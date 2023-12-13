@@ -146,11 +146,11 @@ public class PerformanceManager : Manager
                 ADLXBackend.SetRSR(true);
                 ADLXBackend.SetRSRSharpness(profile.RSRSharpness);
             }
-            else if (ADLXBackend.GetRSRState() == 1)
-            {
-                ADLXBackend.SetRSR(false);
-                ADLXBackend.SetRSRSharpness(20);
-            }
+            //else if (ADLXBackend.GetRSRState() == 1)
+            //{
+            //    ADLXBackend.SetRSR(false);
+            //    ADLXBackend.SetRSRSharpness(20);
+            //}
         }
         catch { }
     }
@@ -397,7 +397,7 @@ public class PerformanceManager : Manager
             }
             AutoTDPPrev = AutoTDP;
 
-            // LogManager.LogTrace("TDPSet;;;;;{0:0.0};{1:0.000};{2:0.0000};{3:0.0000};{4:0.0000}", AutoTDPTargetFPS, AutoTDP, TDPAdjustment, ProcessValueFPS, TDPDamping);
+            //LogManager.LogTrace("TDPSet;;;;;{0:0.0};{1:0.000};{2:0.0000};{3:0.0000};{4:0.0000}", AutoTDPTargetFPS, AutoTDP, TDPAdjustment, ProcessValueFPS, TDPDamping);
 
             // release lock
             autoLock = false;
@@ -552,7 +552,7 @@ public class PerformanceManager : Manager
 
                 // only request an update if current limit is different than stored
                 if (ReadTDP != TDP)
-                    processor.SetTDPLimit(type, TDP);
+                    RequestTDP(type, TDP, true);
 
                 await Task.Delay(12);
             }
@@ -625,7 +625,7 @@ public class PerformanceManager : Manager
                 if (StoredGfxClock == 12750)
                     GPUdone = true;
                 else
-                    processor.SetGPUClock(StoredGfxClock);
+                    RequestGPUClock(StoredGfxClock, true);
             }
             else
             {
@@ -703,7 +703,10 @@ public class PerformanceManager : Manager
 
         // immediately apply
         if (immediate)
+        {
             processor.SetTDPLimit((PowerType)idx, value, immediate);
+            CurrentTDP[idx] = value;
+        }
     }
 
     public async void RequestTDP(double[] values, bool immediate = false)
@@ -723,6 +726,7 @@ public class PerformanceManager : Manager
             if (immediate)
             {
                 processor.SetTDPLimit((PowerType)idx, values[idx], immediate);
+                CurrentTDP[idx] = values[idx];
                 await Task.Delay(12);
             }
         }
@@ -735,10 +739,12 @@ public class PerformanceManager : Manager
 
         // update value read by timer
         StoredGfxClock = value;
-
         // immediately apply
         if (immediate)
+        {
             processor.SetGPUClock(value);
+            CurrentGfxClock = value;
+        }
     }
 
     public void RequestPowerMode(Guid guid)

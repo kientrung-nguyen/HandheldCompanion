@@ -80,13 +80,13 @@ public partial class ProfilesPage : Page
                     break;
                 case 0:
                     RSRToggle.IsEnabled = true;
-                    RSRToggle.IsOn = false;
-                    RSRSlider.Value = RSRSharpness;
+                    //RSRToggle.IsOn = false;
+                    //RSRSlider.Value = RSRSharpness;
                     break;
                 case 1:
                     RSRToggle.IsEnabled = true;
-                    RSRToggle.IsOn = true;
-                    RSRSlider.Value = RSRSharpness;
+                    //RSRToggle.IsOn = true;
+                    //RSRSlider.Value = RSRSharpness;
                     break;
             }
         });

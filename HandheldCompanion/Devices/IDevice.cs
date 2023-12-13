@@ -326,7 +326,15 @@ public abstract class IDevice
                             device = new GPDWinMax2Intel();
                             break;
                         case "G1619-04":
-                            device = new GPDWinMax2AMD();
+                            switch (Processor)
+                            {
+                                case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
+                                    device = new GPDWinMax2_2023_7840U();
+                                    break;
+                                default:
+                                    device = new GPDWinMax2AMD();
+                                    break;
+                            }
                             break;
                     }
                 }
