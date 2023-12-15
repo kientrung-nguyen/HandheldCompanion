@@ -13,31 +13,41 @@ namespace HandheldCompanion.Managers;
 
 public static class PowerMode
 {
+    //public static Guid PowerSaver = new("a1841308-3541-4fab-bc81-f71556f20b4a");
+    public static Guid Default = new("381b4222-f694-41f0-9685-ff5bb260df2e");
+    public static Guid PowerSaverEPP = new("311e8682-fe8a-4c19-b51c-7f70f059cc15");
+    public static Guid BalancedEPP = new("5e3046c2-eb29-4606-9f58-32b9f32ed977");
+    public static Guid PerformanceEPP = new("6c6968d9-d5b8-4e07-91a3-095efdda17ed");
+
     /// <summary>
-    ///     Better Battery mode.
+    ///     Better Battery mode. (Efficient)
+    ///     Better Battery Overlay
     /// </summary>
     public static Guid BetterBattery = new("961cc777-2547-4f9d-8174-7d86181b8a7a");
 
     /// <summary>
-    ///     Better Performance mode.
+    ///     Better Performance mode. (Balanced)
+    ///     High Performance Overlay
     /// </summary>
-    // public static Guid BetterPerformance = new Guid("3af9B8d9-7c97-431d-ad78-34a8bfea439f");
+    //public static Guid BetterPerformance = new("3af9B8d9-7c97-431d-ad78-34a8bfea439f");
     public static Guid BetterPerformance = new();
 
     /// <summary>
-    ///     Best Performance mode.
+    ///     Best Performance mode. (Performance)
+    ///     Max Perfromance Overlay
     /// </summary>
     public static Guid BestPerformance = new("ded574b5-45a0-4f42-8737-46345c09c238");
 }
 
 public class PerformanceManager : Manager
 {
-    private const short INTERVAL_DEFAULT = 1000; // default interval between value scans
+    private const short INTERVAL_DEFAULT = 3000; // default interval between value scans
     private const short INTERVAL_AUTO = 1010; // default interval between value scans
     private const short INTERVAL_DEGRADED = 5000; // degraded interval between value scans
     public static int MaxDegreeOfParallelism = 4;
 
-    public static readonly Guid[] PowerModes = new Guid[3] { PowerMode.BetterBattery, PowerMode.BetterPerformance, PowerMode.BestPerformance };
+    //public static readonly Guid[] PowerModes = [PowerMode.BetterBattery, PowerMode.BetterPerformance, PowerMode.BestPerformance, PowerMode.CustomPerformance];
+    public static readonly Guid[] PowerModes = [PowerMode.Default, PowerMode.PowerSaverEPP, PowerMode.BalancedEPP, PowerMode.PerformanceEPP];
 
     private readonly Timer autoWatchdog;
     private readonly Timer cpuWatchdog;
@@ -56,17 +66,20 @@ public class PerformanceManager : Manager
     private int AutoTDPFPSSetpointMetCounter;
     private int AutoTDPFPSSmallDipCounter;
     private double AutoTDPMax;
+    private double AutoCPUClockMax;
+    private double AutoGPUClockMax;
+
     private double TDPMax;
     private double TDPMin;
     private int AutoTDPProcessId;
     private double AutoTDPTargetFPS;
     private bool cpuWatchdogPendingStop;
-    private uint currentEPP = 50;
+    private uint currentEPP = 0x00000032;
     private int currentCoreCount;
     private double CurrentGfxClock;
 
     // powercfg
-    private bool currentPerfBoostMode;
+    private bool? currentPerfBoostMode = null;
     private Guid currentPowerMode = new("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
     private readonly double[] CurrentTDP = new double[5]; // used to store current TDP
 
@@ -146,11 +159,11 @@ public class PerformanceManager : Manager
                 ADLXBackend.SetRSR(true);
                 ADLXBackend.SetRSRSharpness(profile.RSRSharpness);
             }
-            //else if (ADLXBackend.GetRSRState() == 1)
-            //{
-            //    ADLXBackend.SetRSR(false);
-            //    ADLXBackend.SetRSRSharpness(20);
-            //}
+            else if (ADLXBackend.GetRSRState() == 1)
+            {
+                ADLXBackend.SetRSR(false);
+                ADLXBackend.SetRSRSharpness(20);
+            }
         }
         catch { }
     }
@@ -205,6 +218,48 @@ public class PerformanceManager : Manager
             }
         }
 
+        // apply profile defined CPU
+        if (profile.CPUOverrideEnabled)
+        {
+            RequestCPUClock(Convert.ToUInt32(profile.CPUOverrideValue));
+            AutoCPUClockMax = Convert.ToUInt32(profile.CPUOverrideValue);
+        }
+        else
+        {
+            // restore default GPU clock
+            RestoreCPUClock(true);
+            AutoCPUClockMax = MotherboardInfo.ProcessorMaxTurboSpeed;
+        }
+
+        // apply profile defined GPU
+        if (profile.GPUOverrideEnabled)
+        {
+            if (!profile.AutoTDPEnabled)
+            {
+                RequestGPUClock(profile.GPUOverrideValue);
+                StartGPUWatchdog();
+                AutoGPUClockMax = profile.GPUOverrideValue;
+            }
+            else
+            {
+                StopGPUWatchdog(true);
+                AutoGPUClockMax = profile.GPUOverrideValue;
+            }
+        }
+        else if (gfxWatchdog.Enabled)
+        {
+            // restore default GPU clock
+            StopGPUWatchdog(true);
+            if (!profile.AutoTDPEnabled)
+            {
+                RestoreGPUClock(true);
+            }
+            else
+            {
+                AutoGPUClockMax = MainWindow.CurrentDevice.GfxClock[1];
+            }
+        }
+
         // apply profile defined AutoTDP
         if (profile.AutoTDPEnabled)
         {
@@ -218,41 +273,6 @@ public class PerformanceManager : Manager
             // restore default TDP (if not manual TDP is enabled)
             if (!profile.TDPOverrideEnabled)
                 RestoreTDP(true);
-        }
-
-        // apply profile defined CPU
-        if (profile.CPUOverrideEnabled)
-        {
-            RequestCPUClock(Convert.ToUInt32(profile.CPUOverrideValue));
-        }
-        else
-        {
-            // restore default GPU clock
-            RestoreCPUClock(true);
-        }
-
-        // apply profile defined GPU
-        if (profile.GPUOverrideEnabled)
-        {
-            RequestGPUClock(profile.GPUOverrideValue);
-            StartGPUWatchdog();
-        }
-        else if (gfxWatchdog.Enabled)
-        {
-            // restore default GPU clock
-            StopGPUWatchdog(true);
-            RestoreGPUClock(true);
-        }
-
-        // apply profile defined EPP
-        if (profile.EPPOverrideEnabled)
-        {
-            RequestEPP(profile.EPPOverrideValue);
-        }
-        else if (currentEPP != 0x00000032)
-        {
-            // restore default EPP
-            RequestEPP(0x00000032);
         }
 
         // apply profile defined CPU Core Count
@@ -271,6 +291,21 @@ public class PerformanceManager : Manager
 
         // apply profile Power Mode
         RequestPowerMode(profile.OSPowerMode);
+
+        // apply profile defined EPP
+        if (profile.EPPOverrideEnabled)
+        {
+            RequestEPP(profile.EPPOverrideValue);
+        }
+        else if (currentEPP != 0x00000032)
+        {
+            if (profile.OSPowerMode == PowerMode.Default)
+                // restore default EPP
+                RequestEPP(0x00000032);
+        }
+
+        LogManager.LogInformation("Power Profile {0} applied", profile.Name);
+
     }
 
     private void PowerProfileManager_Discarded(PowerProfile profile)
@@ -323,7 +358,8 @@ public class PerformanceManager : Manager
         }
 
         // restore PowerMode.BetterPerformance 
-        RequestPowerMode(PowerMode.BetterPerformance);
+        //RequestPowerMode(PowerMode.BetterPerformance);
+        RequestPowerMode(PowerMode.Default);
     }
 
     private void RestoreTDP(bool immediate)
@@ -340,7 +376,7 @@ public class PerformanceManager : Manager
 
     private void RestoreGPUClock(bool immediate)
     {
-        RequestGPUClock(255 * 50, immediate);
+        RequestGPUClock(MainWindow.CurrentDevice.GfxClock[1], immediate);
     }
 
     private void RTSS_Hooked(AppEntry appEntry)
@@ -357,7 +393,10 @@ public class PerformanceManager : Manager
     {
         // We don't have any hooked process
         if (AutoTDPProcessId == 0)
+        {
+            LogManager.LogWarning("We don't have any hooked process");
             return;
+        }
 
         if (!autoLock)
         {
@@ -382,8 +421,12 @@ public class PerformanceManager : Manager
             TDPAdjustment *= 0.9; // Always have a little undershoot
 
             // Determine final setpoint
+            double TDPDamping = 0.0;
             if (!AutoTDPFirstRun)
-                AutoTDP += TDPAdjustment + AutoTDPDamper(processValueFPS);
+            {
+                TDPDamping = AutoTDPDamper(processValueFPS);
+                AutoTDP += TDPAdjustment + TDPDamping;
+            }
             else
                 AutoTDPFirstRun = false;
 
@@ -392,16 +435,70 @@ public class PerformanceManager : Manager
             // Only update if we have a different TDP value to set
             if (AutoTDP != AutoTDPPrev)
             {
-                double[] values = new double[3] { AutoTDP, AutoTDP, AutoTDP };
-                RequestTDP(values, true);
+                var autoTDPValues = new double[3] { AutoTDP, AutoTDP, AutoTDP };
+                var autoCPUGPUValues = AutoTDPCPUGPUClock(AutoTDP);
+                RequestTDP(autoTDPValues, true);
+                RequestCPUClock(Convert.ToUInt16(autoCPUGPUValues[0]));
+                RequestGPUClock(autoCPUGPUValues[1], true);
+                LogManager.LogDebug("TDPSet;;;;;{0:0.0};{1:0.000};{2:0.0000};{3:0.0000};{4:0.0000};{5;0};{6:0}", AutoTDPTargetFPS, AutoTDP, TDPAdjustment, processValueFPS, TDPDamping, autoCPUGPUValues[0], autoCPUGPUValues[1]);
+
             }
             AutoTDPPrev = AutoTDP;
 
-            //LogManager.LogTrace("TDPSet;;;;;{0:0.0};{1:0.000};{2:0.0000};{3:0.0000};{4:0.0000}", AutoTDPTargetFPS, AutoTDP, TDPAdjustment, ProcessValueFPS, TDPDamping);
 
             // release lock
             autoLock = false;
         }
+    }
+
+    private double[] AutoTDPCPUGPUClock(double autoTDP)
+    {
+        var autoCPUClockMax = AutoCPUClockMax;
+        var autoGPUClockMax = AutoGPUClockMax;
+        switch (autoTDP)
+        {
+            case < 6: autoCPUClockMax = 1500; autoGPUClockMax = 400; break;
+            case >= 6 and < 7: autoCPUClockMax = 1600; autoGPUClockMax = 400; break;
+            case >= 7 and < 8: autoCPUClockMax = 1700; autoGPUClockMax = 500; break;
+            case >= 8 and < 9: autoCPUClockMax = 1800; autoGPUClockMax = 600; break;
+            case >= 9 and < 10: autoCPUClockMax = 1900; autoGPUClockMax = 700; break;
+            case >= 10 and < 11: autoCPUClockMax = 2000; autoGPUClockMax = 800; break;
+            case >= 11 and < 12: autoCPUClockMax = 2100; autoGPUClockMax = 900; break;
+            case >= 12 and < 13: autoCPUClockMax = 2200; autoGPUClockMax = 975; break;
+            case >= 13 and < 14: autoCPUClockMax = 2300; autoGPUClockMax = 1025; break;
+            case >= 14 and < 15: autoCPUClockMax = 2400; autoGPUClockMax = 1175; break;
+            case >= 15 and < 16: autoCPUClockMax = 2500; autoGPUClockMax = 1225; break;
+            case >= 16 and < 17: autoCPUClockMax = 2600; autoGPUClockMax = 1450; break;
+            case >= 17 and < 18: autoCPUClockMax = 2700; autoGPUClockMax = 1500; break;
+            case >= 18 and < 19: autoCPUClockMax = 2800; autoGPUClockMax = 1550; break;
+            case >= 19 and < 20: autoCPUClockMax = 2900; autoGPUClockMax = 1650; break;
+            case >= 20 and < 21: autoCPUClockMax = 3000; autoGPUClockMax = 1700; break;
+            case >= 21 and < 22: autoCPUClockMax = 3100; autoGPUClockMax = 1800; break;
+            case >= 22 and < 23: autoCPUClockMax = 3200; autoGPUClockMax = 1850; break;
+            case >= 23 and < 24: autoCPUClockMax = 3300; autoGPUClockMax = 1900; break;
+            case >= 24 and < 25: autoCPUClockMax = 3400; autoGPUClockMax = 1950; break;
+            case >= 25 and < 26: autoCPUClockMax = 3500; autoGPUClockMax = 2000; break;
+            case >= 26 and < 27: autoCPUClockMax = 3600; autoGPUClockMax = 2050; break;
+            case >= 27 and < 28: autoCPUClockMax = 3700; autoGPUClockMax = 2100; break;
+            case >= 28 and < 29: autoCPUClockMax = 3800; autoGPUClockMax = 2150; break;
+            case >= 29 and < 30: autoCPUClockMax = 3900; autoGPUClockMax = 2200; break;
+            case >= 30 and < 31: autoCPUClockMax = 4000; autoGPUClockMax = 2250; break;
+            case >= 31 and < 32: autoCPUClockMax = 4000; autoGPUClockMax = 2375; break;
+            case >= 32 and < 33: autoCPUClockMax = 4000; autoGPUClockMax = 2400; break;
+            case >= 33 and < 34: autoCPUClockMax = 4000; autoGPUClockMax = 2425; break;
+            case >= 34 and < 35: autoCPUClockMax = 4000; autoGPUClockMax = 2450; break;
+            case >= 35 and < 36: autoCPUClockMax = 4000; autoGPUClockMax = 2475; break;
+            case >= 36 and < 37: autoCPUClockMax = 4100; autoGPUClockMax = 2500; break;
+            case >= 37 and < 38: autoCPUClockMax = 4200; autoGPUClockMax = 2525; break;
+            case >= 38 and < 39: autoCPUClockMax = 4300; autoGPUClockMax = 2530; break;
+            case >= 39 and < 40: autoCPUClockMax = 4400; autoGPUClockMax = 2575; break;
+            case >= 40 and < 41: autoCPUClockMax = 4500; autoGPUClockMax = 2575; break;
+            case >= 41 and < 42: autoCPUClockMax = 4500; autoGPUClockMax = 2600; break;
+            case >= 42 and < 43: autoCPUClockMax = 4500; autoGPUClockMax = 2625; break;
+            case >= 43 and < 44: autoCPUClockMax = 4500; autoGPUClockMax = 2650; break;
+            case >= 44 and < 45: autoCPUClockMax = 4500; autoGPUClockMax = 2675; break;
+        }
+        return [autoCPUClockMax, autoGPUClockMax];
     }
 
     private double AutoTDPDipper(double FPSActual, double FPSSetpoint)
@@ -471,14 +568,32 @@ public class PerformanceManager : Manager
             powerLock = true;
 
             // Checking if active power shceme has changed to reflect that
-            if (PowerGetEffectiveOverlayScheme(out var activeScheme) == 0)
-                if (activeScheme != currentPowerMode)
-                {
-                    currentPowerMode = activeScheme;
-                    var idx = Array.IndexOf(PowerModes, activeScheme);
-                    if (idx != -1)
-                        PowerModeChanged?.Invoke(idx);
-                }
+            //if (PowerGetEffectiveOverlayScheme(out var activeScheme) == 0)
+            //    if (activeScheme != currentPowerMode)
+            //    {
+            //        if (activeScheme == Guid.Empty && PowerScheme.GetActiveScheme(out activeScheme) && activeScheme != currentPowerMode)
+            //            currentPowerMode = activeScheme;
+            //        else
+            //            currentPowerMode = activeScheme;
+
+            //        var idx = Array.IndexOf(PowerModes, activeScheme);
+            //        if (idx != -1)
+            //            PowerModeChanged?.Invoke(idx);
+            //        else
+            //        {
+            //            if (activeScheme != Guid.Empty)
+            //                PowerModeChanged?.Invoke(PowerModes.Length - 1);
+            //        }
+            //    }
+
+            var idx = -1;
+            if (PowerScheme.GetActiveScheme(out var activeScheme) && activeScheme != currentPowerMode)
+            {
+                currentPowerMode = activeScheme;
+                idx = Array.IndexOf(PowerModes, activeScheme);
+                if (idx != -1)
+                    PowerModeChanged?.Invoke(idx);
+            }
 
             // read perfboostmode
             var result = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE);
@@ -682,6 +797,7 @@ public class PerformanceManager : Manager
     internal void StartAutoTDPWatchdog()
     {
         autoWatchdog.Start();
+        LogManager.LogDebug("AutoTDPWatchdog Started");
     }
 
     internal void StopAutoTDPWatchdog(bool immediate = false)
@@ -732,7 +848,7 @@ public class PerformanceManager : Manager
         }
     }
 
-    public void RequestGPUClock(double value, bool immediate = false)
+    public async void RequestGPUClock(double value, bool immediate = false)
     {
         if (processor is null || !processor.IsInitialized)
             return;
@@ -749,11 +865,20 @@ public class PerformanceManager : Manager
 
     public void RequestPowerMode(Guid guid)
     {
-        currentPowerMode = guid;
-        LogManager.LogDebug("User requested power scheme: {0}", currentPowerMode);
-
-        if (PowerSetActiveOverlayScheme(currentPowerMode) != 0)
-            LogManager.LogWarning("Failed to set requested power scheme: {0}", currentPowerMode);
+        //if (!PowerScheme.SetActiveOverlayScheme(currentPowerMode))
+        if (currentPowerMode != guid)
+        {
+            if (!PowerScheme.SetActiveScheme(guid))
+            {
+                LogManager.LogWarning("Failed to set requested power scheme: {0}", guid);
+                RequestPowerMode(PowerMode.Default);
+            }
+            else
+            {
+                LogManager.LogDebug("User requested power scheme: {0}, current {1}", guid, currentPowerMode);
+                currentPowerMode = guid;
+            }
+        }
     }
 
     public void RequestEPP(uint EPPOverrideValue)
@@ -819,12 +944,22 @@ public class PerformanceManager : Manager
 
     public void RequestPerfBoostMode(bool value)
     {
-        currentPerfBoostMode = value;
+        // read perfboostmode
+        if (currentPerfBoostMode == null)
+        {
+            var result = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE);
+            var resultPerfboostmode = result[(int)PowerIndexType.AC] == (uint)PerfBoostMode.Aggressive &&
+                                result[(int)PowerIndexType.DC] == (uint)PerfBoostMode.Aggressive;
+            currentPerfBoostMode = resultPerfboostmode;
+        }
 
-        var perfboostmode = value ? (uint)PerfBoostMode.Aggressive : (uint)PerfBoostMode.Enabled;
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE, perfboostmode, perfboostmode);
-
-        LogManager.LogDebug("User requested perfboostmode: {0}", value);
+        if (currentPerfBoostMode != value)
+        {
+            currentPerfBoostMode = value;
+            var perfboostmode = value ? (uint)PerfBoostMode.Aggressive : (uint)PerfBoostMode.Enabled;
+            PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE, perfboostmode, perfboostmode);
+            LogManager.LogDebug("User requested perfboostmode: {0}", value);
+        }
     }
 
     private void RequestCPUClock(uint cpuClock)
@@ -900,7 +1035,7 @@ public class PerformanceManager : Manager
     /// </summary>
     /// <param name="EffectiveOverlayPolicyGuid">A pointer to a GUID structure.</param>
     /// <returns>Returns zero if the call was successful, and a nonzero value if the call failed.</returns>
-    [DllImportAttribute("powrprof.dll", EntryPoint = "PowerGetEffectiveOverlayScheme")]
+    [DllImport("powrprof.dll", EntryPoint = "PowerGetEffectiveOverlayScheme")]
     private static extern uint PowerGetEffectiveOverlayScheme(out Guid EffectiveOverlayPolicyGuid);
 
     /// <summary>
@@ -908,7 +1043,7 @@ public class PerformanceManager : Manager
     /// </summary>
     /// <param name="OverlaySchemeGuid">The identifier of the overlay power scheme.</param>
     /// <returns>Returns zero if the call was successful, and a nonzero value if the call failed.</returns>
-    [DllImportAttribute("powrprof.dll", EntryPoint = "PowerSetActiveOverlayScheme")]
+    [DllImport("powrprof.dll", EntryPoint = "PowerSetActiveOverlayScheme")]
     private static extern uint PowerSetActiveOverlayScheme(Guid OverlaySchemeGuid);
 
     #endregion

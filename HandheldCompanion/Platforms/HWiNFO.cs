@@ -545,7 +545,7 @@ public class HWiNFO : IPlatform
         SetProperty("MinimalizeSensorsClose", 1);
 
         // not authorized
-        // SetProperty("SensorsSM", 1); // Shared Memory Support [12-HOUR LIMIT]
+        //SetProperty("SensorsSM", 1); // Shared Memory Support [12-HOUR LIMIT]
 
         SetProperty("ShowWelcomeAndProgress", 0);
         SetProperty("SensorsOnly", 1);

@@ -164,7 +164,7 @@ public static class ProcessManager
         {
             int processId = (int)processInfo.ProcessId;
 
-            if (!Processes.TryGetValue(processId, out ProcessEx process))
+            if (!Processes.TryGetValue(processId, out var process))
             {
                 if (!CreateProcess(processId, (int)hWnd))
                     return;

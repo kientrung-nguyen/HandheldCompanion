@@ -53,6 +53,8 @@ namespace HandheldCompanion.Views.Pages
             PowerProfileManager.Deleted += PowerProfileManager_Deleted;
 
             MainWindow.performanceManager.ProcessorStatusChanged += PerformanceManager_StatusChanged;
+
+            MainWindow.performanceManager.PowerModeChanged += PerformanceManager_PowerModeChanged;
             MainWindow.performanceManager.EPPChanged += PerformanceManager_EPPChanged;
             MainWindow.performanceManager.Initialized += PerformanceManager_Initialized;
 
@@ -221,6 +223,17 @@ namespace HandheldCompanion.Views.Pages
                 EPPSlider.Value = EPP;
             });
         }
+
+
+        private void PerformanceManager_PowerModeChanged(int idx)
+        {
+            // UI thread (async)
+            Application.Current.Dispatcher.BeginInvoke(() =>
+            {
+                PowerMode.SelectedIndex = idx;
+            });
+        }
+
 
         private void PerformanceManager_Initialized()
         {

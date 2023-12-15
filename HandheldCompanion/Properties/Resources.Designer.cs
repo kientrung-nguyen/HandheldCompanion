@@ -6240,6 +6240,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Custom.
+        /// </summary>
+        public static string QuickPerformancePage_PowerModeCustom {
+            get {
+                return ResourceManager.GetString("QuickPerformancePage_PowerModeCustom", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Default.
+        /// </summary>
+        public static string QuickPerformancePage_PowerModeDefault {
+            get {
+                return ResourceManager.GetString("QuickPerformancePage_PowerModeDefault", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Optimize your device based on power use and performance.
         /// </summary>
         public static string QuickPerformancePage_PowerModeDesc {
@@ -6263,6 +6281,15 @@ namespace HandheldCompanion.Properties {
         public static string QuickPerformancePage_PowerModePerformance {
             get {
                 return ResourceManager.GetString("QuickPerformancePage_PowerModePerformance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Power Saver.
+        /// </summary>
+        public static string QuickPerformancePage_PowerModePowerSaver {
+            get {
+                return ResourceManager.GetString("QuickPerformancePage_PowerModePowerSaver", resourceCulture);
             }
         }
         

@@ -326,15 +326,12 @@ public abstract class IDevice
                             device = new GPDWinMax2Intel();
                             break;
                         case "G1619-04":
-                            switch (Processor)
+                            device = Processor switch
                             {
-                                case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
-                                    device = new GPDWinMax2_2023_7840U();
-                                    break;
-                                default:
-                                    device = new GPDWinMax2AMD();
-                                    break;
-                            }
+                                "AMD Ryzen 5 7640U w/ Radeon 760M Graphics" => new GPDWinMax2_2023_7640U(),
+                                "AMD Ryzen 7 7840U w/ Radeon 780M Graphics" => new GPDWinMax2_2023_7840U(),
+                                _ => new GPDWinMax2AMD(),
+                            };
                             break;
                     }
                 }
@@ -438,7 +435,7 @@ public abstract class IDevice
                 break;
         }
 
-        LogManager.LogInformation("{0} from {1}", ProductName, ManufacturerName);
+        LogManager.LogInformation("{0} from {1}", ProductName, ManufacturerName + ", " + Processor + ", " + MotherboardInfo.SystemName);
 
         if (device is null)
         {

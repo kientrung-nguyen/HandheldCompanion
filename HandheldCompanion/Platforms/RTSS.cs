@@ -147,7 +147,6 @@ public class RTSS : IPlatform
     {
         // hook new process
         AppEntry appEntry = null;
-
         var ProcessId = processEx.GetProcessId();
         if (ProcessId == 0)
             return;
@@ -160,10 +159,15 @@ public class RTSS : IPlatform
              * - process no longer exists
              * - RTSS was closed
              */
-
             try
             {
-                appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None && x.ProcessId == ProcessId).FirstOrDefault();
+                var appEntries = OSD.GetAppEntries();
+                if (appEntries == null || appEntries.Length == 0)
+                    continue;
+
+                appEntry = appEntries
+                    .Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None && entry.ProcessId == ProcessId)
+                    .FirstOrDefault();
             }
             catch (FileNotFoundException)
             {

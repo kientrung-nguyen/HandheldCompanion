@@ -78,6 +78,16 @@ public static class PowerScheme
         return result;
     }
 
+    public static bool GetEffectiveOverlayScheme(out Guid EffectiveOverlayPolicyGuid)
+    {
+        return PowerGetEffectiveOverlayScheme(out EffectiveOverlayPolicyGuid) == 0;
+    }
+
+    public static bool SetActiveOverlayScheme(Guid OverlaySchemeGuid)
+    {
+        return PowerSetActiveOverlayScheme(OverlaySchemeGuid) == 0;
+    }
+
     public static bool GetActiveScheme(out Guid ActivePolicyGuid)
     {
         return PowerGetActiveScheme(nint.Zero, out ActivePolicyGuid) == 0;
@@ -180,6 +190,23 @@ public static class PowerScheme
     /// <returns>Returns zero if the call was successful, and a nonzero value if the call failed.</returns>
     [DllImport("powrprof.dll", EntryPoint = "PowerSetActiveScheme")]
     private static extern uint PowerSetActiveScheme(nint UserRootPowerKey, in Guid SchemeGuid);
+
+    /// <summary>
+    ///     Retrieves the active overlay power scheme and returns a GUID that identifies the scheme.
+    /// </summary>
+    /// <param name="EffectiveOverlayPolicyGuid">A pointer to a GUID structure.</param>
+    /// <returns>Returns zero if the call was successful, and a nonzero value if the call failed.</returns>
+    [DllImport("powrprof.dll", EntryPoint = "PowerGetEffectiveOverlayScheme")]
+    private static extern uint PowerGetEffectiveOverlayScheme(out Guid EffectiveOverlayPolicyGuid);
+
+    /// <summary>
+    ///     Sets the active power overlay power scheme.
+    /// </summary>
+    /// <param name="OverlaySchemeGuid">The identifier of the overlay power scheme.</param>
+    /// <returns>Returns zero if the call was successful, and a nonzero value if the call failed.</returns>
+    [DllImport("powrprof.dll", EntryPoint = "PowerSetActiveOverlayScheme")]
+    private static extern uint PowerSetActiveOverlayScheme(Guid OverlaySchemeGuid);
+
 
     /// <summary>
     ///     Retrieves the AC value index of the specified power setting.

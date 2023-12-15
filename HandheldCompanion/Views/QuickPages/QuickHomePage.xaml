@@ -83,6 +83,11 @@
                                 Style="{StaticResource CaptionTextBlockStyle}"
                                 Text="{x:Static resx:Resources.QuickDevicePage_Desc}"
                                 TextWrapping="Wrap" />
+                            <TextBlock 
+                                Name="DeviceInfo"
+                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                TextWrapping="Wrap" />
                         </ui:SimpleStackPanel>
                     </DockPanel>
 

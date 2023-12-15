@@ -2673,4 +2673,13 @@ with motion input toggle, press selected button(s) to switch from enabled to dis
   <data name="DevicePage_FullFanSpeedText" xml:space="preserve">
     <value>Fan max speed override</value>
   </data>
+  <data name="QuickPerformancePage_PowerModeCustom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="QuickPerformancePage_PowerModePowerSaver" xml:space="preserve">
+    <value>Power Saver</value>
+  </data>
+  <data name="QuickPerformancePage_PowerModeDefault" xml:space="preserve">
+    <value>Default</value>
+  </data>
 </root>

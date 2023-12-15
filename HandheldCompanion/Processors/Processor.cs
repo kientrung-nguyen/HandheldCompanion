@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using SharpDX;
 using System.Collections.Generic;
 using System.Timers;
 
@@ -102,6 +103,16 @@ public class Processor
          */
 
         LogManager.LogDebug("User requested GPU clock: {0}, error code: {1}", clock, result);
+    }
+
+    public virtual void SetMaxPerformance()
+    {
+        LogManager.LogDebug("User requested max performance: Hidden options to improve performance (is set when AC plugged in): behavior depends on CPU generation, Device and Manufacture");
+    }
+
+    public virtual void SetPowerSaving()
+    {
+        LogManager.LogDebug("User requested power saving: Hidden options to improve power efficiency (is set when AC unplugged): behavior depends on CPU generation, Device and Manufacture");
     }
 
     protected virtual void UpdateTimer_Elapsed(object sender, ElapsedEventArgs e)

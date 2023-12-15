@@ -484,6 +484,7 @@
                             VerticalAlignment="Center"
                             SelectedIndex="0"
                             SelectionChanged="PowerMode_SelectionChanged">
+                            <ComboBoxItem Name="PowerModeDefault" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeDefault}" />
                             <ComboBoxItem Name="PowerModeEfficiency" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeEfficiency}" />
                             <ComboBoxItem Name="PowerModeBalanced" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeBalanced}" />
                             <ComboBoxItem Name="PowerModePerformance" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModePerformance}" />

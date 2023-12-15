@@ -44,6 +44,7 @@ public partial class QuickPerformancePage : Page
         PlatformManager.RTSS.Updated += RTSS_Updated;
 
         MainWindow.performanceManager.ProcessorStatusChanged += PerformanceManager_StatusChanged;
+        MainWindow.performanceManager.PowerModeChanged += PerformanceManager_PowerModeChanged;
         MainWindow.performanceManager.EPPChanged += PerformanceManager_EPPChanged;
         MainWindow.performanceManager.Initialized += PerformanceManager_Initialized;
 
@@ -188,13 +189,13 @@ public partial class QuickPerformancePage : Page
         PerformanceManager_StatusChanged(processor.CanChangeTDP, processor.CanChangeGPU);
     }
 
-    /*
     private void PerformanceManager_PowerModeChanged(int idx)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() => { PowerModeSlider.Value = idx; });
+        Application.Current.Dispatcher.BeginInvoke(() => { PowerMode.SelectedIndex = idx; });
     }
 
+    /*
     private void PerformanceManager_PerfBoostModeChanged(bool value)
     {
         // UI thread (async)
