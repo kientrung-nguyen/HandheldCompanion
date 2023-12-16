@@ -105,14 +105,14 @@ public class Processor
         LogManager.LogDebug("User requested GPU clock: {0}, error code: {1}", clock, result);
     }
 
-    public virtual void SetMaxPerformance()
+    public virtual void SetMaxPerformance(int result = 0)
     {
-        LogManager.LogDebug("User requested max performance: Hidden options to improve performance (is set when AC plugged in): behavior depends on CPU generation, Device and Manufacture");
+        LogManager.LogDebug("User requested max performance: {0}", result);
     }
 
-    public virtual void SetPowerSaving()
+    public virtual void SetPowerSaving(int result = 0)
     {
-        LogManager.LogDebug("User requested power saving: Hidden options to improve power efficiency (is set when AC unplugged): behavior depends on CPU generation, Device and Manufacture");
+        LogManager.LogDebug("User requested power saving: {0}", result);
     }
 
     protected virtual void UpdateTimer_Elapsed(object sender, ElapsedEventArgs e)

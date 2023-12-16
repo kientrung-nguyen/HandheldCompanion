@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace HandheldCompanion.Misc;
@@ -26,6 +28,12 @@ public static class PowerSetting
             new("75b0ae3f-bce0-45a7-8c89-c9611c25e100"); // Maximum processor frequency in MHz, 0 for no limit (default)
 
     public static Guid
+        PROCTHROTTLEMIN = new("893dee8e-2bef-41e0-89c6-b55d0929964c");
+
+    public static Guid
+        PROCTHROTTLEMAX = new Guid("bc5038f7-23e0-4960-96da-33abaf5935ec");
+
+    public static Guid
         CPMINCORES =
             new("0cc5b647-c1df-4637-891a-dec35c318583"); // Processor performance core parking min cores, expressed as a percent from 0 - 100
 
@@ -41,6 +49,17 @@ public static class PowerSetting
         PERFEPP1 = new(
             "36687f9e-e3a5-4dbf-b1dc-15eb381c6864"); // Processor energy performance preference policy for Processor Power Efficiency Class 1, expressed as a percent from 0 - 100
 }
+
+public enum ErrorCode : uint
+{
+    SUCCESS = 0x000,
+    FILE_NOT_FOUND = 0x002,
+    ERROR_INVALID_PARAMETER = 0x057,
+    ERROR_ALREADY_EXISTS = 0x0B7,
+    MORE_DATA = 0x0EA,
+    NO_MORE_ITEMS = 0x103
+}
+
 
 public enum PerfBoostMode
 {
@@ -59,22 +78,20 @@ public static class PowerScheme
     /// <summary>
     ///     Retrieves the active power scheme and returns a GUID that identifies the scheme.
     /// </summary>
-    /// <param name="UserRootPowerKey">This parameter is reserved for future use and must be set to zero.</param>
-    /// <param name="ActivePolicyGuid">A pointer that receives a GUID structure.</param>
+    /// <param name="userRootPowerKey">This parameter is reserved for future use and must be set to zero.</param>
+    /// <param name="activeSchemeGuid">A pointer that receives a GUID structure.</param>
     /// <returns>Returns zero if the call was successful, and a nonzero value if the call failed.</returns>
-    private static uint PowerGetActiveScheme(nint UserRootPowerKey, out Guid ActivePolicyGuid)
+    private static uint PowerGetActiveScheme(nint userRootPowerKey, out Guid activeSchemeGuid)
     {
-        var activePolicyGuidPtr = nint.Zero;
-        ActivePolicyGuid = Guid.Empty;
+        var activeSchemeGuidPtr = IntPtr.Zero;
+        activeSchemeGuid = Guid.Empty;
 
-        var result = PowerGetActiveScheme(UserRootPowerKey, out activePolicyGuidPtr);
-
-        if (result == 0 && activePolicyGuidPtr != nint.Zero)
+        var result = PowerGetActiveScheme(userRootPowerKey, out activeSchemeGuidPtr);
+        if (result == (uint)ErrorCode.SUCCESS && activeSchemeGuidPtr != IntPtr.Zero)
         {
-            ActivePolicyGuid = (Guid)Marshal.PtrToStructure(activePolicyGuidPtr, typeof(Guid));
-            LocalFree(activePolicyGuidPtr);
+            activeSchemeGuid = (Guid)Marshal.PtrToStructure(activeSchemeGuidPtr, typeof(Guid));
+            LocalFree(activeSchemeGuidPtr);
         }
-
         return result;
     }
 
@@ -83,31 +100,31 @@ public static class PowerScheme
         return PowerGetEffectiveOverlayScheme(out EffectiveOverlayPolicyGuid) == 0;
     }
 
-    public static bool SetActiveOverlayScheme(Guid OverlaySchemeGuid)
+    public static bool SetActiveOverlayScheme(Guid overlaySchemeGuid)
     {
-        return PowerSetActiveOverlayScheme(OverlaySchemeGuid) == 0;
+        return PowerSetActiveOverlayScheme(overlaySchemeGuid) == 0;
     }
 
-    public static bool GetActiveScheme(out Guid ActivePolicyGuid)
+    public static bool GetActiveScheme(out Guid activeSchemeGuid)
     {
-        return PowerGetActiveScheme(nint.Zero, out ActivePolicyGuid) == 0;
+        return PowerGetActiveScheme(nint.Zero, out activeSchemeGuid) == 0;
     }
 
-    public static bool SetActiveScheme(Guid SchemeGuid)
+    public static bool SetActiveScheme(Guid schemeGuid)
     {
-        return PowerSetActiveScheme(nint.Zero, SchemeGuid) == 0;
+        return PowerSetActiveScheme(nint.Zero, schemeGuid) == 0;
     }
 
-    public static bool GetValue(PowerIndexType powerType, Guid SchemeGuid, Guid SubGroupOfPowerSettingsGuid,
-        Guid PowerSettingGuid, out uint value)
+    public static bool GetValue(PowerIndexType powerType, Guid schemeGuid, Guid subGroupOfPowerSettingsGuid,
+        Guid powerSettingGuid, out uint value)
     {
         switch (powerType)
         {
             case PowerIndexType.AC:
-                return PowerReadACValueIndex(nint.Zero, SchemeGuid, SubGroupOfPowerSettingsGuid, PowerSettingGuid,
+                return PowerReadACValueIndex(nint.Zero, schemeGuid, subGroupOfPowerSettingsGuid, powerSettingGuid,
                     out value) == 0;
             case PowerIndexType.DC:
-                return PowerReadDCValueIndex(nint.Zero, SchemeGuid, SubGroupOfPowerSettingsGuid, PowerSettingGuid,
+                return PowerReadDCValueIndex(nint.Zero, schemeGuid, subGroupOfPowerSettingsGuid, powerSettingGuid,
                     out value) == 0;
         }
 
@@ -115,58 +132,74 @@ public static class PowerScheme
         return false;
     }
 
-    public static bool SetValue(PowerIndexType powerType, Guid SchemeGuid, Guid SubGroupOfPowerSettingsGuid,
-        Guid PowerSettingGuid, uint value)
+    public static bool SetValue(PowerIndexType powerType, Guid schemeGuid, Guid subGroupOfPowerSettingsGuid,
+        Guid powerSettingGuid, uint value)
     {
         switch (powerType)
         {
             case PowerIndexType.AC:
-                return PowerWriteACValueIndex(nint.Zero, SchemeGuid, SubGroupOfPowerSettingsGuid, PowerSettingGuid,
+                return PowerWriteACValueIndex(nint.Zero, schemeGuid, subGroupOfPowerSettingsGuid, powerSettingGuid,
                     value) == 0;
             case PowerIndexType.DC:
-                return PowerWriteDCValueIndex(nint.Zero, SchemeGuid, SubGroupOfPowerSettingsGuid, PowerSettingGuid,
+                return PowerWriteDCValueIndex(nint.Zero, schemeGuid, subGroupOfPowerSettingsGuid, powerSettingGuid,
                     value) == 0;
         }
 
         return false;
     }
 
-    public static bool SetAttribute(Guid SubGroupOfPowerSettingsGuid, Guid PowerSettingGuid, bool hide)
+    public static bool SetAttribute(Guid subGroupOfPowerSettingsGuid, Guid powerSettingGuid, bool hide)
     {
-        return PowerWriteSettingAttributes(SubGroupOfPowerSettingsGuid, PowerSettingGuid, (uint)(hide ? 1 : 0)) == 0;
+        return PowerWriteSettingAttributes(subGroupOfPowerSettingsGuid, powerSettingGuid, (uint)(hide ? 1 : 0)) == 0;
     }
 
-    public static uint[] ReadPowerCfg(Guid SubGroup, Guid Settings)
+    public static uint[] ReadPowerCfg(Guid subGroupGuid, Guid settingGuid)
     {
         var results = new uint[2];
 
-        if (GetActiveScheme(out var currentScheme))
+        if (GetActiveScheme(out var currentSchemeGuid))
         {
             // read AC/DC values
-            GetValue(PowerIndexType.AC, currentScheme, SubGroup, Settings,
+            GetValue(PowerIndexType.AC, currentSchemeGuid, subGroupGuid, settingGuid,
                 out results[(int)PowerIndexType.AC]);
-            GetValue(PowerIndexType.DC, currentScheme, SubGroup, Settings,
+            GetValue(PowerIndexType.DC, currentSchemeGuid, subGroupGuid, settingGuid,
                 out results[(int)PowerIndexType.DC]);
         }
 
         return results;
     }
 
-    public static void WritePowerCfg(Guid SubGroup, Guid Settings, uint ACValue, uint DCValue)
+    public static void WritePowerCfg(Guid subGroupGuid, Guid settingGuid, uint ACValue, uint DCValue)
     {
-        if (GetActiveScheme(out var currentScheme))
+        if (GetActiveScheme(out var schemeGuid))
         {
             // unhide attribute
-            SetAttribute(SubGroup, Settings, false);
+            SetAttribute(subGroupGuid, settingGuid, false);
 
             // set value(s)
-            SetValue(PowerIndexType.AC, currentScheme, SubGroup, Settings, ACValue);
-            SetValue(PowerIndexType.DC, currentScheme, SubGroup, Settings, DCValue);
+            SetValue(PowerIndexType.AC, schemeGuid, subGroupGuid, settingGuid, ACValue);
+            SetValue(PowerIndexType.DC, schemeGuid, subGroupGuid, settingGuid, DCValue);
 
             // activate scheme
-            SetActiveScheme(currentScheme);
+            SetActiveScheme(schemeGuid);
         }
     }
+
+    public static void WritePowerCfg(Guid subGroupGuid, Guid settingGuid, PowerIndexType powerIndex, uint value)
+    {
+        if (GetActiveScheme(out var schemeGuid))
+        {
+            // unhide attribute
+            SetAttribute(subGroupGuid, settingGuid, false);
+
+            // set value
+            SetValue(powerIndex, schemeGuid, subGroupGuid, settingGuid, value);
+
+            // activate scheme
+            SetActiveScheme(schemeGuid);
+        }
+    }
+
 
     #region imports
 

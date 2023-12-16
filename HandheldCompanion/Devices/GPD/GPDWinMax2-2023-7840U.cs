@@ -8,10 +8,11 @@ public class GPDWinMax2_2023_7840U : GPDWinMax2
     public GPDWinMax2_2023_7840U()
     {
         // https://www.amd.com/en/products/apu/amd-ryzen-7-7840u
-        nTDP = new double[] { 15, 15, 28 };
-        cTDP = new double[] { 5, 30 };
-        GfxClock = new double[] { 200, 2700 };
+        nTDP = [15, 15, 28];
+        cTDP = [5, 30];
+        GfxClock = [200, 2700];
         CpuClock = 5100;
+        Tjmax = 95;
 
         GyrometerAxis = new Vector3(1.0f, 1.0f, -1.0f);
         GyrometerAxisSwap = new SortedDictionary<char, char>

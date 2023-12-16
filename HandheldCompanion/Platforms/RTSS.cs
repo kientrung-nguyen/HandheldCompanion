@@ -161,11 +161,7 @@ public class RTSS : IPlatform
              */
             try
             {
-                var appEntries = OSD.GetAppEntries();
-                if (appEntries == null || appEntries.Length == 0)
-                    continue;
-
-                appEntry = appEntries
+                appEntry = OSD.GetAppEntries()
                     .Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None && entry.ProcessId == ProcessId)
                     .FirstOrDefault();
             }

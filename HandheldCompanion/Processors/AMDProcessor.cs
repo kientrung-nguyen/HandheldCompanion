@@ -173,7 +173,7 @@ public class AMDProcessor : Processor
     {
         if (Monitor.TryEnter(IsBusy))
         {
-            switch(family)
+            switch (family)
             {
                 case RyzenFamily.FAM_VANGOGH:
                     {
@@ -203,25 +203,38 @@ public class AMDProcessor : Processor
 
                 default:
                     {
-                        int error1, error2, error3;
-
+                        int error1;
+                        // int error2, error3;
+                        // kientrungnguyen - set min & max clock frequency not supported.
+                        //
                         if (clock == 12750)
                         {
                             error1 = RyzenAdj.set_gfx_clk(ry, (uint)clock);
-                            error2 = RyzenAdj.set_min_gfxclk_freq(ry, (uint)MainWindow.CurrentDevice.GfxClock[0]);
-                            error3 = RyzenAdj.set_max_gfxclk_freq(ry, (uint)MainWindow.CurrentDevice.GfxClock[1]);
+                            //error2 = RyzenAdj.set_min_gfxclk_freq(ry, (uint)MainWindow.CurrentDevice.GfxClock[0]);
+                            //error3 = RyzenAdj.set_max_gfxclk_freq(ry, (uint)MainWindow.CurrentDevice.GfxClock[1]);
                         }
                         else
                         {
                             error1 = RyzenAdj.set_gfx_clk(ry, (uint)clock);
-                            error2 = RyzenAdj.set_min_gfxclk_freq(ry, (uint)clock);
-                            error3 = RyzenAdj.set_max_gfxclk_freq(ry, (uint)clock);
+                            //error2 = RyzenAdj.set_min_gfxclk_freq(ry, (uint)clock);
+                            //error3 = RyzenAdj.set_max_gfxclk_freq(ry, (uint)clock);
                         }
 
-                        base.SetGPUClock(clock, error1 + error2 + error3);
+                        base.SetGPUClock(clock, error1);
                     }
                     break;
             }
+
+            Monitor.Exit(IsBusy);
+        }
+    }
+
+    public override void SetMaxPerformance(int result)
+    {
+        if (Monitor.TryEnter(IsBusy))
+        {
+            int errorCode = RyzenAdj.set_max_performance(ry);
+            base.SetMaxPerformance(errorCode);
 
             Monitor.Exit(IsBusy);
         }

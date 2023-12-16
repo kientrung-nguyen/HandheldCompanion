@@ -63,8 +63,10 @@ public static class ProcessManager
     {
         try
         {
+            
             if (sender is AutomationElement element)
             {
+                LogManager.LogDebug("OnWindowOpened {0}", element.Current.Name);
                 var processInfo = new ProcessUtils.FindHostedProcess(element.Current.NativeWindowHandle)._realProcess;
                 if (processInfo is null)
                     return;
@@ -256,7 +258,7 @@ public static class ProcessManager
                 string path = ProcessUtils.GetPathToApp(proc.Id);
                 if (string.IsNullOrEmpty(path))
                     return false;
-
+                LogManager.LogDebug("CreateProcess {0}", path);
                 string exec = Path.GetFileName(path);
                 IntPtr hWnd = NativeWindowHandle != 0 ? NativeWindowHandle : proc.MainWindowHandle;
 

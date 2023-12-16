@@ -252,7 +252,7 @@ public abstract class IPlatform : IDisposable
             }
             else
             {
-                LogManager.LogError("Something wen't wrong while trying to start {0}", GetType());
+                LogManager.LogError("Something went wrong while trying to start {0}", GetType());
                 Stop();
 
                 // reset tentative counter

@@ -109,9 +109,11 @@ public class HWiNFO : IPlatform
         // file watcher
         if (File.Exists(SettingsPath))
         {
-            systemWatcher = new(Path.GetDirectoryName(SettingsPath));
-            systemWatcher.Filter = "*.ini";
-            systemWatcher.EnableRaisingEvents = true;
+            systemWatcher = new(Path.GetDirectoryName(SettingsPath))
+            {
+                Filter = "*.ini",
+                EnableRaisingEvents = true
+            };
             systemWatcher.Changed += SystemWatcher_Changed;
         }
 
@@ -545,7 +547,7 @@ public class HWiNFO : IPlatform
         SetProperty("MinimalizeSensorsClose", 1);
 
         // not authorized
-        //SetProperty("SensorsSM", 1); // Shared Memory Support [12-HOUR LIMIT]
+        SetProperty("SensorsSM", 1); // Shared Memory Support [12-HOUR LIMIT]
 
         SetProperty("ShowWelcomeAndProgress", 0);
         SetProperty("SensorsOnly", 1);

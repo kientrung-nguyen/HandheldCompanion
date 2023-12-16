@@ -47,7 +47,7 @@ public static class MotherboardInfo
     {
         get
         {
-            List<string> strings = new List<string>();
+            var strings = new List<string>();
             foreach (ManagementObject queryObj in displayCollection)
             {
                 var query = queryObj["Description"];
