@@ -1,3 +1,4 @@
+using HandheldCompanion.Devices;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Views;
 using SharpDX;
@@ -87,24 +88,30 @@ public static class DynamicLightingManager
     {
         // Update the screen width and height values when display changes
         // Get the primary screen dimensions
-        screenWidth = resolution.Width;
-        screenHeight = resolution.Height;
+        var ledSettingsEnabled = SettingsManager.GetBoolean("LEDSettingsEnabled") && MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.DynamicLighting);
 
-        squareSize = (int)Math.Floor((decimal)screenWidth / 10);
+        LogManager.LogDebug("DynamicLightingManger LEDSettingsEnabled {0}", ledSettingsEnabled);
 
-        LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.GetInt("LEDSettingsLevel");
-        bool ambilightOn = LEDSettingsLevel == LEDLevel.Ambilight;
+        if (ledSettingsEnabled)
+        {
+            screenWidth = resolution.Width;
+            screenHeight = resolution.Height;
 
-        // stop ambilight if running
-        if (ambilightOn)
-            StopAmbilight();
+            squareSize = (int)Math.Floor((decimal)screenWidth / 10);
 
-        // (re)create the Direct3D device
-        InitializeDirect3DDevice();
+            LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.GetInt("LEDSettingsLevel");
+            bool ambilightOn = LEDSettingsLevel == LEDLevel.Ambilight;
 
-        // restart ambilight if it was running
-        if (ambilightOn)
-            StartAmbilight();
+            // stop ambilight if running
+            if (ambilightOn)
+                StopAmbilight();
+            // (re)create the Direct3D device
+            InitializeDirect3DDevice();
+
+            // restart ambilight if it was running
+            if (ambilightOn)
+                StartAmbilight();
+        }
     }
 
     private static void InitializeDirect3DDevice()
@@ -175,10 +182,9 @@ public static class DynamicLightingManager
 
     private static void UpdateLED()
     {
-        bool LEDSettingsEnabled = SettingsManager.GetBoolean("LEDSettingsEnabled");
-        MainWindow.CurrentDevice.SetLedStatus(LEDSettingsEnabled);
-
-        if (LEDSettingsEnabled)
+        bool ledSeetingsEnabled = SettingsManager.GetBoolean("LEDSettingsEnabled") && MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.DynamicLighting);
+        MainWindow.CurrentDevice.SetLedStatus(ledSeetingsEnabled);
+        if (ledSeetingsEnabled)
         {
             LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.GetInt("LEDSettingsLevel");
             int LEDBrightness = SettingsManager.GetInt("LEDBrightness");

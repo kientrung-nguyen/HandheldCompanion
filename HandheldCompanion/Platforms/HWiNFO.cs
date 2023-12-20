@@ -20,24 +20,36 @@ public class HWiNFO : IPlatform
     {
         CPUTemperature,
         CPUFrequency,
+        CPUEffectiveFrequency,
         CPUPower,
         CPUUsage,
+        TotalCPUUsage,
+        MaxCoreRatio,
+
 
         GPUTemperature,
         GPUFrequency,
+        GPUEffectiveFrequency,
         GPUPower,
         GPUUsage,
+        GPUUtilization,
         GPUMemoryUsage,
+        DynamicGPUMemoryUsage,
+        TotalGPUMemoryUsage,
 
         PL1,
         PL2,
 
+        BatteryChargeRate,
         BatteryChargeLevel,
         BatteryRemainingCapacity,
         BatteryRemainingTime,
 
         PhysicalMemoryUsage,
-        VirtualMemoryUsage
+        VirtualMemoryUsage,
+
+        FramerateDisplayed,
+        Frametime
     }
 
     private const string HWiNFO_SHARED_MEM_FILE_NAME = "Global\\HWiNFO_SENS_SM2";
@@ -286,6 +298,8 @@ public class HWiNFO : IPlatform
 
         try
         {
+            MonitoredSensors[SensorElementType.CPUFrequency] = new SensorElement();
+            MonitoredSensors[SensorElementType.CPUEffectiveFrequency] = new SensorElement();
             for (uint index = 0; index < HWiNFOMemory.dwNumReadingElements; ++index)
                 using (var viewStream = MemoryMapped.CreateViewStream(
                            HWiNFOMemory.dwOffsetOfReadingSection + index * HWiNFOMemory.dwSizeOfReadingElement,
@@ -327,8 +341,8 @@ public class HWiNFO : IPlatform
                             {
                                 switch (element.szLabelOrig)
                                 {
-                                    case "CPU Package Power":
                                     case "CPU PPT":
+                                    case "CPU Package Power":
                                         MonitoredSensors[SensorElementType.CPUPower] = element;
                                         break;
 
@@ -372,14 +386,17 @@ public class HWiNFO : IPlatform
                                 switch (element.szLabelOrig)
                                 {
                                     case "GPU Utilization":
+                                        MonitoredSensors[SensorElementType.GPUUtilization] = element;
+                                        break;
                                     case "GPU D3D Usage":
                                         MonitoredSensors[SensorElementType.GPUUsage] = element;
                                         break;
-
-                                    case "Total CPU Usage":
+                                    case "Max CPU/Thread Usage":
                                         MonitoredSensors[SensorElementType.CPUUsage] = element;
                                         break;
-
+                                    case "Total CPU Usage":
+                                        MonitoredSensors[SensorElementType.TotalCPUUsage] = element;
+                                        break;
                                     case "CPU PPT SLOW Limit":
                                         {
                                             var reading = (int)Math.Floor(MonitoredSensors[SensorElementType.CPUPower].Value /
@@ -410,8 +427,10 @@ public class HWiNFO : IPlatform
                             {
                                 switch (element.szLabelOrig)
                                 {
+                                    case "GPU Clock (Effective)":
+                                        MonitoredSensors[SensorElementType.GPUEffectiveFrequency] = element;
+                                        break;
                                     case "GPU Clock":
-                                    case "GPU SoC Clock": // keep me ?
                                         {
                                             var reading = element.Value;
                                             if (reading != MonitoredSensors[SensorElementType.GPUFrequency].Value)
@@ -420,32 +439,56 @@ public class HWiNFO : IPlatform
                                             MonitoredSensors[SensorElementType.GPUFrequency] = element;
                                         }
                                         break;
-
-                                    case "Core 0 Clock":
-                                    case "Core 1 Clock":
-                                    case "Core 2 Clock":
-                                    case "Core 3 Clock":
-                                    case "Core 4 Clock":
-                                    case "Core 5 Clock":
-                                    case "Core 6 Clock":
-                                    case "Core 7 Clock":
-                                    case "Core 8 Clock":
-                                    case "Core 9 Clock":
-                                    case "Core 10 Clock":
-                                    case "Core 11 Clock":
-                                    case "Core 12 Clock":
-                                    case "Core 13 Clock":
-                                    case "Core 14 Clock":
-                                    case "Core 15 Clock":
-                                    case "Core 16 Clock":
-                                    case "Core 17 Clock":
-                                    case "Core 18 Clock": // improve me (lol)
+                                    case "P-core 0 T0 Effective Clock":
+                                    case "P-core 1 T0 Effective Clock":
+                                    case "P-core 2 T0 Effective Clock":
+                                    case "P-core 3 T0 Effective Clock":
+                                    case "P-core 4 T0 Effective Clock":
+                                    case "P-core 5 T0 Effective Clock":
+                                    case "P-core 6 T0 Effective Clock":
+                                    case "P-core 7 T0 Effective Clock":
+                                    case "P-core 8 T0 Effective Clock":
+                                    case "P-core 9 T0 Effective Clock":
+                                    case "P-core 0 T1 Effective Clock":
+                                    case "P-core 1 T1 Effective Clock":
+                                    case "P-core 2 T1 Effective Clock":
+                                    case "P-core 3 T1 Effective Clock":
+                                    case "P-core 4 T1 Effective Clock":
+                                    case "P-core 5 T1 Effective Clock":
+                                    case "P-core 6 T1 Effective Clock":
+                                    case "P-core 7 T1 Effective Clock":
+                                    case "P-core 8 T1 Effective Clock": // improve me (lol)
                                         {
                                             // we'll keep the highest known frequency right now
-                                            if (element.Value > MonitoredSensors[SensorElementType.CPUFrequency].Value)
-                                                MonitoredSensors[SensorElementType.CPUFrequency] = element;
+                                            if (element.Value > MonitoredSensors[SensorElementType.CPUEffectiveFrequency].Value)
+                                                MonitoredSensors[SensorElementType.CPUEffectiveFrequency] = element;
                                         }
                                         break;
+                                        //case "Core 0 Clock":
+                                        //case "Core 1 Clock":
+                                        //case "Core 2 Clock":
+                                        //case "Core 3 Clock":
+                                        //case "Core 4 Clock":
+                                        //case "Core 5 Clock":
+                                        //case "Core 6 Clock":
+                                        //case "Core 7 Clock":
+                                        //case "Core 8 Clock":
+                                        //case "Core 9 Clock":
+                                        //case "Core 10 Clock":
+                                        //case "Core 11 Clock":
+                                        //case "Core 12 Clock":
+                                        //case "Core 13 Clock":
+                                        //case "Core 14 Clock":
+                                        //case "Core 15 Clock":
+                                        //case "Core 16 Clock":
+                                        //case "Core 17 Clock":
+                                        //case "Core 18 Clock": // improve me (lol)
+                                        //{
+                                        //    // we'll keep the highest known frequency right now
+                                        //    if (element.Value > MonitoredSensors[SensorElementType.CPUFrequency].Value)
+                                        //        MonitoredSensors[SensorElementType.CPUFrequency] = element;
+                                        //}
+                                        //break;
                                 }
                             }
                             break;
@@ -457,6 +500,39 @@ public class HWiNFO : IPlatform
 
                         case SENSOR_READING_TYPE.SENSOR_TYPE_OTHER:
                             {
+                                switch (element.szLabelOrig)
+                                {
+                                    case "P-core 0 Ratio":
+                                    case "P-core 1 Ratio":
+                                    case "P-core 2 Ratio":
+                                    case "P-core 3 Ratio":
+                                    case "P-core 4 Ratio":
+                                    case "P-core 5 Ratio":
+                                    case "P-core 6 Ratio":
+                                    case "P-core 7 Ratio":
+                                    case "P-core 8 Ratio":
+                                    case "P-core 9 Ratio":
+                                    case "P-core 10 Ratio":
+                                    case "P-core 11 Ratio":
+                                    case "P-core 12 Ratio":
+                                    case "P-core 13 Ratio":
+                                    case "P-core 14 Ratio":
+                                    case "P-core 15 Ratio":
+                                    case "P-core 16 Ratio":
+                                    case "P-core 17 Ratio":
+                                    case "P-core 18 Ratio": // improve me (lol)
+                                        {
+                                            var reading = element.Value * 100;
+                                            // we'll keep the highest known frequency right now
+                                            if (reading > MonitoredSensors[SensorElementType.CPUFrequency].Value)
+                                            {
+                                                element.Value = reading;
+                                                element.szUnit = "MHz";
+                                                MonitoredSensors[SensorElementType.CPUFrequency] = element;
+                                            }
+                                        }
+                                        break;
+                                }
                             }
                             break;
                     }
@@ -466,6 +542,9 @@ public class HWiNFO : IPlatform
                     {
                         case "Remaining Capacity":
                             MonitoredSensors[SensorElementType.BatteryRemainingCapacity] = element;
+                            break;
+                        case "Charge Rate":
+                            MonitoredSensors[SensorElementType.BatteryChargeRate] = element;
                             break;
                         case "Charge Level":
                             MonitoredSensors[SensorElementType.BatteryChargeLevel] = element;
@@ -482,12 +561,30 @@ public class HWiNFO : IPlatform
                             break;
 
                         case "GPU D3D Memory Dynamic":
+                            MonitoredSensors[SensorElementType.DynamicGPUMemoryUsage] = element;
+                            break;
                         case "GPU Memory Usage":
+                            MonitoredSensors[SensorElementType.TotalGPUMemoryUsage] = element;
+                            break;
+                        case "GPU D3D Memory Dedicated":
                             MonitoredSensors[SensorElementType.GPUMemoryUsage] = element;
+                            break;
+
+                        case "Framerate (Displayed)":
+                            MonitoredSensors[SensorElementType.FramerateDisplayed] = element;
+                            break;
+                        case "Frame Time":
+                            MonitoredSensors[SensorElementType.Frametime] = element;
                             break;
                     }
                     // Debug.WriteLine("{0}:\t\t{1} {2}\t{3}", sensor.szLabelOrig, sensor.Value, sensor.szUnit, sensor.tReading);
+                    //LogManager.LogDebug("{0}:\t\t{1} {2}\t{3}", element.szLabelOrig, element.Value, element.szUnit, element.tReading);
                 }
+
+            //foreach (var monitoredSensor in MonitoredSensors)
+            //    LogManager.LogDebug("{0}:\t\t{1} {2}\t{3}\t{4}", monitoredSensor.Key.ToString(), monitoredSensor.Value.szLabelOrig, monitoredSensor.Value.Value, monitoredSensor.Value.szUnit, monitoredSensor.Value.tReading);
+
+
         }
         catch
         {

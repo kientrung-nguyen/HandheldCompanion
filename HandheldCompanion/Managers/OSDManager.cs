@@ -105,7 +105,7 @@ public static class OSDManager
 
         var osdSlot = typeof(OSD).GetField("m_osdSlot",
             BindingFlags.NonPublic | BindingFlags.Instance);
-        var value = osdSlot.GetValue(osd);
+        var value = osdSlot?.GetValue(osd);
         if (value is null)
             return uint.MaxValue;
 
@@ -253,6 +253,8 @@ public static class OSDManager
                         GPUentry.elements.Add(new OverlayEntryElement(sensor));
                     if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.GPUTemperature, out sensor))
                         GPUentry.elements.Add(new OverlayEntryElement(sensor));
+                    if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.GPUFrequency, out sensor))
+                        GPUentry.elements.Add(new OverlayEntryElement(sensor));
                     row1.entries.Add(GPUentry);
 
                     OverlayEntry CPUentry = new("CPU", "C2", true);
@@ -261,6 +263,8 @@ public static class OSDManager
                     if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUPower, out sensor))
                         CPUentry.elements.Add(new OverlayEntryElement(sensor));
                     if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUTemperature, out sensor))
+                        CPUentry.elements.Add(new OverlayEntryElement(sensor));
+                    if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUFrequency, out sensor))
                         CPUentry.elements.Add(new OverlayEntryElement(sensor));
                     row2.entries.Add(CPUentry);
 
@@ -279,7 +283,7 @@ public static class OSDManager
                     if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.BatteryChargeLevel,
                             out sensor))
                         BATTentry.elements.Add(new OverlayEntryElement(sensor));
-                    if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.BatteryRemainingCapacity,
+                    if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.BatteryChargeRate,
                             out sensor))
                         BATTentry.elements.Add(new OverlayEntryElement(sensor));
                     if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.BatteryRemainingTime,
@@ -287,7 +291,7 @@ public static class OSDManager
                         BATTentry.elements.Add(new OverlayEntryElement(sensor));
                     row5.entries.Add(BATTentry);
 
-                    OverlayEntry FPSentry = new("<APP>", "C6");
+                    OverlayEntry FPSentry = new("<APP>", "C6", true);
                     FPSentry.elements.Add(new OverlayEntryElement
                     {
                         Value = "<FR>",

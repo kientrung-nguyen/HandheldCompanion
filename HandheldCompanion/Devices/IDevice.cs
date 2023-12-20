@@ -101,14 +101,16 @@ public abstract class IDevice
     protected const byte WR_EC = 0x81;   // Write Embedded Controller
 
     // device configurable TDP (down, up)
-    public double[] cTDP = [10, 25];
+    public double[] cTDP = new double[] { 10, 25 };
 
     // device GfxClock frequency limits
-    public double[] GfxClock = [100, 1800];
+    public double[] GfxClock = new double[] { 100, 1800 };
+    public double BaseGfxClock = 800;
     public uint CpuClock = 6000;
+    public uint BaseCPUClock = 3900;
 
     // device nominal TDP (slow, fast)
-    public double[] nTDP = [15, 15, 20];
+    public double[] nTDP = new double[] { 15, 15, 20 };
 
     // device maximum operating temperature
     public double Tjmax = 100;
@@ -190,11 +192,11 @@ public abstract class IDevice
 
         var ManufacturerName = MotherboardInfo.Manufacturer.ToUpper();
         var ProductName = MotherboardInfo.Product;
-        var SystemName = MotherboardInfo.SystemName;
-        var Version = MotherboardInfo.Version;
         var Processor = MotherboardInfo.ProcessorName;
-        var NumberOfCores = MotherboardInfo.NumberOfCores;
-
+        //var NumberOfCores = MotherboardInfo.NumberOfCores;
+        //var MaxClockSpeed = MotherboardInfo.ProcessorMaxClockSpeed;
+        //var SystemName = MotherboardInfo.SystemName;
+        var Version = MotherboardInfo.Version;
         switch (ManufacturerName)
         {
             case "AYN":

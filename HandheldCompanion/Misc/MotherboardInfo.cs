@@ -251,16 +251,17 @@ public static class MotherboardInfo
             if (_ProcessorMaxClockSpeed != 0)
                 return _ProcessorMaxClockSpeed;
 
-            foreach (ManagementObject queryObj in processorCollection)
-            {
-                var query = queryObj["MaxClockSpeed"];
-                if (query is not null)
-                {
-                    if (uint.TryParse(query.ToString(), out var value))
-                        _ProcessorMaxClockSpeed = value;
-                    break;
-                }
-            }
+            _ProcessorMaxClockSpeed = MainWindow.CurrentDevice.BaseCPUClock;
+            //foreach (ManagementObject queryObj in processorCollection)
+            //{
+            //    var query = queryObj["MaxClockSpeed"];
+            //    if (query is not null)
+            //    {
+            //        if (uint.TryParse(query.ToString(), out var value))
+            //            _ProcessorMaxClockSpeed = value;
+            //        break;
+            //    }
+            //}
 
             return _ProcessorMaxClockSpeed;
         }

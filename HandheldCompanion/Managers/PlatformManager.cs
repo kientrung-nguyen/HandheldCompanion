@@ -183,15 +183,21 @@ public static class PlatformManager
         {
             // If AutoTDP or framerate limiter is needed, start only RTSS and stop HWiNFO
             if (!PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) && !PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
-                // Only start RTSS if it was not running before and if it is installed
+            // Only start RTSS if it was not running before and if it is installed
+            {
                 if (RTSS.IsInstalled)
                     RTSS.Start();
+                //if (HWiNFO.IsInstalled)
+                //    HWiNFO.Start();
+            }
 
             // Only stop HWiNFO if it was running before
             // Only stop HWiNFO if it is installed
+
             if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay))
                 if (HWiNFO.IsInstalled)
                     HWiNFO.Stop(true);
+
         }
         else
         {

@@ -12,6 +12,7 @@ public class GPDWinMax2AMD : GPDWinMax2
         cTDP = new double[] { 15, 28 };
         GfxClock = new double[] { 100, 2200 };
         CpuClock = 4700;
+        BaseCPUClock = 3300;
 
         GyrometerAxis = new Vector3(1.0f, 1.0f, -1.0f);
         GyrometerAxisSwap = new SortedDictionary<char, char>

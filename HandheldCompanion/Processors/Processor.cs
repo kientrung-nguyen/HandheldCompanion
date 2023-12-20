@@ -1,6 +1,8 @@
 ﻿using HandheldCompanion.Managers;
 using SharpDX;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Timers;
 
 namespace HandheldCompanion.Processors;
@@ -52,16 +54,12 @@ public class Processor
         if (processor is not null)
             return processor;
 
-        switch (Manufacturer)
+        processor = Manufacturer switch
         {
-            case "GenuineIntel":
-                processor = new IntelProcessor();
-                break;
-            case "AuthenticAMD":
-                processor = new AMDProcessor();
-                break;
-        }
-
+            "GenuineIntel" => new IntelProcessor(),
+            "AuthenticAMD" => new AMDProcessor(),
+            _ => throw new NotSupportedException(),
+        };
         return processor;
     }
 
@@ -103,6 +101,11 @@ public class Processor
          */
 
         LogManager.LogDebug("User requested GPU clock: {0}, error code: {1}", clock, result);
+    }
+
+    public virtual float GetGPUClock()
+    {
+        return m_Misc["gfx_clk"];
     }
 
     public virtual void SetMaxPerformance(int result = 0)

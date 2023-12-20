@@ -174,12 +174,11 @@ public static class PowerScheme
         if (GetActiveScheme(out var schemeGuid))
         {
             // unhide attribute
-            SetAttribute(subGroupGuid, settingGuid, false);
+            //SetAttribute(subGroupGuid, settingGuid, false);
 
             // set value(s)
             SetValue(PowerIndexType.AC, schemeGuid, subGroupGuid, settingGuid, ACValue);
             SetValue(PowerIndexType.DC, schemeGuid, subGroupGuid, settingGuid, DCValue);
-
             // activate scheme
             SetActiveScheme(schemeGuid);
         }
@@ -190,7 +189,7 @@ public static class PowerScheme
         if (GetActiveScheme(out var schemeGuid))
         {
             // unhide attribute
-            SetAttribute(subGroupGuid, settingGuid, false);
+            //SetAttribute(subGroupGuid, settingGuid, false);
 
             // set value
             SetValue(powerIndex, schemeGuid, subGroupGuid, settingGuid, value);

@@ -138,6 +138,14 @@ public class AMDProcessor : Processor
         }
     }
 
+    public override float GetGPUClock()
+    {
+        if (m_Misc.ContainsKey("gfx_clk"))
+            return m_Misc["gfx_clk"];
+
+        return base.GetGPUClock();
+    }
+
     public override void SetTDPLimit(PowerType type, double limit, bool immediate, int result)
     {
         if (ry == IntPtr.Zero)

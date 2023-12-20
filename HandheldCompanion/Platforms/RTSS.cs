@@ -162,16 +162,18 @@ public class RTSS : IPlatform
             try
             {
                 appEntry = OSD.GetAppEntries()
-                    .Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None && entry.ProcessId == ProcessId)
-                    .FirstOrDefault();
+                    .Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None)
+                    .FirstOrDefault(entry => entry.ProcessId == ProcessId);
             }
             catch (FileNotFoundException)
             {
                 return;
             }
             catch { }
-
-            await Task.Delay(1000);
+            finally
+            {
+                await Task.Delay(1000);
+            }
         } while (appEntry is null && ProcessManager.HasProcess(ProcessId) && KeepAlive);
 
         if (appEntry is null)
@@ -223,6 +225,24 @@ public class RTSS : IPlatform
     {
         if (KeepAlive)
             StartProcess();
+    }
+
+    public AppEntry GetAppEntry(int processId)
+    {
+        try
+        {
+            var appE = OSD.GetAppEntries()
+                .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == processId);
+            return appE;
+        }
+        catch (InvalidDataException)
+        {
+        }
+        catch (FileNotFoundException)
+        {
+        }
+
+        return null;
     }
 
     public double GetFramerate(int processId)
