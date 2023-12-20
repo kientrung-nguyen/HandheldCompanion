@@ -42,6 +42,10 @@ namespace HandheldCompanion.Controllers
         private const byte BACK_IDX = 19;
         private const byte STATUS_IDX = 0;
         private const byte PING_IDX = 40;
+        private HashSet<int> READY_STATES = new HashSet<int>() {25, 60};
+
+        private const byte MIN_WIRELESS_STATUS = 40;
+        private const byte MAX_WIRELESS_STATUS = 50;
 
         private Thread dataThread;
         private bool dataThreadRunning;
@@ -52,7 +56,7 @@ namespace HandheldCompanion.Controllers
             get
             {
                 byte status = GetStatus(STATUS_IDX);
-                return status == 25;
+                return READY_STATES.Contains(status);
             }
         }
 
@@ -61,7 +65,7 @@ namespace HandheldCompanion.Controllers
             get
             {
                 byte status = GetStatus(PING_IDX);
-                return (status >= 40 && status <= 50);
+                return (status >= MIN_WIRELESS_STATUS && status <= MAX_WIRELESS_STATUS);
             }
         }
 
@@ -236,10 +240,11 @@ namespace HandheldCompanion.Controllers
                     continue;
 
                 HidReport report = hidDevice.ReadReport();
+
                 if (report is not null)
                 {
                     // check if packet is safe
-                    if (report.Data[STATUS_IDX] == 25)
+                    if (READY_STATES.Contains(report.Data[STATUS_IDX]))
                         Data = report.Data;
                 }
             }
@@ -370,17 +375,9 @@ namespace HandheldCompanion.Controllers
 
         internal void SetPassthrough(bool enabled)
         {
-            switch(enabled)
-            {
-                case true:
-                    SetTouchPadStatus(1);
-                    break;
-                case false:
-                    SetTouchPadStatus(0);
-                    break;
-            }
-
+            SetTouchPadStatus(enabled ? 1 : 0);
             IsPassthrough = enabled;
         }
+
     }
 }

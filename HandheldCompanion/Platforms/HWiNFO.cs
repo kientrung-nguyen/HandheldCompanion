@@ -146,13 +146,9 @@ public class HWiNFO : IPlatform
 
     public override bool Start()
     {
-        // not authorized
-        // var hasSensorsSM = GetProperty("SensorsSM");
-
-        // start HWiNFO if not running or Shared Memory is disabled
-        if (!IsRunning) // || !hasSensorsSM)
+        // start HWiNFO if not running
+        if (!IsRunning)
         {
-            // StopProcess();
             StartProcess();
         }
         else
@@ -202,14 +198,9 @@ public class HWiNFO : IPlatform
             catch
             {
                 // not authorized
-                // shared memory is disabled, halt process
-                /*
-                if (prevPoll_time != -1)
-                    StopProcess();
-                */
+                // shared memory is disabled
 
                 // raise event
-                // todo: implement a new hint
                 SetStatus(PlatformStatus.Stalled);
                 Monitor.Exit(updateLock);
                 return;
@@ -218,11 +209,7 @@ public class HWiNFO : IPlatform
             // we couldn't poll HWiNFO, halt process
             if (HWiNFOMemory.poll_time == prevPoll_time)
             {
-                // not authorized
-                // StopProcess();
-
                 // raise event
-                // todo: implement a new hint
                 SetStatus(PlatformStatus.Stalled);
                 Monitor.Exit(updateLock);
                 return;
