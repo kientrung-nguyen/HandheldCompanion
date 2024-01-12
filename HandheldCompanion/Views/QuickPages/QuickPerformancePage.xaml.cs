@@ -347,8 +347,9 @@ public partial class QuickPerformancePage : Page
             return;
 
         selectedProfile.TDPOverrideEnabled = TDPToggle.IsOn;
-        selectedProfile.TDPOverrideValues = new double[3]
+        selectedProfile.TDPOverrideValues = new double[4]
         {
+                TDPSlider.Value,
                 TDPSlider.Value,
                 TDPSlider.Value,
                 TDPSlider.Value
@@ -365,8 +366,9 @@ public partial class QuickPerformancePage : Page
         if (updateLock)
             return;
 
-        selectedProfile.TDPOverrideValues = new double[3]
+        selectedProfile.TDPOverrideValues = new double[4]
         {
+                TDPSlider.Value,
                 TDPSlider.Value,
                 TDPSlider.Value,
                 TDPSlider.Value

@@ -63,7 +63,7 @@ public static class ProcessManager
     {
         try
         {
-            
+
             if (sender is AutomationElement element)
             {
                 var processInfo = new ProcessUtils.FindHostedProcess(element.Current.NativeWindowHandle)._realProcess;
@@ -212,9 +212,11 @@ public static class ProcessManager
 
     private static void ProcessHalted(object? sender, EventArgs e)
     {
+        if (sender is null) return;
+
         int processId = ((Process)sender).Id;
 
-        if (!Processes.TryGetValue(processId, out ProcessEx processEx))
+        if (!Processes.TryGetValue(processId, out var processEx))
             return;
 
         // stopped process can't have foreground
@@ -263,10 +265,12 @@ public static class ProcessManager
                 // get filter
                 ProcessFilter filter = GetFilter(exec, path);
 
-                ProcessEx processEx = new ProcessEx(proc, path, exec, filter);
-                processEx.MainWindowHandle = hWnd;
-                processEx.MainWindowTitle = ProcessUtils.GetWindowTitle(hWnd);
-                processEx.MainThread = GetMainThread(proc);
+                var processEx = new ProcessEx(proc, path, exec, filter)
+                {
+                    MainWindowHandle = hWnd,
+                    MainWindowTitle = ProcessUtils.GetWindowTitle(hWnd),
+                    MainThread = GetMainThread(proc)
+                };
 
                 Processes.TryAdd(ProcessID, processEx);
 

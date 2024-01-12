@@ -504,8 +504,9 @@ namespace HandheldCompanion.Views.Pages
                 return;
 
             selectedProfile.TDPOverrideEnabled = TDPToggle.IsOn;
-            selectedProfile.TDPOverrideValues = new double[3]
+            selectedProfile.TDPOverrideValues = new double[4]
             {
+                TDPSlider.Value,
                 TDPSlider.Value,
                 TDPSlider.Value,
                 TDPSlider.Value
@@ -523,8 +524,9 @@ namespace HandheldCompanion.Views.Pages
             if (updateLock)
                 return;
 
-            selectedProfile.TDPOverrideValues = new double[3]
+            selectedProfile.TDPOverrideValues = new double[4]
             {
+                TDPSlider.Value,
                 TDPSlider.Value,
                 TDPSlider.Value,
                 TDPSlider.Value

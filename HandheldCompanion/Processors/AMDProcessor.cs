@@ -111,10 +111,12 @@ public class AMDProcessor : Processor
             if (limit_stapm != 0)
                 m_Limits[PowerType.Stapm] = limit_stapm;
 
+
             // read value(s)
             var value_fast = (int)RyzenAdj.get_fast_value(ry);
             var value_slow = (int)RyzenAdj.get_slow_value(ry);
             var value_stapm = (int)RyzenAdj.get_stapm_value(ry);
+            var value_apuslow = (int)RyzenAdj.get_apu_slow_value(ry);
 
             while (value_fast == 0)
                 value_fast = (int)RyzenAdj.get_fast_value(ry);
@@ -122,6 +124,8 @@ public class AMDProcessor : Processor
                 value_slow = (int)RyzenAdj.get_slow_value(ry);
             while (value_stapm == 0)
                 value_stapm = (int)RyzenAdj.get_stapm_value(ry);
+            while (value_apuslow == 0)
+                value_apuslow = (int)RyzenAdj.get_apu_slow_value(ry);
 
             m_Values[PowerType.Fast] = value_fast;
             m_Values[PowerType.Slow] = value_slow;
@@ -177,7 +181,7 @@ public class AMDProcessor : Processor
         }
     }
 
-    public override void SetGPUClock(double clock, int result)
+    public override void SetGPUClock(double clock, bool immediate, int result)
     {
         if (Monitor.TryEnter(IsBusy))
         {
@@ -189,7 +193,7 @@ public class AMDProcessor : Processor
                         {
                             if (sd is null)
                             {
-                                base.SetGPUClock(clock, 1);
+                                base.SetGPUClock(clock, immediate, 1);
                                 return;
                             }
 
@@ -204,7 +208,7 @@ public class AMDProcessor : Processor
                                 sd.SoftMaxGfxClock = (uint)clock; //softMax
                             }
 
-                            base.SetGPUClock(clock, 0);
+                            base.SetGPUClock(clock, immediate, 0);
                         }
                     }
                     break;
@@ -213,8 +217,7 @@ public class AMDProcessor : Processor
                     {
                         int error1;
                         // int error2, error3;
-                        // kientrungnguyen - set min & max clock frequency not supported.
-                        //
+
                         if (clock == 12750)
                         {
                             error1 = RyzenAdj.set_gfx_clk(ry, (uint)clock);
@@ -228,7 +231,7 @@ public class AMDProcessor : Processor
                             //error3 = RyzenAdj.set_max_gfxclk_freq(ry, (uint)clock);
                         }
 
-                        base.SetGPUClock(clock, error1);
+                        base.SetGPUClock(clock, immediate, error1);
                     }
                     break;
             }
@@ -243,6 +246,17 @@ public class AMDProcessor : Processor
         {
             int errorCode = RyzenAdj.set_max_performance(ry);
             base.SetMaxPerformance(errorCode);
+
+            Monitor.Exit(IsBusy);
+        }
+    }
+
+    public override void SetPowerSaving(int result)
+    {
+        if (Monitor.TryEnter(IsBusy))
+        {
+            int errorCode = RyzenAdj.set_power_saving(ry);
+            base.SetPowerSaving(errorCode);
 
             Monitor.Exit(IsBusy);
         }

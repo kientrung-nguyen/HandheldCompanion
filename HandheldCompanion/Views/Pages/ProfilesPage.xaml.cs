@@ -28,6 +28,7 @@ public partial class ProfilesPage : Page
 {
     // when set on start cannot be null anymore
     public static Profile selectedProfile;
+    private UpdateSource selectedSource = UpdateSource.ProfilesPage;
 
     private readonly SettingsMode0 page0 = new("SettingsMode0");
     private readonly SettingsMode1 page1 = new("SettingsMode1");
@@ -718,25 +719,29 @@ public partial class ProfilesPage : Page
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            var idx = -1;
-            foreach (Profile pr in cB_Profiles.Items)
+            using (new ScopedLock(updateLock))
             {
-                var isCurrent = pr.Path.Equals(profile.Path, StringComparison.InvariantCultureIgnoreCase);
-                if (isCurrent)
+                selectedSource = source;
+                var idx = -1;
+                foreach (Profile pr in cB_Profiles.Items)
                 {
-                    idx = cB_Profiles.Items.IndexOf(pr);
-                    break;
+                    var isCurrent = pr.Path.Equals(profile.Path, StringComparison.InvariantCultureIgnoreCase);
+                    if (isCurrent)
+                    {
+                        idx = cB_Profiles.Items.IndexOf(pr);
+                        break;
+                    }
                 }
+
+                if (idx != -1)
+                    cB_Profiles.Items[idx] = profile;
+                else
+                    cB_Profiles.Items.Add(profile);
+
+                cB_Profiles.Items.Refresh();
+
+                cB_Profiles.SelectedItem = profile;
             }
-
-            if (idx != -1)
-                cB_Profiles.Items[idx] = profile;
-            else
-                cB_Profiles.Items.Add(profile);
-
-            cB_Profiles.Items.Refresh();
-
-            cB_Profiles.SelectedItem = profile;
         });
     }
 
@@ -869,6 +874,12 @@ public partial class ProfilesPage : Page
     {
         if (selectedProfile is null)
             return;
+
+        if (selectedSource != UpdateSource.ProfilesPage)
+        {
+            selectedSource = UpdateSource.ProfilesPage;
+            return;
+        }
 
         ProfileManager.UpdateOrCreateProfile(selectedProfile, source);
     }

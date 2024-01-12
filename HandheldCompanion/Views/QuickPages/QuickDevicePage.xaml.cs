@@ -45,6 +45,7 @@ public partial class QuickDevicePage : Page
                 case PlatformStatus.Ready:
                     OverlayDisplayLevelExtended.IsEnabled = true;
                     OverlayDisplayLevelFull.IsEnabled = true;
+                    OverlayDisplayLevelHorizontal.IsEnabled = true;
                     break;
                 case PlatformStatus.Stalled:
                     // OverlayDisplayLevelExtended.IsEnabled = false;

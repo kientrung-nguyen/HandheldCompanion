@@ -32,7 +32,7 @@ public static class SettingsManager
         var properties = Properties.Settings
             .Default
             .Properties
-            .Cast<SettingsProperty>()
+            .OfType<SettingsProperty>()
             .OrderBy(s => s.Name);
 
         foreach (var property in properties)

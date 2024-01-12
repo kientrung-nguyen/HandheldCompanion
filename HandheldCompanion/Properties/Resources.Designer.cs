@@ -4771,6 +4771,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Full (Horizontal Top Bar).
+        /// </summary>
+        public static string OverlayPage_OverlayDisplayLevel_FullHorizontal {
+            get {
+                return ResourceManager.GetString("OverlayPage_OverlayDisplayLevel_FullHorizontal", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Minimal.
         /// </summary>
         public static string OverlayPage_OverlayDisplayLevel_Minimal {

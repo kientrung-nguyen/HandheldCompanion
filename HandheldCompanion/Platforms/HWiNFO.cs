@@ -1,13 +1,14 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
+using Hwinfo.SharedMemory;
+using Microsoft.WindowsAPICodePack.Sensors;
+using RTSSSharedMemoryNET;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Timers;
 using System.Windows;
 using Timer = System.Timers.Timer;
@@ -20,22 +21,19 @@ public class HWiNFO : IPlatform
     {
         CPUTemperature,
         CPUFrequency,
-        CPUEffectiveFrequency,
+        CPUFrequencyEffective,
         CPUPower,
         CPUUsage,
-        TotalCPUUsage,
-        MaxCoreRatio,
+        CPUCoreRatio,
+        CPUBusClock,
 
 
         GPUTemperature,
         GPUFrequency,
-        GPUEffectiveFrequency,
+        GPUFrequencyEffective,
         GPUPower,
         GPUUsage,
-        GPUUtilization,
         GPUMemoryUsage,
-        DynamicGPUMemoryUsage,
-        TotalGPUMemoryUsage,
 
         PL1,
         PL2,
@@ -48,27 +46,13 @@ public class HWiNFO : IPlatform
         PhysicalMemoryUsage,
         VirtualMemoryUsage,
 
-        FramerateDisplayed,
-        Frametime
     }
 
-    private const string HWiNFO_SHARED_MEM_FILE_NAME = "Global\\HWiNFO_SENS_SM2";
-    private const int HWiNFO_SENSORS_STRING_LEN = 128;
-    private const int HWiNFO_UNIT_STRING_LEN = 16;
-    private const int MemoryInterval = 1000;
-
-    private readonly Timer MemoryTimer;
-
-    private SharedMemory HWiNFOMemory;
-
-    private ConcurrentDictionary<uint, Sensor> HWiNFOSensors;
-    private MemoryMappedViewAccessor MemoryAccessor;
-
-    private MemoryMappedFile MemoryMapped;
-
-    public ConcurrentDictionary<SensorElementType, SensorElement> MonitoredSensors = new();
-
-    private long prevPoll_time = -1;
+    private int MemoryInterval = SettingsManager.GetInt("OnScreenDisplayRefreshRate");
+    private const int PlatformInterval = 3000;
+    private readonly Timer HWiNFOWatchdog;
+    private SharedMemoryReader HWiNFOReader;
+    public readonly ConcurrentDictionary<SensorElementType, SensorReading> MonitoredSensors = new();
 
     public HWiNFO()
     {
@@ -80,8 +64,7 @@ public class HWiNFO : IPlatform
         ExecutableName = RunningName = "HWiNFO64.exe";
 
         // check if platform is installed
-        InstallPath = RegistryUtils.GetString(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\HWiNFO64_is1",
-            "InstallLocation");
+        InstallPath = RegistryUtils.GetString(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\HWiNFO64_is1", "InstallLocation");
         if (Path.Exists(InstallPath))
         {
             // update paths
@@ -113,10 +96,20 @@ public class HWiNFO : IPlatform
         }
 
         // those are used for computes
-        MonitoredSensors[SensorElementType.PL1] = new SensorElement();
-        MonitoredSensors[SensorElementType.PL2] = new SensorElement();
-        MonitoredSensors[SensorElementType.CPUFrequency] = new SensorElement();
-        MonitoredSensors[SensorElementType.GPUFrequency] = new SensorElement();
+        MonitoredSensors[SensorElementType.PL1] = new();
+        MonitoredSensors[SensorElementType.PL2] = new();
+        MonitoredSensors[SensorElementType.CPUFrequency] = new();
+        MonitoredSensors[SensorElementType.CPUFrequencyEffective] = new();
+        MonitoredSensors[SensorElementType.CPUBusClock] = new();
+        MonitoredSensors[SensorElementType.CPUCoreRatio] = new();
+        MonitoredSensors[SensorElementType.CPUUsage] = new();
+        MonitoredSensors[SensorElementType.GPUUsage] = new();
+        MonitoredSensors[SensorElementType.GPUFrequency] = new();
+        MonitoredSensors[SensorElementType.GPUFrequencyEffective] = new();
+
+
+        //PlatformManager.RTSS.Hooked += RTSS_Hooked;
+        //PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
 
         // file watcher
         if (File.Exists(SettingsPath))
@@ -130,12 +123,12 @@ public class HWiNFO : IPlatform
         }
 
         // our main watchdog to (re)apply requested settings
-        PlatformWatchdog = new Timer(3000) { Enabled = false };
-        PlatformWatchdog.Elapsed += Watchdog_Elapsed;
+        PlatformWatchdog = new Timer(PlatformInterval) { Enabled = false };
+        PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
 
         // secondary watchdog to (re)populate sensors
-        MemoryTimer = new Timer(MemoryInterval) { Enabled = false };
-        MemoryTimer.Elapsed += (sender, e) => PopulateSensors();
+        HWiNFOWatchdog = new Timer(MemoryInterval) { Enabled = false };
+        HWiNFOWatchdog.Elapsed += (sender, e) => PopulateSensors();
     }
 
     private void SystemWatcher_Changed(object sender, FileSystemEventArgs e)
@@ -146,9 +139,11 @@ public class HWiNFO : IPlatform
 
     public override bool Start()
     {
-        // start HWiNFO if not running
-        if (!IsRunning)
+        // start HWiNFO if not running or Shared Memory is disabled
+        var hasSensorsSM = GetProperty("SensorsSM");
+        if (!IsRunning || !hasSensorsSM)
         {
+            StopProcess();
             StartProcess();
         }
         else
@@ -159,16 +154,20 @@ public class HWiNFO : IPlatform
 
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
+        HWiNFOReader = new();
+
+        // our main watchdog to (re)apply requested settings
+        PlatformWatchdog = new Timer(PlatformInterval) { Enabled = false };
+        PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
+
         return base.Start();
     }
 
     public override bool Stop(bool kill = false)
     {
-        if (MemoryTimer is not null)
-            MemoryTimer.Stop();
-
+        HWiNFOWatchdog?.Stop();
+        HWiNFOReader?.Dispose();
         SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
-
         return base.Stop(kill);
     }
 
@@ -181,73 +180,22 @@ public class HWiNFO : IPlatform
             {
                 case "OnScreenDisplayRefreshRate":
                     SetProperty("SensorInterval", Convert.ToInt32(value));
+                    if (Convert.ToInt32(value) != MemoryInterval)
+                        MemoryInterval = Convert.ToInt32(value);
+                    
                     break;
             }
         });
     }
 
-    private void Watchdog_Elapsed(object? sender, ElapsedEventArgs e)
+    private void PlatformWatchdogElapsed()
     {
-        if (Monitor.TryEnter(updateLock))
-        {
-            try
-            {
-                // check shared memory
-                MemoryMappedFile.OpenExisting(HWiNFO_SHARED_MEM_FILE_NAME, MemoryMappedFileRights.Read);
-            }
-            catch
-            {
-                // not authorized
-                // shared memory is disabled
-
-                // raise event
-                SetStatus(PlatformStatus.Stalled);
-                Monitor.Exit(updateLock);
-                return;
-            }
-
-            // we couldn't poll HWiNFO, halt process
-            if (HWiNFOMemory.poll_time == prevPoll_time)
-            {
-                // raise event
-                SetStatus(PlatformStatus.Stalled);
-                Monitor.Exit(updateLock);
-                return;
-            }
-
-            // update poll time
-            if (HWiNFOMemory.poll_time != 0)
-                prevPoll_time = HWiNFOMemory.poll_time;
-
-            // reset tentative counter
-            Tentative = 0;
-
-            // connect to shared memory
-            if (MemoryMapped is null)
-                MemoryMapped = MemoryMappedFile.OpenExisting(HWiNFO_SHARED_MEM_FILE_NAME, MemoryMappedFileRights.Read);
-
-            // get accessor
-            if (MemoryAccessor is null)
-                MemoryAccessor =
-                    MemoryMapped.CreateViewAccessor(0L, Marshal.SizeOf(typeof(SharedMemory)), MemoryMappedFileAccess.Read);
-            MemoryAccessor.Read(0L, out HWiNFOMemory);
-
-            // we listed sensors already
-            if (HWiNFOSensors is null)
-            {
-                // (re)set sensors array
-                HWiNFOSensors = new ConcurrentDictionary<uint, Sensor>();
-
-                // populate sensors array
-                GetSensors();
-            }
-
-            MemoryTimer.Start();
-
-            Monitor.Exit(updateLock);
-        }
+        // reset tentative counter
+        Tentative = 0;
+        //HWiNFOWatchdog?.Start();
     }
 
+    /*
     public void GetSensors()
     {
         try
@@ -269,7 +217,8 @@ public class HWiNFO : IPlatform
                         NameUser = structure.szSensorNameUser,
                         Elements = new ConcurrentDictionary<uint, SensorElement>()
                     };
-                    HWiNFOSensors[index] = sensor;
+                    HWSensors[index] = sensor;
+
                 }
         }
         catch
@@ -277,309 +226,151 @@ public class HWiNFO : IPlatform
             // do something
         }
     }
-
+    */
     public void PopulateSensors()
     {
-        if (MemoryMapped is null)
-            return;
-
         try
         {
-            MonitoredSensors[SensorElementType.CPUFrequency] = new SensorElement();
-            MonitoredSensors[SensorElementType.CPUEffectiveFrequency] = new SensorElement();
-            for (uint index = 0; index < HWiNFOMemory.dwNumReadingElements; ++index)
-                using (var viewStream = MemoryMapped.CreateViewStream(
-                           HWiNFOMemory.dwOffsetOfReadingSection + index * HWiNFOMemory.dwSizeOfReadingElement,
-                           HWiNFOMemory.dwSizeOfReadingElement, MemoryMappedFileAccess.Read))
+            var sensors = HWiNFOReader.ReadLocal();
+            MonitoredSensors[SensorElementType.CPUCoreRatio] = new();
+            MonitoredSensors[SensorElementType.CPUFrequency] = new();
+            MonitoredSensors[SensorElementType.CPUFrequencyEffective] = new();
+            MonitoredSensors.TryRemove(SensorElementType.BatteryRemainingTime, out _);
+
+            foreach (var sensor in sensors)
+            {
+                switch (sensor.LabelOrig)
                 {
-                    var buffer = new byte[(int)HWiNFOMemory.dwSizeOfReadingElement];
-                    viewStream.Read(buffer, 0, (int)HWiNFOMemory.dwSizeOfReadingElement);
-                    var gcHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                    case "CPU (Tctl/Tdie)": MonitoredSensors[SensorElementType.CPUTemperature] = sensor; break;
+                    case "GPU Temperature": MonitoredSensors[SensorElementType.GPUTemperature] = sensor; break;
+                    case "CPU Package Power": MonitoredSensors[SensorElementType.CPUPower] = sensor; break;
+                    case "GPU ASIC Power": MonitoredSensors[SensorElementType.GPUPower] = sensor; break;
+                    case "GPU D3D Usage": MonitoredSensors[SensorElementType.GPUUsage] = sensor; break;
+                    case "Max CPU/Thread Usage": MonitoredSensors[SensorElementType.CPUUsage] = sensor; break;
+                    case "GPU Clock":
+                        MonitoredSensors[SensorElementType.GPUFrequency] = sensor;
+                        if (sensor.Value != MonitoredSensors[SensorElementType.GPUFrequency].Value)
+                            GPUFrequencyChanged?.Invoke(sensor.Value);
+                        break;
+                    case "GPU Clock (Effective)": MonitoredSensors[SensorElementType.GPUFrequencyEffective] = sensor; break;
+                    case "P-core 0 Ratio" or "P-core 1 Ratio" or "P-core 10 Ratio":
+                    case "P-core 2 Ratio" or "P-core 11 Ratio" or "P-core 3 Ratio" or "P-core 12 Ratio":
+                    case "P-core 4 Ratio" or "P-core 13 Ratio" or "P-core 5 Ratio" or "P-core 14 Ratio":
+                    case "P-core 6 Ratio" or "P-core 15 Ratio" or "P-core 7 Ratio" or "P-core 16 Ratio":
+                    case "P-core 8 Ratio" or "P-core 17 Ratio" or "P-core 9 Ratio" or "P-core 18 Ratio":
+                    case "Core 0 Ratio" or "Core 1 Ratio" or "Core 10 Ratio":
+                    case "Core 2 Ratio" or "Core 11 Ratio" or "Core 3 Ratio" or "Core 12 Ratio":
+                    case "Core 4 Ratio" or "Core 13 Ratio" or "Core 5 Ratio" or "Core 14 Ratio":
+                    case "Core 6 Ratio" or "Core 15 Ratio" or "Core 7 Ratio" or "Core 16 Ratio":
+                    case "Core 8 Ratio" or "Core 17 Ratio" or "Core 9 Ratio" or "Core 18 Ratio":
+                        if (sensor.Value > MonitoredSensors[SensorElementType.CPUCoreRatio].Value)
+                            MonitoredSensors[SensorElementType.CPUCoreRatio] = sensor;
+                        break;
+                    case "Bus Clock": MonitoredSensors[SensorElementType.CPUBusClock] = sensor; break;
+                    case "Core 0 Clock" or "Core 1 Clock" or "Core 10 Clock":
+                    case "Core 2 Clock" or "Core 11 Clock" or "Core 3 Clock" or "Core 12 Clock":
+                    case "Core 4 Clock" or "Core 13 Clock" or "Core 5 Clock" or "Core 14 Clock":
+                    case "Core 6 Clock" or "Core 15 Clock" or "Core 7 Clock" or "Core 16 Clock":
+                    case "Core 8 Clock" or "Core 17 Clock" or "Core 9 Clock" or "Core 18 Clock":
+                        if (sensor.Value > MonitoredSensors[SensorElementType.CPUFrequency].Value)
+                            MonitoredSensors[SensorElementType.CPUFrequency] = sensor;
+                        break;
+                    case "P-core 0 T0 Effective Clock" or "P-core 0 T1 Effective Clock":
+                    case "P-core 1 T0 Effective Clock" or "P-core 1 T1 Effective Clock":
+                    case "P-core 2 T0 Effective Clock" or "P-core 2 T1 Effective Clock":
+                    case "P-core 3 T0 Effective Clock" or "P-core 3 T1 Effective Clock":
+                    case "P-core 4 T0 Effective Clock" or "P-core 4 T1 Effective Clock":
+                    case "P-core 5 T0 Effective Clock" or "P-core 5 T1 Effective Clock":
+                    case "P-core 6 T0 Effective Clock" or "P-core 6 T1 Effective Clock":
+                    case "P-core 7 T0 Effective Clock" or "P-core 7 T1 Effective Clock":
+                    case "P-core 8 T0 Effective Clock" or "P-core 8 T1 Effective Clock":
+                    case "P-core 9 T0 Effective Clock" or "P-core 9 T1 Effective Clock":
+                    case "P-core 10 T0 Effective Clock" or "P-core 10 T1 Effective Clock":
+                    case "P-core 11 T0 Effective Clock" or "P-core 11 T1 Effective Clock":
+                    case "P-core 12 T0 Effective Clock" or "P-core 12 T1 Effective Clock":
+                    case "P-core 13 T0 Effective Clock" or "P-core 13 T1 Effective Clock":
+                    case "P-core 14 T0 Effective Clock" or "P-core 14 T1 Effective Clock":
+                    case "P-core 15 T0 Effective Clock" or "P-core 15 T1 Effective Clock":
+                    case "P-core 16 T0 Effective Clock" or "P-core 16 T1 Effective Clock":
+                    case "P-core 17 T0 Effective Clock" or "P-core 17 T1 Effective Clock":
+                    case "P-core 18 T0 Effective Clock" or "P-core 18 T1 Effective Clock":
+                    case "Core 0 T0 Effective Clock" or "Core 0 T1 Effective Clock":
+                    case "Core 1 T0 Effective Clock" or "Core 1 T1 Effective Clock":
+                    case "Core 2 T0 Effective Clock" or "Core 2 T1 Effective Clock":
+                    case "Core 3 T0 Effective Clock" or "Core 3 T1 Effective Clock":
+                    case "Core 4 T0 Effective Clock" or "Core 4 T1 Effective Clock":
+                    case "Core 5 T0 Effective Clock" or "Core 5 T1 Effective Clock":
+                    case "Core 6 T0 Effective Clock" or "Core 6 T1 Effective Clock":
+                    case "Core 7 T0 Effective Clock" or "Core 7 T1 Effective Clock":
+                    case "Core 8 T0 Effective Clock" or "Core 8 T1 Effective Clock":
+                    case "Core 9 T0 Effective Clock" or "Core 9 T1 Effective Clock":
+                    case "Core 10 T0 Effective Clock" or "Core 10 T1 Effective Clock":
+                    case "Core 11 T0 Effective Clock" or "Core 11 T1 Effective Clock":
+                    case "Core 12 T0 Effective Clock" or "Core 12 T1 Effective Clock":
+                    case "Core 13 T0 Effective Clock" or "Core 13 T1 Effective Clock":
+                    case "Core 14 T0 Effective Clock" or "Core 14 T1 Effective Clock":
+                    case "Core 15 T0 Effective Clock" or "Core 15 T1 Effective Clock":
+                    case "Core 16 T0 Effective Clock" or "Core 16 T1 Effective Clock":
+                    case "Core 17 T0 Effective Clock" or "Core 17 T1 Effective Clock":
+                    case "Core 18 T0 Effective Clock" or "Core 18 T1 Effective Clock":
+                        if (sensor.Value > MonitoredSensors[SensorElementType.CPUFrequencyEffective].Value)
+                            MonitoredSensors[SensorElementType.CPUFrequencyEffective] = sensor;
+                        break;
+                    case "Remaining Capacity": MonitoredSensors[SensorElementType.BatteryRemainingCapacity] = sensor; break;
+                    case "Charge Rate": MonitoredSensors[SensorElementType.BatteryChargeRate] = sensor; break;
+                    case "Charge Level": MonitoredSensors[SensorElementType.BatteryChargeLevel] = sensor; break;
+                    case "Estimated Remaining Time": MonitoredSensors[SensorElementType.BatteryRemainingTime] = sensor; break;
+                    case "Virtual Memory Committed": MonitoredSensors[SensorElementType.VirtualMemoryUsage] = sensor; break;
+                    case "Physical Memory Used": MonitoredSensors[SensorElementType.PhysicalMemoryUsage] = sensor; break;
+                    case "GPU D3D Memory Dedicated": MonitoredSensors[SensorElementType.GPUMemoryUsage] = sensor; break;
+                    case "PL1 Power Limit" or "PL1 Power Limit (Dynamic)":
+                        {
+                            var reading = (int)Math.Ceiling(sensor.Value);
+                            if (reading != MonitoredSensors[SensorElementType.PL1].Value)
+                                PowerLimitChanged?.Invoke(PowerType.Slow, reading);
+                            MonitoredSensors[SensorElementType.PL1] = sensor;
+                        }
+                        break;
+                    case "PL2 Power Limit" or "PL2 Power Limit (Dynamic)":
+                        {
+                            var reading = (int)Math.Ceiling(sensor.Value);
+                            if (reading != MonitoredSensors[SensorElementType.PL2].Value)
+                                PowerLimitChanged?.Invoke(PowerType.Fast, reading);
 
-                    var element =
-                        (SensorElement)Marshal.PtrToStructure(gcHandle.AddrOfPinnedObject(), typeof(SensorElement));
-                    gcHandle.Free();
-
-                    if (HWiNFOSensors.TryGetValue(element.dwSensorIndex, out var sensor))
-                        sensor.Elements[element.dwSensorID] = element;
-                    else
-                        continue;
-
-                    switch (element.tReading)
-                    {
-                        case SENSOR_READING_TYPE.SENSOR_TYPE_TEMP:
-                            {
-                                switch (element.szLabelOrig)
-                                {
-                                    case "CPU Package":
-                                    case "CPU (Tctl/Tdie)":
-                                        MonitoredSensors[SensorElementType.CPUTemperature] = element;
-                                        break;
-
-                                    case "CPU GT Cores (Graphics)":
-                                    case "GPU Temperature":
-                                        MonitoredSensors[SensorElementType.GPUTemperature] = element;
-                                        break;
-                                }
-                            }
-                            break;
-
-                        case SENSOR_READING_TYPE.SENSOR_TYPE_POWER:
-                            {
-                                switch (element.szLabelOrig)
-                                {
-                                    case "CPU PPT":
-                                    case "CPU Package Power":
-                                        MonitoredSensors[SensorElementType.CPUPower] = element;
-                                        break;
-
-                                    case "PL1 Power Limit":
-                                    // case "PL1 Power Limit (Static)":
-                                    case "PL1 Power Limit (Dynamic)":
-                                        {
-                                            var reading = (int)Math.Ceiling(element.Value);
-                                            if (reading != MonitoredSensors[SensorElementType.PL1].Value)
-                                                PowerLimitChanged?.Invoke(PowerType.Slow, reading);
-
-                                            element.Value = reading;
-                                            MonitoredSensors[SensorElementType.PL1] = element;
-                                        }
-                                        break;
-                                    case "PL2 Power Limit":
-                                    // case "PL2 Power Limit (Static)":
-                                    case "PL2 Power Limit (Dynamic)":
-                                        {
-                                            var reading = (int)Math.Ceiling(element.Value);
-                                            if (reading != MonitoredSensors[SensorElementType.PL2].Value)
-                                                PowerLimitChanged?.Invoke(PowerType.Fast, reading);
-
-                                            element.Value = reading;
-                                            MonitoredSensors[SensorElementType.PL2] = element;
-                                        }
-                                        break;
-
-                                    case "GPU ASIC Power":
-                                    case "GT Cores Power":
-                                    case "GPU SoC Power (VDDCR_SOC)":
-                                    case "GPU PPT":
-                                        MonitoredSensors[SensorElementType.GPUPower] = element;
-                                        break;
-                                }
-                            }
-                            break;
-
-                        case SENSOR_READING_TYPE.SENSOR_TYPE_USAGE:
-                            {
-                                switch (element.szLabelOrig)
-                                {
-                                    case "GPU Utilization":
-                                        MonitoredSensors[SensorElementType.GPUUtilization] = element;
-                                        break;
-                                    case "GPU D3D Usage":
-                                        MonitoredSensors[SensorElementType.GPUUsage] = element;
-                                        break;
-                                    case "Max CPU/Thread Usage":
-                                        MonitoredSensors[SensorElementType.CPUUsage] = element;
-                                        break;
-                                    case "Total CPU Usage":
-                                        MonitoredSensors[SensorElementType.TotalCPUUsage] = element;
-                                        break;
-                                    case "CPU PPT SLOW Limit":
-                                        {
-                                            var reading = (int)Math.Floor(MonitoredSensors[SensorElementType.CPUPower].Value /
-                                                element.Value * 100.0d);
-                                            if (reading != MonitoredSensors[SensorElementType.PL1].Value)
-                                                PowerLimitChanged?.Invoke(PowerType.Slow, reading);
-
-                                            element.Value = reading;
-                                            MonitoredSensors[SensorElementType.PL1] = element;
-                                        }
-                                        break;
-                                    case "CPU PPT FAST Limit":
-                                        {
-                                            var reading = (int)Math.Floor(MonitoredSensors[SensorElementType.CPUPower].Value /
-                                                element.Value * 100.0d);
-                                            if (reading != MonitoredSensors[SensorElementType.PL2].Value)
-                                                PowerLimitChanged?.Invoke(PowerType.Fast, reading);
-
-                                            element.Value = reading;
-                                            MonitoredSensors[SensorElementType.PL2] = element;
-                                        }
-                                        break;
-                                }
-                            }
-                            break;
-
-                        case SENSOR_READING_TYPE.SENSOR_TYPE_CLOCK:
-                            {
-                                switch (element.szLabelOrig)
-                                {
-                                    case "GPU Clock (Effective)":
-                                        MonitoredSensors[SensorElementType.GPUEffectiveFrequency] = element;
-                                        break;
-                                    case "GPU Clock":
-                                        {
-                                            var reading = element.Value;
-                                            if (reading != MonitoredSensors[SensorElementType.GPUFrequency].Value)
-                                                GPUFrequencyChanged?.Invoke(reading);
-
-                                            MonitoredSensors[SensorElementType.GPUFrequency] = element;
-                                        }
-                                        break;
-                                    case "P-core 0 T0 Effective Clock":
-                                    case "P-core 1 T0 Effective Clock":
-                                    case "P-core 2 T0 Effective Clock":
-                                    case "P-core 3 T0 Effective Clock":
-                                    case "P-core 4 T0 Effective Clock":
-                                    case "P-core 5 T0 Effective Clock":
-                                    case "P-core 6 T0 Effective Clock":
-                                    case "P-core 7 T0 Effective Clock":
-                                    case "P-core 8 T0 Effective Clock":
-                                    case "P-core 9 T0 Effective Clock":
-                                    case "P-core 0 T1 Effective Clock":
-                                    case "P-core 1 T1 Effective Clock":
-                                    case "P-core 2 T1 Effective Clock":
-                                    case "P-core 3 T1 Effective Clock":
-                                    case "P-core 4 T1 Effective Clock":
-                                    case "P-core 5 T1 Effective Clock":
-                                    case "P-core 6 T1 Effective Clock":
-                                    case "P-core 7 T1 Effective Clock":
-                                    case "P-core 8 T1 Effective Clock": // improve me (lol)
-                                        {
-                                            // we'll keep the highest known frequency right now
-                                            if (element.Value > MonitoredSensors[SensorElementType.CPUEffectiveFrequency].Value)
-                                                MonitoredSensors[SensorElementType.CPUEffectiveFrequency] = element;
-                                        }
-                                        break;
-                                        //case "Core 0 Clock":
-                                        //case "Core 1 Clock":
-                                        //case "Core 2 Clock":
-                                        //case "Core 3 Clock":
-                                        //case "Core 4 Clock":
-                                        //case "Core 5 Clock":
-                                        //case "Core 6 Clock":
-                                        //case "Core 7 Clock":
-                                        //case "Core 8 Clock":
-                                        //case "Core 9 Clock":
-                                        //case "Core 10 Clock":
-                                        //case "Core 11 Clock":
-                                        //case "Core 12 Clock":
-                                        //case "Core 13 Clock":
-                                        //case "Core 14 Clock":
-                                        //case "Core 15 Clock":
-                                        //case "Core 16 Clock":
-                                        //case "Core 17 Clock":
-                                        //case "Core 18 Clock": // improve me (lol)
-                                        //{
-                                        //    // we'll keep the highest known frequency right now
-                                        //    if (element.Value > MonitoredSensors[SensorElementType.CPUFrequency].Value)
-                                        //        MonitoredSensors[SensorElementType.CPUFrequency] = element;
-                                        //}
-                                        //break;
-                                }
-                            }
-                            break;
-
-                        case SENSOR_READING_TYPE.SENSOR_TYPE_VOLT:
-                            {
-                            }
-                            break;
-
-                        case SENSOR_READING_TYPE.SENSOR_TYPE_OTHER:
-                            {
-                                switch (element.szLabelOrig)
-                                {
-                                    case "P-core 0 Ratio":
-                                    case "P-core 1 Ratio":
-                                    case "P-core 2 Ratio":
-                                    case "P-core 3 Ratio":
-                                    case "P-core 4 Ratio":
-                                    case "P-core 5 Ratio":
-                                    case "P-core 6 Ratio":
-                                    case "P-core 7 Ratio":
-                                    case "P-core 8 Ratio":
-                                    case "P-core 9 Ratio":
-                                    case "P-core 10 Ratio":
-                                    case "P-core 11 Ratio":
-                                    case "P-core 12 Ratio":
-                                    case "P-core 13 Ratio":
-                                    case "P-core 14 Ratio":
-                                    case "P-core 15 Ratio":
-                                    case "P-core 16 Ratio":
-                                    case "P-core 17 Ratio":
-                                    case "P-core 18 Ratio": // improve me (lol)
-                                        {
-                                            var reading = element.Value * 100;
-                                            // we'll keep the highest known frequency right now
-                                            if (reading > MonitoredSensors[SensorElementType.CPUFrequency].Value)
-                                            {
-                                                element.Value = reading;
-                                                element.szUnit = "MHz";
-                                                MonitoredSensors[SensorElementType.CPUFrequency] = element;
-                                            }
-                                        }
-                                        break;
-                                }
-                            }
-                            break;
-                    }
-
-                    // move me !
-                    switch (element.szLabelOrig)
-                    {
-                        case "Remaining Capacity":
-                            MonitoredSensors[SensorElementType.BatteryRemainingCapacity] = element;
-                            break;
-                        case "Charge Rate":
-                            MonitoredSensors[SensorElementType.BatteryChargeRate] = element;
-                            break;
-                        case "Charge Level":
-                            MonitoredSensors[SensorElementType.BatteryChargeLevel] = element;
-                            break;
-                        case "Estimated Remaining Time":
-                            MonitoredSensors[SensorElementType.BatteryRemainingTime] = element;
-                            break;
-
-                        case "Physical Memory Used":
-                            MonitoredSensors[SensorElementType.PhysicalMemoryUsage] = element;
-                            break;
-                        case "Virtual Memory Committed":
-                            MonitoredSensors[SensorElementType.VirtualMemoryUsage] = element;
-                            break;
-
-                        case "GPU D3D Memory Dynamic":
-                            MonitoredSensors[SensorElementType.DynamicGPUMemoryUsage] = element;
-                            break;
-                        case "GPU Memory Usage":
-                            MonitoredSensors[SensorElementType.TotalGPUMemoryUsage] = element;
-                            break;
-                        case "GPU D3D Memory Dedicated":
-                            MonitoredSensors[SensorElementType.GPUMemoryUsage] = element;
-                            break;
-
-                        case "Framerate (Displayed)":
-                            MonitoredSensors[SensorElementType.FramerateDisplayed] = element;
-                            break;
-                        case "Frame Time":
-                            MonitoredSensors[SensorElementType.Frametime] = element;
-                            break;
-                    }
-                    // Debug.WriteLine("{0}:\t\t{1} {2}\t{3}", sensor.szLabelOrig, sensor.Value, sensor.szUnit, sensor.tReading);
-                    //LogManager.LogDebug("{0}:\t\t{1} {2}\t{3}", element.szLabelOrig, element.Value, element.szUnit, element.tReading);
+                            MonitoredSensors[SensorElementType.PL2] = sensor;
+                        }
+                        break;
+                    case "CPU PPT SLOW Limit":
+                        {
+                            var reading = (int)Math.Floor(MonitoredSensors[SensorElementType.CPUPower].Value / sensor.Value * 100.0d);
+                            if (reading != MonitoredSensors[SensorElementType.PL1].Value)
+                                PowerLimitChanged?.Invoke(PowerType.Slow, reading);
+                            MonitoredSensors[SensorElementType.PL1] = sensor;
+                        }
+                        break;
+                    case "CPU PPT FAST Limit":
+                        {
+                            var reading = (int)Math.Floor(MonitoredSensors[SensorElementType.CPUPower].Value / sensor.Value * 100.0d);
+                            if (reading != MonitoredSensors[SensorElementType.PL2].Value)
+                                PowerLimitChanged?.Invoke(PowerType.Fast, reading);
+                            MonitoredSensors[SensorElementType.PL2] = sensor;
+                        }
+                        break;
                 }
-
-            //foreach (var monitoredSensor in MonitoredSensors)
-            //    LogManager.LogDebug("{0}:\t\t{1} {2}\t{3}\t{4}", monitoredSensor.Key.ToString(), monitoredSensor.Value.szLabelOrig, monitoredSensor.Value.Value, monitoredSensor.Value.szUnit, monitoredSensor.Value.tReading);
-
-
+                //LogManager.LogDebug($"{sensor.GroupLabelOrig} > {sensor.LabelOrig}:\t {sensor.Value}{sensor.Unit}\t {sensor.Type}");
+            }
+            //foreach (var sensor in MonitoredSensors)
+            //    LogManager.LogDebug($"{sensor.Key} {sensor.Value.GroupLabelOrig} > {sensor.Value.LabelOrig}:\t {sensor.Value.Value}{sensor.Value.Unit}\t {sensor.Value.Type}");
         }
         catch
         {
-            // do something
+            // raise event
+            StopProcess();
+            SetStatus(PlatformStatus.Stalled);
         }
     }
 
-    public bool SetProperty(string propertyName, object value)
+    private bool SetProperty(string propertyName, object value)
     {
         try
         {
@@ -594,7 +385,7 @@ public class HWiNFO : IPlatform
         }
     }
 
-    public bool GetProperty(string propertyName)
+    internal bool GetProperty(string propertyName)
     {
         try
         {
@@ -629,8 +420,8 @@ public class HWiNFO : IPlatform
         SetProperty("MinimalizeMainWnd", 1);
         SetProperty("MinimalizeSensors", 1);
         SetProperty("MinimalizeSensorsClose", 1);
+        SetProperty("SensorInterval", 500);
 
-        // not authorized
         SetProperty("SensorsSM", 1); // Shared Memory Support [12-HOUR LIMIT]
 
         SetProperty("ShowWelcomeAndProgress", 0);
@@ -648,7 +439,6 @@ public class HWiNFO : IPlatform
     {
         if (IsStarting)
             return false;
-
         KillProcess();
 
         return true;
@@ -656,28 +446,38 @@ public class HWiNFO : IPlatform
 
     public void ReaffirmRunningProcess()
     {
-        if (!IsRunning)
+        // start HWiNFO if not running or Shared Memory is disabled
+        var hasSensorsSM = GetProperty("SensorsSM");
+        if (!IsRunning || !hasSensorsSM)
+        {
+            StopProcess();
             StartProcess();
+        }
+
+        PopulateSensors();
     }
 
     private void DisposeMemory()
     {
-        if (MemoryMapped is not null)
-        {
-            MemoryMapped.Dispose();
-            MemoryMapped = null;
-        }
+        //if (HWiNFOReader is not null)
+        //    HWiNFOReader.Dispose();
 
-        if (MemoryAccessor is not null)
-        {
-            MemoryAccessor.Dispose();
-            MemoryAccessor = null;
-        }
+        //if (MemoryMapped is not null)
+        //{
+        //    MemoryMapped.Dispose();
+        //    MemoryMapped = null;
+        //}
 
-        if (HWiNFOSensors is not null)
-            HWiNFOSensors = null;
+        //if (MemoryAccessor is not null)
+        //{
+        //    MemoryAccessor.Dispose();
+        //    MemoryAccessor = null;
+        //}
 
-        prevPoll_time = -1;
+        //if (HWSensors is not null)
+        //    HWSensors = null;
+
+        //prevPoll_time = -1;
     }
 
     public override void Dispose()
@@ -685,84 +485,6 @@ public class HWiNFO : IPlatform
         DisposeMemory();
         base.Dispose();
     }
-
-    #region struct
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct SharedMemory
-    {
-        public uint dwSignature;
-        public uint dwVersion;
-        public uint dwRevision;
-        public long poll_time;
-        public uint dwOffsetOfSensorSection;
-        public uint dwSizeOfSensorElement;
-        public uint dwNumSensorElements;
-        public uint dwOffsetOfReadingSection;
-        public uint dwSizeOfReadingElement;
-        public uint dwNumReadingElements;
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct SensorStructure
-    {
-        public uint dwSensorID;
-        public uint dwSensorInst;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = HWiNFO_SENSORS_STRING_LEN)]
-        public string szSensorNameOrig;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = HWiNFO_SENSORS_STRING_LEN)]
-        public string szSensorNameUser;
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct SensorElement
-    {
-        public SENSOR_READING_TYPE tReading;
-        public uint dwSensorIndex;
-        public uint dwSensorID;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = HWiNFO_SENSORS_STRING_LEN)]
-        public string szLabelOrig;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = HWiNFO_SENSORS_STRING_LEN)]
-        public string szLabelUser;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = HWiNFO_UNIT_STRING_LEN)]
-        public string szUnit;
-
-        public double Value;
-        public double FanValueMin;
-        public double FanValueMax;
-        public double ValueAvg;
-    }
-
-    public enum SENSOR_READING_TYPE
-    {
-        SENSOR_TYPE_NONE,
-        SENSOR_TYPE_TEMP,
-        SENSOR_TYPE_VOLT,
-        SENSOR_TYPE_FAN,
-        SENSOR_TYPE_CURRENT,
-        SENSOR_TYPE_POWER,
-        SENSOR_TYPE_CLOCK,
-        SENSOR_TYPE_USAGE,
-        SENSOR_TYPE_OTHER
-    }
-
-    public class Sensor
-    {
-        public ConcurrentDictionary<uint, SensorElement> Elements;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = HWiNFO_SENSORS_STRING_LEN)]
-        public string NameOrig;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = HWiNFO_SENSORS_STRING_LEN)]
-        public string NameUser;
-    }
-
-    #endregion
 
     #region events
 

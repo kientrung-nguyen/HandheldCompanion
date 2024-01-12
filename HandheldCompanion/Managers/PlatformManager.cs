@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Timers;
 using System.Windows;
+using static HandheldCompanion.Managers.OSDManager;
 
 namespace HandheldCompanion.Managers;
 
@@ -21,7 +22,6 @@ public static class PlatformManager
     public static OpenHardwareMonitor OpenHardwareMonitor = new();
 
     private static Timer UpdateTimer;
-
     private static bool IsInitialized;
 
     private static PlatformNeeds CurrentNeeds = PlatformNeeds.None;
@@ -47,7 +47,7 @@ public static class PlatformManager
 
         if (RTSS.IsInstalled)
         {
-            UpdateCurrentNeeds_OnScreenDisplay(OSDManager.OverlayLevel);
+            UpdateCurrentNeedsOnScreenDisplay(OverlayLevel);
         }
 
         if (HWiNFO.IsInstalled)
@@ -62,8 +62,7 @@ public static class PlatformManager
         ProfileManager.Applied += ProfileManager_Applied;
         PowerProfileManager.Applied += PowerProfileManager_Applied;
 
-        UpdateTimer = new Timer(UpdateInterval);
-        UpdateTimer.AutoReset = false;
+        UpdateTimer = new Timer(UpdateInterval) { AutoReset = false };
         UpdateTimer.Elapsed += (sender, e) => MonitorPlatforms();
         UpdateTimer.Start();
 
@@ -106,7 +105,7 @@ public static class PlatformManager
             {
                 case "OnScreenDisplayLevel":
                     {
-                        UpdateCurrentNeeds_OnScreenDisplay(Convert.ToInt16(value));
+                        UpdateCurrentNeedsOnScreenDisplay(Convert.ToInt16(value));
                         UpdateTimer.Stop();
                         UpdateTimer.Start();
                     }
@@ -115,22 +114,23 @@ public static class PlatformManager
         });
     }
 
-    private static void UpdateCurrentNeeds_OnScreenDisplay(short level)
+    private static void UpdateCurrentNeedsOnScreenDisplay(short level)
     {
         switch (level)
         {
-            case 0: // Disabled
+            case (short)OverlayDisplayLevel.Disabled: // Disabled
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplayComplex;
                 break;
             default:
-            case 1: // Minimal
+            case (short)OverlayDisplayLevel.Minimal: // Minimal
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplayComplex;
                 break;
-            case 2: // Extended
-            case 3: // Full
-            case 4: // External
+            case (short)OverlayDisplayLevel.Extended: // Extended
+            case (short)OverlayDisplayLevel.Full: // Full
+            case (short)OverlayDisplayLevel.Horizontal: // External
+            case (short)OverlayDisplayLevel.External: // External
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplayComplex;
                 break;
@@ -141,10 +141,9 @@ public static class PlatformManager
     {
         /*
          * Dependencies:
-         * HWInfo: OSD
+         * HWInfo: AutoTDP, OSD
          * RTSS: AutoTDP, framerate limiter, OSD
          */
-
         // Check if the current needs are the same as the previous needs
         if (CurrentNeeds == PreviousNeeds) return;
 
@@ -155,19 +154,19 @@ public static class PlatformManager
             if (!PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay))
                 // Only start RTSS if it was not running before and if it is installed
                 if (RTSS.IsInstalled)
-                {
-                    // Start RTSS
                     RTSS.Start();
-                }
+
             if (CurrentNeeds.HasFlag(PlatformNeeds.OnScreenDisplayComplex))
             {
                 // This condition checks if OnScreenDisplayComplex is true
                 // OnScreenDisplayComplex is a new flag that indicates if the OSD needs more information from HWiNFO
                 if (!PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay) ||
                     !PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplayComplex))
+                {
                     // Only start HWiNFO if it was not running before or if OnScreenDisplayComplex was false and if it is installed
                     if (HWiNFO.IsInstalled)
                         HWiNFO.Start();
+                }
             }
             else
             {
@@ -187,14 +186,14 @@ public static class PlatformManager
             {
                 if (RTSS.IsInstalled)
                     RTSS.Start();
-                //if (HWiNFO.IsInstalled)
-                //    HWiNFO.Start();
+                if (HWiNFO.IsInstalled)
+                    HWiNFO.Start();
+
             }
 
             // Only stop HWiNFO if it was running before
             // Only stop HWiNFO if it is installed
-
-            if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay))
+            else if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay))
                 if (HWiNFO.IsInstalled)
                     HWiNFO.Stop(true);
 
@@ -248,6 +247,8 @@ public static class PlatformManager
             OpenHardwareMonitor.Stop();
 
         IsInitialized = false;
+        PreviousNeeds = PlatformNeeds.None;
+        CurrentNeeds = PlatformNeeds.None;
 
         LogManager.LogInformation("{0} has stopped", "PlatformManager");
     }

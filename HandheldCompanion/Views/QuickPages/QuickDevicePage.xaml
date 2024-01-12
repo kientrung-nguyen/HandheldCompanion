@@ -63,6 +63,10 @@
                         Name="OverlayDisplayLevelFull"
                         Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Full}"
                         IsEnabled="False" />
+                    <ComboBoxItem
+                        Name="OverlayDisplayLevelHorizontal"
+                        Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_FullHorizontal}"
+                        IsEnabled="False" />
                     <ComboBoxItem Name="OverlayDisplayLevelExternal" Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_External}" />
                 </ComboBox>
             </Border>

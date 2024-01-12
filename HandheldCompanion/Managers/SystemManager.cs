@@ -34,19 +34,19 @@ public static class SystemManager
     private static readonly bool BrightnessSupport;
     private static bool FanControlSupport;
 
-    private const int UpdateInterval = 1000;
-    private static readonly Timer ADLXTimer;
-    private static int prevRSRState = -2;
-    private static int prevRSRSharpness = -1;
+    //private const int UpdateInterval = 1000;
+    //private static readonly Timer ADLXTimer;
+    //private static int prevRSRState = -2;
+    //private static int prevRSRSharpness = -1;
 
     public static bool IsInitialized;
 
     static SystemManager()
     {
         // ADLX
-        ADLXTimer = new Timer(UpdateInterval);
-        ADLXTimer.AutoReset = true;
-        ADLXTimer.Elapsed += ADLXTimer_Elapsed;
+        //ADLXTimer = new Timer(UpdateInterval);
+        //ADLXTimer.AutoReset = true;
+        //ADLXTimer.Elapsed += ADLXTimer_Elapsed;
 
         // setup the multimedia device and get current volume value
         notificationClient = new MMDeviceNotificationClient();
@@ -79,16 +79,16 @@ public static class SystemManager
     {
         try
         {
-            var RSRState = ADLXBackend.GetRSRState();
-            var RSRSharpness = ADLXBackend.GetRSRSharpness();
+            //var RSRState = ADLXBackend.GetRSRState();
+            //var RSRSharpness = ADLXBackend.GetRSRSharpness();
 
-            if ((RSRState != prevRSRState) || (RSRSharpness != prevRSRSharpness))
-            {
-                RSRStateChanged?.Invoke(RSRState, RSRSharpness);
+            //if ((RSRState != prevRSRState) || (RSRSharpness != prevRSRSharpness))
+            //{
+            //    RSRStateChanged?.Invoke(RSRState, RSRSharpness);
 
-                prevRSRState = RSRState;
-                prevRSRSharpness = RSRSharpness;
-            }
+            //    prevRSRState = RSRState;
+            //    prevRSRSharpness = RSRSharpness;
+            //}
         }
         catch { }
     }
@@ -267,7 +267,7 @@ public static class SystemManager
     {
         // start brightness watcher
         BrightnessWatcher.Start();
-        ADLXTimer.Start();
+        //ADLXTimer.Start();
 
         // force trigger events
         SystemEvents_DisplaySettingsChanged(null, null);
@@ -285,7 +285,7 @@ public static class SystemManager
 
         // stop brightness watcher
         BrightnessWatcher.Stop();
-        ADLXTimer.Stop();
+        //ADLXTimer.Stop();
 
         DevEnum.UnregisterEndpointNotificationCallback(notificationClient);
 

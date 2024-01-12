@@ -90,7 +90,7 @@ public class Processor
             LogManager.LogDebug("User requested {0} TDP limit: {1}, error code: {2}", type, (uint)limit, result);
     }
 
-    public virtual void SetGPUClock(double clock, int result = 0)
+    public virtual void SetGPUClock(double clock, bool immediate = false, int result = 0)
     {
         /*
          * #define ADJ_ERR_FAM_UNSUPPORTED      -1
@@ -99,8 +99,8 @@ public class Processor
          * #define ADJ_ERR_SMU_REJECTED         -4
          * #define ADJ_ERR_MEMORY_ACCESS        -5
          */
-
-        LogManager.LogDebug("User requested GPU clock: {0}, error code: {1}", clock, result);
+        if (!immediate)
+            LogManager.LogDebug("User requested GPU clock: {0}, error code: {1}", clock, result);
     }
 
     public virtual float GetGPUClock()

@@ -88,33 +88,46 @@ public class RTSS : IPlatform
 
         // our main watchdog to (re)apply requested settings
         PlatformWatchdog = new Timer(2000) { Enabled = false };
-        PlatformWatchdog.Elapsed += Watchdog_Elapsed;
+        PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
+
     }
 
     public override bool Start()
     {
-        // start RTSS if not running
-        if (!IsRunning)
-            StartProcess();
-        else
-            // hook into current process
-            Process.Exited += Process_Exited;
-
-        ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-        ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
-        ProfileManager.Applied += ProfileManager_Applied;
-
-        // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
-        if (SettingsManager.IsInitialized)
+        try
         {
-            var foregroundProcess = ProcessManager.GetForegroundProcess();
-            if (foregroundProcess is not null)
-                ProcessManager_ForegroundChanged(foregroundProcess, null);
+            // start RTSS if not running
+            if (!IsRunning)
+                StartProcess();
+            else
+                // hook into current process
+                Process.Exited += Process_Exited;
 
-            ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+            ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
+            ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
+            ProfileManager.Applied += ProfileManager_Applied;
+
+            // our main watchdog to (re)apply requested settings
+            PlatformWatchdog = new Timer(2000) { Enabled = false };
+            PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
+
+            // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
+            if (SettingsManager.IsInitialized)
+            {
+                var foregroundProcess = ProcessManager.GetForegroundProcess();
+                if (foregroundProcess is not null)
+                    ProcessManager_ForegroundChanged(foregroundProcess, null);
+
+                ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+            }
+
+            return base.Start();
         }
-
-        return base.Start();
+        catch (Exception ex)
+        {
+            LogManager.LogDebug($"Something went wrong when starting RTSS {ex.Message} {ex.StackTrace}");
+        }
+        return false;
     }
 
     public override bool Stop(bool kill = false)
@@ -131,7 +144,9 @@ public class RTSS : IPlatform
         if (profile.FramerateEnabled)
         {
             // Apply profile-defined framerate
-            int frequency = (int)Math.Floor(SystemManager.GetDesktopScreen().GetFrequency()
+            var frequency = (int)Math.Floor(
+                SystemManager.GetDesktopScreen()
+                .GetFrequency()
                 .GetValue((Frequency)profile.FramerateValue));
             RequestFPS(frequency);
         }
@@ -147,8 +162,8 @@ public class RTSS : IPlatform
     {
         // hook new process
         AppEntry appEntry = null;
-        var ProcessId = processEx.GetProcessId();
-        if (ProcessId == 0)
+        var processId = processEx.GetProcessId();
+        if (processId == 0)
             return;
 
         do
@@ -161,9 +176,15 @@ public class RTSS : IPlatform
              */
             try
             {
-                appEntry = OSD.GetAppEntries()
-                    .Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None)
-                    .FirstOrDefault(entry => entry.ProcessId == ProcessId);
+                var entries = OSD.GetAppEntries().Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None);
+                foreach (var entry in entries)
+                {
+                    if (entry.ProcessId == processId)
+                    {
+                        appEntry = entry;
+                        break;
+                    }
+                }
             }
             catch (FileNotFoundException)
             {
@@ -174,7 +195,7 @@ public class RTSS : IPlatform
             {
                 await Task.Delay(1000);
             }
-        } while (appEntry is null && ProcessManager.HasProcess(ProcessId) && KeepAlive);
+        } while (appEntry is null && ProcessManager.HasProcess(processId) && KeepAlive);
 
         if (appEntry is null)
             return;
@@ -183,31 +204,31 @@ public class RTSS : IPlatform
         Hooked?.Invoke(appEntry);
 
         // we're already hooked into this process
-        if (HookedProcessIds.Contains(ProcessId))
+        if (HookedProcessIds.Contains(processId))
             return;
 
         // store into array
-        HookedProcessIds.Add(ProcessId);
+        HookedProcessIds.Add(processId);
     }
 
     private void ProcessManager_ProcessStopped(ProcessEx processEx)
     {
-        var ProcessId = processEx.GetProcessId();
-        if (ProcessId == 0)
+        var processId = processEx.GetProcessId();
+        if (processId == 0)
             return;
 
         // we're not hooked into this process
-        if (!HookedProcessIds.Contains(ProcessId))
+        if (!HookedProcessIds.Contains(processId))
             return;
 
         // remove from array
-        HookedProcessIds.Remove(ProcessId);
+        HookedProcessIds.Remove(processId);
 
         // raise event
-        Unhooked?.Invoke(ProcessId);
+        Unhooked?.Invoke(processId);
     }
 
-    private void Watchdog_Elapsed(object? sender, ElapsedEventArgs e)
+    private void PlatformWatchdogElapsed()
     {
         if (Monitor.TryEnter(updateLock))
         {
@@ -217,6 +238,7 @@ public class RTSS : IPlatform
             if (GetEnableOSD() != true)
                 SetEnableOSD(true);
 
+            Tentative = 0;
             Monitor.Exit(updateLock);
         }
     }
@@ -227,34 +249,17 @@ public class RTSS : IPlatform
             StartProcess();
     }
 
-    public AppEntry GetAppEntry(int processId)
+    public double GetFramerate(int processId, out uint osdFrameId)
     {
         try
         {
-            var appE = OSD.GetAppEntries()
-                .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == processId);
-            return appE;
-        }
-        catch (InvalidDataException)
-        {
-        }
-        catch (FileNotFoundException)
-        {
-        }
-
-        return null;
-    }
-
-    public double GetFramerate(int processId)
-    {
-        try
-        {
-            var appE = OSD.GetAppEntries()
-                .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == processId);
+            osdFrameId = 0;
+            var appE = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == processId);
             if (appE is null)
                 return 0.0d;
 
-            return (double)appE.StatFrameTimeBufFramerate / 10;
+            osdFrameId = appE.OSDFrameId;
+            return appE.StatFrameTimeBufFramerate / 10.0d;
         }
         catch (InvalidDataException)
         {
@@ -262,7 +267,7 @@ public class RTSS : IPlatform
         catch (FileNotFoundException)
         {
         }
-
+        osdFrameId = 0;
         return 0.0d;
     }
 

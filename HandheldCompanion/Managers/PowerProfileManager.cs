@@ -104,6 +104,7 @@ namespace HandheldCompanion.Managers
                     break;
             }
 
+            LogManager.LogInformation($"Power Profile \"{powerProfile.Name}\" applying from {source}.");
             Applied?.Invoke(powerProfile, source);
         }
 
@@ -163,7 +164,10 @@ namespace HandheldCompanion.Managers
             bool isCurrent = profile.Guid == currentProfile.Guid;
 
             if (isCurrent)
+            {
+                LogManager.LogInformation($"Power Profile \"{profile.Name}\" applying from {source}.");
                 Applied?.Invoke(profile, source);
+            }
 
             // serialize profile
             SerializeProfile(profile);

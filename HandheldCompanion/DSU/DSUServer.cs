@@ -462,7 +462,7 @@ public class DSUServer
             Stop();
             return running;
         }
-        catch (Exception /*ex*/) { }
+        catch { }
 
         var randomBuf = new byte[4];
         new Random().NextBytes(randomBuf);

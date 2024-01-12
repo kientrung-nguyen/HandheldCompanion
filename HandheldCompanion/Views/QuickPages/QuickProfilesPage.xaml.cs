@@ -27,7 +27,7 @@ public partial class QuickProfilesPage : Page
     private readonly Timer UpdateTimer;
     private ProcessEx currentProcess;
     private Profile selectedProfile;
-
+    private UpdateSource selectedSource = UpdateSource.QuickProfilesPage;
     private LockObject updateLock = new();
 
     private Hotkey GyroHotkey = new(61);
@@ -156,8 +156,10 @@ public partial class QuickProfilesPage : Page
             cB_Input.Items.Add(comboBoxItem);
         }
 
-        UpdateTimer = new Timer(UpdateInterval);
-        UpdateTimer.AutoReset = false;
+        UpdateTimer = new Timer(UpdateInterval)
+        {
+            AutoReset = false
+        };
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         PlatformManager.RTSS.Updated += RTSS_Updated;
@@ -227,6 +229,12 @@ public partial class QuickProfilesPage : Page
     {
         if (selectedProfile is null)
             return;
+
+        if (this.selectedSource != UpdateSource.QuickProfilesPage)
+        {
+            this.selectedSource = UpdateSource.QuickProfilesPage;
+            return;
+        }
 
         ProfileManager.UpdateOrCreateProfile(selectedProfile, source);
     }
@@ -380,6 +388,7 @@ public partial class QuickProfilesPage : Page
             {
                 using (new ScopedLock(updateLock))
                 {
+                    this.selectedSource = source;
                     // update profile name
                     CurrentProfileName.Text = selectedProfile.Name;
                     Toggle_ControllerLayout.IsEnabled = selectedProfile.Default ? false : true;

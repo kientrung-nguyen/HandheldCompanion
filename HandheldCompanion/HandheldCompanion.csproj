@@ -2304,6 +2304,9 @@
     <Reference Include="HidLibrary">
       <HintPath>..\Resources\HidLibrary.dll</HintPath>
     </Reference>
+    <Reference Include="Hwinfo.SharedMemory">
+      <HintPath>Resources\HWiNFO\Hwinfo.SharedMemory.dll</HintPath>
+    </Reference>
     <Reference Include="Inkore.UI.WPF.Modern">
       <HintPath>..\Resources\Inkore.UI.WPF.Modern.dll</HintPath>
     </Reference>

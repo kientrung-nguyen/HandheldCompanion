@@ -105,9 +105,9 @@ public abstract class IDevice
 
     // device GfxClock frequency limits
     public double[] GfxClock = new double[] { 100, 1800 };
-    public double BaseGfxClock = 800;
     public uint CpuClock = 6000;
     public uint BaseCPUClock = 3900;
+    public uint BaseGfxClock = 800;
 
     // device nominal TDP (slow, fast)
     public double[] nTDP = new double[] { 15, 15, 20 };

@@ -161,14 +161,14 @@ public static class ProfileManager
         // todo: localize me
         if (announce)
         {
-            LogManager.LogInformation("Profile {0} applied", profile.Name);
+            LogManager.LogInformation($"Profile {profile.Name} applied");
             ToastManager.SendToast($"Profile {profile.Name} applied");
         }
     }
 
     private static void PowerProfileManager_Deleted(PowerProfile powerProfile)
     {
-        foreach(Profile profile in profiles.Values)
+        foreach (Profile profile in profiles.Values)
         {
             bool isCurrent = profile.PowerProfile == powerProfile.Guid;
             if (isCurrent)
@@ -203,6 +203,7 @@ public static class ProfileManager
                 // update profile
                 UpdateOrCreateProfile(profile);
 
+                LogManager.LogDebug($"ProcessStopped {processEx.Path}");
                 // restore default profile
                 ApplyProfile(GetDefault());
             }
@@ -251,10 +252,15 @@ public static class ProfileManager
                 var backProfile = GetProfileFromPath(back.Path, false);
 
                 if (backProfile != profile)
+                {
                     Discarded?.Invoke(backProfile);
+                    ApplyProfile(profile);
+                }
             }
-
-            ApplyProfile(profile);
+            else
+            {
+                ApplyProfile(profile);
+            }
         }
         catch
         {
@@ -263,6 +269,8 @@ public static class ProfileManager
 
     private static void ProfileDeleted(object sender, FileSystemEventArgs e)
     {
+        if (e is null)
+            return;
         // not ideal
         var ProfileName = e.Name.Replace(".json", "");
         var profile = profiles.Values.FirstOrDefault(p => p.Name.Equals(ProfileName, StringComparison.InvariantCultureIgnoreCase));
@@ -356,6 +364,7 @@ public static class ProfileManager
         // default specific
         if (profile.Default)
             ApplyProfile(profile, UpdateSource.Serializer);
+
     }
 
     public static void DeleteProfile(Profile profile)
@@ -501,6 +510,7 @@ public static class ProfileManager
         // apply profile (silently)
         if (isCurrent)
             ApplyProfile(profile, source);
+
 
         // serialize profile
         SerializeProfile(profile);
