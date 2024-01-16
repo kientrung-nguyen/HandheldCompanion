@@ -2285,11 +2285,17 @@
     <Reference Include="HidLibrary">
       <HintPath>..\Resources\HidLibrary.dll</HintPath>
     </Reference>
+    <Reference Include="Hwinfo.SharedMemory">
+      <HintPath>Resources\HWiNFO\Hwinfo.SharedMemory.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Win32.TaskScheduler">
       <HintPath>..\Resources\Microsoft.Win32.TaskScheduler.dll</HintPath>
     </Reference>
     <Reference Include="Nefarius.Utilities.DeviceManagement">
       <HintPath>..\Resources\Nefarius.Utilities.DeviceManagement.dll</HintPath>
+    </Reference>
+    <Reference Include="PowerManagerAPI">
+      <HintPath>Resources\Power\PowerManagerAPI.dll</HintPath>
     </Reference>
     <Reference Include="RTSSSharedMemoryNET">
       <HintPath>Resources\RTSSSharedMemoryNET.dll</HintPath>
@@ -2309,6 +2315,10 @@
     <Page Update="Views\Windows\OverlayQuickTools.xaml">
       <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
     </Page>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\Power\" />
   </ItemGroup>
 
 </Project>

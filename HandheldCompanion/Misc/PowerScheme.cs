@@ -21,9 +21,15 @@ public static class PowerSetting
 {
     public static Guid PERFBOOSTMODE = new("be337238-0d82-4146-a960-4f3749d470c7"); // Processor performance boost mode
 
-    public static Guid
-        PROCFREQMAX =
-            new("75b0ae3f-bce0-45a7-8c89-c9611c25e100"); // Maximum processor frequency in MHz, 0 for no limit (default)
+    public static Guid PROCFREQMAX = new("75b0ae3f-bce0-45a7-8c89-c9611c25e100"); // Maximum processor frequency in MHz, 0 for no limit (default)
+    public static Guid PROCFREQMAX1 = new("75b0ae3f-bce0-45a7-8c89-c9611c25e101");
+
+    public static Guid PROCTHROTTLEMIN = new("893dee8e-2bef-41e0-89c6-b55d0929964c");
+    public static Guid PROCTHROTTLEMIN1 = new("893dee8e-2bef-41e0-89c6-b55d0929964d");
+
+    public static Guid PROCTHROTTLEMAX = new("bc5038f7-23e0-4960-96da-33abaf5935ec");
+
+    public static Guid PROCTHROTTLEMAX1 = new("bc5038f7-23e0-4960-96da-33abaf5935ed");
 
     public static Guid
         CPMINCORES =

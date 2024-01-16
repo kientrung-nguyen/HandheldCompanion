@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using System;
 using System.Collections.Generic;
 using System.Timers;
 
@@ -51,16 +52,12 @@ public class Processor
         if (processor is not null)
             return processor;
 
-        switch (Manufacturer)
+        processor = Manufacturer switch
         {
-            case "GenuineIntel":
-                processor = new IntelProcessor();
-                break;
-            case "AuthenticAMD":
-                processor = new AMDProcessor();
-                break;
-        }
-
+            "GenuineIntel" => new IntelProcessor(),
+            "AuthenticAMD" => new AMDProcessor(),
+            _ => throw new NotSupportedException(),
+        };
         return processor;
     }
 
@@ -69,7 +66,7 @@ public class Processor
         StatusChanged?.Invoke(CanChangeTDP, CanChangeGPU);
         Initialized?.Invoke(this);
 
-        // deprecated, we're using LibreHardwareMonitor to provide values and limits
+        // deprecated, we're using HWiNFO to provide values and limits
         /*
         if (CanChangeTDP)
             updateTimer.Start();
@@ -78,7 +75,7 @@ public class Processor
 
     public virtual void Stop()
     {
-        // deprecated, we're using LibreHardwareMonitor to provide values and limits
+        // deprecated, we're using HWiNFO to provide values and limits
         /*
         if (CanChangeTDP)
             updateTimer.Stop();
@@ -91,7 +88,7 @@ public class Processor
             LogManager.LogDebug("User requested {0} TDP limit: {1}, error code: {2}", type, (uint)limit, result);
     }
 
-    public virtual void SetGPUClock(double clock, int result = 0)
+    public virtual void SetGPUClock(double clock, bool immediate = false, int result = 0)
     {
         /*
          * #define ADJ_ERR_FAM_UNSUPPORTED      -1
@@ -100,8 +97,18 @@ public class Processor
          * #define ADJ_ERR_SMU_REJECTED         -4
          * #define ADJ_ERR_MEMORY_ACCESS        -5
          */
+        if (!immediate)
+            LogManager.LogDebug("User requested GPU clock: {0}, error code: {1}", clock, result);
+    }
 
-        LogManager.LogDebug("User requested GPU clock: {0}, error code: {1}", clock, result);
+    public virtual void SetMaxPerformance(int result = 0)
+    {
+        LogManager.LogDebug("User requested max performance: {0}", result);
+    }
+
+    public virtual void SetPowerSaving(int result = 0)
+    {
+        LogManager.LogDebug("User requested power saving: {0}", result);
     }
 
     protected virtual void UpdateTimer_Elapsed(object sender, ElapsedEventArgs e)

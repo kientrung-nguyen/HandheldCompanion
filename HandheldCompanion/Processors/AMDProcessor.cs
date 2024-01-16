@@ -169,11 +169,11 @@ public class AMDProcessor : Processor
         }
     }
 
-    public override void SetGPUClock(double clock, int result)
+    public override void SetGPUClock(double clock, bool immediate, int result)
     {
         if (Monitor.TryEnter(IsBusy))
         {
-            switch(family)
+            switch (family)
             {
                 case RyzenFamily.FAM_VANGOGH:
                     {
@@ -181,7 +181,7 @@ public class AMDProcessor : Processor
                         {
                             if (sd is null)
                             {
-                                base.SetGPUClock(clock, 1);
+                                base.SetGPUClock(clock, immediate, 1);
                                 return;
                             }
 
@@ -196,7 +196,7 @@ public class AMDProcessor : Processor
                                 sd.SoftMaxGfxClock = (uint)clock; //softMax
                             }
 
-                            base.SetGPUClock(clock, 0);
+                            base.SetGPUClock(clock, immediate, 0);
                         }
                     }
                     break;
@@ -218,10 +218,32 @@ public class AMDProcessor : Processor
                         }
                         */
 
-                        base.SetGPUClock(clock, error1);
+                        base.SetGPUClock(clock, immediate, error1);
                     }
                     break;
             }
+
+            Monitor.Exit(IsBusy);
+        }
+    }
+
+    public override void SetMaxPerformance(int result)
+    {
+        if (Monitor.TryEnter(IsBusy))
+        {
+            int errorCode = RyzenAdj.set_max_performance(ry);
+            base.SetMaxPerformance(errorCode);
+
+            Monitor.Exit(IsBusy);
+        }
+    }
+
+    public override void SetPowerSaving(int result)
+    {
+        if (Monitor.TryEnter(IsBusy))
+        {
+            int errorCode = RyzenAdj.set_power_saving(ry);
+            base.SetPowerSaving(errorCode);
 
             Monitor.Exit(IsBusy);
         }

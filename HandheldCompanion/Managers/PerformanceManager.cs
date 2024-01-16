@@ -2,13 +2,19 @@ using HandheldCompanion.Controls;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Views;
+using Microsoft.Win32;
 using RTSSSharedMemoryNET;
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Timers;
+using static HandheldCompanion.Platforms.HWiNFO;
 using Timer = System.Timers.Timer;
+using PowerSchemeAPI = PowerManagerAPI.PowerManager;
+using PowerManagerAPI;
+using System.Windows.Media.Converters;
+using SharpDX;
 
 namespace HandheldCompanion.Managers;
 
@@ -38,7 +44,7 @@ public static class PerformanceManager
     private const short INTERVAL_DEGRADED = 5000; // degraded interval between value scans
     public static int MaxDegreeOfParallelism = 4;
 
-    public static readonly Guid[] PowerModes = new Guid[3] { OSPowerMode.BetterBattery, OSPowerMode.BetterPerformance, OSPowerMode.BestPerformance };
+    public static readonly Guid[] PowerModes = [OSPowerMode.BetterBattery, OSPowerMode.BetterPerformance, OSPowerMode.BestPerformance];
 
     private static readonly Timer autoWatchdog;
     private static readonly Timer cpuWatchdog;
@@ -53,35 +59,46 @@ public static class PerformanceManager
     // AutoTDP
     private static double AutoTDP;
     private static double AutoTDPPrev;
+    private static double AutoCPUClock;
+    private static double AutoGPUClock;
     private static bool AutoTDPFirstRun = true;
     private static int AutoTDPFPSSetpointMetCounter;
     private static int AutoTDPFPSSmallDipCounter;
     private static double AutoTDPMax;
+    private static double AutoCPUClockMin;
+    private static double AutoCPUClockMax;
+    private static double AutoGPUClockMin;
+    private static double AutoGPUClockMax;
     private static double TDPMax;
     private static double TDPMin;
     private static int AutoTDPProcessId;
+    private static uint AutoTDPOSDFrameId;
     private static double AutoTDPTargetFPS;
+    private static double AutoTargetCPU;
+    private static double AutoTargetGPU;
     private static bool cpuWatchdogPendingStop;
     private static uint currentEPP = 50;
     private static int currentCoreCount;
-    private static double CurrentGfxClock;
+    private static uint currentGfxClock;
 
     // powercfg
-    private static bool currentPerfBoostMode;
+    private static bool? currentPerfBoostMode;
     private static Guid currentPowerMode = new("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
-    private static readonly double[] CurrentTDP = new double[5]; // used to store current TDP
+    private static readonly double[] currentTDP = new double[5]; // used to store current TDP
 
     // GPU limits
-    private static double FallbackGfxClock;
-    private static readonly double[] FPSHistory = new double[6];
+    private static double fallbackGfxClock;
+    private static readonly double[] fpsHistory = new double[6];
+    private static readonly double[] cpuHistory = new double[6];
+    private static readonly double[] gpuHistory = new double[6];
     private static bool gfxWatchdogPendingStop;
 
     private static Processor processor = new();
-    private static double ProcessValueFPSPrevious;
-    private static double StoredGfxClock;
+    private static double processValueFPSPrevious;
+    private static uint storedGfxClock;
 
     // TDP limits
-    private static readonly double[] StoredTDP = new double[3]; // used to store TDP
+    private static readonly double[] storedTDP = new double[3]; // used to store TDP
 
     private static bool IsInitialized;
 
@@ -189,7 +206,7 @@ public static class PerformanceManager
                 ADLXWrapper.SetGPUScaling(true);
 
                 var scalingMode = profile.ScalingMode;
-                 
+
                 // RSR + ScalingMode.Center not supported (stop applying center if it's somehow on a profile)
                 // Technically shouldn't occur and be stopped from UI, but could potentially be possible from older versions
                 if (profile.ScalingMode == 2 && profile.RSREnabled)
@@ -253,6 +270,7 @@ public static class PerformanceManager
         try
         {
             // restore default GPU Scaling
+            /*
             if (profile.GPUScaling && ADLXWrapper.GetGPUScaling())
             {
                 ADLXWrapper.SetGPUScaling(false);
@@ -264,7 +282,7 @@ public static class PerformanceManager
                 ADLXWrapper.SetRSR(false);
                 ADLXWrapper.SetRSRSharpness(20);
             }
-            
+
             // restore default integer scaling
             if (profile.IntegerScalingEnabled && ADLXWrapper.GetIntegerScaling())
             {
@@ -276,10 +294,11 @@ public static class PerformanceManager
             {
                 ADLXWrapper.SetImageSharpening(false);
             }
+            */
         }
         catch { }
     }
-    
+
     // todo: moveme
     private static void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
     {
@@ -348,9 +367,10 @@ public static class PerformanceManager
                 StopTDPWatchdog(true);
             }
         }
-        else if (cpuWatchdog.Enabled)
+        else
         {
-            StopTDPWatchdog(true);
+            if (cpuWatchdog.Enabled)
+                StopTDPWatchdog(true);
 
             if (!profile.AutoTDPEnabled)
             {
@@ -364,44 +384,70 @@ public static class PerformanceManager
             }
         }
 
-        // apply profile defined AutoTDP
-        if (profile.AutoTDPEnabled)
-        {
-            AutoTDPTargetFPS = profile.AutoTDPRequestedFPS;
-            StartAutoTDPWatchdog();
-        }
-        else if (autoWatchdog.Enabled)
-        {
-            StopAutoTDPWatchdog(true);
-
-            // restore default TDP (if not manual TDP is enabled)
-            if (!profile.TDPOverrideEnabled)
-                RestoreTDP(true);
-        }
-
         // apply profile defined CPU
         if (profile.CPUOverrideEnabled)
         {
             RequestCPUClock(Convert.ToUInt32(profile.CPUOverrideValue));
+            AutoCPUClockMin = MotherboardInfo.ProcessorMaxClockSpeed / 2;
+            AutoCPUClockMax = Convert.ToUInt32(profile.CPUOverrideValue);
         }
         else
         {
             // restore default GPU clock
             RestoreCPUClock(true);
+            AutoCPUClockMin = MotherboardInfo.ProcessorMaxClockSpeed / 2;
+            AutoCPUClockMax = MotherboardInfo.ProcessorMaxTurboSpeed;
         }
 
         // apply profile defined GPU
         if (profile.GPUOverrideEnabled)
         {
-            RequestGPUClock(profile.GPUOverrideValue);
-            StartGPUWatchdog();
+            AutoGPUClockMin = MainWindow.CurrentDevice.GfxClock[0] * 2;
+            AutoGPUClockMax = profile.GPUOverrideValue;
+            if (!profile.AutoTDPEnabled)
+            {
+                RequestGPUClock(profile.GPUOverrideValue);
+                StartGPUWatchdog();
+            }
+            else
+                StopGPUWatchdog(true);
         }
-        else if (gfxWatchdog.Enabled)
+        else
         {
+            AutoGPUClockMin = MainWindow.CurrentDevice.GfxClock[0] * 2;
+            AutoGPUClockMax = MainWindow.CurrentDevice.GfxClock[1];
+
+            if (gfxWatchdog.Enabled)
+                StopGPUWatchdog(true);
+
             // restore default GPU clock
-            StopGPUWatchdog(true);
-            RestoreGPUClock(true);
+            if (!profile.AutoTDPEnabled)
+                RestoreGPUClock(true);
         }
+
+        // apply profile defined AutoTDP
+        if (profile.AutoTDPEnabled)
+        {
+            AutoTDPTargetFPS = profile.AutoTDPRequestedFPS;
+            AutoTargetCPU = 94;
+            AutoTargetGPU = 94;
+
+            ClampAutoTDPClockMax();
+            StartAutoTDPWatchdog();
+        }
+        else
+        {
+            if (autoWatchdog.Enabled)
+            {
+                StopAutoTDPWatchdog(true);
+                RequestMaxPerformance(false);
+
+                // restore default TDP (if not manual TDP is enabled)
+                if (!profile.TDPOverrideEnabled)
+                    RestoreTDP(true);
+            }
+        }
+
 
         // apply profile defined EPP
         if (profile.EPPOverrideEnabled)
@@ -432,8 +478,72 @@ public static class PerformanceManager
         RequestPowerMode(profile.OSPowerMode);
     }
 
+    private static void ClampAutoTDPClockMax()
+    {
+        var cpuClockMax = AutoCPUClockMax;
+        var cpuClockMin = AutoCPUClockMin;
+        var gpuClockMax = AutoGPUClockMax;
+        var gpuClockMin = AutoGPUClockMin;
+
+        switch (TDPMin)
+        {
+            case < 6: cpuClockMin = 1500; break;
+            case >= 6 and < 7: cpuClockMin = 1500; break;
+        }
+
+        switch (AutoTDPMax)
+        {
+            case < 6: cpuClockMax = 1500; gpuClockMax = 400; break;
+            case >= 6 and < 7: cpuClockMax = 1600; gpuClockMax = 400; break;
+            case >= 7 and < 8: cpuClockMax = 1700; gpuClockMax = 500; break;
+            case >= 8 and < 9: cpuClockMax = 1800; gpuClockMax = 600; break;
+            case >= 9 and < 10: cpuClockMax = 1900; gpuClockMax = 700; break;
+            case >= 10 and < 11: cpuClockMax = 2000; gpuClockMax = 800; break;
+            case >= 11 and < 12: cpuClockMax = 2100; gpuClockMax = 900; break;
+            case >= 12 and < 13: cpuClockMax = 2200; gpuClockMax = 975; break;
+            case >= 13 and < 14: cpuClockMax = 2300; gpuClockMax = 1025; break;
+            case >= 14 and < 15: cpuClockMax = 2400; gpuClockMax = 1175; break;
+            case >= 15 and < 16: cpuClockMax = 2500; gpuClockMax = 1225; break;
+            case >= 16 and < 17: cpuClockMax = 2600; gpuClockMax = 1450; break;
+            case >= 17 and < 18: cpuClockMax = 2700; gpuClockMax = 1500; break;
+            case >= 18 and < 19: cpuClockMax = 2800; gpuClockMax = 1550; break;
+            case >= 19 and < 20: cpuClockMax = 2900; gpuClockMax = 1650; break;
+            case >= 20 and < 21: cpuClockMax = 3000; gpuClockMax = 1700; break;
+            case >= 21 and < 22: cpuClockMax = 3100; gpuClockMax = 1800; break;
+            case >= 22 and < 23: cpuClockMax = 3200; gpuClockMax = 1850; break;
+            case >= 23 and < 24: cpuClockMax = 3300; gpuClockMax = 1900; break;
+            case >= 24 and < 25: cpuClockMax = 3400; gpuClockMax = 1950; break;
+            case >= 25 and < 26: cpuClockMax = 3500; gpuClockMax = 2000; break;
+            case >= 26 and < 27: cpuClockMax = 3600; gpuClockMax = 2050; break;
+            case >= 27 and < 28: cpuClockMax = 3700; gpuClockMax = 2100; break;
+            case >= 28 and < 29: cpuClockMax = 3800; gpuClockMax = 2150; break;
+            case >= 29 and < 30: cpuClockMax = 3900; gpuClockMax = 2200; break;
+            case >= 30 and < 31: cpuClockMax = 4000; gpuClockMax = 2250; break;
+            case >= 31 and < 32: cpuClockMax = 4000; gpuClockMax = 2375; break;
+            case >= 32 and < 33: cpuClockMax = 4000; gpuClockMax = 2400; break;
+            case >= 33 and < 34: cpuClockMax = 4000; gpuClockMax = 2425; break;
+            case >= 34 and < 35: cpuClockMax = 4000; gpuClockMax = 2450; break;
+            case >= 35 and < 36: cpuClockMax = 4000; gpuClockMax = 2475; break;
+            case >= 36 and < 37: cpuClockMax = 4100; gpuClockMax = 2500; break;
+            case >= 37 and < 38: cpuClockMax = 4200; gpuClockMax = 2525; break;
+            case >= 38 and < 39: cpuClockMax = 4300; gpuClockMax = 2530; break;
+            case >= 39 and < 40: cpuClockMax = 4400; gpuClockMax = 2575; break;
+            case >= 40 and < 41: cpuClockMax = 4500; gpuClockMax = 2575; break;
+            case >= 41 and < 42: cpuClockMax = 4500; gpuClockMax = 2600; break;
+            case >= 42 and < 43: cpuClockMax = 4500; gpuClockMax = 2625; break;
+            case >= 43 and < 44: cpuClockMax = 4500; gpuClockMax = 2650; break;
+            case >= 44 and < 45: cpuClockMax = 4500; gpuClockMax = 2675; break;
+        }
+
+        AutoCPUClockMax = Math.Clamp(cpuClockMax, AutoCPUClockMin, AutoCPUClockMax);
+        AutoGPUClockMax = Math.Clamp(gpuClockMax, AutoGPUClockMin, AutoGPUClockMax);
+        AutoCPUClockMin = Math.Clamp(cpuClockMin, Math.Min(cpuClockMin, AutoCPUClockMax), AutoCPUClockMax);
+        AutoGPUClockMin = Math.Clamp(gpuClockMin, Math.Min(gpuClockMin, AutoGPUClockMax), AutoGPUClockMax);
+    }
+
     private static void PowerProfileManager_Discarded(PowerProfile profile)
     {
+        /*
         // restore default TDP
         if (profile.TDPOverrideEnabled)
         {
@@ -483,6 +593,7 @@ public static class PerformanceManager
 
         // restore OSPowerMode.BetterPerformance 
         RequestPowerMode(OSPowerMode.BetterPerformance);
+        */
     }
 
     private static void RestoreTDP(bool immediate)
@@ -493,23 +604,24 @@ public static class PerformanceManager
 
     private static void RestoreCPUClock(bool immediate)
     {
-        uint maxClock = MotherboardInfo.ProcessorMaxTurboSpeed;
-        RequestCPUClock(maxClock);
+        RequestCPUClock(0x00000000, immediate);
     }
 
     private static void RestoreGPUClock(bool immediate)
     {
-        RequestGPUClock(255 * 50, immediate);
+        RequestGPUClock(MainWindow.CurrentDevice.GfxClock[0], immediate);
     }
 
     private static void RTSS_Hooked(AppEntry appEntry)
     {
         AutoTDPProcessId = appEntry.ProcessId;
+        AutoTDPOSDFrameId = appEntry.OSDFrameId;
     }
 
     private static void RTSS_Unhooked(int processId)
     {
         AutoTDPProcessId = 0;
+        AutoTDPOSDFrameId = 0;
     }
 
     private static void AutoTDPWatchdog_Elapsed(object? sender, ElapsedEventArgs e)
@@ -518,106 +630,193 @@ public static class PerformanceManager
         if (AutoTDPProcessId == 0)
             return;
 
-        if (!autoLock)
+        try
         {
-            // set lock
-            autoLock = true;
-
-            // todo: Store fps for data gathering from multiple points (OSD, Performance)
-            double processValueFPS = PlatformManager.RTSS.GetFramerate(AutoTDPProcessId);
-
-            // Ensure realistic process values, prevent divide by 0
-            processValueFPS = Math.Clamp(processValueFPS, 5, 500);
-
-            // Determine error amount, include target, actual and dipper modifier
-            double controllerError = AutoTDPTargetFPS - processValueFPS - AutoTDPDipper(processValueFPS, AutoTDPTargetFPS);
-
-            // Clamp error amount corrected within a single cycle
-            // Adjust clamp if actual FPS is 2.5x requested FPS
-            double clampLowerLimit = processValueFPS >= 2.5 * AutoTDPTargetFPS ? -100 : -5;
-            controllerError = Math.Clamp(controllerError, clampLowerLimit, 15);
-
-            double TDPAdjustment = controllerError * AutoTDP / processValueFPS;
-            TDPAdjustment *= 0.9; // Always have a little undershoot
-
-            // Determine final setpoint
-            if (!AutoTDPFirstRun)
-                AutoTDP += TDPAdjustment + AutoTDPDamper(processValueFPS);
-            else
-                AutoTDPFirstRun = false;
-
-            AutoTDP = Math.Clamp(AutoTDP, TDPMin, AutoTDPMax);
-
-            // Only update if we have a different TDP value to set
-            if (AutoTDP != AutoTDPPrev)
+            if (!autoLock)
             {
-                double[] values = new double[3] { AutoTDP, AutoTDP, AutoTDP };
-                RequestTDP(values, true);
+                // todo: Store fps for data gathering from multiple points (OSD, Performance)
+                double processValueFPS = PlatformManager.RTSS.GetFramerate(AutoTDPProcessId, out var osdFrameId);
+                if (processValueFPS <= 0 || AutoTDPOSDFrameId == osdFrameId) return;
+
+                // set lock
+                autoLock = true;
+                AutoTDPOSDFrameId = osdFrameId;
+
+                // Ensure realistic process values, prevent divide by 0
+                processValueFPS = Math.Clamp(processValueFPS, 1, 500);
+
+                if (AutoTDPFirstRun)
+                {
+                    RequestMaxPerformance(true);
+                    AutoTDPDipper(processValueFPS, AutoTDPTargetFPS);
+                    AutoTDPFirstRun = false;
+                }
+                else
+                {
+                    AutoPerf(processValueFPS);
+                    //AutoTdp(processValueFPS);
+                }
             }
-            AutoTDPPrev = AutoTDP;
-
-            // LogManager.LogTrace("TDPSet;;;;;{0:0.0};{1:0.000};{2:0.0000};{3:0.0000};{4:0.0000}", AutoTDPTargetFPS, AutoTDP, TDPAdjustment, ProcessValueFPS, TDPDamping);
-
+        }
+        finally
+        {
             // release lock
             autoLock = false;
         }
     }
 
-    private static double AutoTDPDipper(double FPSActual, double FPSSetpoint)
+    private static void AutoPerf(double processValueFPS)
+    {
+        PlatformManager.HWiNFO.ReaffirmRunningProcess();
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUCoreRatio, out var cpuCoreRatioSensor) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUBusClock, out var cpuBusClockSensor) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUFrequencyEffective, out var cpuEffClockSensor) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.GPUFrequency, out var gpuActClockSensor) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.GPUFrequencyEffective, out var gpuEffClockSensor))
+        {
+            AutoCPUClock = cpuBusClockSensor.Value * cpuCoreRatioSensor.Value;
+            AutoGPUClock = gpuActClockSensor.Value;
+
+            var processFPSTarget = AutoTDPTargetFPS;//Math.Min(fpsHistory.Max(), AutoTDPTargetFPS);
+            var processValueCPUUse = Math.Clamp(cpuEffClockSensor.Value * 100 / (cpuBusClockSensor.Value * cpuCoreRatioSensor.Value), .1d, 100.0d);
+            var processValueGPUUse = Math.Clamp(gpuEffClockSensor.Value * 100 / gpuActClockSensor.Value, .1d, 100.0d);
+
+            var fpsDipper = AutoTDPDipper(processValueFPS, processFPSTarget);
+            var fpsTarget = Math.Clamp(fpsHistory.Max(), 1, processFPSTarget + 1);
+            var fpsCPU = fpsDipper > 0 ? processValueFPS : Math.Max(processValueFPS * 2 - fpsTarget, Math.Max(fpsTarget / 2, 1));
+            var fpsGPU = Math.Max(processValueFPS, Math.Max(fpsTarget * .8, 1));
+
+            AutoCpu(fpsTarget / fpsCPU, processValueCPUUse, AutoTargetCPU);
+            AutoGpu(fpsTarget / fpsGPU, processValueGPUUse, AutoTargetGPU);
+        }
+    }
+
+    private static void AutoTdp(double processValueFPS)
+    {
+
+        // Determine error amount, include target, actual and dipper modifier
+        double controllerError = AutoTDPTargetFPS - processValueFPS - AutoTDPDipper(processValueFPS, AutoTDPTargetFPS);
+
+        // Clamp error amount corrected within a single cycle
+        // Adjust clamp if actual FPS is 2.5x requested FPS
+        double clampLowerLimit = processValueFPS >= 2.5 * AutoTDPTargetFPS ? -100 : -5;
+        controllerError = Math.Clamp(controllerError, clampLowerLimit, 15);
+
+        double TDPAdjustment = controllerError * AutoTDP / processValueFPS;
+        TDPAdjustment *= 0.9; // Always have a little undershoot
+
+        // Determine final setpoint
+        if (!AutoTDPFirstRun)
+            AutoTDP += TDPAdjustment + AutoTDPDamper(processValueFPS);
+        else
+            AutoTDPFirstRun = false;
+
+        AutoTDP = Math.Clamp(AutoTDP, TDPMin, AutoTDPMax);
+
+        // Only update if we have a different TDP value to set
+        if (AutoTDP != AutoTDPPrev)
+        {
+            double[] values = [AutoTDP, AutoTDP, AutoTDP];
+            RequestTDP(values, true);
+        }
+        AutoTDPPrev = AutoTDP;
+
+        // LogManager.LogTrace("TDPSet;;;;;{0:0.0};{1:0.000};{2:0.0000};{3:0.0000};{4:0.0000}", AutoTDPTargetFPS, AutoTDP, TDPAdjustment, ProcessValueFPS, TDPDamping);
+    }
+
+    private static void AutoCpu(double fpsDipper, double cpuActual, double cpuSetPoint)
+    {
+        Array.Copy(cpuHistory, 0, cpuHistory, 1, cpuHistory.Length - 1);
+        cpuHistory[0] = cpuActual;
+
+        var cpuAvgCounter = 2;
+        var cpuAdjustment = 0.0d;
+        var cpuOffset = 0.0d;
+        var cpuAvg = cpuHistory.Take(cpuAvgCounter).Average() + cpuAdjustment;
+        var cpuTarget = Math.Clamp(cpuAvg, 1, cpuSetPoint);
+        var cpuCurrent = Math.Min(cpuActual, cpuAvg * 2);
+
+        var cpuClock = (AutoCPUClock * fpsDipper * cpuCurrent / cpuTarget) + cpuOffset;
+        LogManager.LogDebug($"AutoCPU - {(AutoCPUClock * fpsDipper * cpuCurrent / cpuTarget) + cpuOffset} = {AutoCPUClock} * {fpsDipper} * {cpuCurrent} / {cpuTarget} ({cpuAdjustment})");
+
+        AutoCPUClock = Math.Clamp(cpuClock, AutoCPUClockMin, AutoCPUClockMax);
+        RequestCPUClock(AutoCPUClock, true);
+    }
+
+    private static void AutoGpu(double fpsDipper, double gpuActual, double gpuSetPoint)
+    {
+        Array.Copy(gpuHistory, 0, gpuHistory, 1, gpuHistory.Length - 1);
+        gpuHistory[0] = gpuActual;
+
+        var gpuAvgCounter = 2;
+        var gpuAdjustment = 1.5d/* + Math.Clamp(fpsDipper, 0.0d, 2.0d)*/;
+        var gpuOffset = 0.0d;
+        var gpuAvg = gpuHistory.Take(gpuAvgCounter).Average() + gpuAdjustment;
+        var gpuTarget = Math.Clamp(gpuAvg, 1, gpuSetPoint);
+        var gpuCurrent = Math.Min(gpuActual, gpuAvg * 2);
+
+        var gpuClock = (AutoGPUClock * fpsDipper * gpuCurrent / gpuTarget) + gpuOffset;
+        LogManager.LogDebug($"AutoGPU - {(AutoGPUClock * fpsDipper * gpuCurrent / gpuTarget) + gpuOffset} = {AutoGPUClock} * {fpsDipper} * {gpuCurrent} / {gpuTarget} ({gpuAdjustment})");
+
+        AutoGPUClock = Math.Clamp(gpuClock, AutoGPUClockMin, AutoGPUClockMax);
+        RequestGPUClock(AutoGPUClock, true);
+    }
+
+    private static double AutoTDPDipper(double fpsActual, double fpsSetPoint)
     {
         // Dipper
         // Add small positive "error" if actual and target FPS are similar for a duration
-        double Modifier = 0.0d;
+        double modifier = 0.0d;
 
         // Track previous FPS values for average calculation using a rolling array
-        Array.Copy(FPSHistory, 0, FPSHistory, 1, FPSHistory.Length - 1);
-        FPSHistory[0] = FPSActual; // Add current FPS at the start
+        Array.Copy(fpsHistory, 0, fpsHistory, 1, fpsHistory.Length - 1);
+        fpsHistory[0] = fpsActual; // Add current FPS at the start
 
         // Activate around target range of 1 FPS as games can fluctuate
-        if (FPSSetpoint - 1 <= FPSActual && FPSActual <= FPSSetpoint + 1)
+        if (fpsSetPoint - 1 <= fpsActual && fpsActual <= fpsSetPoint + 1)
         {
             AutoTDPFPSSetpointMetCounter++;
 
             // First wait for three seconds of stable FPS arount target, then perform small dip
             // Reduction only happens if average FPS is on target or slightly below
             if (AutoTDPFPSSetpointMetCounter >= 3 && AutoTDPFPSSetpointMetCounter < 6 &&
-                FPSSetpoint - 0.5 <= FPSHistory.Take(3).Average() && FPSHistory.Take(3).Average() <= FPSSetpoint + 0.1)
+                fpsSetPoint - 0.5 <= fpsHistory.Take(3).Average() && fpsHistory.Take(3).Average() <= fpsSetPoint + 0.1)
             {
                 AutoTDPFPSSmallDipCounter++;
-                Modifier = FPSSetpoint + 0.5 - FPSActual;
+                modifier = fpsSetPoint + 0.5 - fpsActual;
             }
             // After three small dips, perform larger dip 
             // Reduction only happens if average FPS is on target or slightly below
             else if (AutoTDPFPSSmallDipCounter >= 3 &&
-                     FPSSetpoint - 0.5 <= FPSHistory.Average() && FPSHistory.Average() <= FPSSetpoint + 0.1)
+                     fpsSetPoint - 0.5 <= fpsHistory.Average() && fpsHistory.Average() <= fpsSetPoint + 0.1)
             {
-                Modifier = FPSSetpoint + 1.5 - FPSActual;
+                modifier = fpsSetPoint + 1.5 - fpsActual;
                 AutoTDPFPSSetpointMetCounter = 6;
             }
         }
         // Perform dips until FPS is outside of limits around target
         else
         {
-            Modifier = 0.0;
+            modifier = 0.0;
             AutoTDPFPSSetpointMetCounter = 0;
             AutoTDPFPSSmallDipCounter = 0;
         }
 
-        return Modifier;
+        return modifier;
     }
 
     private static double AutoTDPDamper(double FPSActual)
     {
         // (PI)D derivative control component to dampen FPS fluctuations
-        if (double.IsNaN(ProcessValueFPSPrevious)) ProcessValueFPSPrevious = FPSActual;
+        if (double.IsNaN(processValueFPSPrevious)) processValueFPSPrevious = FPSActual;
         double DFactor = -0.1d;
 
         // Calculation
-        double deltaError = FPSActual - ProcessValueFPSPrevious;
+        double deltaError = FPSActual - processValueFPSPrevious;
         double DTerm = deltaError / (INTERVAL_AUTO / 1000.0);
         double TDPDamping = AutoTDP / FPSActual * DFactor * DTerm;
 
-        ProcessValueFPSPrevious = FPSActual;
+        processValueFPSPrevious = FPSActual;
 
         return TDPDamping;
     }
@@ -628,21 +827,25 @@ public static class PerformanceManager
         {
             // set lock
             powerLock = true;
+            var idx = -1;
 
             // Checking if active power shceme has changed to reflect that
-            if (PowerGetEffectiveOverlayScheme(out var activeScheme) == 0)
-                if (activeScheme != currentPowerMode)
-                {
-                    currentPowerMode = activeScheme;
-                    var idx = Array.IndexOf(PowerModes, activeScheme);
-                    if (idx != -1)
-                        PowerModeChanged?.Invoke(idx);
-                }
+            //
+
+            if (PowerSchemeAPI.GetActivePlan() is Guid activeScheme && activeScheme != currentPowerMode)
+            //if (PowerGetEffectiveOverlayScheme(out var activeScheme) == 0)
+            //if (activeScheme != currentPowerMode)
+            {
+                currentPowerMode = activeScheme;
+                idx = Array.IndexOf(PowerModes, activeScheme);
+                if (idx != -1)
+                    PowerModeChanged?.Invoke(idx);
+            }
 
             // read perfboostmode
-            var result = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE);
-            var perfboostmode = result[(int)PowerIndexType.AC] == (uint)PerfBoostMode.Aggressive &&
-                                result[(int)PowerIndexType.DC] == (uint)PerfBoostMode.Aggressive;
+            var result = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE);
+            var perfboostmode = result.ACValue == (uint)PerfBoostMode.Aggressive &&
+                                result.DCValue == (uint)PerfBoostMode.Aggressive;
 
             if (perfboostmode != currentPerfBoostMode)
             {
@@ -651,8 +854,8 @@ public static class PerformanceManager
             }
 
             // Checking if current EPP value has changed to reflect that
-            var EPP = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFEPP);
-            var DCvalue = EPP[(int)PowerIndexType.DC];
+            var EPP = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP);
+            var DCvalue = EPP.DCValue;
 
             if (DCvalue != currentEPP)
             {
@@ -684,10 +887,10 @@ public static class PerformanceManager
                 var idx = (int)type;
 
                 // skip msr
-                if (idx >= StoredTDP.Length)
+                if (idx >= storedTDP.Length)
                     break;
 
-                var TDP = StoredTDP[idx];
+                var TDP = storedTDP[idx];
 
                 if (processor is AMDProcessor)
                 {
@@ -702,7 +905,7 @@ public static class PerformanceManager
                         continue;
                 }
 
-                var ReadTDP = CurrentTDP[idx];
+                var ReadTDP = currentTDP[idx];
 
                 if (ReadTDP != 0)
                     cpuWatchdog.Interval = INTERVAL_DEFAULT;
@@ -711,23 +914,24 @@ public static class PerformanceManager
 
                 // only request an update if current limit is different than stored
                 if (ReadTDP != TDP)
-                    processor.SetTDPLimit(type, TDP);
+                    RequestTDP(type, TDP, true);
+                //processor.SetTDPLimit(type, TDP);
 
                 await Task.Delay(12);
             }
 
             // are we done ?
-            TDPdone = CurrentTDP[0] == StoredTDP[0] && CurrentTDP[1] == StoredTDP[1] && CurrentTDP[2] == StoredTDP[2];
+            TDPdone = currentTDP[0] == storedTDP[0] && currentTDP[1] == storedTDP[1] && currentTDP[2] == storedTDP[2];
 
             // processor specific
             if (processor is IntelProcessor)
             {
-                int TDPslow = (int)StoredTDP[(int)PowerType.Slow];
-                int TDPfast = (int)StoredTDP[(int)PowerType.Fast];
+                int TDPslow = (int)storedTDP[(int)PowerType.Slow];
+                int TDPfast = (int)storedTDP[(int)PowerType.Fast];
 
                 // only request an update if current limit is different than stored
-                if (CurrentTDP[(int)PowerType.MsrSlow] != TDPslow ||
-                    CurrentTDP[(int)PowerType.MsrFast] != TDPfast)
+                if (currentTDP[(int)PowerType.MsrSlow] != TDPslow ||
+                    currentTDP[(int)PowerType.MsrFast] != TDPfast)
                     ((IntelProcessor)processor).SetMSRLimit(TDPslow, TDPfast);
                 else
                     MSRdone = true;
@@ -764,13 +968,13 @@ public static class PerformanceManager
 
             var GPUdone = false;
 
-            if (CurrentGfxClock != 0)
+            if (currentGfxClock != 0)
                 gfxWatchdog.Interval = INTERVAL_DEFAULT;
             else
                 gfxWatchdog.Interval = INTERVAL_DEGRADED;
 
             // not ready yet
-            if (StoredGfxClock == 0)
+            if (storedGfxClock == 0)
             {
                 // release lock
                 gfxLock = false;
@@ -778,13 +982,13 @@ public static class PerformanceManager
             }
 
             // only request an update if current gfx clock is different than stored
-            if (CurrentGfxClock != StoredGfxClock)
+            if (currentGfxClock != storedGfxClock)
             {
                 // disabling
-                if (StoredGfxClock == 12750)
+                if (storedGfxClock == 12750)
                     GPUdone = true;
                 else
-                    processor.SetGPUClock(StoredGfxClock);
+                    RequestGPUClock(storedGfxClock, true);
             }
             else
             {
@@ -841,6 +1045,7 @@ public static class PerformanceManager
     private static void StartAutoTDPWatchdog()
     {
         autoWatchdog.Start();
+        AutoTDPFirstRun = true;
     }
 
     private static void StopAutoTDPWatchdog(bool immediate = false)
@@ -858,11 +1063,14 @@ public static class PerformanceManager
 
         // update value read by timer
         int idx = (int)type;
-        StoredTDP[idx] = value;
+        storedTDP[idx] = value;
 
         // immediately apply
         if (immediate)
+        {
             processor.SetTDPLimit((PowerType)idx, value, immediate);
+            currentTDP[idx] = value;
+        }
     }
 
     private static async void RequestTDP(double[] values, bool immediate = false)
@@ -876,12 +1084,13 @@ public static class PerformanceManager
             values[idx] = Math.Min(TDPMax, Math.Max(TDPMin, values[idx]));
 
             // update value read by timer
-            StoredTDP[idx] = values[idx];
+            storedTDP[idx] = values[idx];
 
             // immediately apply
             if (immediate)
             {
                 processor.SetTDPLimit((PowerType)idx, values[idx], immediate);
+                currentTDP[idx] = values[idx];
                 await Task.Delay(12);
             }
         }
@@ -893,46 +1102,62 @@ public static class PerformanceManager
             return;
 
         // update value read by timer
-        StoredGfxClock = value;
+        storedGfxClock = (uint)value;
+
+        if (currentGfxClock == storedGfxClock)
+            return;
 
         // immediately apply
         if (immediate)
-            processor.SetGPUClock(value);
+        {
+            processor.SetGPUClock(value, immediate);
+            currentGfxClock = (uint)value;
+            Task.Delay(120);
+        }
     }
 
     private static void RequestPowerMode(Guid guid)
     {
-        currentPowerMode = guid;
-        LogManager.LogDebug("User requested power scheme: {0}", currentPowerMode);
+        //currentPowerMode = guid;
+        //LogManager.LogDebug("User requested power scheme: {0}", currentPowerMode);
 
-        if (PowerSetActiveOverlayScheme(currentPowerMode) != 0)
-            LogManager.LogWarning("Failed to set requested power scheme: {0}", currentPowerMode);
+        //if (PowerSetActiveOverlayScheme(currentPowerMode) != 0)
+        //    LogManager.LogWarning("Failed to set requested power scheme: {0}", currentPowerMode);
+        if (guid == Guid.Empty)
+            return;
+
+        if (currentPowerMode != guid)
+        {
+            PowerSchemeAPI.SetActivePlan(guid);
+            LogManager.LogDebug("User requested power scheme: {0}", guid);
+
+            if (PowerSchemeAPI.GetActivePlan() != guid)
+                LogManager.LogWarning("Failed to set requested power scheme: {0}", guid);
+            else
+                currentPowerMode = guid;
+        }
     }
 
     private static void RequestEPP(uint EPPOverrideValue)
     {
         currentEPP = EPPOverrideValue;
 
-        var requestedEPP = new uint[2]
-        {
-            (uint)Math.Max(0, (int)EPPOverrideValue - 17),
-            (uint)Math.Max(0, (int)EPPOverrideValue)
-        };
+        var requestedEPP = (ACValue: (uint)Math.Max(0, (int)EPPOverrideValue - 10), DCValue: (uint)Math.Max(0, (int)EPPOverrideValue));
 
         // Is the EPP value already correct?
-        uint[] EPP = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFEPP);
-        if (EPP[0] == requestedEPP[0] && EPP[1] == requestedEPP[1])
+        var EPP = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP);
+        if (EPP.ACValue == requestedEPP.ACValue && EPP.DCValue == requestedEPP.DCValue)
             return;
 
-        LogManager.LogDebug("User requested EPP AC: {0}, DC: {1}", requestedEPP[0], requestedEPP[1]);
+        LogManager.LogDebug("User requested EPP AC: {0}, DC: {1}", requestedEPP.ACValue, requestedEPP.DCValue);
 
         // Set profile EPP
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFEPP, requestedEPP[0], requestedEPP[1]);
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFEPP1, requestedEPP[0], requestedEPP[1]);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP, requestedEPP.ACValue, requestedEPP.DCValue);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP1, requestedEPP.ACValue, requestedEPP.DCValue);
 
         // Has the EPP value been applied?
-        EPP = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFEPP);
-        if (EPP[0] != requestedEPP[0] || EPP[1] != requestedEPP[1])
+        EPP = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP);
+        if (EPP.ACValue != requestedEPP.ACValue || EPP.DCValue != requestedEPP.DCValue)
             LogManager.LogWarning("Failed to set requested EPP");
     }
 
@@ -940,66 +1165,116 @@ public static class PerformanceManager
     {
         currentCoreCount = CoreCount;
 
-        uint currentCoreCountPercent = (uint)((100.0d / MotherboardInfo.NumberOfCores) * CoreCount);
+        uint currentCoreCountPercent = (uint)(100.0d / MotherboardInfo.NumberOfCores * CoreCount);
 
         // Is the CPMINCORES value already correct?
-        uint[] CPMINCORES = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMINCORES);
-        bool CPMINCORESReady = (CPMINCORES[0] == currentCoreCountPercent && CPMINCORES[1] == currentCoreCountPercent);
+        var CPMINCORES = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES);
+        bool CPMINCORESReady = CPMINCORES.ACValue == currentCoreCountPercent && CPMINCORES.DCValue == currentCoreCountPercent;
 
         // Is the CPMAXCORES value already correct?
-        uint[] CPMAXCORES = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMAXCORES);
-        bool CPMAXCORESReady = (CPMAXCORES[0] == currentCoreCountPercent && CPMAXCORES[1] == currentCoreCountPercent);
+        var CPMAXCORES = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES);
+        bool CPMAXCORESReady = CPMAXCORES.ACValue == currentCoreCountPercent && CPMAXCORES.DCValue == currentCoreCountPercent;
 
         if (CPMINCORESReady && CPMAXCORESReady)
             return;
 
         // Set profile CPMINCORES and CPMAXCORES
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMINCORES, currentCoreCountPercent, currentCoreCountPercent);
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMAXCORES, currentCoreCountPercent, currentCoreCountPercent);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES, currentCoreCountPercent, currentCoreCountPercent);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES1, currentCoreCountPercent, currentCoreCountPercent);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES, currentCoreCountPercent, currentCoreCountPercent);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES1, currentCoreCountPercent, currentCoreCountPercent);
 
         LogManager.LogDebug("User requested CoreCount: {0} ({1}%)", CoreCount, currentCoreCountPercent);
 
         // Has the CPMINCORES value been applied?
-        CPMINCORES = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMINCORES);
-        if (CPMINCORES[0] != currentCoreCountPercent || CPMINCORES[1] != currentCoreCountPercent)
+        CPMINCORES = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES);
+        if (CPMINCORES.ACValue != currentCoreCountPercent || CPMINCORES.DCValue != currentCoreCountPercent)
             LogManager.LogWarning("Failed to set requested CPMINCORES");
 
         // Has the CPMAXCORES value been applied?
-        CPMAXCORES = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMAXCORES);
-        if (CPMAXCORES[0] != currentCoreCountPercent || CPMAXCORES[1] != currentCoreCountPercent)
+        CPMAXCORES = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES);
+        if (CPMAXCORES.ACValue != currentCoreCountPercent || CPMAXCORES.DCValue != currentCoreCountPercent)
             LogManager.LogWarning("Failed to set requested CPMAXCORES");
     }
 
     private static void RequestPerfBoostMode(bool value)
     {
-        currentPerfBoostMode = value;
-
-        var perfboostmode = value ? (uint)PerfBoostMode.Aggressive : (uint)PerfBoostMode.Enabled;
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE, perfboostmode, perfboostmode);
-
-        LogManager.LogDebug("User requested perfboostmode: {0}", value);
+        // read perfboostmode
+        if (currentPerfBoostMode == null)
+        {
+            var result = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE);
+            var resultPerfboostmode = result.ACValue == (uint)PerfBoostMode.Aggressive &&
+                                result.DCValue == (uint)PerfBoostMode.Aggressive;
+            LogManager.LogDebug("Current perfboostmode: {0} {1}", result.ACValue, result.DCValue);
+            currentPerfBoostMode = resultPerfboostmode;
+        }
+        LogManager.LogDebug("perfboostmode: {0} {1}", currentPerfBoostMode, value);
+        if (currentPerfBoostMode != value)
+        {
+            currentPerfBoostMode = value;
+            var perfboostmode = value ? (uint)PerfBoostMode.Aggressive : (uint)PerfBoostMode.Disabled;
+            PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE, perfboostmode, perfboostmode);
+            LogManager.LogDebug("User requested perfboostmode: {0}", value);
+        }
     }
 
-    private static void RequestCPUClock(uint cpuClock)
+    private static void RequestCPUClock(double cpuClock, bool immediate = false)
     {
         double maxClock = MotherboardInfo.ProcessorMaxTurboSpeed;
 
         // Is the PROCFREQMAX value already correct?
-        uint[] currentClock = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PROCFREQMAX);
-        bool IsReady = (currentClock[0] == cpuClock && currentClock[1] == cpuClock);
+        var currentClock = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX);
+        var isReady = currentClock.ACValue == (uint)cpuClock && currentClock.DCValue == (uint)cpuClock;
 
-        if (IsReady)
+        if (isReady)
             return;
 
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PROCFREQMAX, cpuClock, cpuClock);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX, (uint)cpuClock, (uint)cpuClock);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX1, (uint)cpuClock, (uint)cpuClock);
 
-        double cpuPercentage = cpuClock / maxClock * 100.0d;
-        LogManager.LogDebug("User requested PROCFREQMAX: {0} ({1}%)", cpuClock, cpuPercentage);
+        if (!immediate)
+        {
+            double cpuPercentage = cpuClock / maxClock * 100.0d;
+            LogManager.LogDebug("User requested PROCFREQMAX: {0} ({1}%)", cpuClock, cpuPercentage);
+        }
 
         // Has the value been applied?
-        currentClock = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PROCFREQMAX);
-        if (currentClock[0] != cpuClock || currentClock[1] != cpuClock)
+        currentClock = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX);
+        if (currentClock.ACValue != (uint)cpuClock || currentClock.DCValue != (uint)cpuClock)
             LogManager.LogWarning("Failed to set requested PROCFREQMAX");
+        Task.Delay(120);
+    }
+
+    private static void RequestMaxPerformance(bool immediate = false)
+    {
+        if (processor is null || !processor.IsInitialized)
+            return;
+
+        var requestedValues = (ACValue: 100u, DCValue: 5u);
+        if (immediate)
+        {
+            requestedValues.ACValue = 5u;
+            processor.SetMaxPerformance();
+        }
+
+        var values = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCTHROTTLEMIN);
+        // Is the ProcThrottleMin value already correct?
+        if (values.ACValue == requestedValues.ACValue &&
+            values.DCValue == requestedValues.DCValue)
+            return;
+
+        if (!immediate)
+            LogManager.LogDebug("User requested ProcThrottleMin AC: {0}, DC: {1}", requestedValues.ACValue, requestedValues.DCValue);
+
+        // Set ProcThrottleMin
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCTHROTTLEMIN, requestedValues.ACValue, requestedValues.DCValue);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCTHROTTLEMIN1, requestedValues.ACValue, requestedValues.DCValue);
+
+        // Has the ProcThrottleMin value been applied?
+        values = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCTHROTTLEMIN);
+        if (values.ACValue != requestedValues.ACValue ||
+            values.DCValue != requestedValues.DCValue)
+            LogManager.LogWarning("Failed to set requested ProcThrottleMin");
     }
 
     public static void Start()
@@ -1106,7 +1381,7 @@ public static class PerformanceManager
     {
         if (value is null) return;
 
-        CurrentGfxClock = (float) value;
+        currentGfxClock = (uint)value;
 
         LogManager.LogTrace("GPUClockChange: {0} Mhz", value);
     }
@@ -1126,7 +1401,7 @@ public static class PerformanceManager
     private static void Processor_LimitChanged(PowerType type, int limit)
     {
         var idx = (int)type;
-        CurrentTDP[idx] = limit;
+        currentTDP[idx] = limit;
 
         // raise event
         PowerLimitChanged?.Invoke(type, limit);
@@ -1139,7 +1414,7 @@ public static class PerformanceManager
         {
             case "gfx_clk":
                 {
-                    CurrentGfxClock = value;
+                    currentGfxClock = (uint)value;
                 }
                 break;
         }

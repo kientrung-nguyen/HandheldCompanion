@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Platforms;
+using HandheldCompanion.Utils;
 using System;
 using System.Diagnostics;
 using System.Timers;
@@ -17,6 +18,7 @@ public static class PlatformManager
 
     // misc platforms
     public static RTSS RTSS = new();
+    public static HWiNFO HWiNFO = new();
     public static Platforms.LibreHardwareMonitor LibreHardwareMonitor = new();
 
     private static Timer UpdateTimer;
@@ -46,7 +48,12 @@ public static class PlatformManager
 
         if (RTSS.IsInstalled)
         {
-            UpdateCurrentNeeds_OnScreenDisplay(OSDManager.OverlayLevel);
+            UpdateCurrentNeedsOnScreenDisplay(OSDManager.OverlayLevel);
+        }
+
+        if (HWiNFO.IsInstalled)
+        {
+            // do something
         }
 
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
@@ -97,7 +104,7 @@ public static class PlatformManager
             {
                 case "OnScreenDisplayLevel":
                     {
-                        UpdateCurrentNeeds_OnScreenDisplay(Convert.ToInt16(value));
+                        UpdateCurrentNeedsOnScreenDisplay(EnumUtils<OSDManager.OverlayDisplayLevel>.Parse(Convert.ToInt16(value)));
                         UpdateTimer.Stop();
                         UpdateTimer.Start();
                     }
@@ -106,22 +113,22 @@ public static class PlatformManager
         });
     }
 
-    private static void UpdateCurrentNeeds_OnScreenDisplay(short level)
+    private static void UpdateCurrentNeedsOnScreenDisplay(OSDManager.OverlayDisplayLevel level)
     {
         switch (level)
         {
-            case 0: // Disabled
+            case OSDManager.OverlayDisplayLevel.Disabled: // Disabled
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplayComplex;
                 break;
             default:
-            case 1: // Minimal
+            case OSDManager.OverlayDisplayLevel.Minimal: // Minimal
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplayComplex;
                 break;
-            case 2: // Extended
-            case 3: // Full
-            case 4: // External
+            case OSDManager.OverlayDisplayLevel.Extended: // Extended
+            case OSDManager.OverlayDisplayLevel.Full: // Full
+            case OSDManager.OverlayDisplayLevel.External: // External
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplayComplex;
                 break;
@@ -133,6 +140,7 @@ public static class PlatformManager
         /*
          * Dependencies:
          * LibreHardwareMonitor (LHM): OSD
+         * HWiNFO: AutoPerf, OSD
          * RTSS: AutoTDP, framerate limiter, OSD
          */
 
@@ -156,28 +164,50 @@ public static class PlatformManager
                 // OnScreenDisplayComplex is a new flag that indicates if the OSD needs more information from LHM
                 if (!PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay) ||
                     !PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplayComplex))
+                {
                     // Only start LHM if it was not running before or if OnScreenDisplayComplex was false
-                    LibreHardwareMonitor.Start();
+                    //LibreHardwareMonitor.Start();
+                    // Only start HWiNFO if it was not running before or if OnScreenDisplayComplex was false and if it is installed
+                    if (HWiNFO.IsInstalled)
+                        HWiNFO.Start();
+                }
             }
             else
             {
                 // If OnScreenDisplayComplex is false, stop LHM if it was running before
                 if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay) &&
                     PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplayComplex))
-                    LibreHardwareMonitor.Stop(true);
+                {
+                    //LibreHardwareMonitor.Stop(true);
+                    // Only start HWiNFO if it was not running before or if OnScreenDisplayComplex was false and if it is installed
+                    if (HWiNFO.IsInstalled)
+                        HWiNFO.Stop(true);
+                }
             }
         }
         else if (CurrentNeeds.HasFlag(PlatformNeeds.AutoTDP) || CurrentNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
         {
             // If AutoTDP or framerate limiter is needed, start only RTSS and stop LHM
             if (!PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) && !PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
+            {
                 // Only start RTSS if it was not running before and if it is installed
                 if (RTSS.IsInstalled)
                     RTSS.Start();
 
+                if (HWiNFO.IsInstalled)
+                    HWiNFO.Start();
+            }
+            // Only stop HWiNFO if it was running before
+            // Only stop HWiNFO if it is installed
+            else if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay))
+            {
+                if (HWiNFO.IsInstalled)
+                    HWiNFO.Stop(true);
+            }
+
             // Only stop LHM if it was running before
-            if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplayComplex))
-                LibreHardwareMonitor.Stop(true);
+            //if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplayComplex))
+            //    LibreHardwareMonitor.Stop(true);
         }
         else
         {
@@ -186,7 +216,10 @@ public static class PlatformManager
                 PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
             {
                 // Only stop LHM and RTSS if they were running before and if they are installed
-                LibreHardwareMonitor.Stop(true);
+                //LibreHardwareMonitor.Stop(true);
+
+                // Only stop HWiNFO and RTSS if they were running before and if they are installed
+                if (HWiNFO.IsInstalled) HWiNFO.Stop(true);
                 if (RTSS.IsInstalled)
                 {
                     // Stop RTSS
@@ -220,7 +253,17 @@ public static class PlatformManager
         if (LibreHardwareMonitor.IsInstalled)
             LibreHardwareMonitor.Stop();
 
+        if (HWiNFO.IsInstalled)
+        {
+            var killHWiNFO = SettingsManager.GetBoolean("PlatformHWiNFOEnabled");
+            HWiNFO.Stop(killHWiNFO);
+            HWiNFO.Dispose();
+        }
+
         IsInitialized = false;
+
+        PreviousNeeds = PlatformNeeds.None;
+        CurrentNeeds = PlatformNeeds.None;
 
         LogManager.LogInformation("{0} has stopped", "PlatformManager");
     }

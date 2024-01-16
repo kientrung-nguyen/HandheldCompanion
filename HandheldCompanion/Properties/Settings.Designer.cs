@@ -721,6 +721,18 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool PlatformHWiNFOEnabled {
+            get {
+                return ((bool)(this["PlatformHWiNFOEnabled"]));
+            }
+            set {
+                this["PlatformHWiNFOEnabled"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("3")]
         public int QuickToolsLocation {
             get {

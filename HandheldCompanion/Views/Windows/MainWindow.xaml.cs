@@ -562,6 +562,10 @@ public partial class MainWindow : GamepadWindow
 
                         // restart IMU
                         SensorsManager.Resume(true);
+
+                        PlatformManager.Start();
+
+                        OSDManager.Start();
                     }
 
                     // open device, when ready
@@ -591,6 +595,10 @@ public partial class MainWindow : GamepadWindow
 
                     // pause inputs manager
                     InputsManager.Stop();
+
+                    OSDManager.Stop();
+
+                    PlatformManager.Stop();
 
                     // close current device
                     CurrentDevice.Close();

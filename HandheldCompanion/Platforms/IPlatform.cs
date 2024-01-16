@@ -19,7 +19,8 @@ public enum PlatformType
     Origin = 2,
     UbisoftConnect = 3,
     GOG = 4,
-    RTSS = 5
+    RTSS = 5,
+    HWiNFO = 6
 }
 
 public enum PlatformStatus
@@ -148,9 +149,7 @@ public abstract class IPlatform : IDisposable
 
     public virtual void Dispose()
     {
-        if (PlatformWatchdog is not null)
-            PlatformWatchdog.Dispose();
-
+        PlatformWatchdog?.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -216,9 +215,7 @@ public abstract class IPlatform : IDisposable
         KeepAlive = true;
 
         // start watchdog
-        if (PlatformWatchdog is not null)
-            PlatformWatchdog.Start();
-
+        PlatformWatchdog?.Start();
         return true;
     }
 
@@ -230,8 +227,7 @@ public abstract class IPlatform : IDisposable
         SetStatus(PlatformStatus.Stopping);
 
         // stop watchdog
-        if (PlatformWatchdog is not null)
-            PlatformWatchdog.Stop();
+        PlatformWatchdog?.Stop();
 
         if (kill)
             KillProcess();
@@ -251,7 +247,7 @@ public abstract class IPlatform : IDisposable
             }
             else
             {
-                LogManager.LogError("Something wen't wrong while trying to start {0}", GetType());
+                LogManager.LogError("Something went wrong while trying to start {0}", GetType());
                 Stop();
 
                 // reset tentative counter

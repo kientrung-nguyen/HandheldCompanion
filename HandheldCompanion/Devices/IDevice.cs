@@ -16,6 +16,7 @@ using System.Numerics;
 using System.Threading;
 using System.Windows.Media;
 using Windows.Devices.Sensors;
+using Windows.UI.Notifications;
 using WindowsInput.Events;
 using static HandheldCompanion.OneEuroFilter;
 using static HandheldCompanion.OpenLibSys;
@@ -57,6 +58,9 @@ public struct ECDetails
 
     public short FanValueMin;
     public short FanValueMax;
+    public ushort AddressFanRPMOffset;
+    public short AddressFanRPMLength;
+
 }
 
 public abstract class IDevice
@@ -331,7 +335,12 @@ public abstract class IDevice
                             device = new GPDWinMax2Intel();
                             break;
                         case "G1619-04":
-                            device = new GPDWinMax2AMD();
+                            device = Processor switch
+                            {
+                                "AMD Ryzen 5 7640U w/ Radeon 760M Graphics" => new GPDWinMax2_2023_7640U(),
+                                "AMD Ryzen 7 7840U w/ Radeon 780M Graphics" => new GPDWinMax2_2023_7840U(),
+                                _ => new GPDWinMax2AMD(),
+                            };
                             break;
                     }
                 }
@@ -599,6 +608,11 @@ public abstract class IDevice
         return 0;
     }
 
+    public virtual int ReadFanSpeed()
+    {
+        return 0;
+    }
+
     public virtual bool SetLedStatus(bool status)
     {
         return true;
@@ -670,9 +684,20 @@ public abstract class IDevice
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Couldn't read to port using OpenLibSys. ErrorCode: {0}", ex.Message);
+            LogManager.LogError("Couldn't read to port using OpenLibSys. ErrorCode: {0}", ex.Message + ex.StackTrace);
             return 0;
         }
+    }
+
+    public virtual int ECRAMRead(ushort address, int length, ECDetails details)
+    {
+        var sum = 0;
+        foreach (var len in Enumerable.Range(0, length))
+        {
+            var value = ECRamReadByte((ushort)(address + len), details);
+            sum = (sum << 8) + value;
+        }
+        return sum;
     }
 
     public virtual bool ECRamDirectWrite(ushort address, ECDetails details, byte data)

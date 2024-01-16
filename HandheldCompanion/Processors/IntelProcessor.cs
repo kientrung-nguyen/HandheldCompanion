@@ -142,13 +142,13 @@ public class IntelProcessor : Processor
         platform.set_msr_limits((int)PL1, (int)PL2);
     }
 
-    public override void SetGPUClock(double clock, int result)
+    public override void SetGPUClock(double clock, bool immediate, int result)
     {
         if (Monitor.TryEnter(IsBusy))
         {
             var error = platform.set_gfx_clk((int)clock);
 
-            base.SetGPUClock(clock, error);
+            base.SetGPUClock(clock, immediate, error);
 
             Monitor.Exit(IsBusy);
         }
