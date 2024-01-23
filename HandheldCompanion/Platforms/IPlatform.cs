@@ -20,7 +20,8 @@ public enum PlatformType
     UbisoftConnect = 3,
     GOG = 4,
     RTSS = 5,
-    HWiNFO = 6
+    HWiNFO = 6,
+    LibreHardwareMonitor,
 }
 
 public enum PlatformStatus
@@ -242,9 +243,7 @@ public abstract class IPlatform : IDisposable
         if (KeepAlive)
         {
             if (Tentative < MaxTentative)
-            {
                 StartProcess();
-            }
             else
             {
                 LogManager.LogError("Something went wrong while trying to start {0}", GetType());
@@ -285,7 +284,7 @@ public abstract class IPlatform : IDisposable
                     CreateNoWindow = true
                 });
 
-                Thread.Sleep(500);
+                Thread.Sleep(2000);
             }
 
             if (process is not null && !process.HasExited)

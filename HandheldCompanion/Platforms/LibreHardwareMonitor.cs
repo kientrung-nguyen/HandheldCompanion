@@ -31,6 +31,7 @@ namespace HandheldCompanion.Platforms
 
         public LibreHardwareMonitor()
         {
+            PlatformType = PlatformType.LibreHardwareMonitor;
             Name = "LibreHardwareMonitor";
             IsInstalled = true;
 

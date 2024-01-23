@@ -4,14 +4,12 @@ using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Utils;
 using RTSSSharedMemoryNET;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Platforms;
@@ -28,7 +26,6 @@ public class RTSS : IPlatform
 
     private readonly ConcurrentList<int> HookedProcessIds = new();
     private bool ProfileLoaded;
-
     private int RequestedFramerate;
 
     public RTSS()
@@ -88,7 +85,7 @@ public class RTSS : IPlatform
 
         // our main watchdog to (re)apply requested settings
         PlatformWatchdog = new Timer(2000) { Enabled = false };
-        PlatformWatchdog.Elapsed += Watchdog_Elapsed;
+        PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
     }
 
     public override bool Start()
@@ -97,14 +94,15 @@ public class RTSS : IPlatform
         {
             // start RTSS if not running
             if (!IsRunning)
+            {
                 StartProcess();
+                ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
+                ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
+                ProfileManager.Applied += ProfileManager_Applied;
+            }
             else
                 // hook into current process
                 Process.Exited += Process_Exited;
-
-            ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-            ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
-            ProfileManager.Applied += ProfileManager_Applied;
 
             // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
             if (SettingsManager.IsInitialized)
@@ -159,11 +157,12 @@ public class RTSS : IPlatform
     private async void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
     {
         // hook new process
-        AppEntry appEntry = null;
         var processId = processEx.GetProcessId();
+        LogManager.LogDebug($"RTSS Foreground Changed {processEx.Executable} {processId}");
         if (processId == 0)
             return;
 
+        AppEntry? appEntry = null;
         do
         {
             /*
@@ -174,21 +173,21 @@ public class RTSS : IPlatform
              */
             try
             {
-                var entries = OSD.GetAppEntries().Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None);
-                foreach (var entry in entries)
-                {
-                    if (entry.ProcessId == processId)
-                    {
-                        appEntry = entry;
-                        break;
-                    }
-                }
+                appEntry = OSD.GetAppEntries()
+                    .Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None)
+                    .FirstOrDefault(entry => entry.ProcessId == processId);
+                LogManager.LogDebug($"RTSS AppEntry {processEx.Executable} {(appEntry is null ? "null" : appEntry.ProcessId)}");
             }
             catch (FileNotFoundException)
             {
+                LogManager.LogError($"RTSS {nameof(FileNotFoundException)}");
                 return;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogManager.LogError($"RTSS {ex.Message} {ex.StackTrace}");
+                return;
+            }
             await Task.Delay(1000);
         } while (appEntry is null && ProcessManager.HasProcess(processId) && KeepAlive);
 
@@ -212,21 +211,18 @@ public class RTSS : IPlatform
         if (processId == 0)
             return;
 
-        // we're not hooked into this process
-        if (!HookedProcessIds.Contains(processId))
-            return;
-
-        // remove from array
-        HookedProcessIds.Remove(processId);
-
-        // raise event
-        Unhooked?.Invoke(processId);
+        if (HookedProcessIds.Remove(processId))
+            // raise event
+            Unhooked?.Invoke(processId);
     }
 
-    private void Watchdog_Elapsed(object? sender, ElapsedEventArgs e)
+    private void PlatformWatchdogElapsed()
     {
         if (Monitor.TryEnter(updateLock))
         {
+            // reset tentative counter
+            Tentative = 0;
+
             if (GetTargetFPS() != RequestedFramerate)
                 SetTargetFPS(RequestedFramerate);
 
@@ -237,18 +233,33 @@ public class RTSS : IPlatform
         }
     }
 
-    private void Process_Exited(object? sender, EventArgs e)
+    protected override void Process_Exited(object? sender, EventArgs e)
     {
-        if (KeepAlive)
-            StartProcess();
+        ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
+        ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
+        ProfileManager.Applied -= ProfileManager_Applied;
+        base.Process_Exited(sender, e);
     }
+
+    //private void Process_Exited(object? sender, EventArgs e)
+    //{
+    //    ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
+    //    ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
+    //    ProfileManager.Applied -= ProfileManager_Applied;
+
+    //    if (KeepAlive)
+    //        StartProcess();
+    //}
 
     public double GetFramerate(int processId, out uint osdFrameId)
     {
+        osdFrameId = 0;
         try
         {
-            osdFrameId = 0;
-            var appE = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == processId);
+            var appE = OSD
+                .GetAppEntries()
+                .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None)
+                .FirstOrDefault(a => a.ProcessId == processId);
             if (appE is null)
                 return 0.0d;
 
@@ -257,8 +268,6 @@ public class RTSS : IPlatform
         }
         catch (InvalidDataException) { }
         catch (FileNotFoundException) { }
-
-        osdFrameId = 0;
         return 0.0d;
     }
 

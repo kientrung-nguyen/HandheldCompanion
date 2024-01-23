@@ -668,18 +668,14 @@ public static class PerformanceManager
     private static void AutoPerf(double processValueFPS)
     {
         PlatformManager.HWiNFO.ReaffirmRunningProcess();
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUCoreRatio, out var cpuCoreRatioSensor) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUBusClock, out var cpuBusClockSensor) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUFrequencyEffective, out var cpuEffClockSensor) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.GPUFrequency, out var gpuActClockSensor) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.GPUFrequencyEffective, out var gpuEffClockSensor))
+        if (PlatformManager.HWiNFO.GetAutoPerformanceSensors(out var cpuFrequency, out var cpuEffective, out var gpuFrequency, out var gpuEffective))
         {
-            AutoCPUClock = cpuBusClockSensor.Value * cpuCoreRatioSensor.Value;
-            AutoGPUClock = gpuActClockSensor.Value;
+            AutoCPUClock = cpuFrequency;
+            AutoGPUClock = gpuFrequency;
 
             var processFPSTarget = AutoTDPTargetFPS;//Math.Min(fpsHistory.Max(), AutoTDPTargetFPS);
-            var processValueCPUUse = Math.Clamp(cpuEffClockSensor.Value * 100 / (cpuBusClockSensor.Value * cpuCoreRatioSensor.Value), .1d, 100.0d);
-            var processValueGPUUse = Math.Clamp(gpuEffClockSensor.Value * 100 / gpuActClockSensor.Value, .1d, 100.0d);
+            var processValueCPUUse = Math.Clamp(cpuEffective * 100 / cpuFrequency, .1d, 100.0d);
+            var processValueGPUUse = Math.Clamp(gpuEffective * 100 / gpuFrequency, .1d, 100.0d);
 
             var fpsDipper = AutoTDPDipper(processValueFPS, processFPSTarget);
             var fpsTarget = Math.Clamp(fpsHistory.Max(), 1, processFPSTarget + 1);
@@ -1152,8 +1148,7 @@ public static class PerformanceManager
         LogManager.LogDebug("User requested EPP AC: {0}, DC: {1}", requestedEPP.ACValue, requestedEPP.DCValue);
 
         // Set profile EPP
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP, requestedEPP.ACValue, requestedEPP.DCValue);
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP1, requestedEPP.ACValue, requestedEPP.DCValue);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.PERFEPP, Setting.PERFEPP1], requestedEPP.ACValue, requestedEPP.DCValue);
 
         // Has the EPP value been applied?
         EPP = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP);
@@ -1179,11 +1174,9 @@ public static class PerformanceManager
             return;
 
         // Set profile CPMINCORES and CPMAXCORES
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES, currentCoreCountPercent, currentCoreCountPercent);
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES1, currentCoreCountPercent, currentCoreCountPercent);
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES, currentCoreCountPercent, currentCoreCountPercent);
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES1, currentCoreCountPercent, currentCoreCountPercent);
-
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.CPMINCORES, Setting.CPMINCORES1], currentCoreCountPercent, currentCoreCountPercent);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.CPMAXCORES, Setting.CPMAXCORES1], currentCoreCountPercent, currentCoreCountPercent);
+        
         LogManager.LogDebug("User requested CoreCount: {0} ({1}%)", CoreCount, currentCoreCountPercent);
 
         // Has the CPMINCORES value been applied?
@@ -1202,13 +1195,12 @@ public static class PerformanceManager
         // read perfboostmode
         if (currentPerfBoostMode == null)
         {
-            var result = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE);
-            var resultPerfboostmode = result.ACValue == (uint)PerfBoostMode.Aggressive &&
-                                result.DCValue == (uint)PerfBoostMode.Aggressive;
-            LogManager.LogDebug("Current perfboostmode: {0} {1}", result.ACValue, result.DCValue);
+            var (ACValue, DCValue) = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE);
+            var resultPerfboostmode = ACValue == (uint)PerfBoostMode.Aggressive &&
+                                DCValue == (uint)PerfBoostMode.Aggressive;
             currentPerfBoostMode = resultPerfboostmode;
         }
-        LogManager.LogDebug("perfboostmode: {0} {1}", currentPerfBoostMode, value);
+
         if (currentPerfBoostMode != value)
         {
             currentPerfBoostMode = value;
@@ -1229,8 +1221,7 @@ public static class PerformanceManager
         if (isReady)
             return;
 
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX, (uint)cpuClock, (uint)cpuClock);
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX1, (uint)cpuClock, (uint)cpuClock);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.PROCFREQMAX, Setting.PROCFREQMAX1], (uint)cpuClock, (uint)cpuClock);
 
         if (!immediate)
         {
@@ -1250,30 +1241,29 @@ public static class PerformanceManager
         if (processor is null || !processor.IsInitialized)
             return;
 
-        var requestedValues = (ACValue: 100u, DCValue: 5u);
+        var (ACValue, DCValue) = (100u, 5u);
         if (immediate)
         {
-            requestedValues.ACValue = 5u;
+            ACValue = 5u;
             processor.SetMaxPerformance();
         }
 
         var values = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCTHROTTLEMIN);
         // Is the ProcThrottleMin value already correct?
-        if (values.ACValue == requestedValues.ACValue &&
-            values.DCValue == requestedValues.DCValue)
+        if (values.ACValue == ACValue &&
+            values.DCValue == DCValue)
             return;
 
         if (!immediate)
-            LogManager.LogDebug("User requested ProcThrottleMin AC: {0}, DC: {1}", requestedValues.ACValue, requestedValues.DCValue);
+            LogManager.LogDebug("User requested ProcThrottleMin AC: {0}, DC: {1}", ACValue, DCValue);
 
         // Set ProcThrottleMin
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCTHROTTLEMIN, requestedValues.ACValue, requestedValues.DCValue);
-        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCTHROTTLEMIN1, requestedValues.ACValue, requestedValues.DCValue);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.PROCTHROTTLEMIN, Setting.PROCTHROTTLEMIN1], ACValue, DCValue);
 
         // Has the ProcThrottleMin value been applied?
         values = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCTHROTTLEMIN);
-        if (values.ACValue != requestedValues.ACValue ||
-            values.DCValue != requestedValues.DCValue)
+        if (values.ACValue != ACValue ||
+            values.DCValue != DCValue)
             LogManager.LogWarning("Failed to set requested ProcThrottleMin");
     }
 

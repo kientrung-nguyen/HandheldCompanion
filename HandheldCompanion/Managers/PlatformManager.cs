@@ -181,7 +181,7 @@ public static class PlatformManager
                     //LibreHardwareMonitor.Stop(true);
                     // Only start HWiNFO if it was not running before or if OnScreenDisplayComplex was false and if it is installed
                     if (HWiNFO.IsInstalled)
-                        HWiNFO.Stop(true);
+                        HWiNFO.Stop();
                 }
             }
         }
@@ -199,10 +199,10 @@ public static class PlatformManager
             }
             // Only stop HWiNFO if it was running before
             // Only stop HWiNFO if it is installed
-            else if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay))
+            else if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplayComplex))
             {
                 if (HWiNFO.IsInstalled)
-                    HWiNFO.Stop(true);
+                    HWiNFO.Stop();
             }
 
             // Only stop LHM if it was running before
@@ -219,7 +219,7 @@ public static class PlatformManager
                 //LibreHardwareMonitor.Stop(true);
 
                 // Only stop HWiNFO and RTSS if they were running before and if they are installed
-                if (HWiNFO.IsInstalled) HWiNFO.Stop(true);
+                if (HWiNFO.IsInstalled) HWiNFO.Stop();
                 if (RTSS.IsInstalled)
                 {
                     // Stop RTSS
@@ -250,8 +250,8 @@ public static class PlatformManager
             RTSS.Dispose();
         }
 
-        if (LibreHardwareMonitor.IsInstalled)
-            LibreHardwareMonitor.Stop();
+        //if (LibreHardwareMonitor.IsInstalled)
+        //    LibreHardwareMonitor.Stop();
 
         if (HWiNFO.IsInstalled)
         {

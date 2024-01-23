@@ -7,6 +7,7 @@ using HandheldCompanion.Utils;
 using HidLibrary;
 using iNKORE.UI.WPF.Modern.Controls;
 using LibreHardwareMonitor.Hardware.Motherboard;
+using Microsoft.Extensions.Logging;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Collections.Generic;
@@ -610,6 +611,9 @@ public abstract class IDevice
 
     public virtual int ReadFanSpeed()
     {
+        if (!IsOpen)
+            return 0;
+
         return 0;
     }
 
@@ -661,6 +665,9 @@ public abstract class IDevice
 
     public virtual byte ECRamReadByte(ushort address, ECDetails details)
     {
+        if (openLibSys is null)
+            return 0;
+
         var addr_upper = (byte)((address >> 8) & byte.MaxValue);
         var addr_lower = (byte)(address & byte.MaxValue);
 
@@ -689,9 +696,9 @@ public abstract class IDevice
         }
     }
 
-    public virtual int ECRAMRead(ushort address, int length, ECDetails details)
+    public virtual long ECRAMReadLong(ushort address, int length, ECDetails details)
     {
-        var sum = 0;
+        var sum = 0l;
         foreach (var len in Enumerable.Range(0, length))
         {
             var value = ECRamReadByte((ushort)(address + len), details);
@@ -702,6 +709,9 @@ public abstract class IDevice
 
     public virtual bool ECRamDirectWrite(ushort address, ECDetails details, byte data)
     {
+        if (openLibSys is null)
+            return false;
+
         byte addr_upper = (byte)((address >> 8) & byte.MaxValue);
         byte addr_lower = (byte)(address & byte.MaxValue);
 

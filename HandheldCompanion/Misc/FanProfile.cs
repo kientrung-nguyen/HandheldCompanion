@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Views;
+﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Views;
 using System;
 using System.Linq;
 
@@ -16,7 +17,7 @@ namespace HandheldCompanion.Misc
         public FanMode fanMode = FanMode.Hardware;
 
         //                            00, 10, 20, 30, 40, 50, 60, 70, 80, 90,  100°C
-        public double[] fanSpeeds = { 20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100 };
+        public double[] fanSpeeds = [20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100];
 
         // A private variable to store the average temperature
         private ConcurrentList<double> avgTemp;
