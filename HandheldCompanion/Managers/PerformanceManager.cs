@@ -2,37 +2,38 @@ using HandheldCompanion.Controls;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Views;
-using Microsoft.Win32;
+using PowerManagerAPI;
 using RTSSSharedMemoryNET;
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Timers;
-using static HandheldCompanion.Platforms.HWiNFO;
-using Timer = System.Timers.Timer;
 using PowerSchemeAPI = PowerManagerAPI.PowerManager;
-using PowerManagerAPI;
-using System.Windows.Media.Converters;
-using SharpDX;
+using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
 public static class OSPowerMode
 {
     /// <summary>
-    ///     Better Battery mode.
+    ///     Better Battery mode. (Efficient / Better Battery Overlay)
     /// </summary>
     public static Guid BetterBattery = new("961cc777-2547-4f9d-8174-7d86181b8a7a");
 
     /// <summary>
-    ///     Better Performance mode.
+    ///     Better Performance mode. (Better Performance / High Performance Overlay)
     /// </summary>
-    // public static Guid BetterPerformance = new Guid("3af9B8d9-7c97-431d-ad78-34a8bfea439f");
-    public static Guid BetterPerformance = new();
+    public static Guid BetterPerformance = new("3af9B8d9-7c97-431d-ad78-34a8bfea439f");
+    //public static Guid Balanced = new("381b4222-f694-41f0-9685-ff5bb260df2e");
 
     /// <summary>
-    ///     Best Performance mode.
+    ///     Balanced mode. (Balanced / Default to Balance Power Scheme)
+    /// </summary
+    public static Guid Recommended = new();
+
+    /// <summary>
+    ///     Best Performance mode. (Performance / Max Perfromance Overlay)
     /// </summary>
     public static Guid BestPerformance = new("ded574b5-45a0-4f42-8737-46345c09c238");
 }
@@ -44,7 +45,12 @@ public static class PerformanceManager
     private const short INTERVAL_DEGRADED = 5000; // degraded interval between value scans
     public static int MaxDegreeOfParallelism = 4;
 
-    public static readonly Guid[] PowerModes = [OSPowerMode.BetterBattery, OSPowerMode.BetterPerformance, OSPowerMode.BestPerformance];
+    public static readonly Guid[] PowerModes = [
+        OSPowerMode.BetterBattery,      // Best Power Efficiency
+        OSPowerMode.Recommended,        // Recommended
+        OSPowerMode.BetterPerformance,  // Better Performance
+        OSPowerMode.BestPerformance     // Best Performance
+    ];
 
     private static readonly Timer autoWatchdog;
     private static readonly Timer cpuWatchdog;
@@ -77,14 +83,15 @@ public static class PerformanceManager
     private static double AutoTargetCPU;
     private static double AutoTargetGPU;
     private static bool cpuWatchdogPendingStop;
-    private static uint currentEPP = 50;
+
+    private static uint currentEPP = 0x00000032;
     private static int currentCoreCount;
     private static uint currentGfxClock;
 
     // powercfg
     private static bool? currentPerfBoostMode;
     private static Guid currentPowerMode = new("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
-    private static readonly double[] currentTDP = new double[5]; // used to store current TDP
+    private static double[] currentTDP = new double[5]; // used to store current TDP
 
     // GPU limits
     private static double fallbackGfxClock;
@@ -126,7 +133,9 @@ public static class PerformanceManager
         ProfileManager.Updated += ProfileManager_Updated;
         PowerProfileManager.Applied += PowerProfileManager_Applied;
         PowerProfileManager.Discarded += PowerProfileManager_Discarded;
-        PlatformManager.LibreHardwareMonitor.GPUClockChanged += LibreHardwareMonitor_GPUClockChanged;
+        //PlatformManager.LibreHardwareMonitor.GPUClockChanged += LibreHardwareMonitor_GPUClockChanged;
+        PlatformManager.HWiNFO.GPUFrequencyChanged += HWiNFO_GPUFrequencyChanged;
+        PlatformManager.HWiNFO.PowerLimitChanged += HWiNFO_PowerLimitChanged;
         PlatformManager.RTSS.Hooked += RTSS_Hooked;
         PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
         SettingsManager.SettingValueChanged += SettingsManagerOnSettingValueChanged;
@@ -140,6 +149,37 @@ public static class PerformanceManager
 
         currentCoreCount = Environment.ProcessorCount;
         MaxDegreeOfParallelism = Convert.ToInt32(Environment.ProcessorCount / 2);
+    }
+
+    private static void HWiNFO_GPUFrequencyChanged(double value)
+    {
+        currentGfxClock = (uint)value;
+        //LogManager.LogDebug("GPUFrequencyChanged: {0} Mhz", value);
+    }
+
+    private static void HWiNFO_PowerLimitChanged(PowerType type, int limit)
+    {
+        var idx = (int)type;
+        currentTDP[idx] = limit;
+
+        // workaround, HWiNFO doesn't have the ability to report MSR
+        switch (type)
+        {
+            case PowerType.Stapm:
+                currentTDP[(int)PowerType.Stapm] = limit;
+                break;
+            case PowerType.Slow:
+                currentTDP[(int)PowerType.MsrSlow] = limit;
+                break;
+            case PowerType.Fast:
+                currentTDP[(int)PowerType.MsrFast] = limit;
+                break;
+        }
+
+        // raise event
+        PowerLimitChanged?.Invoke(type, limit);
+
+        //LogManager.LogDebug("PowerLimitChanged: {0}\t{1} W", type, limit);
     }
 
     private static void SettingsManagerOnSettingValueChanged(string name, object value)
@@ -349,6 +389,8 @@ public static class PerformanceManager
 
     private static void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
     {
+        LogManager.LogDebug(PowerSchemeAPI.GetPowerMode().ToString() + " / " + PowerSchemeAPI.GetActivePlan().ToString());
+        LogManager.LogDebug($"Power profile: {string.Join(",", PowerSchemeAPI.GetPlans().Select(v => "[" + v.PlanId + "," + v.PlanName + "]"))}");
         // apply profile defined TDP
         if (profile.TDPOverrideEnabled && profile.TDPOverrideValues is not null)
         {
@@ -476,6 +518,8 @@ public static class PerformanceManager
 
         // apply profile Power Mode
         RequestPowerMode(profile.OSPowerMode);
+
+        LogManager.LogDebug($"{nameof(PerformanceManager)} Power profile {profile.Name} applied.");
     }
 
     private static void ClampAutoTDPClockMax()
@@ -733,7 +777,7 @@ public static class PerformanceManager
         var cpuCurrent = Math.Min(cpuActual, cpuAvg * 2);
 
         var cpuClock = (AutoCPUClock * fpsDipper * cpuCurrent / cpuTarget) + cpuOffset;
-        LogManager.LogDebug($"AutoCPU - {(AutoCPUClock * fpsDipper * cpuCurrent / cpuTarget) + cpuOffset} = {AutoCPUClock} * {fpsDipper} * {cpuCurrent} / {cpuTarget} ({cpuAdjustment})");
+        //LogManager.LogDebug($"AutoCPU - {(AutoCPUClock * fpsDipper * cpuCurrent / cpuTarget) + cpuOffset} = {AutoCPUClock} * {fpsDipper} * {cpuCurrent} / {cpuTarget} ({cpuAdjustment})");
 
         AutoCPUClock = Math.Clamp(cpuClock, AutoCPUClockMin, AutoCPUClockMax);
         RequestCPUClock(AutoCPUClock, true);
@@ -752,7 +796,7 @@ public static class PerformanceManager
         var gpuCurrent = Math.Min(gpuActual, gpuAvg * 2);
 
         var gpuClock = (AutoGPUClock * fpsDipper * gpuCurrent / gpuTarget) + gpuOffset;
-        LogManager.LogDebug($"AutoGPU - {(AutoGPUClock * fpsDipper * gpuCurrent / gpuTarget) + gpuOffset} = {AutoGPUClock} * {fpsDipper} * {gpuCurrent} / {gpuTarget} ({gpuAdjustment})");
+        //LogManager.LogDebug($"AutoGPU - {(AutoGPUClock * fpsDipper * gpuCurrent / gpuTarget) + gpuOffset} = {AutoGPUClock} * {fpsDipper} * {gpuCurrent} / {gpuTarget} ({gpuAdjustment})");
 
         AutoGPUClock = Math.Clamp(gpuClock, AutoGPUClockMin, AutoGPUClockMax);
         RequestGPUClock(AutoGPUClock, true);
@@ -828,12 +872,13 @@ public static class PerformanceManager
             // Checking if active power shceme has changed to reflect that
             //
 
-            if (PowerSchemeAPI.GetActivePlan() is Guid activeScheme && activeScheme != currentPowerMode)
+            //if (PowerSchemeAPI.GetActivePlan() is Guid activeScheme && activeScheme != currentPowerMode)
             //if (PowerGetEffectiveOverlayScheme(out var activeScheme) == 0)
             //if (activeScheme != currentPowerMode)
+            if (PowerSchemeAPI.GetPowerMode() is Guid powerModeId && powerModeId != currentPowerMode)
             {
-                currentPowerMode = activeScheme;
-                idx = Array.IndexOf(PowerModes, activeScheme);
+                currentPowerMode = powerModeId;
+                idx = Array.IndexOf(PowerModes, powerModeId);
                 if (idx != -1)
                     PowerModeChanged?.Invoke(idx);
             }
@@ -910,14 +955,16 @@ public static class PerformanceManager
 
                 // only request an update if current limit is different than stored
                 if (ReadTDP != TDP)
-                    RequestTDP(type, TDP, true);
-                //processor.SetTDPLimit(type, TDP);
+                    processor.SetTDPLimit(type, TDP, true);
+                //RequestTDP(type, TDP, true);
 
                 await Task.Delay(12);
             }
 
             // are we done ?
-            TDPdone = currentTDP[0] == storedTDP[0] && currentTDP[1] == storedTDP[1] && currentTDP[2] == storedTDP[2];
+            TDPdone = currentTDP[(int)PowerType.Slow] == storedTDP[(int)PowerType.Slow] &&
+                currentTDP[(int)PowerType.Stapm] == storedTDP[(int)PowerType.Stapm] &&
+                currentTDP[(int)PowerType.Fast] == storedTDP[(int)PowerType.Fast];
 
             // processor specific
             if (processor is IntelProcessor)
@@ -984,7 +1031,8 @@ public static class PerformanceManager
                 if (storedGfxClock == 12750)
                     GPUdone = true;
                 else
-                    RequestGPUClock(storedGfxClock, true);
+                    processor.SetGPUClock(storedGfxClock, true);
+                    //RequestGPUClock(storedGfxClock, true);
             }
             else
             {
@@ -1119,16 +1167,13 @@ public static class PerformanceManager
 
         //if (PowerSetActiveOverlayScheme(currentPowerMode) != 0)
         //    LogManager.LogWarning("Failed to set requested power scheme: {0}", currentPowerMode);
-        if (guid == Guid.Empty)
-            return;
-
         if (currentPowerMode != guid)
         {
-            PowerSchemeAPI.SetActivePlan(guid);
-            LogManager.LogDebug("User requested power scheme: {0}", guid);
+            PowerSchemeAPI.SetPowerMode(guid);
+            LogManager.LogDebug("User requested power mode: {0}", guid);
 
-            if (PowerSchemeAPI.GetActivePlan() != guid)
-                LogManager.LogWarning("Failed to set requested power scheme: {0}", guid);
+            if (PowerSchemeAPI.GetPowerMode() is Guid curGuid && curGuid != guid)
+                LogManager.LogWarning("Failed to set requested power mode: {0}", curGuid);
             else
                 currentPowerMode = guid;
         }
@@ -1176,7 +1221,7 @@ public static class PerformanceManager
         // Set profile CPMINCORES and CPMAXCORES
         PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.CPMINCORES, Setting.CPMINCORES1], currentCoreCountPercent, currentCoreCountPercent);
         PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.CPMAXCORES, Setting.CPMAXCORES1], currentCoreCountPercent, currentCoreCountPercent);
-        
+
         LogManager.LogDebug("User requested CoreCount: {0} ({1}%)", CoreCount, currentCoreCountPercent);
 
         // Has the CPMINCORES value been applied?
@@ -1307,6 +1352,15 @@ public static class PerformanceManager
         gfxWatchdog.Stop();
         autoWatchdog.Stop();
 
+
+        currentEPP = 0x00000032;
+        currentCoreCount = 0;
+        currentGfxClock = 0x00000000;
+        currentPerfBoostMode = null;
+        currentPowerMode = new("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
+        currentTDP = new double[5];
+
+
         IsInitialized = false;
 
         LogManager.LogInformation("{0} has started", "PerformanceManager");
@@ -1322,10 +1376,10 @@ public static class PerformanceManager
     /// <summary>
     ///     Retrieves the active overlay power scheme and returns a GUID that identifies the scheme.
     /// </summary>
-    /// <param name="EffectiveOverlayPolicyGuid">A pointer to a GUID structure.</param>
+    /// <param name="EffectiveOverlayGuid">A pointer to a GUID structure.</param>
     /// <returns>Returns zero if the call was successful, and a nonzero value if the call failed.</returns>
     [DllImportAttribute("powrprof.dll", EntryPoint = "PowerGetEffectiveOverlayScheme")]
-    private static extern uint PowerGetEffectiveOverlayScheme(out Guid EffectiveOverlayPolicyGuid);
+    private static extern uint PowerGetEffectiveOverlayScheme(out Guid EffectiveOverlayGuid);
 
     /// <summary>
     ///     Sets the active power overlay power scheme.
@@ -1367,6 +1421,7 @@ public static class PerformanceManager
 
     #region events
 
+    [Obsolete("Method is deprecated.")]
     private static void LibreHardwareMonitor_GPUClockChanged(float? value)
     {
         if (value is null) return;

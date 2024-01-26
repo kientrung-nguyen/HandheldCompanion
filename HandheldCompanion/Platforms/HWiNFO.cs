@@ -135,28 +135,33 @@ public class HWiNFO : IPlatform
 
     public override bool Start()
     {
-        // start HWiNFO if not running or Shared Memory is disabled
-        var hasSensorsSM = GetProperty("SensorsSM");
-        if (!IsRunning || !hasSensorsSM)
+        try
         {
-            StopProcess();
-            StartProcess();
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            // start HWiNFO if not running or Shared Memory is disabled
+            var hasSensorsSM = GetProperty("SensorsSM");
+            if (!IsRunning || !hasSensorsSM)
+            {
+                StopProcess();
+                StartProcess();
+                SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            }
+            else
+            {
+                // hook into current process
+                Process.Exited += Process_Exited;
+            }
+
+
+            HWiNFOReader = new();
+
+            // our main watchdog to (re)apply requested settings
+            PlatformWatchdog = new Timer(PlatformInterval) { Enabled = false };
+            PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
+
+            return base.Start();
         }
-        else
-        {
-            // hook into current process
-            Process.Exited += Process_Exited;
-        }
-
-
-        HWiNFOReader = new();
-
-        // our main watchdog to (re)apply requested settings
-        PlatformWatchdog = new Timer(PlatformInterval) { Enabled = false };
-        PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
-
-        return base.Start();
+        catch { }
+        return false;
     }
 
     public override bool Stop(bool kill = false)

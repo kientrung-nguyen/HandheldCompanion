@@ -136,7 +136,7 @@ public class ROGAlly : IDevice
             Default = true,
             DeviceDefault = true,
             OEMPowerMode = (int)AsusMode.Performance,
-            OSPowerMode = OSPowerMode.BetterPerformance,
+            OSPowerMode = OSPowerMode.Recommended,
             Guid = new("3af9B8d9-7c97-431d-ad78-34a8bfea439f")
         });
 

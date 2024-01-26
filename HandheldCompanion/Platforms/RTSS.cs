@@ -93,16 +93,17 @@ public class RTSS : IPlatform
         try
         {
             // start RTSS if not running
+            LogManager.LogDebug($"{nameof(RTSS)} is starting {IsRunning} {SettingsManager.IsInitialized}");
             if (!IsRunning)
             {
                 StartProcess();
                 ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
                 ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
                 ProfileManager.Applied += ProfileManager_Applied;
-            }
-            else
                 // hook into current process
                 Process.Exited += Process_Exited;
+            }
+                
 
             // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
             if (SettingsManager.IsInitialized)
@@ -157,11 +158,12 @@ public class RTSS : IPlatform
     private async void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
     {
         // hook new process
+
+        LogManager.LogDebug($"{nameof(RTSS)} process foreground changed {processEx.Executable}");
         var processId = processEx.GetProcessId();
-        LogManager.LogDebug($"RTSS Foreground Changed {processEx.Executable} {processId}");
         if (processId == 0)
             return;
-
+        LogManager.LogDebug($"{nameof(RTSS)} process foreground changed {processId}");
         AppEntry? appEntry = null;
         do
         {
@@ -176,7 +178,6 @@ public class RTSS : IPlatform
                 appEntry = OSD.GetAppEntries()
                     .Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None)
                     .FirstOrDefault(entry => entry.ProcessId == processId);
-                LogManager.LogDebug($"RTSS AppEntry {processEx.Executable} {(appEntry is null ? "null" : appEntry.ProcessId)}");
             }
             catch (FileNotFoundException)
             {
@@ -185,7 +186,7 @@ public class RTSS : IPlatform
             }
             catch (Exception ex)
             {
-                LogManager.LogError($"RTSS {ex.Message} {ex.StackTrace}");
+                LogManager.LogError($"RTSS {ex.GetType()}");
                 return;
             }
             await Task.Delay(1000);
@@ -211,8 +212,8 @@ public class RTSS : IPlatform
         if (processId == 0)
             return;
 
+        // raise event
         if (HookedProcessIds.Remove(processId))
-            // raise event
             Unhooked?.Invoke(processId);
     }
 
@@ -235,9 +236,6 @@ public class RTSS : IPlatform
 
     protected override void Process_Exited(object? sender, EventArgs e)
     {
-        ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
-        ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
-        ProfileManager.Applied -= ProfileManager_Applied;
         base.Process_Exited(sender, e);
     }
 

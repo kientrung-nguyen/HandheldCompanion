@@ -69,7 +69,7 @@ namespace HandheldCompanion.Managers
             // update fan profile
             currentProfile.FanProfile.SetTemperature((float)value);
 
-            switch (currentProfile.FanProfile.fanMode)
+            switch (currentProfile.FanProfile.FanMode)
             {
                 default:
                 case FanMode.Hardware:
@@ -97,7 +97,7 @@ namespace HandheldCompanion.Managers
             currentProfile = powerProfile;
 
             // switch device fan mode
-            switch (currentProfile.FanProfile.fanMode)
+            switch (currentProfile.FanProfile.FanMode)
             {
                 default:
                 case FanMode.Hardware:

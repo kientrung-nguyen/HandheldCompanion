@@ -820,10 +820,10 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Optimize your device based on power use and performance</value>
   </data>
   <data name="QuickPerformancePage_PowerModeEfficiency" xml:space="preserve">
-    <value>Efficiency</value>
+    <value>Best Power Efficiency</value>
   </data>
   <data name="QuickPerformancePage_PowerModePerformance" xml:space="preserve">
-    <value>Performance</value>
+    <value>Best Performance</value>
   </data>
   <data name="QuickPerformancePage_TDPBoost" xml:space="preserve">
     <value>Boost</value>
@@ -2825,5 +2825,8 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   </data>
   <data name="QuickSettingsPage_ResScaleExclusiveFullscreen" xml:space="preserve">
     <value>1/1 only supports Exclusive Fullscreen.</value>
+  </data>
+  <data name="QuickPerformancePage_PowerModeBetterPerformance" xml:space="preserve">
+    <value>Better Performance</value>
   </data>
 </root>

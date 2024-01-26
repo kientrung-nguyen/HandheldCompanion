@@ -370,6 +370,14 @@ public static class ProcessManager
             case "asusosd.exe":
             case "gamepadcustomizeosd":
             case "rtkuwp.exe":
+
+            case "discord.exe":
+            case "whatsapp.exe":
+            case "consent.exe":
+            case "mmc.exe":
+            case "systemsettings.exe":
+            case "notepad.exe":
+            case "notepad++.exe":
                 return ProcessFilter.Desktop;
 
             default:

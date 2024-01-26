@@ -127,7 +127,7 @@ public abstract class IDevice
         {
             Default = true,
             Guid = Guid.Empty,
-            OSPowerMode = OSPowerMode.BetterPerformance
+            OSPowerMode = OSPowerMode.Recommended
         }
     };
 
@@ -456,6 +456,8 @@ public abstract class IDevice
         // get the actual handheld device
         device.ManufacturerName = ManufacturerName;
         device.ProductName = ProductName;
+        device.Processor = Processor;
+        device.SystemName = SystemName;
 
         return device;
     }
@@ -609,12 +611,12 @@ public abstract class IDevice
         return 0;
     }
 
-    public virtual int ReadFanSpeed()
+    public virtual float ReadFanSpeed()
     {
         if (!IsOpen)
-            return 0;
+            return float.NaN;
 
-        return 0;
+        return float.NaN;
     }
 
     public virtual bool SetLedStatus(bool status)

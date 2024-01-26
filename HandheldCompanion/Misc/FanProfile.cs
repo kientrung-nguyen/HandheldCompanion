@@ -14,10 +14,10 @@ namespace HandheldCompanion.Misc
     [Serializable]
     public class FanProfile
     {
-        public FanMode fanMode = FanMode.Hardware;
+        public FanMode FanMode { get; set; } = FanMode.Hardware;
 
         //                            00, 10, 20, 30, 40, 50, 60, 70, 80, 90,  100°C
-        public double[] fanSpeeds = [20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100];
+        public double[] FanSpeeds { get; set; } = [20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100];
 
         // A private variable to store the average temperature
         private ConcurrentList<double> avgTemp;
@@ -78,14 +78,14 @@ namespace HandheldCompanion.Misc
             }
 
             // Find the two closest points that bracket the temperature
-            int low = (int)Math.Floor(temp / fanSpeeds.Length);
+            int low = (int)Math.Floor(temp / FanSpeeds.Length);
 
             // Add a condition to prevent high from being out of bounds
-            int high = low < (fanSpeeds.Length - 1) ? low + 1 : low;
+            int high = low < (FanSpeeds.Length - 1) ? low + 1 : low;
 
             // Linearly interpolate the fan speed value between the two closest points
-            double slope = (fanSpeeds[high] - fanSpeeds[low]) / fanSpeeds.Length;
-            double intercept = fanSpeeds[low] - slope * low * fanSpeeds.Length;
+            double slope = (FanSpeeds[high] - FanSpeeds[low]) / FanSpeeds.Length;
+            double intercept = FanSpeeds[low] - slope * low * FanSpeeds.Length;
             return slope * temp + intercept;
         }
 
@@ -93,7 +93,7 @@ namespace HandheldCompanion.Misc
         public void SetFanSpeed(double[] fanSpeeds)
         {
             // Check if the array has the length of fanSpeeds and is not empty
-            if (fanSpeeds.Length != this.fanSpeeds.Length || fanSpeeds.Length == 0)
+            if (fanSpeeds.Length != this.FanSpeeds.Length || fanSpeeds.Length == 0)
             {
                 throw new ArgumentException("Invalid input array");
             }
@@ -114,7 +114,7 @@ namespace HandheldCompanion.Misc
             }
 
             // Update the private field with the input array
-            this.fanSpeeds = fanSpeeds;
+            this.FanSpeeds = fanSpeeds;
         }
 
         // A public method that takes a temperature as a parameter and updates the avgTemp variable
@@ -132,7 +132,7 @@ namespace HandheldCompanion.Misc
         }
 
         // A public method that returns the average temperature
-        public double GetAverageTemperature()
+        private double GetAverageTemperature()
         {
             if (this.avgTemp.Count != 0)
                 return this.avgTemp.Average();

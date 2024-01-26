@@ -22,13 +22,16 @@ public class GPDWinMax2_2023_7840U : GPDWinMax2AMD
         return (float)(100f * (Convert.ToDouble(value) / ECDetails.FanValueMax));
     }
 
-    public override int ReadFanSpeed()
+    public override float ReadFanSpeed()
     {
         try
         {
-            var value = ECRAMReadLong(ECDetails.AddressFanRPMOffset, ECDetails.AddressFanRPMLength, ECDetails);
-            return (int)value;
+            var value = ECRAMReadLong(
+                ECDetails.AddressFanRPMOffset, 
+                ECDetails.AddressFanRPMLength, 
+                ECDetails);
+            return value;
         }
-        catch { return 0; }
+        catch { return float.NaN; }
     }
 }

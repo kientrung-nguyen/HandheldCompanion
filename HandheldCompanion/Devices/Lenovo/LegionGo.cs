@@ -97,7 +97,7 @@ public class LegionGo : IDevice
         {
             Default = true,
             DeviceDefault = true,
-            OSPowerMode = OSPowerMode.BetterPerformance,
+            OSPowerMode = OSPowerMode.Recommended,
             OEMPowerMode = (int)LegionMode.Balanced,
             Guid = new("3af9B8d9-7c97-431d-ad78-34a8bfea439f"),
             TDPOverrideEnabled = true,
@@ -159,20 +159,20 @@ public class LegionGo : IDevice
 
     private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
     {
-        if (profile.FanProfile.fanMode == FanMode.Hardware)
+        if (profile.FanProfile.FanMode == FanMode.Hardware)
             fanTable = new(new ushort[] { 44, 48, 55, 60, 71, 79, 87, 87, 100, 100 });
         else
             fanTable = new(new ushort[] {
-                (ushort)profile.FanProfile.fanSpeeds[1],
-                (ushort)profile.FanProfile.fanSpeeds[2],
-                (ushort)profile.FanProfile.fanSpeeds[3],
-                (ushort)profile.FanProfile.fanSpeeds[4],
-                (ushort)profile.FanProfile.fanSpeeds[5],
-                (ushort)profile.FanProfile.fanSpeeds[6],
-                (ushort)profile.FanProfile.fanSpeeds[7],
-                (ushort)profile.FanProfile.fanSpeeds[8],
-                (ushort)profile.FanProfile.fanSpeeds[9],
-                (ushort)profile.FanProfile.fanSpeeds[10],
+                (ushort)profile.FanProfile.FanSpeeds[1],
+                (ushort)profile.FanProfile.FanSpeeds[2],
+                (ushort)profile.FanProfile.FanSpeeds[3],
+                (ushort)profile.FanProfile.FanSpeeds[4],
+                (ushort)profile.FanProfile.FanSpeeds[5],
+                (ushort)profile.FanProfile.FanSpeeds[6],
+                (ushort)profile.FanProfile.FanSpeeds[7],
+                (ushort)profile.FanProfile.FanSpeeds[8],
+                (ushort)profile.FanProfile.FanSpeeds[9],
+                (ushort)profile.FanProfile.FanSpeeds[10],
             });
 
         try

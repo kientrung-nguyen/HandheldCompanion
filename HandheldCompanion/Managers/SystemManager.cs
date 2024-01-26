@@ -520,44 +520,32 @@ public static class SystemManager
 
         try
         {
-            using (var mclass = new ManagementClass("WmiMonitorBrightnessMethods"))
+            using var mclass = new ManagementClass("WmiMonitorBrightnessMethods")
             {
-                mclass.Scope = new ManagementScope(@"\\.\root\wmi");
-                using (var instances = mclass.GetInstances())
-                {
-                    foreach (ManagementObject instance in instances)
-                    {
-                        object[] args = { 1, brightness };
-                        instance.InvokeMethod("WmiSetBrightness", args);
-                    }
-                }
-            }
+                Scope = new ManagementScope(@"\\.\root\wmi")
+            };
+            using var instances = mclass.GetInstances();
+            foreach (ManagementObject instance in instances)
+                instance.InvokeMethod("WmiSetBrightness", [1, brightness]);
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     public static short GetBrightness()
     {
         try
         {
-            using (var mclass = new ManagementClass("WmiMonitorBrightness"))
+            using var mclass = new ManagementClass("WmiMonitorBrightness")
             {
-                mclass.Scope = new ManagementScope(@"\\.\root\wmi");
-                using (var instances = mclass.GetInstances())
-                {
-                    foreach (ManagementObject instance in instances)
-                        return (byte)instance.GetPropertyValue("CurrentBrightness");
-                }
-            }
+                Scope = new ManagementScope(@"\\.\root\wmi")
+            };
+            using var instances = mclass.GetInstances();
+            foreach (ManagementObject instance in instances)
+                return (byte)instance.GetPropertyValue("CurrentBrightness");
 
             return 0;
         }
-        catch
-        {
-        }
-
+        catch { }
         return -1;
     }
 

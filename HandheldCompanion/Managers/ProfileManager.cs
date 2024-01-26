@@ -607,7 +607,7 @@ public static class ProfileManager
 
         // looks like profile power profile was deleted, restore balanced
         if (!PowerProfileManager.Contains(profile.PowerProfile))
-            profile.PowerProfile = OSPowerMode.BetterPerformance;
+            profile.PowerProfile = OSPowerMode.Recommended;
     }
 
     public static void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)

@@ -3312,33 +3312,6 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to HWiNFO Shared Memory limit was reached.
-        /// </summary>
-        public static string Hint_HWiNFO12hLimitPassed {
-            get {
-                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to HWiNFO has reached its shared memory time limit and disabled the shared memory support. This may result in missing or outdated sensor readings.
-        /// </summary>
-        public static string Hint_HWiNFO12hLimitPassedDesc {
-            get {
-                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassedDesc", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to You should manually re-activate the shared memory time limit in the HWiNFO settings.
-        /// </summary>
-        public static string Hint_HWiNFO12hLimitPassedReadme {
-            get {
-                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassedReadme", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Core isolation features are turned on.
         /// </summary>
         public static string Hint_CoreIsolationCheck {
@@ -3371,6 +3344,33 @@ namespace HandheldCompanion.Properties {
         public static string Hint_CoreIsolationCheckReadme {
             get {
                 return ResourceManager.GetString("Hint_CoreIsolationCheckReadme", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to HWiNFO Shared Memory limit was reached.
+        /// </summary>
+        public static string Hint_HWiNFO12hLimitPassed {
+            get {
+                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to HWiNFO has reached its shared memory time limit and disabled the shared memory support. This may result in missing or outdated sensor readings.
+        /// </summary>
+        public static string Hint_HWiNFO12hLimitPassedDesc {
+            get {
+                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassedDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You should manually re-activate the shared memory time limit in the HWiNFO settings.
+        /// </summary>
+        public static string Hint_HWiNFO12hLimitPassedReadme {
+            get {
+                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassedReadme", resourceCulture);
             }
         }
         
@@ -6654,6 +6654,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Better Performance.
+        /// </summary>
+        public static string QuickPerformancePage_PowerModeBetterPerformance {
+            get {
+                return ResourceManager.GetString("QuickPerformancePage_PowerModeBetterPerformance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Optimize your device based on power use and performance.
         /// </summary>
         public static string QuickPerformancePage_PowerModeDesc {
@@ -6663,7 +6672,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Efficiency.
+        ///   Looks up a localized string similar to Best Power Efficiency.
         /// </summary>
         public static string QuickPerformancePage_PowerModeEfficiency {
             get {
@@ -6672,7 +6681,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Performance.
+        ///   Looks up a localized string similar to Best Performance.
         /// </summary>
         public static string QuickPerformancePage_PowerModePerformance {
             get {
