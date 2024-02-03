@@ -203,6 +203,10 @@ public class AMDProcessor : Processor
 
                 default:
                     {
+                        // you can't restore default frequency on AMD GPUs
+                        if (clock == 12750)
+                            return;
+                        
                         int error1 = RyzenAdj.set_gfx_clk(ry, (uint)clock);
 
                         /*

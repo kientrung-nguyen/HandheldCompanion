@@ -35,16 +35,13 @@ public class Processor
 
     protected Dictionary<PowerType, float> m_Values = new();
 
-    protected string Name, ProcessorID;
+    protected static string Name, ProcessorID;
 
-    public Processor()
+    static Processor()
     {
         Name = MotherboardInfo.ProcessorName;
         ProcessorID = MotherboardInfo.ProcessorID;
         Manufacturer = MotherboardInfo.ProcessorManufacturer;
-
-        // write default miscs
-        m_Misc["gfx_clk"] = m_PrevMisc["gfx_clk"] = 0;
     }
 
     public static Processor GetCurrent()
@@ -56,8 +53,11 @@ public class Processor
         {
             "GenuineIntel" => new IntelProcessor(),
             "AuthenticAMD" => new AMDProcessor(),
-            _ => throw new NotSupportedException(),
+            _ => throw new NotImplementedException()
         };
+        // write default miscs
+        processor.m_Misc["gfx_clk"] = processor.m_PrevMisc["gfx_clk"] = 0;
+
         return processor;
     }
 

@@ -2,6 +2,7 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
@@ -119,7 +120,32 @@ public partial class MainWindow : GamepadWindow
         var process = Process.GetCurrentProcess();
 
         // fix touch support
-        var tablets = Tablet.TabletDevices;
+        TabletDeviceCollection tabletDevices = Tablet.TabletDevices;
+        /*if (tabletDevices.Count > 0)
+        {
+            // Get the Type of InputManager.  
+            Type inputManagerType = typeof(System.Windows.Input.InputManager);
+
+            // Call the StylusLogic method on the InputManager.Current instance.  
+            object stylusLogic = inputManagerType.InvokeMember("StylusLogic",
+                        BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.NonPublic,
+                        null, InputManager.Current, null);
+
+            if (stylusLogic != null)
+            {
+                //  Get the type of the stylusLogic returned from the call to StylusLogic.  
+                Type stylusLogicType = stylusLogic.GetType();
+
+                // Loop until there are no more devices to remove.  
+                while (tabletDevices.Count > 0)
+                {
+                    // Remove the first tablet device in the devices collection.  
+                    stylusLogicType.InvokeMember("OnTabletRemoved",
+                            BindingFlags.InvokeMethod | BindingFlags.Instance | BindingFlags.NonPublic,
+                            null, stylusLogic, new object[] { (uint)0 });
+                }
+            }
+        }*/
 
         // get first start
         bool FirstStart = SettingsManager.GetBoolean("FirstStart");
@@ -253,6 +279,9 @@ public partial class MainWindow : GamepadWindow
             SettingsManager.SetProperty("FirstStart", false);
         }
 
+        // initialize UI sounds board
+        UISounds uiSounds = new UISounds();
+
         // load window(s)
         loadWindows();
 
@@ -261,7 +290,7 @@ public partial class MainWindow : GamepadWindow
 
         // manage events
         InputsManager.TriggerRaised += InputsManager_TriggerRaised;
-        PowerManager.SystemStatusChanged += OnSystemStatusChanged;
+        SystemManager.SystemStatusChanged += OnSystemStatusChanged;
         DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
         ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
@@ -271,6 +300,7 @@ public partial class MainWindow : GamepadWindow
         ToastManager.IsEnabled = SettingsManager.GetBoolean("ToastEnable");
 
         // start static managers in sequence
+        GPUManager.Start();
         PowerProfileManager.Start();
         ProfileManager.Start();
         ControllerManager.Start();
@@ -278,9 +308,9 @@ public partial class MainWindow : GamepadWindow
         DeviceManager.Start();
         OSDManager.Start();
         LayoutManager.Start();
-        PowerManager.Start();
-        DynamicLightingManager.Start();
         SystemManager.Start();
+        DynamicLightingManager.Start();
+        MultimediaManager.Start();
         VirtualManager.Start();
         InputsManager.Start();
         SensorsManager.Start();
@@ -610,17 +640,17 @@ public partial class MainWindow : GamepadWindow
     }
 
     // no code from the cases inside this function will be called on program start
-    private async void OnSystemStatusChanged(PowerManager.SystemStatus status, PowerManager.SystemStatus prevStatus)
+    private async void OnSystemStatusChanged(SystemManager.SystemStatus status, SystemManager.SystemStatus prevStatus)
     {
         if (status == prevStatus)
             return;
 
         switch (status)
         {
-            case PowerManager.SystemStatus.SystemReady:
+            case SystemManager.SystemStatus.SystemReady:
                 {
                     // resume from sleep
-                    if (prevStatus == PowerManager.SystemStatus.SystemPending)
+                    if (prevStatus == SystemManager.SystemStatus.SystemPending)
                     {
                         // use device-specific delay
                         await Task.Delay(CurrentDevice.ResumeDelay);
@@ -658,7 +688,7 @@ public partial class MainWindow : GamepadWindow
                 }
                 break;
 
-            case PowerManager.SystemStatus.SystemPending:
+            case SystemManager.SystemStatus.SystemPending:
                 // sleep
                 {
                     // stop the virtual controller
@@ -740,7 +770,8 @@ public partial class MainWindow : GamepadWindow
         overlayquickTools.Close(true);
 
         VirtualManager.Stop();
-        SystemManager.Stop();
+        MultimediaManager.Stop();
+        GPUManager.Stop();
         MotionManager.Stop();
         SensorsManager.Stop();
         ControllerManager.Stop();
@@ -751,7 +782,7 @@ public partial class MainWindow : GamepadWindow
         PowerProfileManager.Stop();
         ProfileManager.Stop();
         LayoutManager.Stop();
-        PowerManager.Stop();
+        SystemManager.Stop();
         ProcessManager.Stop();
         ToastManager.Stop();
         TaskManager.Stop();

@@ -22,12 +22,11 @@ using WpfScreenHelper;
 using WpfScreenHelper.Enum;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 using Application = System.Windows.Application;
-using ComboBox = System.Windows.Controls.ComboBox;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Page = System.Windows.Controls.Page;
 using PowerLineStatus = System.Windows.Forms.PowerLineStatus;
-using PowerManager = HandheldCompanion.Managers.PowerManager;
 using Screen = WpfScreenHelper.Screen;
+using SystemManager = HandheldCompanion.Managers.SystemManager;
 using SystemPowerManager = Windows.System.Power.PowerManager;
 using Timer = System.Timers.Timer;
 
@@ -80,11 +79,13 @@ public partial class OverlayQuickTools : GamepadWindow
     public QuickOverlayPage overlayPage;
     public QuickSuspenderPage suspenderPage;
 
+    private static OverlayQuickTools CurrentWindow;
     private string preNavItemTag;
 
     public OverlayQuickTools()
     {
         InitializeComponent();
+        CurrentWindow = this;
 
         // used by gamepad navigation
         Tag = "QuickTools";
@@ -99,9 +100,9 @@ public partial class OverlayQuickTools : GamepadWindow
         WM_PAINT_TIMER.Elapsed += WM_PAINT_TIMER_Tick;
 
         // create manager(s)
-        PowerManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
+        SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
 
-        SystemManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
+        MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // create pages
@@ -118,6 +119,11 @@ public partial class OverlayQuickTools : GamepadWindow
         _pages.Add("QuickProfilesPage", profilesPage);
         _pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickSuspenderPage", suspenderPage);
+    }
+
+    public static OverlayQuickTools GetCurrent()
+    {
+        return CurrentWindow;
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value)
@@ -211,7 +217,7 @@ public partial class OverlayQuickTools : GamepadWindow
             // set key
             var Key = $"Battery{KeyStatus}{KeyValue}";
 
-            if (PowerManager.PowerStatusIcon.TryGetValue(Key, out var glyph))
+            if (SystemManager.PowerStatusIcon.TryGetValue(Key, out var glyph))
                 BatteryIndicatorIcon.Glyph = glyph;
 
             if (status.BatteryLifeRemaining > 0)

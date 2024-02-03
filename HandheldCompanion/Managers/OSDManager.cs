@@ -39,6 +39,16 @@ public static class OSDManager
 
     private static bool IsInitialized;
     public static OverlayDisplayLevel OverlayLevel;
+	public static string[] OverlayOrder;
+    public static int OverlayCount;
+    public static short OverlayLevel;
+    public static short OverlayTimeLevel;
+    public static short OverlayFPSLevel;
+    public static short OverlayCPULevel;
+    public static short OverlayRAMLevel;
+    public static short OverlayGPULevel;
+    public static short OverlayVRAMLevel;
+    public static short OverlayBATTLevel;
 
     private static readonly PrecisionTimer RefreshTimer;
     private static int RefreshInterval = 100;
@@ -404,6 +414,19 @@ public static class OSDManager
     {
         switch (name)
         {
+            case "OnScreenDisplayRefreshRate":
+                {
+                    RefreshInterval = Convert.ToInt32(value);
+
+                    if (RefreshTimer.IsRunning())
+                    {
+                        RefreshTimer.Stop();
+                        RefreshTimer.SetPeriod(RefreshInterval);
+                        RefreshTimer.Start();
+                    }
+                }
+                break;
+
             case "OnScreenDisplayLevel":
                 {
                     OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(value));
@@ -449,17 +472,30 @@ public static class OSDManager
                 }
                 break;
 
-            case "OnScreenDisplayRefreshRate":
-                {
-                    RefreshInterval = Convert.ToInt32(value);
-
-                    if (RefreshTimer.IsRunning())
-                    {
-                        RefreshTimer.Stop();
-                        RefreshTimer.SetPeriod(RefreshInterval);
-                        RefreshTimer.Start();
-                    }
-                }
+            case "OnScreenDisplayOrder":
+                OverlayOrder = value.ToString().Split(",");
+                OverlayCount = OverlayOrder.Length;
+                break;
+            case "OnScreenDisplayTimeLevel":
+                OverlayTimeLevel = Convert.ToInt16(value);
+                break;
+            case "OnScreenDisplayFPSLevel":
+                OverlayFPSLevel = Convert.ToInt16(value);
+                break;
+            case "OnScreenDisplayCPULevel":
+                OverlayCPULevel = Convert.ToInt16(value);
+                break;
+            case "OnScreenDisplayRAMLevel":
+                OverlayRAMLevel = Convert.ToInt16(value);
+                break;
+            case "OnScreenDisplayGPULevel":
+                OverlayGPULevel = Convert.ToInt16(value);
+                break;
+            case "OnScreenDisplayVRAMLevel":
+                OverlayVRAMLevel = Convert.ToInt16(value);
+                break;
+            case "OnScreenDisplayBATTLevel":
+                OverlayBATTLevel = Convert.ToInt16(value);
                 break;
         }
     }

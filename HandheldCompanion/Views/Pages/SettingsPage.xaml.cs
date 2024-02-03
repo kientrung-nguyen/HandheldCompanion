@@ -237,6 +237,9 @@ public partial class SettingsPage : Page
                 case "QuickToolsAutoHide":
                     Toggle_QuicktoolsAutoHide.IsOn = Convert.ToBoolean(value);
                     break;
+                case "UISounds":
+                    Toggle_UISounds.IsOn = Convert.ToBoolean(value);
+                    break;
             }
         });
     }
@@ -297,7 +300,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        var rotation = SystemManager.GetScreenOrientation();
+        var rotation = MultimediaManager.GetScreenOrientation();
         rotation = new ScreenRotation(rotation.rotationUnnormalized, ScreenRotation.Rotations.UNSET);
         SettingsManager.SetProperty("NativeDisplayOrientation", (int)rotation.rotationNativeBase);
     }
@@ -430,7 +433,7 @@ public partial class SettingsPage : Page
 
         _ = Dialog.ShowAsync($"{Properties.Resources.SettingsPage_AppLanguageWarning}",
             Properties.Resources.SettingsPage_AppLanguageWarningDesc,
-            ContentDialogButton.Primary, string.Empty, $"{Properties.Resources.ProfilesPage_OK}");
+            ContentDialogButton.Primary, string.Empty, $"{Properties.Resources.ProfilesPage_OK}", string.Empty, MainWindow.GetCurrent());
     }
 
     private void Toggle_Notification_Toggled(object? sender, RoutedEventArgs? e)
@@ -600,5 +603,13 @@ public partial class SettingsPage : Page
             return;
 
         SettingsManager.SetProperty("QuickToolsAutoHide", Toggle_QuicktoolsAutoHide.IsOn);
+    }
+
+    private void Toggle_UISounds_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        SettingsManager.SetProperty("UISounds", Toggle_UISounds.IsOn);
     }
 }

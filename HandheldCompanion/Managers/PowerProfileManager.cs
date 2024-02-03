@@ -96,18 +96,6 @@ namespace HandheldCompanion.Managers
             // update current profile
             currentProfile = powerProfile;
 
-            // switch device fan mode
-            switch (currentProfile.FanProfile.FanMode)
-            {
-                default:
-                case FanMode.Hardware:
-                    MainWindow.CurrentDevice.SetFanControl(false, currentProfile.OEMPowerMode);
-                    break;
-                case FanMode.Software:
-                    MainWindow.CurrentDevice.SetFanControl(true);
-                    break;
-            }
-
             Applied?.Invoke(powerProfile, source);
             
             // send toast

@@ -147,7 +147,7 @@ public class RTSS : IPlatform
     {
         int frameLimit = 0;
 
-        DesktopScreen desktopScreen = SystemManager.GetDesktopScreen();
+        DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
 
         if (desktopScreen is not null)
         {
