@@ -20,6 +20,7 @@ using System.Windows.Threading;
 using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 using Application = System.Windows.Application;
 using ComboBox = System.Windows.Controls.ComboBox;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -91,7 +92,7 @@ public partial class OverlayQuickTools : GamepadWindow
         PreviewKeyDown += HandleEsc;
 
         clockUpdateTimer = new DispatcherTimer();
-        clockUpdateTimer.Interval = TimeSpan.FromMilliseconds(500);
+        clockUpdateTimer.Interval = TimeSpan.FromMilliseconds(1000);
         clockUpdateTimer.Tick += UpdateTime;
 
         WM_PAINT_TIMER = new(250) { AutoReset = false };
@@ -168,12 +169,11 @@ public partial class OverlayQuickTools : GamepadWindow
                 case 1:
                 case 3:
                     this.SetWindowPosition(WindowPositions.Right, Screen.PrimaryScreen);
-                    Left -= Margin.Right;
+                    Left -= Margin.Right - Margin.Right;
                     break;
             }
-
-            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (2.0d * Margin.Top));
-            Top = Margin.Top;
+            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (5.0d * Margin.Top));
+            Top = Margin.Top - Margin.Top;
         });
     }
 
@@ -220,11 +220,11 @@ public partial class OverlayQuickTools : GamepadWindow
 
                 string remaining;
                 if (status.BatteryLifeRemaining >= 3600)
-                    remaining = $"{time.Hours}h {time.Minutes}min";
+                    remaining = $"{time.Hours}h {time.Minutes}m";
                 else
-                    remaining = $"{time.Minutes}min";
+                    remaining = $"{time.Minutes}m";
 
-                BatteryIndicatorLifeRemaining.Text = $"({remaining} remaining)";
+                BatteryIndicatorLifeRemaining.Text = $"({remaining})";
                 BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
             }
             else
@@ -239,12 +239,10 @@ public partial class OverlayQuickTools : GamepadWindow
     {
         // load gamepad navigation maanger
         gamepadFocusManager = new(this, ContentFrame);
-
         hwndSource = PresentationSource.FromVisual(this) as HwndSource;
-        hwndSource.AddHook(WndProc);
-
         if (hwndSource != null)
         {
+            hwndSource.AddHook(WndProc);
             hwndSource.CompositionTarget.RenderMode = RenderMode.SoftwareOnly;
             WinAPI.SetWindowPos(hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
         }
@@ -440,7 +438,7 @@ public partial class OverlayQuickTools : GamepadWindow
         var preNavPageType = ContentFrame.CurrentSourcePageType;
 
         // Only navigate if the selected page isn't currently loaded.
-        if (!(_page is null) && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
+        if (_page is not null && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
     }
 
     public void NavView_Navigate(Page _page)
@@ -483,13 +481,59 @@ public partial class OverlayQuickTools : GamepadWindow
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
         navView.IsBackEnabled = ContentFrame.CanGoBack;
+        //navView.IsBackButtonVisible = ContentFrame.CanGoBack ? NavigationViewBackButtonVisible.Visible : NavigationViewBackButtonVisible.Collapsed;
         navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
     }
 
     private void UpdateTime(object? sender, EventArgs e)
     {
+        Time.Text = string.Empty;
+        //CPU.Text = string.Empty;
+        //GPU.Text = string.Empty;
         var timeFormat = CultureInfo.InstalledUICulture.DateTimeFormat.ShortTimePattern;
-        Time.Text = DateTime.Now.ToString(timeFormat);
+        CPUIndicatorIcon.Visibility = Visibility.Collapsed;
+        GPUIndicatorIcon.Visibility = Visibility.Collapsed;
+
+        PlatformManager.HWiNFO.ReaffirmRunningProcess();
+        //CPUIndicatorIcon.Glyph = "\uD83D\uDDA5";
+        //GPUIndicatorIcon.Glyph = "\uD83D\uDDA8";
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUUsage, out var cpuUsage) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUTemperature, out var cpuTemp) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUPower, out var cpuPower) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.PhysicalMemoryUsage, out var cpuMem) &&
+            !float.IsNaN(PlatformManager.HWiNFO.CPUFanSpeed))
+        {
+            CPUIndicatorIcon.Visibility = Visibility.Visible;
+            CPUIndicatorIcon.Glyph = "\uE770";
+            CPUUsage.Text = $"{cpuUsage.Value:0}";
+            CPUUsageUnit.Text = $"{cpuUsage.Unit}";
+            CPUTemp.Text = $" {cpuTemp.Value:0}";
+            CPUTempUnit.Text = $"{cpuTemp.Unit}";
+            CPUPower.Text = $" {cpuPower.Value:0}";
+            CPUPowerUnit.Text = $"{cpuPower.Unit}";
+            CPUMem.Text = $" {(cpuMem.Value / 1024):0.0}";
+            CPUMemUnit.Text = $"GB";
+            CPUFan.Text = $" {PlatformManager.HWiNFO.CPUFanSpeed}";
+            CPUFanUnit.Text = "rpm";
+        }
+
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUUsage, out var gpuUsage) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUTemperature, out var gpuTemp) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUPower, out var gpuPower) &&
+            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUMemoryUsage, out var gpuMem))
+        {
+            GPUIndicatorIcon.Visibility = Visibility.Visible;
+            GPUIndicatorIcon.Glyph = "\uE964";
+            GPUUsage.Text = $"{gpuUsage.Value:0}";
+            GPUUsageUnit.Text = $"{gpuUsage.Unit}";
+            GPUTemp.Text = $" {gpuTemp.Value:0}";
+            GPUTempUnit.Text = $"{gpuTemp.Unit}";
+            GPUPower.Text = $" {gpuPower.Value:0}";
+            GPUPowerUnit.Text = $"{gpuPower.Unit}";
+            GPUMem.Text = $" {(gpuMem.Value / 1024):0.0}";
+            GPUMemUnit.Text = $"GB";
+        }
+        //Time.Text = $"{DateTime.Now.ToString(timeFormat)}";
     }
 
     #endregion

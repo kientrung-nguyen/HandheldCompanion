@@ -210,8 +210,8 @@
 
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" MinWidth="200" />
-                        <ColumnDefinition Width="8*" MinWidth="200" />
+                        <ColumnDefinition Width="1*" MinWidth="80" />
+                        <ColumnDefinition Width="9*" MinWidth="200" />
                     </Grid.ColumnDefinitions>
 
                     <ui:SimpleStackPanel VerticalAlignment="Center">
@@ -257,8 +257,8 @@
 
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" MinWidth="200" />
-                        <ColumnDefinition Width="8*" MinWidth="200" />
+                        <ColumnDefinition Width="1*" MinWidth="80" />
+                        <ColumnDefinition Width="9*" MinWidth="200" />
                     </Grid.ColumnDefinitions>
 
                     <ui:SimpleStackPanel VerticalAlignment="Center">

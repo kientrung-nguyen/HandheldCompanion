@@ -28,7 +28,7 @@
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1*" MinWidth="70" />
+                            <ColumnDefinition Width="5*" MinWidth="70" />
                             <ColumnDefinition Width="5*" MinWidth="200" />
                         </Grid.ColumnDefinitions>
 
@@ -52,7 +52,7 @@
 
                         <Grid Grid.Column="1" Margin="12,0,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="8*" MinWidth="400" />
+                                <ColumnDefinition Width="7*" MinWidth="300" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
@@ -742,6 +742,7 @@
                                 SelectionChanged="PowerMode_SelectionChanged">
                                 <ComboBoxItem Name="PowerModeEfficiency" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeEfficiency}" />
                                 <ComboBoxItem Name="PowerModeBalanced" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeBalanced}" />
+                                <ComboBoxItem Name="PowerModeBetterPerformance" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeBetterPerformance}" />
                                 <ComboBoxItem Name="PowerModePerformance" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModePerformance}" />
                             </ComboBox>
                         </DockPanel>

@@ -302,7 +302,7 @@ public partial class QuickPerformancePage : Page
                 PowerMode.SelectedIndex = Array.IndexOf(PerformanceManager.PowerModes, selectedProfile.OSPowerMode);
 
                 // Fan control
-                FanMode.SelectedIndex = (int)selectedProfile.FanProfile.fanMode;
+                FanMode.SelectedIndex = (int)selectedProfile.FanProfile.FanMode;
             }
         });
     }
@@ -487,7 +487,7 @@ public partial class QuickPerformancePage : Page
         if (updateLock)
             return;
 
-        selectedProfile.FanProfile.fanMode = (FanMode)FanMode.SelectedIndex;
+        selectedProfile.FanProfile.FanMode = (FanMode)FanMode.SelectedIndex;
         UpdateProfile();
     }
 

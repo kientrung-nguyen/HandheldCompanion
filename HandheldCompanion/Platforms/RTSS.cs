@@ -28,6 +28,18 @@ public class RTSS : IPlatform
     private bool ProfileLoaded;
     private int RequestedFramerate;
 
+    private AppFlags[] appFlags = [
+        AppFlags.DirectDraw,
+        AppFlags.Direct3D9,
+        AppFlags.Direct3D9Ex,
+        AppFlags.Direct3D10,
+        AppFlags.Direct3D11,
+        AppFlags.Direct3D12,
+        AppFlags.Direct3D12AFR,
+        AppFlags.Vulkan,
+        AppFlags.OpenGL
+    ];
+
     public RTSS()
     {
         PlatformType = PlatformType.RTSS;
@@ -86,6 +98,8 @@ public class RTSS : IPlatform
         // our main watchdog to (re)apply requested settings
         PlatformWatchdog = new Timer(2000) { Enabled = false };
         PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
+
+
     }
 
     public override bool Start()
@@ -93,17 +107,16 @@ public class RTSS : IPlatform
         try
         {
             // start RTSS if not running
-            LogManager.LogDebug($"{nameof(RTSS)} is starting {IsRunning} {SettingsManager.IsInitialized}");
             if (!IsRunning)
             {
                 StartProcess();
-                ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-                ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
-                ProfileManager.Applied += ProfileManager_Applied;
-                // hook into current process
-                Process.Exited += Process_Exited;
             }
-                
+            else
+                Process.Exited += Process_Exited;
+            // hook into current process
+            ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
+            ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
+            ProfileManager.Applied += ProfileManager_Applied;
 
             // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
             if (SettingsManager.IsInitialized)
@@ -158,12 +171,11 @@ public class RTSS : IPlatform
     private async void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
     {
         // hook new process
-
-        LogManager.LogDebug($"{nameof(RTSS)} process foreground changed {processEx.Executable}");
         var processId = processEx.GetProcessId();
-        if (processId == 0)
-            return;
-        LogManager.LogDebug($"{nameof(RTSS)} process foreground changed {processId}");
+        LogManager.LogDebug($"{nameof(RTSS)} process {processEx.Executable} {processEx.Filter} ({processId})");
+        if (processId == 0) return;
+
+        if (processEx.Filter != ProcessEx.ProcessFilter.Allowed) return;
         AppEntry? appEntry = null;
         do
         {
@@ -175,19 +187,18 @@ public class RTSS : IPlatform
              */
             try
             {
-                appEntry = OSD.GetAppEntries()
-                    .Where(entry => (entry.Flags & AppFlags.MASK) != AppFlags.None)
-                    .FirstOrDefault(entry => entry.ProcessId == processId);
+                var entries = OSD.GetAppEntries();
+                appEntry = entries.FirstOrDefault(entry =>
+                        (entry.Flags & AppFlags.MASK) != AppFlags.None &&
+                        entry.ProcessId == processId
+                    );
+                if (entries.Length > 0)
+                    LogManager.LogDebug($"{nameof(RTSS)} entries [{string.Join(" | ", entries.Select(entry => string.Join(";", [entry.Flags, (entry.Flags & AppFlags.MASK), entry.ProcessId, entry.Name])))}]");
             }
-            catch (FileNotFoundException)
-            {
-                LogManager.LogError($"RTSS {nameof(FileNotFoundException)}");
-                return;
-            }
+            catch (FileNotFoundException) { return; }
             catch (Exception ex)
             {
-                LogManager.LogError($"RTSS {ex.GetType()}");
-                return;
+                LogManager.LogError($"{nameof(RTSS)} error {ex.Message}\n{ex.StackTrace}");
             }
             await Task.Delay(1000);
         } while (appEntry is null && ProcessManager.HasProcess(processId) && KeepAlive);
@@ -209,8 +220,7 @@ public class RTSS : IPlatform
     private void ProcessManager_ProcessStopped(ProcessEx processEx)
     {
         var processId = processEx.GetProcessId();
-        if (processId == 0)
-            return;
+        if (processId == 0) return;
 
         // raise event
         if (HookedProcessIds.Remove(processId))
@@ -254,19 +264,17 @@ public class RTSS : IPlatform
         osdFrameId = 0;
         try
         {
-            var appE = OSD
-                .GetAppEntries()
-                .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None)
-                .FirstOrDefault(a => a.ProcessId == processId);
-            if (appE is null)
-                return 0.0d;
-
-            osdFrameId = appE.OSDFrameId;
-            return appE.StatFrameTimeBufFramerate / 10.0d;
+            var appEntry = OSD.GetAppEntries().FirstOrDefault(entry =>
+                (entry.Flags & AppFlags.MASK) != AppFlags.None &&
+                entry.ProcessId == processId
+            );
+            if (appEntry is null) return double.NaN;
+            osdFrameId = appEntry.OSDFrameId;
+            return appEntry.StatFrameTimeBufFramerate / 10.0d;
         }
         catch (InvalidDataException) { }
         catch (FileNotFoundException) { }
-        return 0.0d;
+        return double.NaN;
     }
 
     public bool GetProfileProperty<T>(string propertyName, out T value)

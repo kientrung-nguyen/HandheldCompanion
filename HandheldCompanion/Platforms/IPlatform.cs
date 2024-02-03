@@ -265,7 +265,7 @@ public abstract class IPlatform : IDisposable
             // set lock
             IsStarting = true;
 
-            Process process = null;
+            Process? process = null;
             while (process is null && Tentative < MaxTentative)
             {
                 // increase tentative counter

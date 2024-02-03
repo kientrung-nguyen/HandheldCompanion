@@ -6,7 +6,6 @@ using RTSSSharedMemoryNET;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using WinRT;
 using static HandheldCompanion.Platforms.HWiNFO;
 
 namespace HandheldCompanion.Managers;
@@ -32,12 +31,10 @@ public static class OSDManager
     // C6: FPS
     private const string Header =
         "<LI=Plugins\\Client\\Overlays\\sample.png>" +
-        "<C0=FFFFFF><C1=C0CA33><C2=FF5252><C3=FF5252><C4=C0CA33><C5=FDA928><C6=D76D76>" +
+        "<C0=FFFFFF><C1=458A6E><C2=4C8DB2><C3=AD7B95><C4=A369A6><C5=F19F86><C6=D76D76>" +
         "<A0=-4><A1=5><A2=-2><A3=-3><A4=-4><A5=-5>" +
         "<S0=-50><S1=80>";
-    private const string PositionTopCenter = "<P1><L0><C=64000000><B=0,0>\b<C><E=-6,-2,4>";
-
-    private const string BatteryIcon = "<I=0,0,256,384,128,128>";
+    private const string Footer = "<P1><L0><C=64000000><B=0,0>\b<C><E=-178,-2,4>";
     //"<C0=FFFFFF><C1=458A6E><C2=4C8DB2><C3=AD7B95><C4=A369A6><C5=F19F86><C6=D76D76><A0=-4><A1=5><A2=-2><A3=-3><A4=-4><A5=-5><S0=-50><S1=80><P1><M=0,0,0,0><L0><C=64000000><B=0,0>\b<C>";
 
     private static bool IsInitialized;
@@ -46,16 +43,15 @@ public static class OSDManager
     private static readonly PrecisionTimer RefreshTimer;
     private static int RefreshInterval = 100;
 
-    private static readonly ConcurrentDictionary<int, OSD> OnScreenDisplay = new();
+    private static ConcurrentDictionary<int, OSD> OnScreenDisplay = new();
+    private static uint OnScreenAppEntryOSDFrameId;
     private static AppEntry OnScreenAppEntry;
     private static List<string> Content;
 
-    private static uint OnScreenAppEntryOSDFrameId;
 
     static OSDManager()
     {
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-
         PlatformManager.RTSS.Hooked += RTSS_Hooked;
         PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
 
@@ -76,7 +72,7 @@ public static class OSDManager
         try
         {
             // clear previous display
-            if (OnScreenDisplay.TryRemove(processId, out var OSD))
+            if (OnScreenDisplay.Remove(processId, out var OSD))
             {
                 OSD.Update(string.Empty);
                 OSD.Dispose();
@@ -89,19 +85,14 @@ public static class OSDManager
     {
         try
         {
-            LogManager.LogDebug($"{nameof(OSDManager)} RTSS Hooked {appEntry.ProcessId}");
+            LogManager.LogDebug($"{nameof(OSDManager)} RTSS hooked {appEntry.Name} ({appEntry.ProcessId})");
             // update foreground id
-            OnScreenAppEntry = appEntry;
             OnScreenAppEntryOSDFrameId = appEntry.OSDFrameId;
+            OnScreenAppEntry = appEntry;
+
             // only create a new OSD if needed
             if (!OnScreenDisplay.TryGetValue(appEntry.ProcessId, out var OSD))
-            {
-                OSD = new(OnScreenAppEntry.Name);
-                OnScreenDisplay.TryAdd(appEntry.ProcessId, OSD);
-            }
-
-            if (!RefreshTimer.IsRunning())
-                RefreshTimer.Start();
+                OnScreenDisplay[OnScreenAppEntry.ProcessId] = OSD = new OSD(OnScreenAppEntry.Name);
         }
         catch { }
     }
@@ -111,15 +102,20 @@ public static class OSDManager
         IsInitialized = true;
         Initialized?.Invoke();
 
+        OnScreenDisplay = new();
+        OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(SettingsManager.GetInt("OnScreenDisplayLevel")));
+
+        PlatformManager.RTSS.Start();
+
         LogManager.LogInformation("{0} has started", "OSDManager");
 
-        if (OverlayLevel != OverlayDisplayLevel.Disabled && !RefreshTimer.IsRunning())
+        if (OverlayLevel != OverlayDisplayLevel.Disabled)
             RefreshTimer.Start();
     }
 
     private static void UpdateOSD()
     {
-        if (OverlayLevel == OverlayDisplayLevel.Disabled || OnScreenAppEntry is null)
+        if (OverlayLevel == OverlayDisplayLevel.Disabled)
             return;
 
         foreach (var OSD in OnScreenDisplay)
@@ -127,28 +123,29 @@ public static class OSDManager
             var processId = OSD.Key;
             var processOSD = OSD.Value;
 
-            try
+            if (OnScreenAppEntry is not null)
             {
-                var s = string.Empty;
                 if (OnScreenAppEntry.ProcessId == processId)
                 {
                     PlatformManager.RTSS.GetFramerate(processId, out var osdFrameId);
-                    if (osdFrameId != OnScreenAppEntryOSDFrameId)
-                        s = Draw(processId);
+                    processOSD.Update(Draw(osdFrameId));
                     OnScreenAppEntryOSDFrameId = osdFrameId;
                 }
-                processOSD.Update(s);
+                else
+                {
+                    processOSD.Update(string.Empty);
+                    processOSD.Dispose();
+                }
             }
-            catch { }
         }
     }
 
-    private static string Draw(int processId)
+    private static string Draw(uint osdFrameId)
     {
-        if (OnScreenAppEntry is null || OnScreenAppEntry.ProcessId != processId)
+        if (OnScreenAppEntryOSDFrameId - osdFrameId == 0)
             return string.Empty;
 
-        Content = new List<string>();
+        Content = [];
         switch (OverlayLevel)
         {
             default:
@@ -157,7 +154,7 @@ public static class OSDManager
 
             case OverlayDisplayLevel.Minimal: // Minimal
                 {
-                    OverlayRow row1 = new();
+                    using OverlayRow row1 = new();
 
                     OverlayEntry FPSentry = new("<APP>", "C6");
                     FPSentry.elements.Add(new OverlayEntryElement
@@ -181,48 +178,28 @@ public static class OSDManager
                 {
                     PlatformManager.HWiNFO.ReaffirmRunningProcess();
 
-                    OverlayRow row1 = new();
-                    /*
-                    OverlayEntry GPUentry = new("GPU", "C1");
-                    AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPULoad, "%");
-                    AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPUPower, "W");
-                    row1.entries.Add(GPUentry);
+                    using OverlayRow row1 = new();
 
-                    OverlayEntry CPUentry = new("CPU", "C2");
-                    AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPULoad, "%");
-                    AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPUPower, "W");
-                    row1.entries.Add(CPUentry);
-
-                    OverlayEntry RAMentry = new("RAM", "C3");
-                    AddElementIfNotNull(RAMentry, PlatformManager.LibreHardwareMonitor.MemoryLoad, "%");
-                    row1.entries.Add(RAMentry);
-
-                    OverlayEntry BATTentry = new("BATT", "C5");
-                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryLevel, "%");
-                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryTimeSpan, "min");
-                    row1.entries.Add(BATTentry);
-                    */
-
-                    OverlayEntry GPUentry = new("GPU", "C1");
+                    using OverlayEntry GPUentry = new("GPU", "C1");
                     AddElementIfFound(GPUentry, SensorElementType.GPUUsage);
                     AddElementIfFound(GPUentry, SensorElementType.GPUPower);
                     row1.entries.Add(GPUentry);
 
-                    OverlayEntry CPUentry = new("CPU", "C2");
+                    using OverlayEntry CPUentry = new("CPU", "C2");
                     AddElementIfFound(CPUentry, SensorElementType.CPUUsage);
                     AddElementIfFound(CPUentry, SensorElementType.CPUPower);
                     row1.entries.Add(CPUentry);
 
-                    OverlayEntry RAMentry = new("RAM", "C3");
+                    using OverlayEntry RAMentry = new("RAM", "C3");
                     AddElementIfFound(RAMentry, SensorElementType.PhysicalMemoryUsage);
                     row1.entries.Add(RAMentry);
 
-                    OverlayEntry BATTentry = new("BATT", "C5");
+                    using OverlayEntry BATTentry = new("BATT", "C5");
                     AddElementIfFound(BATTentry, SensorElementType.BatteryChargeLevel);
                     AddElementIfFound(BATTentry, SensorElementType.BatteryRemainingTime);
                     row1.entries.Add(BATTentry);
 
-                    OverlayEntry FPSentry = new("<APP>", "C6");
+                    using OverlayEntry FPSentry = new("<APP>", "C6");
                     FPSentry.elements.Add(new OverlayEntryElement
                     {
                         Value = "<FR>",
@@ -244,43 +221,43 @@ public static class OSDManager
                 {
                     PlatformManager.HWiNFO.ReaffirmRunningProcess();
 
-                    OverlayRow rowGpu = new();
-                    OverlayRow rowCpu = new();
-                    OverlayRow rowFan = new();
-                    OverlayRow rowRam = new();
-                    OverlayRow rowVram = new();
-                    OverlayRow rowBatt = new();
-                    OverlayRow rowFps = new();
+                    using OverlayRow rowGpu = new();
+                    using OverlayRow rowCpu = new();
+                    using OverlayRow rowFan = new();
+                    using OverlayRow rowRam = new();
+                    using OverlayRow rowVram = new();
+                    using OverlayRow rowBatt = new();
+                    using OverlayRow rowFps = new();
 
-                    OverlayEntry GPUentry = new("GPU", "C1");
+                    using OverlayEntry GPUentry = new("GPU", "C1");
                     AddElementIfFound(GPUentry, SensorElementType.GPUFrequencyEffective);
                     AddElementIfFound(GPUentry, SensorElementType.GPUUsage);
                     AddElementIfFound(GPUentry, SensorElementType.GPUTemperature);
                     AddElementIfFound(GPUentry, SensorElementType.GPUPower);
                     rowGpu.entries.Add(GPUentry);
 
-                    OverlayEntry CPUentry = new("CPU", "C2");
+                    using OverlayEntry CPUentry = new("CPU", "C2");
                     AddElementIfFound(CPUentry, SensorElementType.CPUFrequencyEffective);
                     AddElementIfFound(CPUentry, SensorElementType.CPUUsage);
                     AddElementIfFound(CPUentry, SensorElementType.CPUTemperature);
                     AddElementIfFound(CPUentry, SensorElementType.CPUPower);
                     rowCpu.entries.Add(CPUentry);
 
-                    OverlayEntry FANentry = new("FAN", "C2");
-                    AddElementIfNotNull(FANentry, MainWindow.CurrentDevice.ReadFanSpeed(), "rpm");
-                    AddElementIfNotNull(FANentry, MainWindow.CurrentDevice.ReadFanDuty(), "%");
+                    using OverlayEntry FANentry = new("FAN", "C2");
+                    AddElementIfNotNull(FANentry, PlatformManager.HWiNFO.CPUFanSpeed, "rpm");
+                    AddElementIfNotNull(FANentry, PlatformManager.HWiNFO.CPUFanDuty, "%");
                     rowFan.entries.Add(FANentry);
 
-                    OverlayEntry RAMentry = new("RAM", "C3");
+                    using OverlayEntry RAMentry = new("RAM", "C3");
                     AddElementIfFound(RAMentry, SensorElementType.PhysicalMemoryUsage);
                     rowRam.entries.Add(RAMentry);
 
 
-                    OverlayEntry VRAMentry = new("VRAM", "C4");
+                    using OverlayEntry VRAMentry = new("VRAM", "C4");
                     AddElementIfFound(VRAMentry, SensorElementType.GPUMemoryUsage);
                     rowVram.entries.Add(VRAMentry);
 
-                    OverlayEntry BATTentry = new("BATT", "C5");
+                    using OverlayEntry BATTentry = new("BATT", "C5");
                     AddElementIfFound(BATTentry, SensorElementType.BatteryChargeLevel);
                     AddElementIfFound(BATTentry, SensorElementType.BatteryChargeRate);
                     AddElementIfFound(BATTentry, SensorElementType.BatteryRemainingTime);
@@ -289,7 +266,7 @@ public static class OSDManager
                         Value = " <TIME=%X>"
                     });
                     rowBatt.entries.Add(BATTentry);
-                    OverlayEntry FPSentry = new("<APP>", "C6");
+                    using OverlayEntry FPSentry = new("<APP>", "C6");
                     FPSentry.elements.Add(new OverlayEntryElement
                     {
                         Value = "<FR>",
@@ -303,12 +280,12 @@ public static class OSDManager
                     rowFps.entries.Add(FPSentry);
 
 
-                    OverlayRow rowTdp = new();
-                    OverlayEntry TDPentry = new("TDP", "C6");
+                    using OverlayRow rowTdp = new();
+                    using OverlayEntry TDPentry = new("TDP", "C6");
                     AddElementIfFound(TDPentry, SensorElementType.PL3);
                     rowTdp.entries.Add(TDPentry);
 
-                    Content.Add(Header + PositionTopCenter + string.Join("   ", new[] {
+                    Content.Add(Header + Footer + string.Join("  ", new[] {
                             rowFps.ToString(),
                             rowGpu.ToString(),
                             rowVram.ToString(),
@@ -434,7 +411,7 @@ public static class OSDManager
                     // set OSD toggle hotkey state
                     SettingsManager.SetProperty("OnScreenDisplayToggle", Convert.ToBoolean(value));
 
-                    if (OverlayLevel > 0)
+                    if ((short)OverlayLevel > 0)
                     {
                         // set lastOSDLevel to be used in OSD toggle hotkey
                         SettingsManager.SetProperty("LastOnScreenDisplayLevel", value);
@@ -493,10 +470,7 @@ public struct OverlayEntryElement
     public string Value { get; set; }
     public string SzUnit { get; set; }
 
-    public override string ToString()
-    {
-        return string.Format("<C0>{0:00}<S1>{1}<S><C>", Value, SzUnit);
-    }
+    public override string ToString() => string.Format("<C0>{0:00}<S1>{1}<S><C>", Value, SzUnit);
 
     public OverlayEntryElement(float value, string unit, string format = "{0:00}")
     {

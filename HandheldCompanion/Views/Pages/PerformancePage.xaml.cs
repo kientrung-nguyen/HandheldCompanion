@@ -266,7 +266,7 @@ namespace HandheldCompanion.Views.Pages
                 return;
 
             for (int idx = 0; idx < lvLineSeries.ActualValues.Count; idx++)
-                selectedProfile.FanProfile.fanSpeeds[idx] = (double)lvLineSeries.ActualValues[idx];
+                selectedProfile.FanProfile.FanSpeeds[idx] = (double)lvLineSeries.ActualValues[idx];
 
             UpdateProfile();
         }
@@ -484,11 +484,11 @@ namespace HandheldCompanion.Views.Pages
                     PowerMode.SelectedIndex = Array.IndexOf(PerformanceManager.PowerModes, selectedProfile.OSPowerMode);
 
                     // Fan control
-                    FanMode.SelectedIndex = (int)selectedProfile.FanProfile.fanMode;
+                    FanMode.SelectedIndex = (int)selectedProfile.FanProfile.FanMode;
 
                     // update charts
                     for (int idx = 0; idx < lvLineSeries.ActualValues.Count; idx++)
-                        lvLineSeries.ActualValues[idx] = selectedProfile.FanProfile.fanSpeeds[idx];
+                        lvLineSeries.ActualValues[idx] = selectedProfile.FanProfile.FanSpeeds[idx];
                 }
             });
         }
@@ -713,7 +713,7 @@ namespace HandheldCompanion.Views.Pages
             if (updateLock)
                 return;
 
-            selectedProfile.FanProfile.fanMode = (FanMode)FanMode.SelectedIndex;
+            selectedProfile.FanProfile.FanMode = (FanMode)FanMode.SelectedIndex;
             UpdateProfile();
         }
 

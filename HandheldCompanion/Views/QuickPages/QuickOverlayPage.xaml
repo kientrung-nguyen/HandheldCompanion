@@ -25,6 +25,10 @@
                 CornerRadius="{DynamicResource ControlCornerRadius}">
 
                 <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="6*" />
+                        <ColumnDefinition Width="4*" />
+                    </Grid.ColumnDefinitions>
                     <DockPanel>
                         <ui:FontIcon
                             Height="40"
@@ -41,31 +45,33 @@
                                 TextWrapping="Wrap" />
                         </ui:SimpleStackPanel>
                     </DockPanel>
+
+                    <!--  Content  -->
+                    <Border Grid.Column="1" 
+                            CornerRadius="{DynamicResource ControlCornerRadius}">
+                        <ComboBox
+                            Name="ComboBoxOverlayDisplayLevel"
+                            HorizontalAlignment="Stretch"
+                            IsEnabled="False"
+                            IsReadOnly="True"
+                            SelectionChanged="ComboBoxOverlayDisplayLevel_SelectionChanged">
+
+                            <ComboBoxItem Name="OverlayDisplayLevelDisabled" Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Disabled}" />
+                            <ComboBoxItem Name="OverlayDisplayLevelMinimal" Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Minimal}" />
+                            <ComboBoxItem
+                                Name="OverlayDisplayLevelExtended"
+                                Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Extended}"
+                                IsEnabled="False" />
+                            <ComboBoxItem
+                                Name="OverlayDisplayLevelFull"
+                                Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Full}"
+                                IsEnabled="False" />
+                            <ComboBoxItem Name="OverlayDisplayLevelExternal" Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_External}" />
+                        </ComboBox>
+                    </Border>
                 </Grid>
             </Border>
 
-            <!--  Content  -->
-            <Border CornerRadius="{DynamicResource ControlCornerRadius}">
-                <ComboBox
-                    Name="ComboBoxOverlayDisplayLevel"
-                    HorizontalAlignment="Stretch"
-                    IsEnabled="False"
-                    IsReadOnly="True"
-                    SelectionChanged="ComboBoxOverlayDisplayLevel_SelectionChanged">
-
-                    <ComboBoxItem Name="OverlayDisplayLevelDisabled" Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Disabled}" />
-                    <ComboBoxItem Name="OverlayDisplayLevelMinimal" Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Minimal}" />
-                    <ComboBoxItem
-                        Name="OverlayDisplayLevelExtended"
-                        Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Extended}"
-                        IsEnabled="False" />
-                    <ComboBoxItem
-                        Name="OverlayDisplayLevelFull"
-                        Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Full}"
-                        IsEnabled="False" />
-                    <ComboBoxItem Name="OverlayDisplayLevelExternal" Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_External}" />
-                </ComboBox>
-            </Border>
         </ui:SimpleStackPanel>
     </ui:SimpleStackPanel>
 </Page>

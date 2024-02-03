@@ -7,14 +7,17 @@ using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
+using LiveCharts.Dtos;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,7 +25,9 @@ using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Navigation;
+using System.Windows.Threading;
 using Windows.UI.ViewManagement;
 using static HandheldCompanion.Managers.InputsHotkey;
 using Application = System.Windows.Application;
@@ -81,6 +86,22 @@ public partial class MainWindow : GamepadWindow
 
     private const int WM_QUERYENDSESSION = 0x0011;
 
+    private static DispatcherTimer notifyIconWaitTimer = new(
+        //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime),
+        TimeSpan.FromMilliseconds(100),
+        DispatcherPriority.Normal,
+        notifyIconWaitTimerTicked,
+        Dispatcher.CurrentDispatcher)
+    {
+        IsEnabled = false
+    };
+
+    private static void notifyIconWaitTimerTicked(object? sender, EventArgs e)
+    {
+        notifyIconWaitTimer.Stop();
+        overlayquickTools.ToggleVisibility();
+    }
+
     public MainWindow(FileVersionInfo _fileVersionInfo, Assembly CurrentAssembly)
     {
         InitializeComponent();
@@ -123,17 +144,58 @@ public partial class MainWindow : GamepadWindow
             Text = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visible = false,
-            ContextMenuStrip = new ContextMenuStrip()
+            ContextMenuStrip = new CustomContextMenu()
+            {
+                DropShadowEnabled = true
+            }
         };
+        
+        //if (Background is SolidColorBrush mainWindowBackColor)
+        //    notifyIcon.ContextMenuStrip.BackColor = System.Drawing.Color.FromArgb(
+        //                mainWindowBackColor.Color.A,
+        //                mainWindowBackColor.Color.R,
+        //                mainWindowBackColor.Color.G,
+        //                mainWindowBackColor.Color.B
+        //                );
+        //if (Foreground is SolidColorBrush mainWindowForeColor)
+        //    notifyIcon.ContextMenuStrip.ForeColor = System.Drawing.Color.FromArgb(
+        //                mainWindowForeColor.Color.A,
+        //                mainWindowForeColor.Color.R,
+        //                mainWindowForeColor.Color.G,
+        //                mainWindowForeColor.Color.B
+        //                );
 
-        notifyIcon.DoubleClick += (sender, e) => { SwapWindowState(); };
+        notifyIcon.DoubleClick += (sender, e) =>
+        {
+            // Stop the timer from ticking.
+            notifyIconWaitTimer.Stop();
+            if (overlayquickTools.Visibility == Visibility.Visible)
+                overlayquickTools.ToggleVisibility();
+            SwapWindowState();
+        };
+        notifyIcon.Click += (sender, e) =>
+        {
+            if (e is System.Windows.Forms.MouseEventArgs me && me.Button == MouseButtons.Left)
+                notifyIconWaitTimer.Start();
+        };
 
         AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow);
         AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools);
-        
+
         AddNotifyIconSeparator();
 
         AddNotifyIconItem(Properties.Resources.MainWindow_Exit);
+
+        //try
+        //{
+        //    notifyIcon.ContextMenuStrip.Invalidate(true);
+        //    notifyIcon.ContextMenuStrip.Update();
+        //    notifyIcon.ContextMenuStrip.Refresh();
+        //}
+        //catch (Exception ex)
+        //{
+
+        //}
 
         // paths
         CurrentExe = process.MainModule.FileName;
@@ -142,12 +204,12 @@ public partial class MainWindow : GamepadWindow
         // initialize HidHide
         HidHide.RegisterApplication(CurrentExe);
 
-        // initialize title
-        Title += $" ({fileVersionInfo.FileVersion})";
-
         // initialize device
         CurrentDevice = IDevice.GetDefault();
         CurrentDevice.PullSensors();
+
+        // initialize title
+        Title += $" ({fileVersionInfo.FileVersion}) {CurrentDevice.ProductName} ({CurrentDevice.Processor})";
 
         // workaround for Bosch BMI320/BMI323 (as of 06/20/2023)
         // todo: check if still needed with Bosch G-sensor Driver V1.0.1.7
@@ -241,6 +303,9 @@ public partial class MainWindow : GamepadWindow
         Left = Math.Min(SystemParameters.PrimaryScreenWidth - MinWidth, SettingsManager.GetDouble("MainWindowLeft"));
         Top = Math.Min(SystemParameters.PrimaryScreenHeight - MinHeight, SettingsManager.GetDouble("MainWindowTop"));
         navView.IsPaneOpen = SettingsManager.GetBoolean("MainWindowIsPaneOpen");
+
+        SetPreferredAppMode(2);
+        FlushMenuThemes();
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -331,6 +396,9 @@ public partial class MainWindow : GamepadWindow
 
     private void AddNotifyIconItem(string name, object tag = null)
     {
+        if (notifyIcon.ContextMenuStrip is null)
+            return;
+
         tag ??= string.Concat(name.Where(c => !char.IsWhiteSpace(c)));
 
         var menuItemMainWindow = new ToolStripMenuItem(name);
@@ -341,6 +409,9 @@ public partial class MainWindow : GamepadWindow
 
     private void AddNotifyIconSeparator()
     {
+        if (notifyIcon.ContextMenuStrip is null)
+            return;
+
         var separator = new ToolStripSeparator();
         notifyIcon.ContextMenuStrip.Items.Add(separator);
     }
@@ -454,18 +525,21 @@ public partial class MainWindow : GamepadWindow
 
     private void MenuItem_Click(object? sender, EventArgs e)
     {
-        switch (((ToolStripMenuItem)sender).Tag)
+        if (sender is ToolStripMenuItem menuItem)
         {
-            case "MainWindow":
-                SwapWindowState();
-                break;
-            case "QuickTools":
-                overlayquickTools.ToggleVisibility();
-                break;
-            case "Exit":
-                appClosing = true;
-                Close();
-                break;
+            switch (menuItem.Tag)
+            {
+                case "MainWindow":
+                    SwapWindowState();
+                    break;
+                case "QuickTools":
+                    overlayquickTools.ToggleVisibility();
+                    break;
+                case "Exit":
+                    appClosing = true;
+                    Close();
+                    break;
+            }
         }
     }
 
@@ -563,9 +637,12 @@ public partial class MainWindow : GamepadWindow
                         // restart IMU
                         SensorsManager.Resume(true);
 
-                        OSDManager.Start();
+                        //OSDManager.Start();
 
-                        PlatformManager.Start();
+                        // todo: improve overall threading logic
+                        //new Thread(() => { PlatformManager.Start(); }).Start();
+                        new Thread(() => { PerformanceManager.Start(); }).Start();
+
                     }
 
                     // open device, when ready
@@ -596,9 +673,9 @@ public partial class MainWindow : GamepadWindow
                     // pause inputs manager
                     InputsManager.Stop();
 
-                    OSDManager.Stop();
-
-                    PlatformManager.Stop();
+                    //OSDManager.Stop();
+                    //PlatformManager.Stop();
+                    PerformanceManager.Stop();
 
                     // close current device
                     CurrentDevice.Close();
@@ -637,7 +714,7 @@ public partial class MainWindow : GamepadWindow
         var preNavPageType = ContentFrame.CurrentSourcePageType;
 
         // Only navigate if the selected page isn't currently loaded.
-        if (!(_page is null) && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
+        if (_page is not null && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
     }
 
     public static void NavView_Navigate(Page _page)
@@ -820,4 +897,10 @@ public partial class MainWindow : GamepadWindow
     }
 
     #endregion
+
+    [DllImport("uxtheme.dll", EntryPoint = "#135", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern int SetPreferredAppMode(int preferredAppMode);
+
+    [DllImport("uxtheme.dll", EntryPoint = "#136", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern void FlushMenuThemes();
 }

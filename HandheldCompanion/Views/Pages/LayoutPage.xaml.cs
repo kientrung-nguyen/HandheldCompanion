@@ -499,7 +499,7 @@ public partial class LayoutPage : Page
         var preNavPageType = ContentFrame.CurrentSourcePageType;
 
         // Only navigate if the selected page isn't currently loaded.
-        if (!(_page is null) && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
+        if (_page is not null && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
     }
 
     public void NavView_Navigate(Page _page)

@@ -1,16 +1,12 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views;
 using Hwinfo.SharedMemory;
-using Microsoft.WindowsAPICodePack.Sensors;
-using RTSSSharedMemoryNET;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Timers;
 using System.Windows;
 using static HandheldCompanion.Platforms.LibreHardwareMonitor;
 using Timer = System.Timers.Timer;
@@ -48,7 +44,8 @@ public class HWiNFO : IPlatform
         BatteryRemainingTime,
 
         PhysicalMemoryUsage,
-        VirtualMemoryUsage
+        VirtualMemoryUsage,
+
     }
 
     private int MemoryInterval = 1000;
@@ -56,6 +53,8 @@ public class HWiNFO : IPlatform
     private readonly Timer HWiNFOWatchdog;
     private SharedMemoryReader HWiNFOReader;
     public readonly ConcurrentDictionary<SensorElementType, SensorReading> MonitoredSensors = new();
+    public float CPUFanSpeed = float.NaN;
+    public float CPUFanDuty = float.NaN;
 
     public HWiNFO()
     {
@@ -97,7 +96,6 @@ public class HWiNFO : IPlatform
             LogManager.LogWarning("HWiNFO is missing. Please get it from: {0}", Url);
             return;
         }
-
 
         // those are used for computes
         MonitoredSensors[SensorElementType.PL1] = new();
@@ -143,7 +141,6 @@ public class HWiNFO : IPlatform
             {
                 StopProcess();
                 StartProcess();
-                SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
             }
             else
             {
@@ -151,7 +148,7 @@ public class HWiNFO : IPlatform
                 Process.Exited += Process_Exited;
             }
 
-
+            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
             HWiNFOReader = new();
 
             // our main watchdog to (re)apply requested settings
@@ -190,7 +187,7 @@ public class HWiNFO : IPlatform
     {
         // reset tentative counter
         Tentative = 0;
-        HWiNFOWatchdog?.Start();
+        //HWiNFOWatchdog?.Start();
     }
 
     public void PopulateSensors()
@@ -207,6 +204,9 @@ public class HWiNFO : IPlatform
                 MonitoredSensors[SensorElementType.CPUFrequencyEffective] = new();
                 MonitoredSensors[SensorElementType.BatteryRemainingTime] = new();
                 MonitoredSensors[SensorElementType.BatteryChargeRate] = new();
+
+                CPUFanSpeed = MainWindow.CurrentDevice.ReadFanSpeed();
+                CPUFanDuty = MainWindow.CurrentDevice.ReadFanDuty();
 
                 foreach (var sensor in sensors)
                 {
@@ -236,9 +236,9 @@ public class HWiNFO : IPlatform
                                     apuSTAPMPower = sensor.Value;
                                     MonitoredSensors[SensorElementType.APUStapmPower] = sensor;
                                     break;
-                                case "GPU Core Power (VDDCR_GFX)": MonitoredSensors[SensorElementType.GPUPower] = sensor; break;
+                                case "GPU ASIC Power": MonitoredSensors[SensorElementType.GPUPower] = sensor; break;
                                 case "GPU D3D Usage": MonitoredSensors[SensorElementType.GPUUsage] = sensor; break;
-                                case "Max CPU/Thread Usage": MonitoredSensors[SensorElementType.CPUUsage] = sensor; break;
+                                case "Total CPU Usage": MonitoredSensors[SensorElementType.CPUUsage] = sensor; break;
                                 case "GPU Clock":
                                     {
                                         if (!MonitoredSensors.TryGetValue(SensorElementType.GPUFrequency, out var curSensor) || sensor.Value != curSensor.Value)
@@ -391,8 +391,7 @@ public class HWiNFO : IPlatform
         {
             if (IsRunning)
             {
-                using var HWiNFOPerfReader = new SharedMemoryReader();
-                var sensors = HWiNFOPerfReader.ReadLocal();
+                var sensors = HWiNFOReader.ReadLocal();
                 var cpuBusClock = double.NaN;
                 var cpuRatioCore = double.NaN;
                 foreach (var sensor in sensors)
@@ -570,6 +569,8 @@ public class HWiNFO : IPlatform
             StopProcess();
             StartProcess();
         }
+
+        PopulateSensors();
     }
 
     private void DisposeMemory()
@@ -585,15 +586,6 @@ public class HWiNFO : IPlatform
         base.Dispose();
     }
 
-    public void Suspend()
-    {
-        HWiNFOWatchdog?.Stop();
-    }
-
-    public void Resume()
-    {
-        HWiNFOWatchdog?.Start();
-    }
     #region events
 
     public event LimitChangedHandler PowerLimitChanged;

@@ -30,14 +30,13 @@
 
     <ui:NavigationView
         Name="navView"
-        Margin="0,-30,0,0"
         BackRequested="navView_BackRequested"
         IsPaneToggleButtonVisible="False"
         IsSettingsVisible="False"
         ItemInvoked="navView_ItemInvoked"
         Loaded="navView_Loaded"
         PaneDisplayMode="Top"
-        SelectionFollowsFocus="Enabled">
+        SelectionFollowsFocus="Enabled" ScrollViewer.VerticalScrollBarVisibility="Hidden">
 
         <ui:NavigationView.Header>
             <TextBlock x:Name="navHeader" Margin="-34,-30,0,0" />
@@ -45,9 +44,111 @@
 
         <ui:NavigationView.FooterMenuItems>
             <ui:NavigationViewItem IsEnabled="False">
-                <DockPanel Height="40">
+                <DockPanel LastChildFill="False">
+                    <ui:FontIcon
+                        Name="CPUIndicatorIcon"
+                        VerticalAlignment="Center"
+                        Margin="0,0,4,0"
+                        FontSize="24" />
+                    <TextBlock Name="CPUUsage" 
+                               Margin="2,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Style="{StaticResource BodyTextBlockStyle}"  />
+                    <TextBlock Name="CPUUsageUnit" FontSize="10" 
+                               VerticalAlignment="Center" 
+                               Margin="1,0,0,0" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="CPUTemp"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="CPUTempUnit" FontSize="10" 
+                               VerticalAlignment="Center"
+                               Margin="1,0,0,0" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="CPUPower"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="CPUPowerUnit" FontSize="10" 
+                               VerticalAlignment="Center"
+                               Margin="1,0,0,0"  
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="CPUMem"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="CPUMemUnit" FontSize="10" 
+                               VerticalAlignment="Center"
+                               Margin="1,0,0,0"  
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="CPUFan"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="CPUFanUnit" FontSize="10" 
+                               VerticalAlignment="Center" 
+                               Margin="1,0,0,0" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <ui:FontIcon Name="GPUIndicatorIcon"
+                                 Margin="12,0,4,0"
+                                 VerticalAlignment="Center"
+                                 FontSize="24" />
+                    <TextBlock Name="GPUUsage" Margin="2,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="GPUUsageUnit" FontSize="10"
+                               VerticalAlignment="Center" 
+                               Margin="1,0,0,0" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="GPUTemp"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="GPUTempUnit" 
+                               FontSize="10" VerticalAlignment="Center"
+                               Margin="1,0,0,0" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="GPUPower"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="GPUPowerUnit" FontSize="10" 
+                               VerticalAlignment="Center" 
+                               Margin="1,0,0,0"  
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="GPUMem"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left" 
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="GPUMemUnit" FontSize="10" 
+                               VerticalAlignment="Center"
+                               Margin="1,0,0,0"  
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <!--<StackPanel
+                        Name="CPU"
+                        Margin="2,0,0,0"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Left">
+                    </StackPanel>-->
+                    <!--<StackPanel
+                        Name="GPU"
+                        Margin="2,0,0,0"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Left">
+                    </StackPanel>-->
                     <ui:FontIcon
                         Name="BatteryIndicatorIcon"
+                        Margin="12,0,0,0"
                         VerticalAlignment="Center"
                         FontSize="30" />
                     <TextBlock
@@ -57,17 +158,16 @@
                         Style="{StaticResource BodyTextBlockStyle}" />
                     <TextBlock
                         Name="BatteryIndicatorLifeRemaining"
-                        Margin="4,0,0,0"
+                        Margin="4,0,20,0"
                         VerticalAlignment="Center"
-                        Style="{StaticResource BodyTextBlockStyle}" />
+                        Style="{StaticResource BodyTextBlockStyle}" FontSize="10" />
                     <TextBlock
                         Name="Time"
-                        Margin="12,0,0,0"
+                        Margin="6,0,10,0"
                         VerticalAlignment="Center"
                         Style="{StaticResource BodyTextBlockStyle}" />
                 </DockPanel>
             </ui:NavigationViewItem>
-            <ui:NavigationViewItem IsEnabled="False" />
         </ui:NavigationView.FooterMenuItems>
 
         <common:TouchScrollViewer

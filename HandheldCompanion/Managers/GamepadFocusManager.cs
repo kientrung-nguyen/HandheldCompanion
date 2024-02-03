@@ -202,7 +202,7 @@ namespace HandheldCompanion.Managers
                     case "SettingsMode0":
                     case "SettingsMode1":
 
-                        // quicktools
+                    // quicktools
                     case "quickhome":
                     case "quicksettings":
                     case "quickdevice":
@@ -363,7 +363,7 @@ namespace HandheldCompanion.Managers
 
             return null;
         }
-        
+
         // declare a DateTime variable to store the last time the function was called
         private DateTime lastCallTime;
 
@@ -518,6 +518,10 @@ namespace HandheldCompanion.Managers
                                             // go back to previous page
                                             if (_gamepadFrame.CanGoBack)
                                                 _gamepadFrame.GoBack();
+                                            else
+                                            {
+                                                _currentWindow.Close();
+                                            }
                                         }
                                         return;
                                 }
@@ -556,6 +560,10 @@ namespace HandheldCompanion.Managers
                                                             // go back to previous page
                                                             if (_gamepadFrame.CanGoBack)
                                                                 _gamepadFrame.GoBack();
+                                                            else
+                                                            {
+                                                                _currentWindow.Close();
+                                                            }
                                                         }
                                                         break;
                                                 }
@@ -568,8 +576,8 @@ namespace HandheldCompanion.Managers
 
                         case "ComboBoxItem":
                             {
-                                ComboBox comboBox = ItemsControl.ItemsControlFromItemContainer(focusedElement) as ComboBox;
-                                comboBox.IsDropDownOpen = false;
+                                if (ItemsControl.ItemsControlFromItemContainer(focusedElement) is ComboBox comboBox)
+                                    comboBox.IsDropDownOpen = false;
                             }
                             return;
 
@@ -588,8 +596,7 @@ namespace HandheldCompanion.Managers
                         case "Button":
                             {
                                 // To get the first RadioButton in the list, if any
-                                RadioButton firstRadioButton = WPFUtils.FindChildren(focusedElement).FirstOrDefault(c => c is RadioButton) as RadioButton;
-                                if (firstRadioButton is not null)
+                                if (WPFUtils.FindChildren(focusedElement).FirstOrDefault(c => c is RadioButton) is RadioButton firstRadioButton)
                                     firstRadioButton.IsChecked = true;
                             }
                             break;

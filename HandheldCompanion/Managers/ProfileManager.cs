@@ -15,23 +15,21 @@ namespace HandheldCompanion.Managers;
 
 public static class ProfileManager
 {
-    public const string DefaultName = "Default";
-
-    public static Dictionary<string, Profile> profiles = new(StringComparer.InvariantCultureIgnoreCase);
-    public static List<Profile> subProfiles = new();
-
+    private const string DefaultName = "Default";
+    private static readonly Dictionary<string, Profile> profiles = new(StringComparer.InvariantCultureIgnoreCase);
+    private static List<Profile> subProfiles = [];
     private static Profile currentProfile;
 
-    private static string ProfilesPath;
+    private static readonly string profilesPath;
 
-    public static bool IsInitialized;
+    private static bool isInitialized;
 
     static ProfileManager()
     {
         // initialiaze path(s)
-        ProfilesPath = Path.Combine(MainWindow.SettingsPath, "profiles");
-        if (!Directory.Exists(ProfilesPath))
-            Directory.CreateDirectory(ProfilesPath);
+        profilesPath = Path.Combine(MainWindow.SettingsPath, "profiles");
+        if (!Directory.Exists(profilesPath))
+            Directory.CreateDirectory(profilesPath);
 
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
@@ -49,7 +47,7 @@ public static class ProfileManager
         // monitor profile files
         profileWatcher = new FileSystemWatcher
         {
-            Path = ProfilesPath,
+            Path = profilesPath,
             EnableRaisingEvents = true,
             IncludeSubdirectories = true,
             Filter = "*.json",
@@ -58,7 +56,7 @@ public static class ProfileManager
         profileWatcher.Deleted += ProfileDeleted;
 
         // process existing profiles
-        var fileEntries = Directory.GetFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
+        var fileEntries = Directory.GetFiles(profilesPath, "*.json", SearchOption.AllDirectories);
         foreach (var fileName in fileEntries)
             ProcessProfile(fileName);
 
@@ -79,7 +77,7 @@ public static class ProfileManager
             UpdateOrCreateProfile(defaultProfile, UpdateSource.Creation);
         }
 
-        IsInitialized = true;
+        isInitialized = true;
         Initialized?.Invoke();
 
         LogManager.LogInformation("{0} has started", "ProfileManager");
@@ -87,10 +85,10 @@ public static class ProfileManager
 
     public static void Stop()
     {
-        if (!IsInitialized)
+        if (!isInitialized)
             return;
 
-        IsInitialized = false;
+        isInitialized = false;
 
         profileWatcher.Deleted -= ProfileDeleted;
         profileWatcher.Dispose();
@@ -122,8 +120,7 @@ public static class ProfileManager
         Profile profile = subProfiles.FirstOrDefault(pr => pr.Path == path && pr.IsFavoriteSubProfile);
 
         // get main profile from path instead
-        if (profile is null)
-            profile = profiles.Values.FirstOrDefault(a => a.Path.Equals(path, StringComparison.InvariantCultureIgnoreCase));
+        profile ??= profiles.Values.FirstOrDefault(a => a.Path.Equals(path, StringComparison.InvariantCultureIgnoreCase));
 
         if (profile is null)
         {
@@ -478,7 +475,7 @@ public static class ProfileManager
 
     public static void DeleteProfile(Profile profile)
     {
-        var profilePath = Path.Combine(ProfilesPath, profile.GetFileName());
+        var profilePath = Path.Combine(profilesPath, profile.GetFileName());
 
         if (profiles.ContainsKey(profile.Path))
         {
@@ -525,7 +522,7 @@ public static class ProfileManager
 
     public static void DeleteSubProfile(Profile subProfile)
     {
-        var profilePath = Path.Combine(ProfilesPath, subProfile.GetFileName());
+        var profilePath = Path.Combine(profilesPath, subProfile.GetFileName());
 
         if (subProfiles.Contains(subProfile))
         {
@@ -570,7 +567,7 @@ public static class ProfileManager
         });
 
         // prepare for writing
-        var profilePath = Path.Combine(ProfilesPath, profile.GetFileName());
+        var profilePath = Path.Combine(profilesPath, profile.GetFileName());
 
         try
         {

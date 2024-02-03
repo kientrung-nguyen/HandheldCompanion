@@ -648,12 +648,12 @@ public static class PerformanceManager
 
     private static void RestoreCPUClock(bool immediate)
     {
-        RequestCPUClock(0x00000000, immediate);
+        RequestCPUClock(/*0x00000000*/MainWindow.CurrentDevice.CpuClock, immediate);
     }
 
     private static void RestoreGPUClock(bool immediate)
     {
-        RequestGPUClock(MainWindow.CurrentDevice.GfxClock[0], immediate);
+        RequestGPUClock(MainWindow.CurrentDevice.GfxClock[0] * 2, immediate);
     }
 
     private static void RTSS_Hooked(AppEntry appEntry)
@@ -680,7 +680,7 @@ public static class PerformanceManager
             {
                 // todo: Store fps for data gathering from multiple points (OSD, Performance)
                 double processValueFPS = PlatformManager.RTSS.GetFramerate(AutoTDPProcessId, out var osdFrameId);
-                if (processValueFPS <= 0 || AutoTDPOSDFrameId == osdFrameId) return;
+                if (double.IsNaN(processValueFPS) || processValueFPS <= 0 || AutoTDPOSDFrameId == osdFrameId) return;
 
                 // set lock
                 autoLock = true;
