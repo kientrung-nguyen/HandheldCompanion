@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Helpers;
+﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Processors.AMD;
 using HandheldCompanion.Views;
 using System;
@@ -187,8 +188,8 @@ public class AMDProcessor : Processor
 
                             if (clock == 12750)
                             {
-                                sd.HardMinGfxClock = (uint)MainWindow.CurrentDevice.GfxClock[0]; //hardMin
-                                sd.SoftMaxGfxClock = (uint)MainWindow.CurrentDevice.GfxClock[1]; //softMax
+                                sd.HardMinGfxClock = (uint) IDevice.GetCurrent().GfxClock[0]; //hardMin
+                                sd.SoftMaxGfxClock = (uint) IDevice.GetCurrent().GfxClock[1]; //softMax
                             }
                             else
                             {
@@ -205,15 +206,18 @@ public class AMDProcessor : Processor
                     {
                         // you can't restore default frequency on AMD GPUs
                         if (clock == 12750)
+                        {
+                            Monitor.Exit(IsBusy);
                             return;
-                        
-                        int error1 = RyzenAdj.set_gfx_clk(ry, (uint)clock);
+                        }
+
+                        int error = RyzenAdj.set_gfx_clk(ry, (uint)clock);
 
                         /*
                         if (clock == 12750)
                         {
-                            error2 = RyzenAdj.set_min_gfxclk_freq(ry, (uint)MainWindow.CurrentDevice.GfxClock[0]);
-                            error3 = RyzenAdj.set_max_gfxclk_freq(ry, (uint)MainWindow.CurrentDevice.GfxClock[1]);
+                            error2 = RyzenAdj.set_min_gfxclk_freq(ry, (uint) IDevice.GetCurrent().GfxClock[0]);
+                            error3 = RyzenAdj.set_max_gfxclk_freq(ry, (uint) IDevice.GetCurrent().GfxClock[1]);
                         }
                         else
                         {
@@ -222,7 +226,7 @@ public class AMDProcessor : Processor
                         }
                         */
 
-                        base.SetGPUClock(clock, immediate, error1);
+                        base.SetGPUClock(clock, immediate, error);
                     }
                     break;
             }
@@ -230,7 +234,12 @@ public class AMDProcessor : Processor
             Monitor.Exit(IsBusy);
         }
     }
-
+	
+	public void SetCoall(uint value)
+    {
+        RyzenAdj.set_coall(ry, value);
+    }
+    
     public override void SetMaxPerformance(int result)
     {
         if (Monitor.TryEnter(IsBusy))

@@ -99,8 +99,8 @@ public static class PlatformManager
 
     private static void SettingsManager_SettingValueChanged(string name, object value)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (name)
             {
@@ -130,6 +130,7 @@ public static class PlatformManager
                 break;
             case OSDManager.OverlayDisplayLevel.Extended: // Extended
             case OSDManager.OverlayDisplayLevel.Full: // Full
+            case OSDManager.OverlayDisplayLevel.Custom:
             case OSDManager.OverlayDisplayLevel.External: // External
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplayComplex;

@@ -44,7 +44,7 @@ namespace HandheldCompanion.Views;
 public partial class MainWindow : GamepadWindow
 {
     // devices vars
-    public static IDevice CurrentDevice;
+    private static IDevice CurrentDevice;
 
     // page vars
     private static readonly Dictionary<string, Page> _pages = new();
@@ -75,17 +75,18 @@ public partial class MainWindow : GamepadWindow
     public static string CurrentPageName = string.Empty;
 
     private bool appClosing;
-    private bool IsReady;
     private readonly NotifyIcon notifyIcon;
     private bool NotifyInTaskbar;
     private string preNavItemTag;
 
     private WindowState prevWindowState;
-    private SplashScreen splashScreen;
+    public static SplashScreen SplashScreen;
 
     public static UISettings uiSettings;
 
     private const int WM_QUERYENDSESSION = 0x0011;
+    private const int WM_DISPLAYCHANGE = 0x007e;
+    private const int WM_DEVICECHANGE = 0x0219;
 
     private static DispatcherTimer notifyIconWaitTimer = new(
         //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime),
@@ -105,7 +106,23 @@ public partial class MainWindow : GamepadWindow
 
     public MainWindow(FileVersionInfo _fileVersionInfo, Assembly CurrentAssembly)
     {
+        // initialize splash screen
+        SplashScreen = new SplashScreen();
+
+        // get first start
+        bool FirstStart = SettingsManager.GetBoolean("FirstStart");
+
+        if (FirstStart)
+        {
+#if !DEBUG
+            SplashScreen.Show();
+#endif
+        }
+
+        SplashScreen.LoadingSequence.Text = "Preparing UI...";
+
         InitializeComponent();
+        this.Tag = "MainWindow";
 
         fileVersionInfo = _fileVersionInfo;
         CurrentWindow = this;
@@ -113,42 +130,8 @@ public partial class MainWindow : GamepadWindow
         // used by system manager, controller manager
         uiSettings = new UISettings();
 
-        // used by gamepad navigation
-        Tag = "MainWindow";
-
-        // get process
-        var process = Process.GetCurrentProcess();
-
         // fix touch support
         TabletDeviceCollection tabletDevices = Tablet.TabletDevices;
-        /*if (tabletDevices.Count > 0)
-        {
-            // Get the Type of InputManager.  
-            Type inputManagerType = typeof(System.Windows.Input.InputManager);
-
-            // Call the StylusLogic method on the InputManager.Current instance.  
-            object stylusLogic = inputManagerType.InvokeMember("StylusLogic",
-                        BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.NonPublic,
-                        null, InputManager.Current, null);
-
-            if (stylusLogic != null)
-            {
-                //  Get the type of the stylusLogic returned from the call to StylusLogic.  
-                Type stylusLogicType = stylusLogic.GetType();
-
-                // Loop until there are no more devices to remove.  
-                while (tabletDevices.Count > 0)
-                {
-                    // Remove the first tablet device in the devices collection.  
-                    stylusLogicType.InvokeMember("OnTabletRemoved",
-                            BindingFlags.InvokeMethod | BindingFlags.Instance | BindingFlags.NonPublic,
-                            null, stylusLogic, new object[] { (uint)0 });
-                }
-            }
-        }*/
-
-        // get first start
-        bool FirstStart = SettingsManager.GetBoolean("FirstStart");
 
         // define current directory
         InstallPath = AppDomain.CurrentDomain.BaseDirectory;
@@ -170,27 +153,9 @@ public partial class MainWindow : GamepadWindow
             Text = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visible = false,
-            ContextMenuStrip = new CustomContextMenu()
-            {
-                DropShadowEnabled = true
-            }
+            ContextMenuStrip = new ContextMenuStrip()
         };
         
-        //if (Background is SolidColorBrush mainWindowBackColor)
-        //    notifyIcon.ContextMenuStrip.BackColor = System.Drawing.Color.FromArgb(
-        //                mainWindowBackColor.Color.A,
-        //                mainWindowBackColor.Color.R,
-        //                mainWindowBackColor.Color.G,
-        //                mainWindowBackColor.Color.B
-        //                );
-        //if (Foreground is SolidColorBrush mainWindowForeColor)
-        //    notifyIcon.ContextMenuStrip.ForeColor = System.Drawing.Color.FromArgb(
-        //                mainWindowForeColor.Color.A,
-        //                mainWindowForeColor.Color.R,
-        //                mainWindowForeColor.Color.G,
-        //                mainWindowForeColor.Color.B
-        //                );
-
         notifyIcon.DoubleClick += (sender, e) =>
         {
             // Stop the timer from ticking.
@@ -212,18 +177,8 @@ public partial class MainWindow : GamepadWindow
 
         AddNotifyIconItem(Properties.Resources.MainWindow_Exit);
 
-        //try
-        //{
-        //    notifyIcon.ContextMenuStrip.Invalidate(true);
-        //    notifyIcon.ContextMenuStrip.Update();
-        //    notifyIcon.ContextMenuStrip.Refresh();
-        //}
-        //catch (Exception ex)
-        //{
-
-        //}
-
         // paths
+        Process process = Process.GetCurrentProcess();
         CurrentExe = process.MainModule.FileName;
         CurrentPath = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -231,35 +186,37 @@ public partial class MainWindow : GamepadWindow
         HidHide.RegisterApplication(CurrentExe);
 
         // initialize device
-        CurrentDevice = IDevice.GetDefault();
+        SplashScreen.LoadingSequence.Text = "Initializing device...";
+        CurrentDevice = IDevice.GetCurrent();
         CurrentDevice.PullSensors();
 
         // initialize title
         Title += $" ({fileVersionInfo.FileVersion}) {CurrentDevice.ProductName} ({CurrentDevice.Processor})";
-
-        // workaround for Bosch BMI320/BMI323 (as of 06/20/2023)
-        // todo: check if still needed with Bosch G-sensor Driver V1.0.1.7
-        // https://dlcdnets.asus.com/pub/ASUS/IOTHMD/Image/Driver/Chipset/34644/BoschG-sensor_ROG_Bosch_Z_V1.0.1.7_34644.exe?model=ROG%20Ally%20(2023)
-
         string currentDeviceType = CurrentDevice.GetType().Name;
         switch (currentDeviceType)
         {
-            case "AYANEOAIRPlus":
-            case "ROGAlly":
-                {
-                    LogManager.LogInformation("Restarting: {0}", CurrentDevice.InternalSensorName);
+            /*
+             * workaround for Bosch BMI320/BMI323 (as of 06/20/2023)
+             * todo: check if still needed with Bosch G-sensor Driver V1.0.1.7
+             * https://dlcdnets.asus.com/pub/ASUS/IOTHMD/Image/Driver/Chipset/34644/BoschG-sensor_ROG_Bosch_Z_V1.0.1.7_34644.exe?model=ROG%20Ally%20(2023)
 
-                    if (CurrentDevice.RestartSensor())
+                case "AYANEOAIRPlus":
+                case "ROGAlly":
                     {
-                        // give the device some breathing space once restarted
-                        Thread.Sleep(500);
+                        LogManager.LogInformation("Restarting: {0}", CurrentDevice.InternalSensorName);
 
-                        LogManager.LogInformation("Successfully restarted: {0}", CurrentDevice.InternalSensorName);
+                        if (CurrentDevice.RestartSensor())
+                        {
+                            // give the device some breathing space once restarted
+                            Thread.Sleep(500);
+
+                            LogManager.LogInformation("Successfully restarted: {0}", CurrentDevice.InternalSensorName);
+                        }
+                        else
+                            LogManager.LogError("Failed to restart: {0}", CurrentDevice.InternalSensorName);
                     }
-                    else
-                        LogManager.LogError("Failed to restart: {0}", CurrentDevice.InternalSensorName);
-                }
-                break;
+                    break;
+            */
 
             case "SteamDeck":
                 {
@@ -271,22 +228,24 @@ public partial class MainWindow : GamepadWindow
         }
 
         // initialize splash screen on first start only
-        if (FirstStart)
-        {
-            splashScreen = new SplashScreen();
-            splashScreen.Show();
-
-            SettingsManager.SetProperty("FirstStart", false);
-        }
+        SettingsManager.SetProperty("FirstStart", false);
 
         // initialize UI sounds board
         UISounds uiSounds = new UISounds();
 
         // load window(s)
-        loadWindows();
+        SplashScreen.LoadingSequence.Text = "Drawing windows...";
+        Dispatcher.Invoke(new Action(() =>
+        {
+            loadWindows();
+        }), DispatcherPriority.Background); // Lower priority
 
         // load page(s)
-        loadPages();
+        SplashScreen.LoadingSequence.Text = "Drawing pages...";
+        Dispatcher.Invoke(new Action(() =>
+        {
+            loadPages();
+        }), DispatcherPriority.Background); // Lower priority
 
         // manage events
         InputsManager.TriggerRaised += InputsManager_TriggerRaised;
@@ -294,27 +253,30 @@ public partial class MainWindow : GamepadWindow
         DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
         ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
 
         ToastManager.Start();
         ToastManager.IsEnabled = SettingsManager.GetBoolean("ToastEnable");
 
         // start static managers in sequence
-        GPUManager.Start();
-        PowerProfileManager.Start();
-        ProfileManager.Start();
-        ControllerManager.Start();
-        HotkeysManager.Start();
-        DeviceManager.Start();
-        OSDManager.Start();
-        LayoutManager.Start();
-        SystemManager.Start();
-        DynamicLightingManager.Start();
-        MultimediaManager.Start();
-        VirtualManager.Start();
-        InputsManager.Start();
-        SensorsManager.Start();
-        TimerManager.Start();
+        SplashScreen.LoadingSequence.Text = "Initializing managers...";
+        Dispatcher.Invoke(new Action(() =>
+        {
+            GPUManager.Start();
+            PowerProfileManager.Start();
+            ProfileManager.Start();
+            ControllerManager.Start();
+            HotkeysManager.Start();
+            DeviceManager.Start();
+            OSDManager.Start();
+            LayoutManager.Start();
+            SystemManager.Start();
+            DynamicLightingManager.Start();
+            MultimediaManager.Start();
+            VirtualManager.Start();
+            InputsManager.Start();
+            SensorsManager.Start();
+            TimerManager.Start();
+        }), DispatcherPriority.Background); // Lower priority
 
         // todo: improve overall threading logic
         new Thread(() => { PlatformManager.Start(); }).Start();
@@ -326,6 +288,10 @@ public partial class MainWindow : GamepadWindow
         // start setting last
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         SettingsManager.Start();
+
+        // Load MVVM pages after the Models / data have been created.
+        overlayquickTools.LoadPages_MVVM();
+        LoadPages_MVVM();
 
         // update Position and Size
         Height = (int)Math.Max(MinHeight, SettingsManager.GetDouble("MainWindowHeight"));
@@ -340,10 +306,14 @@ public partial class MainWindow : GamepadWindow
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        // windows shutting down event
-        if (msg == WM_QUERYENDSESSION)
+        switch (msg)
         {
-            // do something
+            case WM_DISPLAYCHANGE:
+            case WM_DEVICECHANGE:
+                DeviceManager.RefreshDisplayAdapters();
+                break;
+            case WM_QUERYENDSESSION:
+                break;
         }
 
         return IntPtr.Zero;
@@ -352,7 +322,7 @@ public partial class MainWindow : GamepadWindow
     private void ControllerManager_ControllerSelected(IController Controller)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             GamepadUISelectIcon.Glyph = Controller.GetGlyph(ButtonFlags.B1);
             GamepadUISelectIcon.Foreground = Controller.GetGlyphColor(ButtonFlags.B1);
@@ -368,7 +338,7 @@ public partial class MainWindow : GamepadWindow
     private void GamepadFocusManagerOnFocused(Control control)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             // todo : localize me
             string controlType = control.GetType().Name;
@@ -493,27 +463,39 @@ public partial class MainWindow : GamepadWindow
         controllerPage.Loaded += ControllerPage_Loaded;
 
         devicePage = new DevicePage("device");
-        performancePage = new PerformancePage("performance");
         profilesPage = new ProfilesPage("profiles");
         settingsPage = new SettingsPage("settings");
-        aboutPage = new AboutPage("about");
+
         overlayPage = new OverlayPage("overlay");
         hotkeysPage = new HotkeysPage("hotkeys");
-        layoutPage = new LayoutPage("layout", navView);
+
         notificationsPage = new NotificationsPage("notifications");
         notificationsPage.StatusChanged += NotificationsPage_LayoutUpdated;
 
         // store pages
         _pages.Add("ControllerPage", controllerPage);
         _pages.Add("DevicePage", devicePage);
-        _pages.Add("PerformancePage", performancePage);
+
         _pages.Add("ProfilesPage", profilesPage);
-        _pages.Add("AboutPage", aboutPage);
+
         _pages.Add("OverlayPage", overlayPage);
         _pages.Add("SettingsPage", settingsPage);
         _pages.Add("HotkeysPage", hotkeysPage);
-        _pages.Add("LayoutPage", layoutPage);
+
         _pages.Add("NotificationsPage", notificationsPage);
+    }
+
+    private void LoadPages_MVVM()
+    {
+        layoutPage = new LayoutPage("layout", navView);
+        layoutPage.Initialize();
+
+        performancePage = new PerformancePage();
+        aboutPage = new AboutPage();
+
+        _pages.Add("LayoutPage", layoutPage);
+        _pages.Add("PerformancePage", performancePage);
+        _pages.Add("AboutPage", aboutPage);
     }
 
     private void loadWindows()
@@ -528,9 +510,6 @@ public partial class MainWindow : GamepadWindow
     {
         // todo: improve me
         CurrentDevice.PullSensors();
-
-        aboutPage.UpdateDevice(device);
-        settingsPage.UpdateDevice(device);
     }
 
     private void InputsManager_TriggerRaised(string listener, InputsChord input, InputsHotkeyType type, bool IsKeyDown,
@@ -580,24 +559,20 @@ public partial class MainWindow : GamepadWindow
 
         HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
         source.AddHook(WndProc); // Hook into the window's message loop
+
+        // restore window state
+        WindowState = SettingsManager.GetBoolean("StartMinimized") ? WindowState.Minimized : (WindowState)SettingsManager.GetInt("MainWindowState");
+        prevWindowState = (WindowState)SettingsManager.GetInt("MainWindowPrevState");
     }
 
     private void ControllerPage_Loaded(object sender, RoutedEventArgs e)
     {
-        if (IsReady)
-            return;
-
         // hide splashscreen
-        if (splashScreen is not null)
-            splashScreen.Close();
+        if (SplashScreen is not null)
+            SplashScreen.Close();
 
-        // home page has loaded, display main window
-        WindowState = SettingsManager.GetBoolean("StartMinimized")
-            ? WindowState.Minimized
-            : (WindowState)SettingsManager.GetInt("MainWindowState");
-        prevWindowState = (WindowState)SettingsManager.GetInt("MainWindowPrevState");
-
-        IsReady = true;
+        // home page is ready, display main window
+        this.Visibility = Visibility.Visible;
     }
 
     private void NotificationsPage_LayoutUpdated(int status)
@@ -605,38 +580,10 @@ public partial class MainWindow : GamepadWindow
         bool hasNotification = Convert.ToBoolean(status);
 
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             HasNotifications.Visibility = hasNotification ? Visibility.Visible : Visibility.Collapsed;
         });
-    }
-
-    private void VirtualManager_ControllerSelected(HIDmode HIDmode)
-    {
-        Application.Current.Dispatcher.BeginInvoke(() =>
-        {
-            overlayModel.UpdateHIDMode(HIDmode);
-        });
-        CurrentDevice.SetKeyPressDelay(HIDmode);
-    }
-
-    public void UpdateSettings(Dictionary<string, string> args)
-    {
-        foreach (var pair in args)
-        {
-            var name = pair.Key;
-            var property = pair.Value;
-
-            switch (name)
-            {
-                case "DSUEnabled":
-                    break;
-                case "DSUip":
-                    break;
-                case "DSUport":
-                    break;
-            }
-        }
     }
 
     // no code from the cases inside this function will be called on program start
@@ -649,30 +596,24 @@ public partial class MainWindow : GamepadWindow
         {
             case SystemManager.SystemStatus.SystemReady:
                 {
-                    // resume from sleep
                     if (prevStatus == SystemManager.SystemStatus.SystemPending)
                     {
+                        // when device resumes from sleep
                         // use device-specific delay
                         await Task.Delay(CurrentDevice.ResumeDelay);
 
-                        // restore inputs manager
+                        // resume manager(s)
                         InputsManager.Start();
-
-                        // start timer manager
                         TimerManager.Start();
-
-                        // resume the virtual controller last
                         VirtualManager.Resume();
-
-                        // restart IMU
                         SensorsManager.Resume(true);
+                        GPUManager.Start();
 
                         //OSDManager.Start();
 
                         // todo: improve overall threading logic
                         //new Thread(() => { PlatformManager.Start(); }).Start();
-                        new Thread(() => { PerformanceManager.Start(); }).Start();
-
+                        //new Thread(() => { PerformanceManager.Start(); }).Start();
                     }
 
                     // open device, when ready
@@ -689,26 +630,25 @@ public partial class MainWindow : GamepadWindow
                 break;
 
             case SystemManager.SystemStatus.SystemPending:
-                // sleep
                 {
-                    // stop the virtual controller
+                    // when device goes to sleep
+                    // suspend manager(s)
                     VirtualManager.Suspend();
-
-                    // stop timer manager
                     TimerManager.Stop();
-
-                    // stop sensors
                     SensorsManager.Stop();
-
-                    // pause inputs manager
                     InputsManager.Stop();
+                    GPUManager.Stop();
 
                     //OSDManager.Stop();
                     //PlatformManager.Stop();
-                    PerformanceManager.Stop();
+                    //PerformanceManager.Stop();
 
                     // close current device
                     CurrentDevice.Close();
+
+                    // Allow system to sleep
+                    SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
+                    LogManager.LogDebug("Tasks completed. System can now suspend if needed.");
                 }
                 break;
         }

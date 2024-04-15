@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
@@ -187,7 +188,7 @@ public class HWiNFO : IPlatform
     {
         // reset tentative counter
         Tentative = 0;
-        //HWiNFOWatchdog?.Start();
+        HWiNFOWatchdog?.Start();
     }
 
     public void PopulateSensors()
@@ -205,8 +206,8 @@ public class HWiNFO : IPlatform
                 MonitoredSensors[SensorElementType.BatteryRemainingTime] = new();
                 MonitoredSensors[SensorElementType.BatteryChargeRate] = new();
 
-                CPUFanSpeed = MainWindow.CurrentDevice.ReadFanSpeed();
-                CPUFanDuty = MainWindow.CurrentDevice.ReadFanDuty();
+                CPUFanSpeed =  IDevice.GetCurrent().ReadFanSpeed();
+                CPUFanDuty =  IDevice.GetCurrent().ReadFanDuty();
 
                 foreach (var sensor in sensors)
                 {
@@ -380,13 +381,14 @@ public class HWiNFO : IPlatform
         }
     }
 
-    internal bool GetAutoPerformanceSensors(out double cpuFrequency, out double cpuEffective, out double gpuFrequency, out double gpuEffective)
+    internal bool GetAutoPerformanceSensors(
+        out double cpuFrequency, out double cpuEffective, 
+        out double gpuFrequency, out double gpuEffective)
     {
         cpuEffective = double.NaN;
         cpuFrequency = double.NaN;
         gpuEffective = double.NaN;
         gpuFrequency = double.NaN;
-
         try
         {
             if (IsRunning)
@@ -394,6 +396,7 @@ public class HWiNFO : IPlatform
                 var sensors = HWiNFOReader.ReadLocal();
                 var cpuBusClock = double.NaN;
                 var cpuRatioCore = double.NaN;
+
                 foreach (var sensor in sensors)
                 {
                     switch (sensor.Type)
@@ -570,7 +573,7 @@ public class HWiNFO : IPlatform
             StartProcess();
         }
 
-        PopulateSensors();
+        //PopulateSensors();
     }
 
     private void DisposeMemory()

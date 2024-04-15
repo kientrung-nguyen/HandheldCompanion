@@ -48,13 +48,13 @@ public class Processor
     {
         if (processor is not null)
             return processor;
-
         processor = Manufacturer switch
         {
             "GenuineIntel" => new IntelProcessor(),
             "AuthenticAMD" => new AMDProcessor(),
-            _ => throw new NotImplementedException()
+            _ => throw new NotSupportedException(Manufacturer)
         };
+
         // write default miscs
         processor.m_Misc["gfx_clk"] = processor.m_PrevMisc["gfx_clk"] = 0;
 

@@ -13,8 +13,10 @@ namespace HandheldCompanion.Views.QuickPages;
 /// </summary>
 public partial class QuickHomePage : Page
 {
+    /*
     private LockObject brightnessLock = new();
     private LockObject volumeLock = new();
+    */
 
     public QuickHomePage(string Tag) : this()
     {
@@ -23,12 +25,27 @@ public partial class QuickHomePage : Page
         HotkeysManager.HotkeyCreated += HotkeysManager_HotkeyCreated;
         HotkeysManager.HotkeyUpdated += HotkeysManager_HotkeyUpdated;
 
+        /*
         MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
         MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
         MultimediaManager.Initialized += SystemManager_Initialized;
 
         ProfileManager.Applied += ProfileManager_Applied;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        */
+
+        GPUManager.Hooked += GPUManager_Hooked;
+    }
+
+    private void GPUManager_Hooked(GraphicsProcessingUnit.GPU GPU)
+    {
+        // UI thread
+        /*
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            t_CurrentDeviceName.Text = GPU.adapterInformation.Details.Description;
+        });
+        */
     }
 
     public QuickHomePage()
@@ -38,12 +55,14 @@ public partial class QuickHomePage : Page
 
     private void HotkeysManager_HotkeyUpdated(Hotkey hotkey)
     {
-        UpdatePins();
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() => { UpdatePins(); });
     }
 
     private void HotkeysManager_HotkeyCreated(Hotkey hotkey)
     {
-        UpdatePins();
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() => { UpdatePins(); });
     }
 
     private void UpdatePins()
@@ -61,10 +80,11 @@ public partial class QuickHomePage : Page
         MainWindow.overlayquickTools.NavView_Navigate(button.Name);
     }
 
+    /*
     private void SystemManager_Initialized()
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             if (MultimediaManager.HasBrightnessSupport())
             {
@@ -75,33 +95,35 @@ public partial class QuickHomePage : Page
             if (MultimediaManager.HasVolumeSupport())
             {
                 SliderVolume.IsEnabled = true;
-                SliderVolume.Value = MultimediaManager.GetVolume();
-                UpdateVolumeIcon((float)SliderVolume.Value);
+                SliderVolume.Value = Math.Round(MultimediaManager.GetVolume());
+                UpdateVolumeIcon((float)SliderVolume.Value, MultimediaManager.GetMute());
             }
         });
     }
 
     private void SystemManager_BrightnessNotification(int brightness)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        using (new ScopedLock(brightnessLock))
         {
-            using (new ScopedLock(brightnessLock))
+            // UI thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
                 SliderBrightness.Value = brightness;
-        });
+            });
+        }
     }
 
     private void SystemManager_VolumeNotification(float volume)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        using (new ScopedLock(volumeLock))
         {
-            using (new ScopedLock(volumeLock))
+            // UI thread
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 UpdateVolumeIcon(volume);
                 SliderVolume.Value = Math.Round(volume);
-            }
-        });
+            });
+        }
     }
 
     private void SliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -113,7 +135,7 @@ public partial class QuickHomePage : Page
         if (brightnessLock)
             return;
 
-       MultimediaManager.SetBrightness(SliderBrightness.Value);
+        MultimediaManager.SetBrightness(SliderBrightness.Value);
     }
 
     private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -131,7 +153,7 @@ public partial class QuickHomePage : Page
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             t_CurrentProfile.Text = profile.ToString();
         });
@@ -148,43 +170,41 @@ public partial class QuickHomePage : Page
             Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
         };
 
-        switch (name)
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
-            case "OnScreenDisplayLevel":
-                {
-                    var overlayLevel = Convert.ToInt16(value);
-
-                    // UI thread (async)
-                    Application.Current.Dispatcher.BeginInvoke(() =>
+            switch (name)
+            {
+                case "OnScreenDisplayLevel":
                     {
+                        var overlayLevel = Convert.ToInt16(value);
                         t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
-                    });
-                }
-                break;
-        }
+                    }
+                    break;
+            }
+        });
     }
-
-    private void UpdateVolumeIcon(float volume)
+    */
+    /*
+    private void UpdateVolumeIcon(float volume, bool mute = false)
     {
-        string glyph;
-
-        if (volume == 0)
+        string glyph = mute ? "\uE74F" :
+            volume switch
         {
-            glyph = "\uE992"; // Mute icon
-        }
-        else if (volume <= 33)
-        {
-            glyph = "\uE993"; // Low volume icon
-        }
-        else if (volume <= 65)
-        {
-            glyph = "\uE994"; // Medium volume icon
-        }
-        else
-        {
-            glyph = "\uE995"; // High volume icon (default)
-        }
-
+            <= 0 => "\uE74F",// Mute icon
+            <= 33 => "\uE993",// Low volume icon
+            <= 65 => "\uE994",// Medium volume icon
+            _ => "\uE995",// High volume icon (default)
+        };
         VolumeIcon.Glyph = glyph;
     }
+
+    private void VolumeButton_Click(object sender, RoutedEventArgs e)
+    {
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            UpdateVolumeIcon((float)MultimediaManager.GetVolume(), MultimediaManager.ToggleMute());
+        });
+    }
+    */
 }

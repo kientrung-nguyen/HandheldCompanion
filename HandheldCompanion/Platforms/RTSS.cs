@@ -4,12 +4,14 @@ using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Utils;
 using RTSSSharedMemoryNET;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Platforms;
@@ -171,11 +173,10 @@ public class RTSS : IPlatform
     private async void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
     {
         // hook new process
-        var processId = processEx.GetProcessId();
-        LogManager.LogDebug($"{nameof(RTSS)} process {processEx.Executable} {processEx.Filter} ({processId})");
+        var processId = processEx.ProcessId;
         if (processId == 0) return;
-
         if (processEx.Filter != ProcessEx.ProcessFilter.Allowed) return;
+
         AppEntry? appEntry = null;
         do
         {
@@ -192,13 +193,11 @@ public class RTSS : IPlatform
                         (entry.Flags & AppFlags.MASK) != AppFlags.None &&
                         entry.ProcessId == processId
                     );
-                if (entries.Length > 0)
-                    LogManager.LogDebug($"{nameof(RTSS)} entries [{string.Join(" | ", entries.Select(entry => string.Join(";", [entry.Flags, (entry.Flags & AppFlags.MASK), entry.ProcessId, entry.Name])))}]");
             }
             catch (FileNotFoundException) { return; }
             catch (Exception ex)
             {
-                LogManager.LogError($"{nameof(RTSS)} error {ex.Message}\n{ex.StackTrace}");
+                LogManager.LogError($"{nameof(RTSS)} error {processEx.Executable} {processEx.Filter} ({processId}) {ex.Message}\n{ex.StackTrace}");
             }
             await Task.Delay(1000);
         } while (appEntry is null && ProcessManager.HasProcess(processId) && KeepAlive);
@@ -219,7 +218,7 @@ public class RTSS : IPlatform
 
     private void ProcessManager_ProcessStopped(ProcessEx processEx)
     {
-        var processId = processEx.GetProcessId();
+        var processId = processEx.ProcessId;
         if (processId == 0) return;
 
         // raise event
@@ -237,6 +236,15 @@ public class RTSS : IPlatform
             if (GetTargetFPS() != RequestedFramerate)
                 SetTargetFPS(RequestedFramerate);
 
+            try
+            {
+                // force "Show On-Screen Display" to On
+                SetFlags(~RTSSHOOKSFLAG_OSD_VISIBLE, RTSSHOOKSFLAG_OSD_VISIBLE);
+            }
+            catch (DllNotFoundException)
+            { }
+
+            // force "On-Screen Display Support" to On
             if (GetEnableOSD() != true)
                 SetEnableOSD(true);
 
@@ -450,7 +458,9 @@ public class RTSS : IPlatform
             if (GetProfileProperty("FramerateLimit", out int fpsLimit))
                 return fpsLimit;
         }
-        catch { }
+        catch
+        {
+        }
 
         return 0;
 
