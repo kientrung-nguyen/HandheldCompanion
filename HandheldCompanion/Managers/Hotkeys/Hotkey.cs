@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
+using HandheldCompanion.Devices;
 using HandheldCompanion.Properties;
 using HandheldCompanion.Views;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -298,7 +299,7 @@ public class Hotkey
                 var controller = ControllerManager.GetTargetController();
                 if (controller is null)
                     controller = ControllerManager.GetEmulatedController();
-                var device = MainWindow.CurrentDevice;
+                var device = IDevice.GetCurrent();
 
                 foreach (var button in inputsChord.State.Buttons)
                 {
@@ -319,7 +320,7 @@ public class Hotkey
                         case Inputs.ButtonFlags.OEM10:
                             {
                                 //
-                                fontIcon = MainWindow.CurrentDevice.GetFontIcon(button);
+                                fontIcon = IDevice.GetCurrent().GetFontIcon(button);
                             }
                             break;
                         default:

@@ -31,26 +31,26 @@ public partial class AboutPage : Page
     {
         // Device visual
         var ImageSource =
-            new Uri($"pack://application:,,,/Resources/{MainWindow.CurrentDevice.ProductIllustration}.png");
+            new Uri($"pack://application:,,,/Resources/{IDevice.GetCurrent().ProductIllustration}.png");
 
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
             // Motherboard properties
-            LabelManufacturer.Text = MainWindow.CurrentDevice.ManufacturerName;
-            LabelProductName.Text = MainWindow.CurrentDevice.ProductName;
+            LabelManufacturer.Text = IDevice.GetCurrent().ManufacturerName;
+            LabelProductName.Text = IDevice.GetCurrent().ProductName;
             HandheldGrid.Visibility = Visibility.Visible;
 
             VersionValue.Text = MainWindow.fileVersionInfo.FileVersion;
 
-            SensorInternal.Text = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.InternalSensor)
-                ? MainWindow.CurrentDevice.InternalSensorName
+            SensorInternal.Text = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.InternalSensor)
+                ? IDevice.GetCurrent().InternalSensorName
                 : string.Empty;
-            SensorExternal.Text = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.ExternalSensor)
-                ? MainWindow.CurrentDevice.ExternalSensorName
+            SensorExternal.Text = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.ExternalSensor)
+                ? IDevice.GetCurrent().ExternalSensorName
                 : string.Empty;
 
-            if (MainWindow.CurrentDevice is DefaultDevice)
+            if (IDevice.GetCurrent() is DefaultDevice)
             {
                 WarningBorder.Visibility = Visibility.Visible;
                 WarningContent.Text =

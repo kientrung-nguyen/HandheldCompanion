@@ -13,8 +13,10 @@ namespace HandheldCompanion.Views.QuickPages;
 /// </summary>
 public partial class QuickHomePage : Page
 {
+    /*
     private LockObject brightnessLock = new();
     private LockObject volumeLock = new();
+    */
 
     public QuickHomePage(string Tag) : this()
     {
@@ -23,12 +25,14 @@ public partial class QuickHomePage : Page
         HotkeysManager.HotkeyCreated += HotkeysManager_HotkeyCreated;
         HotkeysManager.HotkeyUpdated += HotkeysManager_HotkeyUpdated;
 
+        /*
         MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
         MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
         MultimediaManager.Initialized += SystemManager_Initialized;
 
         ProfileManager.Applied += ProfileManager_Applied;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        */
     }
 
     public QuickHomePage()
@@ -61,6 +65,7 @@ public partial class QuickHomePage : Page
         MainWindow.overlayquickTools.NavView_Navigate(button.Name);
     }
 
+    /*
     private void SystemManager_Initialized()
     {
         // UI thread (async)
@@ -75,8 +80,8 @@ public partial class QuickHomePage : Page
             if (MultimediaManager.HasVolumeSupport())
             {
                 SliderVolume.IsEnabled = true;
-                SliderVolume.Value = MultimediaManager.GetVolume();
-                UpdateVolumeIcon((float)SliderVolume.Value);
+                SliderVolume.Value = Math.Round(MultimediaManager.GetVolume());
+                UpdateVolumeIcon((float)SliderVolume.Value, MultimediaManager.GetMute());
             }
         });
     }
@@ -162,29 +167,29 @@ public partial class QuickHomePage : Page
                 }
                 break;
         }
+
     }
-
-    private void UpdateVolumeIcon(float volume)
+    */
+    /*
+    private void UpdateVolumeIcon(float volume, bool mute = false)
     {
-        string glyph;
-
-        if (volume == 0)
+        string glyph = mute ? "\uE74F" :
+            volume switch
         {
-            glyph = "\uE992"; // Mute icon
-        }
-        else if (volume <= 33)
-        {
-            glyph = "\uE993"; // Low volume icon
-        }
-        else if (volume <= 65)
-        {
-            glyph = "\uE994"; // Medium volume icon
-        }
-        else
-        {
-            glyph = "\uE995"; // High volume icon (default)
-        }
-
+            <= 0 => "\uE74F",// Mute icon
+            <= 33 => "\uE993",// Low volume icon
+            <= 65 => "\uE994",// Medium volume icon
+            _ => "\uE995",// High volume icon (default)
+        };
         VolumeIcon.Glyph = glyph;
     }
+
+    private void VolumeButton_Click(object sender, RoutedEventArgs e)
+    {
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            UpdateVolumeIcon((float)MultimediaManager.GetVolume(), MultimediaManager.ToggleMute());
+        });
+    }
+    */
 }

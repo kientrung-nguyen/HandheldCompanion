@@ -130,6 +130,7 @@ public static class PlatformManager
                 break;
             case OSDManager.OverlayDisplayLevel.Extended: // Extended
             case OSDManager.OverlayDisplayLevel.Full: // Full
+            case OSDManager.OverlayDisplayLevel.Custom:
             case OSDManager.OverlayDisplayLevel.External: // External
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplayComplex;

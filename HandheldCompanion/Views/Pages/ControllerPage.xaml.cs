@@ -5,6 +5,7 @@ using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Page = System.Windows.Controls.Page;
@@ -86,9 +87,6 @@ public partial class ControllerPage : Page
                     Toggle_SCMuteController.IsOn = Convert.ToBoolean(value);
                     ControllerRefresh();
                     break;
-                case "LegionControllerPassthrough":
-                    Toggle_TouchpadPassthrough.IsOn = Convert.ToBoolean(value);
-                    break;
                 case "HIDmode":
                     cB_HidMode.SelectedIndex = Convert.ToInt32(value);
                     break;
@@ -107,7 +105,7 @@ public partial class ControllerPage : Page
     {
     }
 
-    private void ControllerUnplugged(IController Controller, bool IsPowerCycling)
+    private void ControllerUnplugged(IController Controller, bool IsPowerCycling, bool WasTarget)
     {
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
@@ -192,16 +190,18 @@ public partial class ControllerPage : Page
             if (status == 2)
             {
                 // todo: translate me
-                var result = Dialog.ShowAsync(
-                    Properties.Resources.SettingsPage_UpdateWarning,
-                    $"We've failed to reorder your controllers. For maximum compatibility, we encourage you to restart HandheldCompanion",
-                    ContentDialogButton.Close,
-                    Properties.Resources.ControllerPage_TryAgain,
-                    Properties.Resources.ControllerPage_Close, string.Empty, MainWindow.GetCurrent());
+                Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+                {
+                    Title = Properties.Resources.SettingsPage_UpdateWarning,
+                    Content = $"We've failed to reorder your controllers. For maximum compatibility, we encourage you to restart HandheldCompanion",
+                    DefaultButton = ContentDialogButton.Close,
+                    CloseButtonText = Properties.Resources.ControllerPage_Close,
+                    PrimaryButtonText = Properties.Resources.ControllerPage_TryAgain
+                }.ShowAsync();
 
-                await result; // sync call
+                await dialogTask; // sync call
 
-                switch (result.Result)
+                switch (dialogTask.Result)
                 {
                     default:
                     case ContentDialogResult.Primary:
@@ -217,6 +217,8 @@ public partial class ControllerPage : Page
 
     private void VirtualManager_ControllerSelected(HIDmode mode)
     {
+        return;
+
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
@@ -267,7 +269,6 @@ public partial class ControllerPage : Page
             bool isSteam = hasTarget && (targetController is NeptuneController || targetController is GordonController);
 
             MuteVirtualController.Visibility = targetController is SteamController ? Visibility.Visible : Visibility.Collapsed;
-            TouchpadPassthrough.Visibility = targetController is LegionController ? Visibility.Visible : Visibility.Collapsed;
 
             // hint: Has physical controller, but is not connected
             HintsNoPhysicalConnected.Visibility =
@@ -285,7 +286,7 @@ public partial class ControllerPage : Page
             bool notmuted = !isHidden && hasVirtual && (!isSteam || (isSteam && !isMuted));
             HintsNotMuted.Visibility = notmuted ? Visibility.Visible : Visibility.Collapsed;
 
-            Hints.Visibility =  (HintsNoPhysicalConnected.Visibility == Visibility.Visible ||
+            Hints.Visibility = (HintsNoPhysicalConnected.Visibility == Visibility.Visible ||
                                 HintsHIDManagedByProfile.Visibility == Visibility.Visible ||
                                 HintsNeptuneHidden.Visibility == Visibility.Visible ||
                                 HintsNotMuted.Visibility == Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
@@ -398,13 +399,5 @@ public partial class ControllerPage : Page
     private void Expander_Expanded(object sender, RoutedEventArgs e)
     {
         ((Expander)sender).BringIntoView();
-    }
-
-    private void Toggle_TouchpadPassthrough_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded)
-            return;
-
-        SettingsManager.SetProperty("LegionControllerPassthrough", Toggle_TouchpadPassthrough.IsOn);
     }
 }

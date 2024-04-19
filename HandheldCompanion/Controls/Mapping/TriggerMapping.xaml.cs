@@ -88,7 +88,7 @@ public partial class TriggerMapping : IMapping
             // we need a controller to get compatible buttons
             if (controller is null)
                 return;
-
+            /*
             foreach (var axis in IController.GetTargetTriggers())
             {
                 // create a label, store AxisLayoutFlags as Tag and Label as controller specific string
@@ -98,6 +98,7 @@ public partial class TriggerMapping : IMapping
                 if (axis.Equals(((TriggerActions)Actions).Axis))
                     TargetComboBox.SelectedItem = buttonLabel;
             }
+            */
         }
 
         // if no target element was selected, pick the first one

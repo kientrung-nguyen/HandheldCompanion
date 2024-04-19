@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
+using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using iNKORE.UI.WPF.Modern.Controls;
 using System.Collections.Generic;
@@ -116,7 +117,7 @@ public class ILayoutPage : Page
             switch (flags)
             {
                 case AxisLayoutFlags.Gyroscope:
-                    isVisible |= MainWindow.CurrentDevice.HasMotionSensor();
+                    isVisible |= IDevice.GetCurrent().HasMotionSensor();
                     break;
             }
 

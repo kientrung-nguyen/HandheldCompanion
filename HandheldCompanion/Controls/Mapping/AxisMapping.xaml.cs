@@ -90,7 +90,7 @@ public partial class AxisMapping : IMapping
             // we need a controller to get compatible buttons
             if (controller is null)
                 return;
-
+            /*
             foreach (AxisLayoutFlags axis in IController.GetTargetAxis())
             {
                 // create a label, store ButtonFlags as Tag and Label as controller specific string
@@ -100,7 +100,7 @@ public partial class AxisMapping : IMapping
                 if (axis.Equals(((AxisActions)Actions).Axis))
                     TargetComboBox.SelectedItem = buttonLabel;
             }
-
+            */
             // settings
             Axis2AxisImproveCircularity.IsOn = ((AxisActions)Actions).ImproveCircularity;
             Axis2AxisAutoRotate.IsOn = ((AxisActions)Actions).AutoRotate;

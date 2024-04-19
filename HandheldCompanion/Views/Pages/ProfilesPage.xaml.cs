@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
@@ -50,7 +51,7 @@ public partial class ProfilesPage : Page
     public ProfilesPage()
     {
         InitializeComponent();
-        
+
         // manage events
         ProfileManager.Deleted += ProfileDeleted;
         ProfileManager.Updated += ProfileUpdated;
@@ -58,11 +59,11 @@ public partial class ProfilesPage : Page
         ProfileManager.Initialized += ProfileManagerLoaded;
         PowerProfileManager.Updated += PowerProfileManager_Updated;
         PowerProfileManager.Deleted += PowerProfileManager_Deleted;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         MultimediaManager.Initialized += MultimediaManager_Initialized;
-        MultimediaManager.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
+        MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
         PlatformManager.RTSS.Updated += RTSS_Updated;
-        GPUManager.Initialized += GPUManager_Initialized;
+        GPUManager.Hooked += GPUManager_Hooked;
+        GPUManager.Unhooked += GPUManager_Unhooked;
 
         UpdateTimer = new Timer(UpdateInterval);
         UpdateTimer.AutoReset = false;
@@ -85,7 +86,7 @@ public partial class ProfilesPage : Page
         });
     }
 
-    private void GPUManager_Initialized(GPU GPU)
+    private void GPUManager_Hooked(GPU GPU)
     {
         bool HasRSRSupport = false;
         if (GPU is AMDGPU amdGPU)
@@ -114,7 +115,25 @@ public partial class ProfilesPage : Page
             GPUScalingComboBox.IsEnabled = HasGPUScalingSupport && HasScalingModeSupport;
         });
     }
+	
+	private void GPUManager_Unhooked(GPU GPU)
+    {
+        if (GPU is AMDGPU amdGPU)
+            amdGPU.RSRStateChanged -= OnRSRStateChanged;
 
+        GPU.IntegerScalingChanged -= OnIntegerScalingChanged;
+        GPU.GPUScalingChanged -= OnGPUScalingChanged;
+
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            StackProfileRSR.IsEnabled = false;
+            StackProfileIS.IsEnabled = false;
+            GPUScalingToggle.IsEnabled = false;
+            GPUScalingComboBox.IsEnabled = false;
+        });
+    }
+	
     private void OnRSRStateChanged(bool Supported, bool Enabled, int Sharpness)
     {
         // UI thread (async)
@@ -173,18 +192,7 @@ public partial class ProfilesPage : Page
         });
     }
 
-    public void SettingsManager_SettingValueChanged(string name, object value)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
-        {
-            switch (name)
-            {
-            }
-        });
-    }
-
-    private void SystemManager_PrimaryScreenChanged(DesktopScreen desktopScreen)
+    private void MultimediaManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
     {
         List<ScreenFramelimit> frameLimits = desktopScreen.GetFramelimits();
 
@@ -306,16 +314,17 @@ public partial class ProfilesPage : Page
                 // check on path rather than profile
                 if (ProfileManager.Contains(path))
                 {
-                    var result = Dialog.ShowAsync(
-                        string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite1, profile.Name),
-                        string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite2, profile.Name),
-                        ContentDialogButton.Primary,
-                        $"{Properties.Resources.ProfilesPage_Cancel}",
-                        $"{Properties.Resources.ProfilesPage_Yes}", string.Empty, MainWindow.GetCurrent());
+                    Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+                    {
+                        Title = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite1, profile.Name),
+                        Content = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite2, profile.Name),
+                        CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+                        PrimaryButtonText = Properties.Resources.ProfilesPage_Yes
+                    }.ShowAsync();
 
-                    await result; // sync call
+                    await dialogTask; // sync call
 
-                    switch (result.Result)
+                    switch (dialogTask.Result)
                     {
                         case ContentDialogResult.Primary:
                             exists = false;
@@ -347,8 +356,6 @@ public partial class ProfilesPage : Page
         switch (((GyroActions)currentAction).MotionInput)
         {
             default:
-            case MotionInput.JoystickCamera:
-            case MotionInput.PlayerSpace:
                 page0.SetProfile();
                 MainWindow.NavView_Navigate(page0);
                 break;
@@ -570,7 +577,7 @@ public partial class ProfilesPage : Page
                 tb_ProfileGyroValue.Value = selectedProfile.GyrometerMultiplier;
                 tb_ProfileAcceleroValue.Value = selectedProfile.AccelerometerMultiplier;
 
-                cB_GyroSteering.SelectedIndex = selectedProfile.SteeringAxis;
+                cB_GyroSteering.SelectedIndex = (int)selectedProfile.SteeringAxis;
                 cB_InvertHorizontal.IsChecked = selectedProfile.MotionInvertHorizontal;
                 cB_InvertVertical.IsChecked = selectedProfile.MotionInvertVertical;
 
@@ -694,15 +701,17 @@ public partial class ProfilesPage : Page
         if (selectedProfile is null)
             return;
 
-        var result = Dialog.ShowAsync(
-            $"{Properties.Resources.ProfilesPage_AreYouSureDelete1} \"{selectedMainProfile.Name}\"?",
-            $"{Properties.Resources.ProfilesPage_AreYouSureDelete2}",
-            ContentDialogButton.Primary,
-            $"{Properties.Resources.ProfilesPage_Cancel}",
-            $"{Properties.Resources.ProfilesPage_Delete}", string.Empty, MainWindow.GetCurrent());
-        await result; // sync call
+        Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+        {
+            Title = $"{Properties.Resources.ProfilesPage_AreYouSureDelete1} \"{selectedMainProfile.Name}\"?",
+            Content = Properties.Resources.ProfilesPage_AreYouSureDelete2,
+            CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+            PrimaryButtonText = Properties.Resources.ProfilesPage_Delete
+        }.ShowAsync();
 
-        switch (result.Result)
+        await dialogTask; // sync call
+
+        switch (dialogTask.Result)
         {
             case ContentDialogResult.Primary:
                 ProfileManager.DeleteProfile(selectedMainProfile);
@@ -946,7 +955,7 @@ public partial class ProfilesPage : Page
         if (updateLock)
             return;
 
-        selectedProfile.SteeringAxis = cB_GyroSteering.SelectedIndex;
+        selectedProfile.SteeringAxis = EnumUtils<SteeringAxis>.Parse(cB_GyroSteering.SelectedIndex);
         UpdateProfile();
     }
 
@@ -1002,7 +1011,7 @@ public partial class ProfilesPage : Page
     {
         if (selectedProfile is null)
             return;
-        
+
         LogManager.LogInformation($"Submitting profile in ProfilesPage: {selectedProfile} - is Sub Profile? {selectedProfile.IsSubProfile}");
 
         switch (source)
@@ -1126,7 +1135,7 @@ public partial class ProfilesPage : Page
         {
             selectedProfile.ScalingMode = GPUScalingComboBox.SelectedIndex;
         }
-     
+
         UpdateProfile();
     }
 
@@ -1206,16 +1215,17 @@ public partial class ProfilesPage : Page
         Profile subProfile = (Profile)cb_SubProfilePicker.SelectedItem;
 
         // user confirmation
-        var result = Dialog.ShowAsync(
-            $"{Properties.Resources.ProfilesPage_AreYouSureDelete1} \"{subProfile.Name}\"?",
-            $"{Properties.Resources.ProfilesPage_AreYouSureDelete2}",
-            ContentDialogButton.Primary,
-            $"{Properties.Resources.ProfilesPage_Cancel}",
-            $"{Properties.Resources.ProfilesPage_Delete}", string.Empty, MainWindow.GetCurrent());
-        await result; // sync call
+        Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+        {
+            Title = $"{Properties.Resources.ProfilesPage_AreYouSureDelete1} \"{subProfile.Name}\"?",
+            Content = Properties.Resources.ProfilesPage_AreYouSureDelete2,
+            CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+            PrimaryButtonText = Properties.Resources.ProfilesPage_Delete
+        }.ShowAsync();
 
-        // delete sub profile if confirmed
-        switch (result.Result)
+        await dialogTask; // sync call
+
+        switch (dialogTask.Result)
         {
             case ContentDialogResult.Primary:
                 ProfileManager.DeleteSubProfile(subProfile);

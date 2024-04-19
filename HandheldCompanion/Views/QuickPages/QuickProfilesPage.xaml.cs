@@ -1,5 +1,6 @@
 using HandheldCompanion.Actions;
 using HandheldCompanion.Controls;
+using HandheldCompanion.Extensions;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
@@ -47,16 +48,18 @@ public partial class QuickProfilesPage : Page
         // manage events
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
         ProfileManager.Applied += ProfileManager_Applied;
+        ProfileManager.Deleted += ProfileManager_Deleted;
         PowerProfileManager.Updated += PowerProfileManager_Updated;
         PowerProfileManager.Deleted += PowerProfileManager_Deleted;
         MultimediaManager.Initialized += MultimediaManager_Initialized;
-        MultimediaManager.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
+        MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
         HotkeysManager.HotkeyCreated += TriggerCreated;
         InputsManager.TriggerUpdated += TriggerUpdated;
         PlatformManager.RTSS.Updated += RTSS_Updated;
-        GPUManager.Initialized += GPUManager_Initialized;
+        GPUManager.Hooked += GPUManager_Hooked;
+        GPUManager.Unhooked += GPUManager_Unhooked;
 
-        foreach (var mode in (MotionOuput[])Enum.GetValues(typeof(MotionOuput)))
+        foreach (var mode in Enum.GetValues<MotionOuput>())
         {
             // create panel
             ComboBoxItem comboBoxItem = new ComboBoxItem()
@@ -73,26 +76,7 @@ public partial class QuickProfilesPage : Page
             };
 
             // create icon
-            var icon = new FontIcon();
-
-            switch (mode)
-            {
-                case MotionOuput.Disabled:
-                    icon.Glyph = "\uE8D8";
-                    break;
-                case MotionOuput.RightStick:
-                    icon.Glyph = "\uF109";
-                    break;
-                case MotionOuput.LeftStick:
-                    icon.Glyph = "\uF108";
-                    break;
-                case MotionOuput.MoveCursor:
-                    icon.Glyph = "\uE962";
-                    break;
-                case MotionOuput.ScrollWheel:
-                    icon.Glyph = "\uEC8F";
-                    break;
-            }
+            var icon = new FontIcon() { Glyph = mode.ToGlyph() };
 
             if (!string.IsNullOrEmpty(icon.Glyph))
                 simpleStackPanel.Children.Add(icon);
@@ -124,24 +108,7 @@ public partial class QuickProfilesPage : Page
             };
 
             // create icon
-            var icon = new FontIcon();
-
-            switch (mode)
-            {
-                default:
-                case MotionInput.PlayerSpace:
-                    icon.Glyph = "\uF119";
-                    break;
-                case MotionInput.JoystickCamera:
-                    icon.Glyph = "\uE714";
-                    break;
-                case MotionInput.AutoRollYawSwap:
-                    icon.Glyph = "\uE7F8";
-                    break;
-                case MotionInput.JoystickSteering:
-                    icon.Glyph = "\uEC47";
-                    break;
-            }
+            var icon = new FontIcon() { Glyph = mode.ToGlyph() };
 
             if (!string.IsNullOrEmpty(icon.Glyph))
                 simpleStackPanel.Children.Add(icon);
@@ -174,7 +141,7 @@ public partial class QuickProfilesPage : Page
         });
     }
 
-    private void GPUManager_Initialized(GPU GPU)
+    private void GPUManager_Hooked(GPU GPU)
     {
         bool HasRSRSupport = false;
         if (GPU is AMDGPU amdGPU)
@@ -203,6 +170,24 @@ public partial class QuickProfilesPage : Page
             StackProfileRIS.IsEnabled = HasGPUScalingSupport; // check if processor is AMD should be enough
             GPUScalingToggle.IsEnabled = HasGPUScalingSupport;
             GPUScalingComboBox.IsEnabled = HasGPUScalingSupport && HasScalingModeSupport;
+        });
+    }
+	
+	private void GPUManager_Unhooked(GPU GPU)
+    {
+        if (GPU is AMDGPU amdGPU)
+            amdGPU.RSRStateChanged -= OnRSRStateChanged;
+
+        GPU.IntegerScalingChanged -= OnIntegerScalingChanged;
+        GPU.GPUScalingChanged -= OnGPUScalingChanged;
+
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            StackProfileRSR.IsEnabled = false;
+            StackProfileIS.IsEnabled = false;
+            GPUScalingToggle.IsEnabled = false;
+            GPUScalingComboBox.IsEnabled = false;
         });
     }
 
@@ -264,8 +249,11 @@ public partial class QuickProfilesPage : Page
         });
     }
 
-    private void SystemManager_PrimaryScreenChanged(DesktopScreen desktopScreen)
+    private void MultimediaManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
     {
+        if (selectedProfile is null)
+            return;
+
         List<ScreenFramelimit> frameLimits = desktopScreen.GetFramelimits();
 
         // UI thread (async)
@@ -375,10 +363,12 @@ public partial class QuickProfilesPage : Page
                 }
 
                 Button button = powerProfile.GetButton(this);
-                button.Click += (sender, e) => PowerProfile_Clicked(powerProfile);
+                if (button is not null)
+                    button.Click += (sender, e) => PowerProfile_Clicked(powerProfile);
 
                 RadioButton radioButton = powerProfile.GetRadioButton(this);
-                radioButton.Checked += (sender, e) => PowerProfile_Selected(powerProfile);
+                if (radioButton is not null)
+                    radioButton.Checked += (sender, e) => PowerProfile_Selected(powerProfile);
 
                 // add new entry
                 ProfileStack.Children.Add(button);
@@ -412,7 +402,6 @@ public partial class QuickProfilesPage : Page
         UpdateProfile();
     }
 
-    private DesktopScreen desktopScreen;
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
         switch (source)
@@ -470,7 +459,7 @@ public partial class QuickProfilesPage : Page
 
                 // power profile
                 PowerProfile powerProfile = PowerProfileManager.GetProfile(profile.PowerProfile);
-                powerProfile.Check(this);
+                powerProfile?.Check(this);
 
                 // gyro layout
                 if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
@@ -509,7 +498,7 @@ public partial class QuickProfilesPage : Page
                 }
 
                 // Framerate limit
-                desktopScreen = MultimediaManager.GetDesktopScreen();
+                DesktopScreen? desktopScreen = MultimediaManager.GetDesktopScreen();
                 if (desktopScreen is not null)
                     cB_Framerate.SelectedItem = desktopScreen.GetClosest(selectedProfile.FramerateValue);
 
@@ -533,6 +522,13 @@ public partial class QuickProfilesPage : Page
                 RISSlider.Value = selectedProfile.RISSharpness;
             }
         });
+    }
+	
+	private void ProfileManager_Deleted(Profile profile)
+    {
+        // this shouldn't happen, someone removed the currently applied profile
+        if (selectedProfile == profile)
+            ProcessManager_ForegroundChanged(currentProcess, null);
     }
 
     private void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
@@ -783,10 +779,8 @@ public partial class QuickProfilesPage : Page
         if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
             return;
 
-        // no Monitor on threaded calls ?
         switch (listener)
         {
-            case "shortcutProfilesPage@":
             case "shortcutProfilesPage@@":
                 ((GyroActions)currentAction).MotionTrigger = inputs.State.Clone() as ButtonState;
                 UpdateProfile();
@@ -947,11 +941,11 @@ public partial class QuickProfilesPage : Page
         // wait until lock is released
         if (updateLock)
             return;
-        
+
         // return if combobox selected item is null
         if (cb_SubProfiles.SelectedIndex == -1)
             return;
-        
+
         LogManager.LogInformation($"Subprofile changed in Quick Settings - ind: {cb_SubProfiles.SelectedIndex} - subprofile: {cb_SubProfiles.SelectedItem}");
         selectedProfile = (Profile)cb_SubProfiles.SelectedItem;
         UpdateProfile();

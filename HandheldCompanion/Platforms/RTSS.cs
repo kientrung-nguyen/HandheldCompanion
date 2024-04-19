@@ -192,8 +192,6 @@ public class RTSS : IPlatform
                         (entry.Flags & AppFlags.MASK) != AppFlags.None &&
                         entry.ProcessId == processId
                     );
-                if (entries.Length > 0)
-                    LogManager.LogDebug($"{nameof(RTSS)} entries [{string.Join(" | ", entries.Select(entry => string.Join(";", [entry.Flags, (entry.Flags & AppFlags.MASK), entry.ProcessId, entry.Name])))}]");
             }
             catch (FileNotFoundException) { return; }
             catch (Exception ex)
@@ -237,6 +235,15 @@ public class RTSS : IPlatform
             if (GetTargetFPS() != RequestedFramerate)
                 SetTargetFPS(RequestedFramerate);
 
+            try
+            {
+                // force "Show On-Screen Display" to On
+                SetFlags(~RTSSHOOKSFLAG_OSD_VISIBLE, RTSSHOOKSFLAG_OSD_VISIBLE);
+            }
+            catch (DllNotFoundException)
+            { }
+
+            // force "On-Screen Display Support" to On
             if (GetEnableOSD() != true)
                 SetEnableOSD(true);
 
@@ -450,7 +457,9 @@ public class RTSS : IPlatform
             if (GetProfileProperty("FramerateLimit", out int fpsLimit))
                 return fpsLimit;
         }
-        catch { }
+        catch
+        {
+        }
 
         return 0;
 

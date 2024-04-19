@@ -241,6 +241,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Oups, it appears your device is not supported yet. The software might not run as expected..
+        /// </summary>
+        public static string AboutPage_UnsupportedDevice {
+            get {
+                return ResourceManager.GetString("AboutPage_UnsupportedDevice", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Version.
         /// </summary>
         public static string AboutPage_Version {
@@ -1829,18 +1838,18 @@ namespace HandheldCompanion.Properties {
         /// <summary>
         ///   Looks up a localized string similar to Joystick camera.
         /// </summary>
-        public static string Enum_Input_JoystickCamera {
+        public static string Enum_Input_JoystickSteering {
             get {
-                return ResourceManager.GetString("Enum.Input.JoystickCamera", resourceCulture);
+                return ResourceManager.GetString("Enum.Input.JoystickSteering", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Joystick steering.
+        ///   Looks up a localized string similar to Local space.
         /// </summary>
-        public static string Enum_Input_JoystickSteering {
+        public static string Enum_Input_LocalSpace {
             get {
-                return ResourceManager.GetString("Enum.Input.JoystickSteering", resourceCulture);
+                return ResourceManager.GetString("Enum.Input.LocalSpace", resourceCulture);
             }
         }
         
@@ -1850,6 +1859,15 @@ namespace HandheldCompanion.Properties {
         public static string Enum_Input_PlayerSpace {
             get {
                 return ResourceManager.GetString("Enum.Input.PlayerSpace", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to World space.
+        /// </summary>
+        public static string Enum_Input_WorldSpace {
+            get {
+                return ResourceManager.GetString("Enum.Input.WorldSpace", resourceCulture);
             }
         }
         
@@ -2529,6 +2547,33 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Double tap.
+        /// </summary>
+        public static string Enum_LegionController_ButtonFlags_RightPadClick {
+            get {
+                return ResourceManager.GetString("Enum.LegionController.ButtonFlags.RightPadClick", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Hold.
+        /// </summary>
+        public static string Enum_LegionController_ButtonFlags_RightPadClickDown {
+            get {
+                return ResourceManager.GetString("Enum.LegionController.ButtonFlags.RightPadClickDown", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Touch.
+        /// </summary>
+        public static string Enum_LegionController_ButtonFlags_RightPadTouch {
+            get {
+                return ResourceManager.GetString("Enum.LegionController.ButtonFlags.RightPadTouch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to LegionR.
         /// </summary>
         public static string Enum_LegionGo_ButtonFlags_OEM1 {
@@ -2565,24 +2610,6 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Joystick Camera.
-        /// </summary>
-        public static string Enum_MotionInput_JoystickCamera {
-            get {
-                return ResourceManager.GetString("Enum.MotionInput.JoystickCamera", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to This input will operate as a simple joystick. This is intended for traditional joystick applications.
-        /// </summary>
-        public static string Enum_MotionInput_JoystickCamera_Desc {
-            get {
-                return ResourceManager.GetString("Enum.MotionInput.JoystickCamera.Desc", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Joystick Steering.
         /// </summary>
         public static string Enum_MotionInput_JoystickSteering {
@@ -2601,7 +2628,25 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Player Space.
+        ///   Looks up a localized string similar to Local space.
+        /// </summary>
+        public static string Enum_MotionInput_LocalSpace {
+            get {
+                return ResourceManager.GetString("Enum.MotionInput.LocalSpace", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Input is based on the controller’s orientation, independent of the game world or character..
+        /// </summary>
+        public static string Enum_MotionInput_LocalSpace_Desc {
+            get {
+                return ResourceManager.GetString("Enum.MotionInput.LocalSpace.Desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Player space.
         /// </summary>
         public static string Enum_MotionInput_PlayerSpace {
             get {
@@ -2615,6 +2660,24 @@ namespace HandheldCompanion.Properties {
         public static string Enum_MotionInput_PlayerSpace_Desc {
             get {
                 return ResourceManager.GetString("Enum.MotionInput.PlayerSpace.Desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to World space.
+        /// </summary>
+        public static string Enum_MotionInput_WorldSpace {
+            get {
+                return ResourceManager.GetString("Enum.MotionInput.WorldSpace", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Input is mapped to the game world’s axes, providing consistent directional input regardless of the player character’s orientation..
+        /// </summary>
+        public static string Enum_MotionInput_WorldSpace_Desc {
+            get {
+                return ResourceManager.GetString("Enum.MotionInput.WorldSpace.Desc", resourceCulture);
             }
         }
         
@@ -3551,6 +3614,42 @@ namespace HandheldCompanion.Properties {
         public static string Hint_LegionGoServicesReadme {
             get {
                 return ResourceManager.GetString("Hint_LegionGoServicesReadme", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to MSI Center is running.
+        /// </summary>
+        public static string Hint_MSIClawCenterCheck {
+            get {
+                return ResourceManager.GetString("Hint_MSIClawCenterCheck", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Disable MSI Center.
+        /// </summary>
+        public static string Hint_MSIClawCenterCheckAction {
+            get {
+                return ResourceManager.GetString("Hint_MSIClawCenterCheckAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to MSI Center is running on your device. This may interfere with the application.
+        /// </summary>
+        public static string Hint_MSIClawCenterCheckDesc {
+            get {
+                return ResourceManager.GetString("Hint_MSIClawCenterCheckDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You should disable MSI Center, so that the application can run smoothly and without any conflicts.
+        /// </summary>
+        public static string Hint_MSIClawCenterCheckReadme {
+            get {
+                return ResourceManager.GetString("Hint_MSIClawCenterCheckReadme", resourceCulture);
             }
         }
         
@@ -4834,6 +4933,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to DualShock 4.
+        /// </summary>
+        public static string OverlayPage_DualShock4Controller {
+            get {
+                return ResourceManager.GetString("OverlayPage_DualShock4Controller", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Emulated controller.
         /// </summary>
         public static string OverlayPage_EmulatedController {
@@ -5266,6 +5374,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Steam Deck.
+        /// </summary>
+        public static string OverlayPage_SteamDeck {
+            get {
+                return ResourceManager.GetString("OverlayPage_SteamDeck", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Time Level.
         /// </summary>
         public static string OverlayPage_TimeLevel {
@@ -5320,6 +5437,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Xbox 360.
+        /// </summary>
+        public static string OverlayPage_Xbox360Controller {
+            get {
+                return ResourceManager.GetString("OverlayPage_Xbox360Controller", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Xbox One.
         /// </summary>
         public static string OverlayPage_XboxOneController {
@@ -5365,56 +5491,56 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Preset similar to Balanced Mode in LS. TDP Limit: 15W.
+        ///   Looks up a localized string similar to Performance.
         /// </summary>
-        public static string PowerProfileLegionGoBalancedDescription {
+        public static string PowerProfileLegionGoBestPerformance {
             get {
-                return ResourceManager.GetString("PowerProfileLegionGoBalancedDescription", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Legion Go - Balanced.
-        /// </summary>
-        public static string PowerProfileLegionGoBalancedName {
-            get {
-                return ResourceManager.GetString("PowerProfileLegionGoBalancedName", resourceCulture);
+                return ResourceManager.GetString("PowerProfileLegionGoBestPerformance", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to Preset similar to Performance Mode in LS. TDP Limit: 20W.
         /// </summary>
-        public static string PowerProfileLegionGoPerformanceDescription {
+        public static string PowerProfileLegionGoBestPerformanceDesc {
             get {
-                return ResourceManager.GetString("PowerProfileLegionGoPerformanceDescription", resourceCulture);
+                return ResourceManager.GetString("PowerProfileLegionGoBestPerformanceDesc", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Legion Go - Performance.
+        ///   Looks up a localized string similar to Efficiency.
         /// </summary>
-        public static string PowerProfileLegionGoPerformanceName {
+        public static string PowerProfileLegionGoBetterBattery {
             get {
-                return ResourceManager.GetString("PowerProfileLegionGoPerformanceName", resourceCulture);
+                return ResourceManager.GetString("PowerProfileLegionGoBetterBattery", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Preset similar to Quiet Mode in LS. TDP Limit: 8W.
+        ///   Looks up a localized string similar to Preset similar to Efficiency Mode in LS. TDP Limit: 8W.
         /// </summary>
-        public static string PowerProfileLegionGoQuietDescription {
+        public static string PowerProfileLegionGoBetterBatteryDesc {
             get {
-                return ResourceManager.GetString("PowerProfileLegionGoQuietDescription", resourceCulture);
+                return ResourceManager.GetString("PowerProfileLegionGoBetterBatteryDesc", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Legion Go - Quiet.
+        ///   Looks up a localized string similar to Balanced.
         /// </summary>
-        public static string PowerProfileLegionGoQuietName {
+        public static string PowerProfileLegionGoBetterPerformance {
             get {
-                return ResourceManager.GetString("PowerProfileLegionGoQuietName", resourceCulture);
+                return ResourceManager.GetString("PowerProfileLegionGoBetterPerformance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Preset similar to Balanced Mode in LS. TDP Limit: 15W.
+        /// </summary>
+        public static string PowerProfileLegionGoBetterPerformanceDesc {
+            get {
+                return ResourceManager.GetString("PowerProfileLegionGoBetterPerformanceDesc", resourceCulture);
             }
         }
         
@@ -5437,56 +5563,110 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Balances performance, temperature and acoustic for any scenario..
+        ///   Looks up a localized string similar to Extreme Performance.
         /// </summary>
-        public static string PowerProfileROGAllyPerformanceDescription {
+        public static string PowerProfileMSIClawBestPerformance {
             get {
-                return ResourceManager.GetString("PowerProfileROGAllyPerformanceDescription", resourceCulture);
+                return ResourceManager.GetString("PowerProfileMSIClawBestPerformance", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to ROG Ally - Performance.
+        ///   Looks up a localized string similar to The best system performance for multi-tasking and heavy duty..
         /// </summary>
-        public static string PowerProfileROGAllyPerformanceName {
+        public static string PowerProfileMSIClawBestPerformanceDesc {
             get {
-                return ResourceManager.GetString("PowerProfileROGAllyPerformanceName", resourceCulture);
+                return ResourceManager.GetString("PowerProfileMSIClawBestPerformanceDesc", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Limits CPU and GPU power, but keeps noise levels quiet..
+        ///   Looks up a localized string similar to Super Battery.
         /// </summary>
-        public static string PowerProfileROGAllySilentDescription {
+        public static string PowerProfileMSIClawBetterBattery {
             get {
-                return ResourceManager.GetString("PowerProfileROGAllySilentDescription", resourceCulture);
+                return ResourceManager.GetString("PowerProfileMSIClawBetterBattery", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to ROG Ally - Silent.
+        ///   Looks up a localized string similar to The longest possible battery life..
         /// </summary>
-        public static string PowerProfileROGAllySilentName {
+        public static string PowerProfileMSIClawBetterBatteryDesc {
             get {
-                return ResourceManager.GetString("PowerProfileROGAllySilentName", resourceCulture);
+                return ResourceManager.GetString("PowerProfileMSIClawBetterBatteryDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Balanced.
+        /// </summary>
+        public static string PowerProfileMSIClawBetterPerformance {
+            get {
+                return ResourceManager.GetString("PowerProfileMSIClawBetterPerformance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The best system settings that MSI recommends..
+        /// </summary>
+        public static string PowerProfileMSIClawBetterPerformanceDesc {
+            get {
+                return ResourceManager.GetString("PowerProfileMSIClawBetterPerformanceDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Turbo.
+        /// </summary>
+        public static string PowerProfileROGAllyBestPerformance {
+            get {
+                return ResourceManager.GetString("PowerProfileROGAllyBestPerformance", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to Maximizes power to the CPU and GPU for high-performance gaming and work, with maximum airflow from fans..
         /// </summary>
-        public static string PowerProfileROGAllyTurboDescription {
+        public static string PowerProfileROGAllyBestPerformanceDesc {
             get {
-                return ResourceManager.GetString("PowerProfileROGAllyTurboDescription", resourceCulture);
+                return ResourceManager.GetString("PowerProfileROGAllyBestPerformanceDesc", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to ROG Ally - Turbo.
+        ///   Looks up a localized string similar to Silent.
         /// </summary>
-        public static string PowerProfileROGAllyTurboName {
+        public static string PowerProfileROGAllyBetterBattery {
             get {
-                return ResourceManager.GetString("PowerProfileROGAllyTurboName", resourceCulture);
+                return ResourceManager.GetString("PowerProfileROGAllyBetterBattery", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Limits CPU and GPU power, but keeps noise levels quiet..
+        /// </summary>
+        public static string PowerProfileROGAllyBetterBatteryDesc {
+            get {
+                return ResourceManager.GetString("PowerProfileROGAllyBetterBatteryDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Performance.
+        /// </summary>
+        public static string PowerProfileROGAllyBetterPerformance {
+            get {
+                return ResourceManager.GetString("PowerProfileROGAllyBetterPerformance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Balances performance, temperature and acoustic for any scenario..
+        /// </summary>
+        public static string PowerProfileROGAllyBetterPerformanceDesc {
+            get {
+                return ResourceManager.GetString("PowerProfileROGAllyBetterPerformanceDesc", resourceCulture);
             }
         }
         
@@ -6382,6 +6562,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Auto.
+        /// </summary>
+        public static string ProfilesPage_RollYawAuto {
+            get {
+                return ResourceManager.GetString("ProfilesPage_RollYawAuto", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Radeon Super Resolution.
         /// </summary>
         public static string ProfilesPage_RSR {
@@ -6978,15 +7167,6 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Better Performance.
-        /// </summary>
-        public static string QuickPerformancePage_PowerModeBetterPerformance {
-            get {
-                return ResourceManager.GetString("QuickPerformancePage_PowerModeBetterPerformance", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Optimize your device based on power use and performance.
         /// </summary>
         public static string QuickPerformancePage_PowerModeDesc {
@@ -6996,7 +7176,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Best Power Efficiency.
+        ///   Looks up a localized string similar to Efficiency.
         /// </summary>
         public static string QuickPerformancePage_PowerModeEfficiency {
             get {
@@ -7005,7 +7185,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Best Performance.
+        ///   Looks up a localized string similar to Performance.
         /// </summary>
         public static string QuickPerformancePage_PowerModePerformance {
             get {
@@ -8067,6 +8247,22 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Sensor calibration.
+        /// </summary>
+        public static string SettingsPage_SensorCalibration {
+            get {
+                return ResourceManager.GetString("SettingsPage_SensorCalibration", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Will calibrate your device IMU sensor.
+        /// </summary>
+        public static string SettingsPage_SensorCalibrationDesc {
+            get {
+                return ResourceManager.GetString("SettingsPage_SensorCalibrationDesc", resourceCulture);
+            }
+        }
         ///   Looks up a localized string similar to External.
         /// </summary>
         public static string SettingsPage_SensorExternal {
@@ -8492,7 +8688,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Please switch your controller off and then on again by pressing and holding the Guide button to finalize pairing..
+        ///   Looks up a localized string similar to Please restart your controller by holding the Guide button to finalize pairing..
         /// </summary>
         public static string XInputController_Warning_BTH {
             get {

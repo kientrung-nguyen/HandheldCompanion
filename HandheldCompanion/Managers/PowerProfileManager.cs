@@ -1,11 +1,14 @@
-﻿using HandheldCompanion.Misc;
+﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace HandheldCompanion.Managers
 {
@@ -39,7 +42,7 @@ namespace HandheldCompanion.Managers
             foreach (var fileName in fileEntries)
                 ProcessProfile(fileName);
 
-            foreach (var devicePowerProfile in MainWindow.CurrentDevice.DevicePowerProfiles)
+            foreach (var devicePowerProfile in IDevice.GetCurrent().DevicePowerProfiles)
             {
                 if (!profiles.ContainsKey(devicePowerProfile.Guid))
                     UpdateOrCreateProfile(devicePowerProfile, UpdateSource.Serializer);
@@ -76,7 +79,7 @@ namespace HandheldCompanion.Managers
                     return;
                 case FanMode.Software:
                     double fanSpeed = currentProfile.FanProfile.GetFanSpeed();
-                    MainWindow.CurrentDevice.SetFanDuty(fanSpeed);
+                    IDevice.GetCurrent().SetFanDuty(fanSpeed);
                     return;
             }
         }
@@ -184,7 +187,19 @@ namespace HandheldCompanion.Managers
             if (profiles.TryGetValue(guid, out var profile))
                 return profile;
 
-            return null;
+            return GetDefault();
+        }
+
+        private static bool HasDefault()
+        {
+            return profiles.Values.Count(a => a.Default) != 0;
+        }
+
+        public static PowerProfile GetDefault()
+        {
+            if (HasDefault())
+                return profiles.Values.FirstOrDefault(a => a.Default);
+            return new PowerProfile();
         }
 
         public static PowerProfile GetCurrent()
@@ -192,7 +207,7 @@ namespace HandheldCompanion.Managers
             if (currentProfile is not null)
                 return currentProfile;
 
-            return null;
+            return GetDefault();
         }
 
         public static void SerializeProfile(PowerProfile profile)

@@ -108,6 +108,7 @@ public partial class ButtonMapping : IMapping
             if (Actions is null || Actions is not ButtonActions)
                 Actions = new ButtonActions();
 
+            /*
             foreach (ButtonFlags button in IController.GetTargetButtons())
             {
                 // create a label, store ButtonFlags as Tag and Label as controller specific string
@@ -117,7 +118,7 @@ public partial class ButtonMapping : IMapping
                 if (button.Equals(((ButtonActions)Actions).Button))
                     TargetComboBox.SelectedItem = buttonLabel;
             }
-
+            */
             // button specific settings
         }
         else if (type == ActionType.Keyboard)

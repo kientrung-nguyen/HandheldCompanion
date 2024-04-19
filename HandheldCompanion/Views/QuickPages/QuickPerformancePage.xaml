@@ -559,7 +559,6 @@
                             SelectionChanged="PowerMode_SelectionChanged">
                             <ComboBoxItem Name="PowerModeEfficiency" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeEfficiency}" />
                             <ComboBoxItem Name="PowerModeBalanced" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeBalanced}" />
-                            <ComboBoxItem Name="PowerModeBetterPerformance" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModeBetterPerformance}" />
                             <ComboBoxItem Name="PowerModePerformance" Content="{x:Static resx:Resources.QuickPerformancePage_PowerModePerformance}" />
                         </ComboBox>
                     </DockPanel>

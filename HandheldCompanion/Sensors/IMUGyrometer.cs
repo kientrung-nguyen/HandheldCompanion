@@ -1,6 +1,8 @@
+using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using System;
 using System.Numerics;
 using Windows.Devices.Sensors;
 using static HandheldCompanion.Utils.DeviceUtils;
@@ -17,10 +19,11 @@ public class IMUGyrometer : IMUSensor
         maxOut = 2048.0f
     };
 
-    public IMUGyrometer(SensorFamily sensorFamily, int updateInterval)
+    public IMUGyrometer(SensorFamily sensorFamily, int updateInterval, float threshold)
     {
         this.sensorFamily = sensorFamily;
         this.updateInterval = updateInterval;
+        this.threshold = threshold;
 
         UpdateSensor();
     }
@@ -33,7 +36,7 @@ public class IMUGyrometer : IMUSensor
                 sensor = Gyrometer.GetDefault();
                 break;
             case SensorFamily.SerialUSBIMU:
-                sensor = SerialUSBIMU.GetDefault();
+                sensor = SerialUSBIMU.GetCurrent();
                 break;
             case SensorFamily.Controller:
                 sensor = new object();
@@ -50,8 +53,7 @@ public class IMUGyrometer : IMUSensor
         {
             case SensorFamily.Windows:
                 {
-                    ((Gyrometer)sensor).ReportInterval = (uint)updateInterval;
-
+                    ((Gyrometer)sensor).ReportInterval = Math.Max(((Gyrometer)sensor).MinimumReportInterval, (uint)updateInterval);
                     LogManager.LogInformation("{0} initialised as a {1}. Report interval set to {2}ms", ToString(),
                         sensorFamily.ToString(), updateInterval);
                 }
@@ -101,59 +103,47 @@ public class IMUGyrometer : IMUSensor
         base.StopListening();
     }
 
-    private void ReadingChanged(float GyroRoll, float GyroPitch, float GyroYaw)
+    private void ReadingChanged(Vector3 AccelerationG, Vector3 AngularVelocityDeg, double timestamp)
     {
-        switch (sensorFamily)
-        {
-            case SensorFamily.Controller:
-                {
-                    reading.X = GyroRoll;
-                    reading.Y = GyroPitch;
-                    reading.Z = GyroYaw;
-
-                    base.ReadingChanged();
-                }
-                break;
-        }
-    }
-
-    private void ReadingChanged(Vector3 AccelerationG, Vector3 AngularVelocityDeg)
-    {
-        reading.X = AngularVelocityDeg.X;
-        reading.Y = AngularVelocityDeg.Y;
-        reading.Z = AngularVelocityDeg.Z;
+        reading.reading.X = AngularVelocityDeg.X;
+        reading.reading.Y = AngularVelocityDeg.Y;
+        reading.reading.Z = AngularVelocityDeg.Z;
+        reading.timestamp = timestamp;
 
         base.ReadingChanged();
     }
 
     private void ReadingChanged(Gyrometer sender, GyrometerReadingChangedEventArgs args)
     {
-        if (sensor is null)
-            return;
-
-        foreach (var axis in reading_axis.Keys)
-            switch (MainWindow.CurrentDevice.GyrometerAxisSwap[axis])
+        foreach (char axis in reading_axis.Keys)
+        {
+            switch (IDevice.GetCurrent().GyrometerAxisSwap[axis])
             {
                 default:
                 case 'X':
-                    reading_axis[axis] = args.Reading.AngularVelocityX;
+                    if (!(Math.Abs(args.Reading.AngularVelocityX) >= threshold))
+                        reading_axis[axis] = args.Reading.AngularVelocityX;
                     break;
                 case 'Y':
-                    reading_axis[axis] = args.Reading.AngularVelocityY;
+                    if (!(Math.Abs(args.Reading.AngularVelocityY) >= threshold))
+                        reading_axis[axis] = args.Reading.AngularVelocityY;
                     break;
                 case 'Z':
-                    reading_axis[axis] = args.Reading.AngularVelocityZ;
+                    if (!(Math.Abs(args.Reading.AngularVelocityZ) >= threshold))
+                        reading_axis[axis] = args.Reading.AngularVelocityZ;
                     break;
             }
+        }
 
-        reading.X = (float)reading_axis['X'] * MainWindow.CurrentDevice.GyrometerAxis.X;
-        reading.Y = (float)reading_axis['Y'] * MainWindow.CurrentDevice.GyrometerAxis.Y;
-        reading.Z = (float)reading_axis['Z'] * MainWindow.CurrentDevice.GyrometerAxis.Z;
+        reading.reading.X = (float)reading_axis['X'] * IDevice.GetCurrent().GyrometerAxis.X;
+        reading.reading.Y = (float)reading_axis['Y'] * IDevice.GetCurrent().GyrometerAxis.Y;
+        reading.reading.Z = (float)reading_axis['Z'] * IDevice.GetCurrent().GyrometerAxis.Z;
+        reading.timestamp = args.Reading.Timestamp.DateTime.TimeOfDay.TotalMilliseconds;
 
         base.ReadingChanged();
     }
 
-    public new Vector3 GetCurrentReading()
+    public new SensorReading GetCurrentReading()
     {
         return this.reading;
     }

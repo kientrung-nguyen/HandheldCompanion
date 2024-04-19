@@ -4,6 +4,7 @@ using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using LiveCharts;
 using LiveCharts.Definitions.Series;
@@ -12,6 +13,7 @@ using LiveCharts.Wpf;
 using System;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
@@ -59,8 +61,8 @@ namespace HandheldCompanion.Views.Pages
             MultimediaManager.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
 
             // device settings
-            GPUSlider.Minimum = MainWindow.CurrentDevice.GfxClock[0];
-            GPUSlider.Maximum = MainWindow.CurrentDevice.GfxClock[1];
+            GPUSlider.Minimum = IDevice.GetCurrent().GfxClock[0];
+            GPUSlider.Maximum = IDevice.GetCurrent().GfxClock[1];
 
             CPUSlider.Minimum = MotherboardInfo.ProcessorMaxTurboSpeed / 4.0d;
             CPUSlider.Maximum = MotherboardInfo.ProcessorMaxTurboSpeed;
@@ -68,7 +70,7 @@ namespace HandheldCompanion.Views.Pages
             // motherboard settings
             CPUCoreSlider.Maximum = MotherboardInfo.NumberOfCores;
 
-            FanModeSoftware.IsEnabled = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.FanControl);
+            FanModeSoftware.IsEnabled = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.FanControl);
         }
 
         private void Page_Loaded(object? sender, RoutedEventArgs? e)
@@ -338,6 +340,23 @@ namespace HandheldCompanion.Views.Pages
 
         private async void ButtonProfileDelete_Click(object sender, RoutedEventArgs e)
         {
+            Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+            {
+                Title = $"{Properties.Resources.ProfilesPage_AreYouSureDelete1} \"{selectedProfile.Name}\"?",
+                Content = Properties.Resources.ProfilesPage_AreYouSureDelete2,
+                CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+                PrimaryButtonText = Properties.Resources.ProfilesPage_Delete
+            }.ShowAsync();
+
+            await dialogTask; // sync call
+
+            switch (dialogTask.Result)
+            {
+                case ContentDialogResult.Primary:
+                    PowerProfileManager.DeleteProfile(selectedProfile);
+                    break;
+            }
+            /*
             var result = Dialog.ShowAsync(
                 $"{Properties.Resources.ProfilesPage_AreYouSureDelete1} \"{selectedProfile.Name}\"?",
                 $"{Properties.Resources.ProfilesPage_AreYouSureDelete2}",
@@ -353,6 +372,7 @@ namespace HandheldCompanion.Views.Pages
                     ProfilesPicker.SelectedIndex = 1;
                     break;
             }
+            */
         }
 
         private void ButtonProfileEdit_Click(object sender, RoutedEventArgs e)
@@ -450,7 +470,7 @@ namespace HandheldCompanion.Views.Pages
                     TDPToggle.IsOn = selectedProfile.TDPOverrideEnabled;
                     var TDP = selectedProfile.TDPOverrideValues is not null
                         ? selectedProfile.TDPOverrideValues
-                        : MainWindow.CurrentDevice.nTDP;
+                        : IDevice.GetCurrent().nTDP;
                     TDPSlider.Value = TDP[(int)PowerType.Slow];
 
                     // define slider(s) min and max values based on device specifications
@@ -478,7 +498,7 @@ namespace HandheldCompanion.Views.Pages
                     GPUSlider.Value = selectedProfile.GPUOverrideValue != 0 ? selectedProfile.GPUOverrideValue : 255 * 50;
 
                     // CPU Boost
-                    CPUBoostLevel.SelectedIndex = selectedProfile.CPUBoostLevel;
+                    CPUBoostLevel.SelectedIndex = (int)selectedProfile.CPUBoostLevel;
 
                     // Power Mode
                     PowerMode.SelectedIndex = Array.IndexOf(PerformanceManager.PowerModes, selectedProfile.OSPowerMode);
@@ -684,7 +704,7 @@ namespace HandheldCompanion.Views.Pages
             if (updateLock)
                 return;
 
-            selectedProfile.CPUBoostLevel = CPUBoostLevel.SelectedIndex;
+            selectedProfile.CPUBoostLevel = EnumUtils<CPUBoostLevel>.Parse(CPUBoostLevel.SelectedIndex);
             UpdateProfile();
         }
 
@@ -732,7 +752,7 @@ namespace HandheldCompanion.Views.Pages
             {
                 // update charts
                 for (int idx = 0; idx < lvLineSeries.ActualValues.Count; idx++)
-                    lvLineSeries.ActualValues[idx] = MainWindow.CurrentDevice.fanPresets[0][idx];
+                    lvLineSeries.ActualValues[idx] = IDevice.GetCurrent().fanPresets[0][idx];
             });
         }
 
@@ -743,7 +763,7 @@ namespace HandheldCompanion.Views.Pages
             {
                 // update charts
                 for (int idx = 0; idx < lvLineSeries.ActualValues.Count; idx++)
-                    lvLineSeries.ActualValues[idx] = MainWindow.CurrentDevice.fanPresets[1][idx];
+                    lvLineSeries.ActualValues[idx] = IDevice.GetCurrent().fanPresets[1][idx];
             });
         }
 
@@ -754,7 +774,7 @@ namespace HandheldCompanion.Views.Pages
             {
                 // update charts
                 for (int idx = 0; idx < lvLineSeries.ActualValues.Count; idx++)
-                    lvLineSeries.ActualValues[idx] = MainWindow.CurrentDevice.fanPresets[2][idx];
+                    lvLineSeries.ActualValues[idx] = IDevice.GetCurrent().fanPresets[2][idx];
             });
         }
     }

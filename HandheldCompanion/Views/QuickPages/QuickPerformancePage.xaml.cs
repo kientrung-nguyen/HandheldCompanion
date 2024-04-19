@@ -8,6 +8,7 @@ using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
@@ -52,8 +53,8 @@ public partial class QuickPerformancePage : Page
         MultimediaManager.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
 
         // device settings
-        GPUSlider.Minimum = MainWindow.CurrentDevice.GfxClock[0];
-        GPUSlider.Maximum = MainWindow.CurrentDevice.GfxClock[1];
+        GPUSlider.Minimum = IDevice.GetCurrent().GfxClock[0];
+        GPUSlider.Maximum = IDevice.GetCurrent().GfxClock[1];
 
         CPUSlider.Minimum = MotherboardInfo.ProcessorMaxTurboSpeed / 4.0d;
         CPUSlider.Maximum = MotherboardInfo.ProcessorMaxTurboSpeed;
@@ -61,7 +62,7 @@ public partial class QuickPerformancePage : Page
         // motherboard settings
         CPUCoreSlider.Maximum = MotherboardInfo.NumberOfCores;
 
-        FanModeSoftware.IsEnabled = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.FanControl);
+        FanModeSoftware.IsEnabled = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.FanControl);
 
         UpdateTimer = new Timer(UpdateInterval);
         UpdateTimer.AutoReset = false;
@@ -237,7 +238,7 @@ public partial class QuickPerformancePage : Page
         if (updateLock)
             return;
 
-        selectedProfile.CPUBoostLevel = CPUBoostLevel.SelectedIndex;
+        selectedProfile.CPUBoostLevel = EnumUtils<CPUBoostLevel>.Parse(CPUBoostLevel.SelectedIndex);
         UpdateProfile();
     }
 
@@ -276,7 +277,7 @@ public partial class QuickPerformancePage : Page
                 TDPToggle.IsOn = selectedProfile.TDPOverrideEnabled;
                 var TDP = selectedProfile.TDPOverrideValues is not null
                     ? selectedProfile.TDPOverrideValues
-                    : MainWindow.CurrentDevice.nTDP;
+                    : IDevice.GetCurrent().nTDP;
                 TDPSlider.Value = TDP[(int)PowerType.Slow];
 
                 // CPU Clock control
@@ -300,7 +301,7 @@ public partial class QuickPerformancePage : Page
                 CPUCoreSlider.Value = selectedProfile.CPUCoreCount;
 
                 // CPU Boost
-                CPUBoostLevel.SelectedIndex = selectedProfile.CPUBoostLevel;
+                CPUBoostLevel.SelectedIndex = (int)selectedProfile.CPUBoostLevel;
 
                 // Power Mode
                 PowerMode.SelectedIndex = Array.IndexOf(PerformanceManager.PowerModes, selectedProfile.OSPowerMode);
@@ -497,6 +498,23 @@ public partial class QuickPerformancePage : Page
 
     private async void Button_PowerSettings_Delete_Click(object sender, RoutedEventArgs e)
     {
+        Task<ContentDialogResult> dialogTask = new Dialog(OverlayQuickTools.GetCurrent())
+        {
+            Title = $"{Properties.Resources.ProfilesPage_AreYouSureDelete1} \"{selectedProfile.Name}\"?",
+            Content = Properties.Resources.ProfilesPage_AreYouSureDelete2,
+            CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+            PrimaryButtonText = Properties.Resources.ProfilesPage_Delete
+        }.ShowAsync();
+
+        await dialogTask; // sync call
+
+        switch (dialogTask.Result)
+        {
+            case ContentDialogResult.Primary:
+                PowerProfileManager.DeleteProfile(selectedProfile);
+                break;
+        }
+        /*
         var result = Dialog.ShowAsync(
                 $"{Properties.Resources.ProfilesPage_AreYouSureDelete1} \"{selectedProfile.Name}\"?",
                 $"{Properties.Resources.ProfilesPage_AreYouSureDelete2}",
@@ -511,5 +529,6 @@ public partial class QuickPerformancePage : Page
                 PowerProfileManager.DeleteProfile(selectedProfile);
                 break;
         }
+        */
     }
 }

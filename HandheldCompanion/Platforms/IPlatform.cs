@@ -150,7 +150,13 @@ public abstract class IPlatform : IDisposable
 
     public virtual void Dispose()
     {
-        PlatformWatchdog?.Dispose();
+        if (PlatformWatchdog is not null)
+        {
+            PlatformWatchdog.Stop();
+            PlatformWatchdog.Dispose();
+            PlatformWatchdog = null;
+        }
+
         GC.SuppressFinalize(this);
     }
 
@@ -216,7 +222,9 @@ public abstract class IPlatform : IDisposable
         KeepAlive = true;
 
         // start watchdog
-        PlatformWatchdog?.Start();
+        if (PlatformWatchdog is not null)
+            PlatformWatchdog.Start();
+
         return true;
     }
 
@@ -228,7 +236,8 @@ public abstract class IPlatform : IDisposable
         SetStatus(PlatformStatus.Stopping);
 
         // stop watchdog
-        PlatformWatchdog?.Stop();
+        if (PlatformWatchdog is not null)
+            PlatformWatchdog.Stop();
 
         if (kill)
             KillProcess();
@@ -243,7 +252,9 @@ public abstract class IPlatform : IDisposable
         if (KeepAlive)
         {
             if (Tentative < MaxTentative)
+            {
                 StartProcess();
+            }
             else
             {
                 LogManager.LogError("Something went wrong while trying to start {0}", GetType());
@@ -265,7 +276,7 @@ public abstract class IPlatform : IDisposable
             // set lock
             IsStarting = true;
 
-            Process? process = null;
+            Process process = null;
             while (process is null && Tentative < MaxTentative)
             {
                 // increase tentative counter

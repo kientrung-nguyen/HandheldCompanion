@@ -1,4 +1,5 @@
-﻿using iNKORE.UI.WPF.Modern.Controls;
+﻿using HandheldCompanion.Managers;
+using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -54,7 +55,7 @@ namespace HandheldCompanion.Misc
         }
 
         public string FileName { get; set; }
-        public bool Default {  get; set; }
+        public bool Default { get; set; }
         public bool DeviceDefault { get; set; }
 
         public Version Version { get; set; } = new();
@@ -76,14 +77,14 @@ namespace HandheldCompanion.Misc
         public uint EPPOverrideValue { get; set; } = 50;
 
         public bool CPUCoreEnabled { get; set; }
-        public int CPUCoreCount { get; set; } = Environment.ProcessorCount;
+        public int CPUCoreCount { get; set; } = MotherboardInfo.NumberOfCores;
 
-        public int CPUBoostLevel { get; set; } = 0;
+        public CPUBoostLevel CPUBoostLevel { get; set; } = CPUBoostLevel.Enabled;
 
         public FanProfile FanProfile { get; set; } = new();
 
         public int OEMPowerMode { get; set; } = 0xFF;
-        public Guid OSPowerMode { get; set; } = Managers.OSPowerMode.Recommended;
+        public Guid OSPowerMode { get; set; } = Managers.OSPowerMode.BetterPerformance;
 
         private Dictionary<Page, UIElement> uIElements = new();
 
@@ -238,22 +239,30 @@ namespace HandheldCompanion.Misc
 
         public Button GetButton(Page page)
         {
-            return uIElements[page].button;
+            if (uIElements.TryGetValue(page, out UIElement UI))
+                return UI.button;
+
+            return null;
         }
 
         public RadioButton GetRadioButton(Page page)
         {
-            return uIElements[page].radioButton;
+            if (uIElements.TryGetValue(page, out UIElement UI))
+                return UI.radioButton;
+
+            return null;
         }
 
         public void Check(Page page)
         {
-            uIElements[page].radioButton.IsChecked = true;
+            if (uIElements.TryGetValue(page, out UIElement UI))
+                UI.radioButton.IsChecked = true;
         }
 
         public void Uncheck(Page page)
         {
-            uIElements[page].radioButton.IsChecked = false;
+            if (uIElements.TryGetValue(page, out UIElement UI))
+                UI.radioButton.IsChecked = false;
         }
 
         public override string ToString()

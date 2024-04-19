@@ -53,10 +53,13 @@ public partial class App : Application
                     if (ProcessUtils.IsIconic(handle))
                         ProcessUtils.ShowWindow(handle, (int)ProcessUtils.ShowWindowCommands.Restored);
 
-                    ProcessUtils.SetForegroundWindow(handle);
+                    // force close this process if we were able to bring previous process to foreground
+                    // kill previous process otherwise (means it's stalled)
+                    if (ProcessUtils.SetForegroundWindow(handle))
+                        process.Kill();
+                    else
+                        prevProcess.Kill();
 
-                    // force close this iteration
-                    process.Kill();
                     return;
                 }
         }
@@ -105,6 +108,10 @@ public partial class App : Application
     {
         var ex = default(Exception);
         ex = (Exception)e.Exception;
+        if (ex.InnerException != null)
+        {
+            LogManager.LogCritical(ex.InnerException.Message + "\t" + ex.InnerException.StackTrace);
+        }
         LogManager.LogCritical(ex.Message + "\t" + ex.StackTrace);
     }
 
@@ -112,6 +119,10 @@ public partial class App : Application
     {
         var ex = default(Exception);
         ex = (Exception)e.ExceptionObject;
+        if (ex.InnerException != null)
+        {
+            LogManager.LogCritical(ex.InnerException.Message + "\t" + ex.InnerException.StackTrace);
+        }
         LogManager.LogCritical(ex.Message + "\t" + ex.StackTrace);
     }
 }

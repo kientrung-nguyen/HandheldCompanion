@@ -38,10 +38,10 @@ public partial class GyroMapping : IMapping
                 case MotionInput.PlayerSpace:
                     icon.Glyph = "\uF119";
                     break;
-                case MotionInput.JoystickCamera:
+                case MotionInput.LocalSpace:
                     icon.Glyph = "\uE714";
                     break;
-                case MotionInput.AutoRollYawSwap:
+                case MotionInput.WorldSpace:
                     icon.Glyph = "\uE7F8";
                     break;
                 case MotionInput.JoystickSteering:
@@ -145,7 +145,7 @@ public partial class GyroMapping : IMapping
             // we need a controller to get compatible buttons
             if (controller is null)
                 return;
-
+            /*
             foreach (var axis in IController.GetTargetAxis())
             {
                 // create a label, store ButtonFlags as Tag and Label as controller specific string
@@ -155,6 +155,7 @@ public partial class GyroMapping : IMapping
                 if (axis.Equals(((AxisActions)Actions).Axis))
                     TargetComboBox.SelectedItem = buttonLabel;
             }
+            */
 
             if (TargetComboBox.SelectedItem is null)
                 TargetComboBox.SelectedIndex = 0;

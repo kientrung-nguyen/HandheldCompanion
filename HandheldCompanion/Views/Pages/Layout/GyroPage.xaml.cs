@@ -1,6 +1,7 @@
 using HandheldCompanion.Controllers;
 
 using HandheldCompanion.Controls;
+using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using System.Collections.Generic;
 using System.Windows;
@@ -32,7 +33,7 @@ namespace HandheldCompanion.Views.Pages
         {
             base.UpdateController(controller);
 
-            bool gyro = CheckController(controller, Gyroscope) || MainWindow.CurrentDevice.HasMotionSensor();
+            bool gyro = CheckController(controller, Gyroscope) || IDevice.GetCurrent().HasMotionSensor();
 
             gridGyroscope.Visibility = gyro ? Visibility.Visible : Visibility.Collapsed;
 

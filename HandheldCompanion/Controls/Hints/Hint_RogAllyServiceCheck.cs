@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +24,7 @@ namespace HandheldCompanion.Controls.Hints
 
         public Hint_RogAllyServiceCheck() : base()
         {
-            if (MainWindow.CurrentDevice is not ROGAlly)
+            if (IDevice.GetCurrent() is not ROGAlly)
                 return;
 
             // Get all the services installed on the local computer
@@ -102,7 +101,7 @@ namespace HandheldCompanion.Controls.Hints
 
         public override void Stop()
         {
-            serviceTimer.Stop();
+            serviceTimer?.Stop();
             base.Stop();
         }
     }

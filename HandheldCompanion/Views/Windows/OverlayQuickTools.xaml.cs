@@ -24,6 +24,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 using Application = System.Windows.Application;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Page = System.Windows.Controls.Page;
+using Button = System.Windows.Controls.Button;
 using PowerLineStatus = System.Windows.Forms.PowerLineStatus;
 using Screen = WpfScreenHelper.Screen;
 using SystemManager = HandheldCompanion.Managers.SystemManager;
@@ -68,7 +69,7 @@ public partial class OverlayQuickTools : GamepadWindow
     // page vars
     private readonly Dictionary<string, Page> _pages = new();
 
-    private bool AutoHide;
+    private bool autoHide;
     private bool isClosing;
     private readonly DispatcherTimer clockUpdateTimer;
 
@@ -79,21 +80,41 @@ public partial class OverlayQuickTools : GamepadWindow
     public QuickOverlayPage overlayPage;
     public QuickSuspenderPage suspenderPage;
 
-    private static OverlayQuickTools CurrentWindow;
+    private static OverlayQuickTools currentWindow;
     private string preNavItemTag;
+
+
+    private LockObject brightnessLock = new();
+    private LockObject volumeLock = new();
+
+    private Dictionary<string, System.Windows.Controls.Button> tabButtons = new();
+
+    private Dictionary<string, bool> _activeTabs;
+
+    public Dictionary<string, bool> activeTabs
+    {
+        get { return _activeTabs; }
+        set
+        {
+            _activeTabs = value;
+
+        }
+    }
 
     public OverlayQuickTools()
     {
         InitializeComponent();
-        CurrentWindow = this;
+        currentWindow = this;
 
         // used by gamepad navigation
         Tag = "QuickTools";
 
         PreviewKeyDown += HandleEsc;
 
-        clockUpdateTimer = new DispatcherTimer();
-        clockUpdateTimer.Interval = TimeSpan.FromMilliseconds(1000);
+        clockUpdateTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(1000)
+        };
         clockUpdateTimer.Tick += UpdateTime;
 
         WM_PAINT_TIMER = new(250) { AutoReset = false };
@@ -102,7 +123,13 @@ public partial class OverlayQuickTools : GamepadWindow
         // create manager(s)
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
 
+        MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
+        MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
+        MultimediaManager.Initialized += SystemManager_Initialized;
+
         MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
+
+        ProfileManager.Applied += ProfileManager_Applied;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // create pages
@@ -123,16 +150,32 @@ public partial class OverlayQuickTools : GamepadWindow
 
     public static OverlayQuickTools GetCurrent()
     {
-        return CurrentWindow;
+        return currentWindow;
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value)
     {
+        string[] onScreenDisplayLevels = [
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Disabled,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Minimal,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Extended,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Full,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Custom,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
+        ];
+
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
             switch (name)
             {
+                case "OnScreenDisplayLevel":
+                    {
+                        var overlayLevel = Convert.ToInt16(value);
+                        t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
+
+                    }
+                    break;
                 case "QuickToolsLocation":
                     {
                         var QuickToolsLocation = Convert.ToInt32(value);
@@ -141,14 +184,14 @@ public partial class OverlayQuickTools : GamepadWindow
                     break;
                 case "QuickToolsAutoHide":
                     {
-                        AutoHide = Convert.ToBoolean(value);
+                        autoHide = Convert.ToBoolean(value);
                     }
                     break;
             }
         });
     }
 
-    private void SystemManager_DisplaySettingsChanged(ScreenResolution resolution)
+    private void SystemManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
     {
         int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
         UpdateLocation(QuickToolsLocation);
@@ -175,11 +218,13 @@ public partial class OverlayQuickTools : GamepadWindow
                 case 1:
                 case 3:
                     this.SetWindowPosition(WindowPositions.Right, Screen.PrimaryScreen);
-                    Left -= Margin.Right - Margin.Right;
+                    Left -= Margin.Right;
                     break;
             }
-            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (5.0d * Margin.Top));
-            Top = Margin.Top - Margin.Top;
+            Width = MinWidth = MaxWidth = (int)(Screen.PrimaryScreen.WpfBounds.Width / 2.5);
+            Height = MinHeight = MaxHeight = (int)Screen.PrimaryScreen.WpfBounds.Height - (6.0d * Margin.Top);
+            //Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (6.0d * Margin.Top));
+            Top = Margin.Top;
         });
     }
 
@@ -212,10 +257,10 @@ public partial class OverlayQuickTools : GamepadWindow
             }
 
             // get battery key
-            var KeyValue = (int)Math.Truncate(status.BatteryLifePercent * 10);
+            var keyValue = (int)Math.Truncate(status.BatteryLifePercent * 10);
 
             // set key
-            var Key = $"Battery{KeyStatus}{KeyValue}";
+            var Key = $"Battery{KeyStatus}{keyValue}";
 
             if (SystemManager.PowerStatusIcon.TryGetValue(Key, out var glyph))
                 BatteryIndicatorIcon.Glyph = glyph;
@@ -226,6 +271,19 @@ public partial class OverlayQuickTools : GamepadWindow
 
                 string remaining;
                 if (status.BatteryLifeRemaining >= 3600)
+                    remaining = $"{time.Hours}h {time.Minutes}m";
+                else
+                    remaining = $"{time.Minutes}m";
+
+                BatteryIndicatorLifeRemaining.Text = $"({remaining})";
+                BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
+            }
+            else if (status.BatteryFullLifetime > 0)
+            {
+                var time = TimeSpan.FromSeconds(status.BatteryFullLifetime);
+
+                string remaining;
+                if (status.BatteryFullLifetime >= 3600)
                     remaining = $"{time.Hours}h {time.Minutes}m";
                 else
                     remaining = $"{time.Minutes}m";
@@ -280,7 +338,7 @@ public partial class OverlayQuickTools : GamepadWindow
                     if (wParam == 0 && (lParam == 0))
                     {
                         if (prevWParam != new IntPtr(0x0000000000000086))
-                            if (AutoHide && Visibility == Visibility.Visible)
+                            if (autoHide && Visibility == Visibility.Visible)
                                 ToggleVisibility();
                         handled = true;
                     }
@@ -457,6 +515,9 @@ public partial class OverlayQuickTools : GamepadWindow
         // Add handler for ContentFrame navigation.
         ContentFrame.Navigated += On_Navigated;
 
+        // NavView doesn't load any page by default, so load home page.
+        //navView.SelectedItem = navView.MenuItems[0];
+
         // If navigation occurs on SelectionChanged, this isn't needed.
         // Because we use ItemInvoked to navigate, we need to call Navigate
         // here to load the home page.
@@ -487,60 +548,150 @@ public partial class OverlayQuickTools : GamepadWindow
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
         navView.IsBackEnabled = ContentFrame.CanGoBack;
-        //navView.IsBackButtonVisible = ContentFrame.CanGoBack ? NavigationViewBackButtonVisible.Visible : NavigationViewBackButtonVisible.Collapsed;
         navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
     }
 
     private void UpdateTime(object? sender, EventArgs e)
     {
-        Time.Text = string.Empty;
-        //CPU.Text = string.Empty;
-        //GPU.Text = string.Empty;
         var timeFormat = CultureInfo.InstalledUICulture.DateTimeFormat.ShortTimePattern;
-        CPUIndicatorIcon.Visibility = Visibility.Collapsed;
-        GPUIndicatorIcon.Visibility = Visibility.Collapsed;
-
         PlatformManager.HWiNFO.ReaffirmRunningProcess();
-        //CPUIndicatorIcon.Glyph = "\uD83D\uDDA5";
-        //GPUIndicatorIcon.Glyph = "\uD83D\uDDA8";
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUUsage, out var cpuUsage) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUTemperature, out var cpuTemp) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUPower, out var cpuPower) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.PhysicalMemoryUsage, out var cpuMem) &&
-            !float.IsNaN(PlatformManager.HWiNFO.CPUFanSpeed))
+        Time.Text = string.Empty;
+        Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            CPUIndicatorIcon.Visibility = Visibility.Visible;
-            CPUIndicatorIcon.Glyph = "\uE770";
-            CPUUsage.Text = $"{cpuUsage.Value:0}";
-            CPUUsageUnit.Text = $"{cpuUsage.Unit}";
-            CPUTemp.Text = $" {cpuTemp.Value:0}";
-            CPUTempUnit.Text = $"{cpuTemp.Unit}";
-            CPUPower.Text = $" {cpuPower.Value:0}";
-            CPUPowerUnit.Text = $"{cpuPower.Unit}";
-            CPUMem.Text = $" {(cpuMem.Value / 1024):0.0}";
-            CPUMemUnit.Text = $"GB";
-            CPUFan.Text = $" {PlatformManager.HWiNFO.CPUFanSpeed}";
-            CPUFanUnit.Text = "rpm";
-        }
+            if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUUsage, out var cpuUsage) &&
+                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUTemperature, out var cpuTemp) &&
+                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUPower, out var cpuPower) &&
+                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.PhysicalMemoryUsage, out var cpuMem) &&
+                !float.IsNaN(PlatformManager.HWiNFO.CPUFanSpeed))
+            {
+                CPUUsage.Text = $"{cpuUsage.Value:0}{cpuUsage.Unit}";
+                CPUTemp.Text = $"{cpuTemp.Value:0}{cpuTemp.Unit}";
+                CPUPower.Text = $"{cpuPower.Value:0}{cpuPower.Unit}";
+                CPUMem.Text = $"{(cpuMem.Value / 1024):0.0}GB";
+                CPUFan.Text = $"{PlatformManager.HWiNFO.CPUFanSpeed}rpm";
+            }
 
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUUsage, out var gpuUsage) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUTemperature, out var gpuTemp) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUPower, out var gpuPower) &&
-            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUMemoryUsage, out var gpuMem))
-        {
-            GPUIndicatorIcon.Visibility = Visibility.Visible;
-            GPUIndicatorIcon.Glyph = "\uE964";
-            GPUUsage.Text = $"{gpuUsage.Value:0}";
-            GPUUsageUnit.Text = $"{gpuUsage.Unit}";
-            GPUTemp.Text = $" {gpuTemp.Value:0}";
-            GPUTempUnit.Text = $"{gpuTemp.Unit}";
-            GPUPower.Text = $" {gpuPower.Value:0}";
-            GPUPowerUnit.Text = $"{gpuPower.Unit}";
-            GPUMem.Text = $" {(gpuMem.Value / 1024):0.0}";
-            GPUMemUnit.Text = $"GB";
-        }
-        //Time.Text = $"{DateTime.Now.ToString(timeFormat)}";
+            if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUUsage, out var gpuUsage) &&
+                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUTemperature, out var gpuTemp) &&
+                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUPower, out var gpuPower) &&
+                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUMemoryUsage, out var gpuMem))
+            {
+                GPUUsage.Text = $"{gpuUsage.Value:0}{gpuUsage.Unit}";
+                GPUTemp.Text = $"{gpuTemp.Value:0}{gpuTemp.Unit}";
+                GPUPower.Text = $"{gpuPower.Value:0}{gpuPower.Unit}";
+                GPUMem.Text = $"{(gpuMem.Value / 1024):0.0}GB";
+            }
+            Time.Text = $"{DateTime.Now.ToString(timeFormat)}";
+        });
     }
 
     #endregion
+
+
+    private void SystemManager_Initialized()
+    {
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (MultimediaManager.HasBrightnessSupport())
+            {
+                SliderBrightness.IsEnabled = true;
+                SliderBrightness.Value = MultimediaManager.GetBrightness();
+            }
+
+            if (MultimediaManager.HasVolumeSupport())
+            {
+                SliderVolume.IsEnabled = true;
+                SliderVolume.Value = Math.Round(MultimediaManager.GetVolume());
+                UpdateVolumeIcon((float)SliderVolume.Value, MultimediaManager.GetMute());
+            }
+        });
+    }
+
+    private void SystemManager_BrightnessNotification(int brightness)
+    {
+        // UI thread
+        using (new ScopedLock(brightnessLock))
+        {
+            // UI thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                SliderBrightness.Value = brightness;
+            });
+        }
+    }
+
+    private void SystemManager_VolumeNotification(float volume)
+    {
+        // UI thread
+        using (new ScopedLock(volumeLock))
+        {
+            // UI thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                UpdateVolumeIcon(volume);
+                SliderVolume.Value = Math.Round(volume);
+            });
+        }
+    }
+
+    private void SliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+            return;
+
+        // wait until lock is released
+        if (brightnessLock)
+            return;
+
+        MultimediaManager.SetBrightness(SliderBrightness.Value);
+    }
+
+    private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+            return;
+
+        // wait until lock is released
+        if (volumeLock)
+            return;
+
+        MultimediaManager.SetVolume(SliderVolume.Value);
+    }
+
+    private void UpdateVolumeIcon(float volume, bool mute = false)
+    {
+        string glyph = mute ? "\uE74F" :
+            volume switch
+            {
+                <= 0 => "\uE74F",// Mute icon
+                <= 33 => "\uE993",// Low volume icon
+                <= 65 => "\uE994",// Medium volume icon
+                _ => "\uE995",// High volume icon (default)
+            };
+        VolumeIcon.Glyph = glyph;
+    }
+
+    private void VolumeButton_Click(object sender, RoutedEventArgs e)
+    {
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            UpdateVolumeIcon((float)MultimediaManager.GetVolume(), MultimediaManager.ToggleMute());
+        });
+    }
+
+    private void QuickButton_Click(object sender, RoutedEventArgs e)
+    {
+        var button = (Button)sender;
+        MainWindow.overlayquickTools.NavView_Navigate(button.Name);
+    }
+
+    private void ProfileManager_Applied(Profile profile, UpdateSource source)
+    {
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            t_CurrentProfile.Text = profile.ToString();
+        });
+    }
 }

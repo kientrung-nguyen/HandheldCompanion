@@ -1,5 +1,6 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
+using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
@@ -59,7 +60,7 @@ namespace HandheldCompanion.Views.Pages
 
             foreach (ButtonFlags button in OEM)
             {
-                if (!MainWindow.CurrentDevice.OEMButtons.Contains(button))
+                if (!IDevice.GetCurrent().OEMButtons.Contains(button))
                     continue;
 
                 ButtonStack panel = new(button);
@@ -69,7 +70,7 @@ namespace HandheldCompanion.Views.Pages
             }
 
             // manage layout pages visibility
-            gridOEM.Visibility = MainWindow.CurrentDevice.OEMButtons.Count() > 0 ? Visibility.Visible : Visibility.Collapsed;
+            gridOEM.Visibility = IDevice.GetCurrent().OEMButtons.Count() > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         public override void UpdateController(IController controller)
@@ -90,8 +91,8 @@ namespace HandheldCompanion.Views.Pages
                     buttonStack.Visibility = Visibility.Visible;
 
                     // update icon
-                    FontIcon newIcon = MainWindow.CurrentDevice.GetFontIcon(button);
-                    string newLabel = MainWindow.CurrentDevice.GetButtonName(button);
+                    FontIcon newIcon = IDevice.GetCurrent().GetFontIcon(button);
+                    string newLabel = IDevice.GetCurrent().GetButtonName(button);
                     buttonStack.UpdateIcon(newIcon, newLabel);
                 }
             }
