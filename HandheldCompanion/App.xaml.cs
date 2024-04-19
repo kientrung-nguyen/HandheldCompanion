@@ -45,11 +45,12 @@ public partial class App : Application
             // force high priority
             SetPriorityClass(process.Handle, (int)PriorityClass.HIGH_PRIORITY_CLASS);
 
-            var processes = Process.GetProcessesByName(process.ProcessName);
+            Process[] processes = Process.GetProcessesByName(process.ProcessName);
             if (processes.Length > 1)
-                using (var prevProcess = processes[0])
+            {
+                using (Process prevProcess = processes[0])
                 {
-                    var handle = prevProcess.MainWindowHandle;
+                    nint handle = prevProcess.MainWindowHandle;
                     if (ProcessUtils.IsIconic(handle))
                         ProcessUtils.ShowWindow(handle, (int)ProcessUtils.ShowWindowCommands.Restored);
 
@@ -62,6 +63,7 @@ public partial class App : Application
 
                     return;
                 }
+            }
         }
 
         // define culture settings

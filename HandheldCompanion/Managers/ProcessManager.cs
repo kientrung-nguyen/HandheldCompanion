@@ -30,6 +30,23 @@ public static class ProcessManager
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(int h);
 
+    // Import the necessary user32.dll functions
+    [DllImport("user32.dll")]
+    static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax,
+        IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc,
+        uint idProcess, uint idThread, uint dwFlags);
+
+    // Declare the WinEventDelegate
+    private static WinEventDelegate winDelegate = null;
+
+    // Define the WinEventDelegate
+    delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
+        int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+
+    // Constants for WinEvent hook
+    private const uint WINEVENT_OUTOFCONTEXT = 0;
+    private const uint EVENT_SYSTEM_FOREGROUND = 3;
+
     // process vars
     private static readonly Timer ForegroundTimer;
     private static readonly Timer ProcessWatcher;
@@ -252,7 +269,14 @@ public static class ProcessManager
                 return true;
 
             // hook exited event
-            proc.EnableRaisingEvents = true;
+            try
+            {
+                proc.EnableRaisingEvents = true;
+            }
+            catch (Exception ex)
+            {
+                // access denied
+            }
             proc.Exited += ProcessHalted;
 
             // check process path
@@ -272,7 +296,6 @@ public static class ProcessManager
             {
                 // create process
                 processEx = new ProcessEx(proc, path, exec, filter);
-                // processEx.MainWindowTitle = ProcessUtils.GetWindowTitle(hWnd);
             });
 
             if (processEx is null)
@@ -280,7 +303,8 @@ public static class ProcessManager
 
             processEx.MainWindowHandle = hWnd;
             processEx.MainThread = GetMainThread(proc);
-            processEx.MainThread.Disposed += (sender, e) => processEx.MainThreadDisposed();
+            if (processEx.MainThread is not null)
+                processEx.MainThread.Disposed += (sender, e) => processEx.MainThreadDisposed();
             processEx.Platform = PlatformManager.GetPlatform(proc);
 
             Processes.TryAdd(ProcessID, processEx);
@@ -295,7 +319,7 @@ public static class ProcessManager
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
             // process has too high elevation
         }

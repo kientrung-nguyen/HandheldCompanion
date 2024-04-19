@@ -145,31 +145,6 @@ namespace HandheldCompanion.Managers
             LostFocus?.Invoke(_currentWindow);
         }
 
-        private void SettingsManager_SettingValueChanged(string name, object value)
-        {
-            // UI thread (async)
-            Application.Current.Dispatcher.BeginInvoke(() =>
-            {
-                switch (name)
-                {
-                    case "DesktopLayoutEnabled":
-                        {
-                            var value = SettingsManager.GetBoolean(name, true);
-                            switch (value)
-                            {
-                                case true:
-                                    ControllerManager.InputsUpdated -= InputsUpdated;
-                                    break;
-                                case false:
-                                    ControllerManager.InputsUpdated += InputsUpdated;
-                                    break;
-                            }
-                        }
-                        break;
-                }
-            });
-        }
-
         private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
         {
             // set rendering state
