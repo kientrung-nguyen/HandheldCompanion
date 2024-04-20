@@ -1836,7 +1836,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Joystick camera.
+        ///   Looks up a localized string similar to Joystick steering.
         /// </summary>
         public static string Enum_Input_JoystickSteering {
             get {
@@ -2655,7 +2655,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to This input will operate as a joystick optimized for controlling a first or third person camera.
+        ///   Looks up a localized string similar to Input is aligned with the player character’s orientation in the game, allowing for intuitive aiming and movement..
         /// </summary>
         public static string Enum_MotionInput_PlayerSpace_Desc {
             get {

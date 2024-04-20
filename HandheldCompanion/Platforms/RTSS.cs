@@ -4,6 +4,7 @@ using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Utils;
 using RTSSSharedMemoryNET;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;

@@ -28,7 +28,7 @@
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="70" />
+                            <ColumnDefinition Width="1*" MinWidth="70" />
                             <ColumnDefinition Width="5*" MinWidth="200" />
                         </Grid.ColumnDefinitions>
 
@@ -52,7 +52,7 @@
 
                         <Grid Grid.Column="1" Margin="12,0,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="7*" MinWidth="300" />
+                                <ColumnDefinition Width="8*" MinWidth="400" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
@@ -177,7 +177,7 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="9*" MinWidth="200" />
-                                <ColumnDefinition MinWidth="200" />
+                                <ColumnDefinition MinWidth="100" />
                             </Grid.ColumnDefinitions>
 
                             <DockPanel>
@@ -258,7 +258,7 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="9*" MinWidth="200" />
-                                <ColumnDefinition MinWidth="200" />
+                                <ColumnDefinition MinWidth="100" />
                             </Grid.ColumnDefinitions>
 
                             <DockPanel>
@@ -329,6 +329,7 @@
                     </ui:SimpleStackPanel>
                 </Border>
 
+                <!--  Auto TDP  -->
                 <Border
                     Padding="15,12,12,12"
                     Background="{DynamicResource ExpanderHeaderBackground}"
@@ -342,7 +343,7 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="9*" MinWidth="200" />
-                                <ColumnDefinition MinWidth="200" />
+                                <ColumnDefinition MinWidth="100" />
                             </Grid.ColumnDefinitions>
                             <DockPanel>
                                 <ui:FontIcon
@@ -411,6 +412,7 @@
                     </ui:SimpleStackPanel>
                 </Border>
 
+                <!--  Processor energy performance preference policy  -->
                 <Border
                     Padding="15,12,12,12"
                     Background="{DynamicResource ExpanderHeaderBackground}"
@@ -421,7 +423,7 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="9*" MinWidth="200" />
-                                <ColumnDefinition MinWidth="200" />
+                                <ColumnDefinition MinWidth="100" />
                             </Grid.ColumnDefinitions>
                             <DockPanel>
                                 <ui:FontIcon
@@ -511,7 +513,7 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="9*" MinWidth="200" />
-                                <ColumnDefinition MinWidth="200" />
+                                <ColumnDefinition MinWidth="100" />
                             </Grid.ColumnDefinitions>
 
                             <DockPanel>
@@ -563,7 +565,8 @@
                                 Text="{Binding Value, StringFormat={}{0:N0} Mhz, ElementName=CPUSlider, Mode=OneWay}" />
                             <Slider
                                 x:Name="CPUSlider"
-                                Margin="6,0,0,0"
+                                Margin="8,0,0,0"
+                                HorizontalAlignment="Stretch"
                                 VerticalAlignment="Center"
                                 AutoToolTipPrecision="0"
                                 IsMoveToPointEnabled="True"
@@ -579,6 +582,7 @@
                     </ui:SimpleStackPanel>
                 </Border>
 
+                <!--  Manual GPU Clock Control  -->
                 <Border
                     Padding="15,12,12,12"
                     Background="{DynamicResource ExpanderHeaderBackground}"
@@ -592,7 +596,7 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="9*" MinWidth="200" />
-                                <ColumnDefinition MinWidth="200" />
+                                <ColumnDefinition MinWidth="100" />
                             </Grid.ColumnDefinitions>
 
                             <DockPanel>
@@ -644,7 +648,8 @@
                                 Text="{Binding Value, StringFormat={}{0:N0} Mhz, ElementName=GPUSlider, Mode=OneWay}" />
                             <Slider
                                 x:Name="GPUSlider"
-                                Margin="6,0,0,0"
+                                Margin="8,0,0,0"
+                                HorizontalAlignment="Stretch"
                                 VerticalAlignment="Center"
                                 AutoToolTipPrecision="0"
                                 IsMoveToPointEnabled="True"
@@ -668,8 +673,8 @@
                     CornerRadius="{DynamicResource ControlCornerRadius}">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" MinWidth="200" />
                         </Grid.ColumnDefinitions>
 
                         <DockPanel>
@@ -717,8 +722,8 @@
                     CornerRadius="{DynamicResource ControlCornerRadius}">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" MinWidth="200" />
                         </Grid.ColumnDefinitions>
 
                         <DockPanel>

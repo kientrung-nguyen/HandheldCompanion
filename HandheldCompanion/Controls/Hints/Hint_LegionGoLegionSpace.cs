@@ -120,7 +120,7 @@ namespace HandheldCompanion.Controls.Hints
 
         public override void Stop()
         {
-            serviceTimer.Stop();
+            serviceTimer?.Stop();
             base.Stop();
         }
     }

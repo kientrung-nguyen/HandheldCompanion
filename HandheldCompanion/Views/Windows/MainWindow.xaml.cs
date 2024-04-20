@@ -150,10 +150,7 @@ public partial class MainWindow : GamepadWindow
             Text = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visible = false,
-            ContextMenuStrip = new CustomContextMenu()
-            {
-                DropShadowEnabled = true
-            }
+            ContextMenuStrip = new ContextMenuStrip()
         };
 
         notifyIcon.DoubleClick += (sender, e) =>
@@ -185,6 +182,8 @@ public partial class MainWindow : GamepadWindow
         // initialize HidHide
         HidHide.RegisterApplication(CurrentExe);
 
+        // collect details from MotherboardInfo
+        MotherboardInfo.Collect();
         // initialize device
         SplashScreen.LoadingSequence.Text = "Initializing device...";
         currentDevice = IDevice.GetCurrent();
@@ -259,24 +258,21 @@ public partial class MainWindow : GamepadWindow
 
         // start static managers in sequence
         SplashScreen.LoadingSequence.Text = "Initializing managers...";
-        Dispatcher.Invoke(new Action(() =>
-        {
-            GPUManager.Start();
-            PowerProfileManager.Start();
-            ProfileManager.Start();
-            ControllerManager.Start();
-            HotkeysManager.Start();
-            DeviceManager.Start();
-            OSDManager.Start();
-            LayoutManager.Start();
-            SystemManager.Start();
-            DynamicLightingManager.Start();
-            MultimediaManager.Start();
-            VirtualManager.Start();
-            InputsManager.Start();
-            SensorsManager.Start();
-            TimerManager.Start();
-        }), DispatcherPriority.Background); // Lower priority
+        GPUManager.Start();
+        PowerProfileManager.Start();
+        ProfileManager.Start();
+        ControllerManager.Start();
+        HotkeysManager.Start();
+        DeviceManager.Start();
+        OSDManager.Start();
+        LayoutManager.Start();
+        SystemManager.Start();
+        DynamicLightingManager.Start();
+        MultimediaManager.Start();
+        VirtualManager.Start();
+        InputsManager.Start();
+        SensorsManager.Start();
+        TimerManager.Start();
 
         // todo: improve overall threading logic
         new Thread(() => { PlatformManager.Start(); }).Start();
@@ -482,7 +478,20 @@ public partial class MainWindow : GamepadWindow
         _pages.Add("NotificationsPage", notificationsPage);
     }
 
-    private void loadWindows()
+    private void LoadPages_MVVM()
+    {
+        layoutPage = new LayoutPage("layout", navView);
+        layoutPage.Initialize();
+
+        performancePage = new PerformancePage();
+        aboutPage = new AboutPage();
+
+        _pages.Add("LayoutPage", layoutPage);
+        _pages.Add("PerformancePage", performancePage);
+        _pages.Add("AboutPage", aboutPage);
+    }
+
+	private void loadWindows()
     {
         // initialize overlay
         overlayModel = new OverlayModel();
@@ -586,27 +595,19 @@ public partial class MainWindow : GamepadWindow
                     // resume from sleep
                     if (prevStatus == SystemManager.SystemStatus.SystemPending)
                     {
+                        // when device resumes from sleep
                         // use device-specific delay
                         await Task.Delay(currentDevice.ResumeDelay);
 
-                        // restore inputs manager
+                        // resume manager(s)
                         InputsManager.Start();
-
-                        // start timer manager
                         TimerManager.Start();
-
-                        // resume the virtual controller last
                         VirtualManager.Resume();
-
-                        // restart IMU
                         SensorsManager.Resume(true);
+                        GPUManager.Start();
 
-                        //OSDManager.Start();
-
-                        // todo: improve overall threading logic
-                        //new Thread(() => { PlatformManager.Start(); }).Start();
-                        new Thread(() => { PerformanceManager.Start(); }).Start();
-
+                        // resume platform(s)
+                        //PlatformManager.LibreHardwareMonitor.Start();
                     }
 
                     // open device, when ready
@@ -623,26 +624,24 @@ public partial class MainWindow : GamepadWindow
                 break;
 
             case SystemManager.SystemStatus.SystemPending:
-                // sleep
                 {
-                    // stop the virtual controller
+                    // when device goes to sleep
+                    // suspend manager(s)
                     VirtualManager.Suspend();
-
-                    // stop timer manager
                     TimerManager.Stop();
-
-                    // stop sensors
                     SensorsManager.Stop();
-
-                    // pause inputs manager
                     InputsManager.Stop();
+                    GPUManager.Stop();
 
-                    //OSDManager.Stop();
-                    //PlatformManager.Stop();
-                    PerformanceManager.Stop();
+                    // suspend platform(s)
+                    //PlatformManager.LibreHardwareMonitor.Stop();
 
                     // close current device
                     currentDevice.Close();
+
+                    // Allow system to sleep
+                    SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
+                    LogManager.LogDebug("Tasks completed. System can now suspend if needed.");
                 }
                 break;
         }

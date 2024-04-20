@@ -14,8 +14,8 @@ namespace HandheldCompanion.Views.QuickPages;
 public partial class QuickHomePage : Page
 {
     /*
-    private LockObject brightnessLock = new();
-    private LockObject volumeLock = new();
+    private CrossThreadLock brightnessLock = new();
+    private CrossThreadLock volumeLock = new();
     */
 
     public QuickHomePage(string Tag) : this()

@@ -21,23 +21,18 @@ namespace HandheldCompanion.Managers;
 public static class OSPowerMode
 {
     /// <summary>
-    ///     Better Battery mode. (Efficient / Better Battery Overlay)
+    ///     Better Battery mode.
     /// </summary>
     public static Guid BetterBattery = new("961cc777-2547-4f9d-8174-7d86181b8a7a");
 
     /// <summary>
-    ///     Better Performance mode. (Better Performance / High Performance Overlay)
+    ///     Better Performance mode.
     /// </summary>
-    public static Guid BetterPerformance = new("3af9B8d9-7c97-431d-ad78-34a8bfea439f");
-    //public static Guid Balanced = new("381b4222-f694-41f0-9685-ff5bb260df2e");
+    // public static Guid BetterPerformance = new Guid("3af9B8d9-7c97-431d-ad78-34a8bfea439f");
+    public static Guid BetterPerformance = new();
 
     /// <summary>
-    ///     Balanced mode. (Balanced / Default to Balance Power Scheme)
-    /// </summary
-    public static Guid Recommended = new();
-
-    /// <summary>
-    ///     Best Performance mode. (Performance / Max Perfromance Overlay)
+    ///     Best Performance mode.
     /// </summary>
     public static Guid BestPerformance = new("ded574b5-45a0-4f42-8737-46345c09c238");
 }
@@ -56,15 +51,8 @@ public static class PerformanceManager
     private const short INTERVAL_DEFAULT = 3000; // default interval between value scans
     private const short INTERVAL_AUTO = 1010; // default interval between value scans
     private const short INTERVAL_DEGRADED = 5000; // degraded interval between value scans
-    public static int MaxDegreeOfParallelism = 4;
 
-
-    public static readonly Guid[] PowerModes = [
-        OSPowerMode.BetterBattery,      // Best Power Efficiency
-        OSPowerMode.Recommended,        // Recommended
-        OSPowerMode.BetterPerformance,  // Better Performance
-        OSPowerMode.BestPerformance     // Best Performance
-    ];
+    public static readonly Guid[] PowerModes = new Guid[3] { OSPowerMode.BetterBattery, OSPowerMode.BetterPerformance, OSPowerMode.BestPerformance };
 
     private static readonly Timer autoWatchdog;
     private static readonly Timer cpuWatchdog;
@@ -114,7 +102,7 @@ public static class PerformanceManager
     private static readonly double[] gpuHistory = new double[6];
     private static bool gfxWatchdogPendingStop;
 
-    private static Processor processor;
+    private static Processor processor = new();
     private static double processValueFPSPrevious;
     private static double storedGfxClock;
 
@@ -153,7 +141,6 @@ public static class PerformanceManager
         HotkeysManager.CommandExecuted += HotkeysManager_CommandExecuted;
 
         currentCoreCount = MotherboardInfo.NumberOfCores;
-        MaxDegreeOfParallelism = Convert.ToInt32(Environment.ProcessorCount / 2);
     }
 
     private static void HWiNFO_GPUFrequencyChanged(double value)
@@ -880,7 +867,7 @@ public static class PerformanceManager
             gfxLock = true;
 
             var GPUdone = false;
-            var CurrentGfxClock = GPUManager.GetCurrent().GetClock();
+            float currentGfxClock = GPUManager.GetCurrent().GetClock();
 
             if (currentGfxClock != 0)
                 gfxWatchdog.Interval = INTERVAL_DEFAULT;
@@ -903,7 +890,7 @@ public static class PerformanceManager
                     GPUdone = true;
                 else
                     processor.SetGPUClock(storedGfxClock, true);
-                    //RequestGPUClock(storedGfxClock, true);
+                //RequestGPUClock(storedGfxClock, true);
             }
             else
             {
@@ -1189,18 +1176,15 @@ public static class PerformanceManager
         // initialize processor
         processor = Processor.GetCurrent();
 
-        if (processor.IsInitialized)
+        if (processor is not null && processor.IsInitialized)
         {
             processor.StatusChanged += Processor_StatusChanged;
             processor.Initialize();
         }
-
-        // deprecated
-        /*
-        processor.ValueChanged += Processor_ValueChanged;
-        processor.LimitChanged += Processor_LimitChanged;
-        processor.MiscChanged += Processor_MiscChanged;
-        */
+        else
+        {
+            ProcessorStatusChanged?.Invoke(false, false);
+        }
 
         IsInitialized = true;
         Initialized?.Invoke();

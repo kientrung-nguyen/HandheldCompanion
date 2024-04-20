@@ -70,7 +70,7 @@ public abstract class IDevice
     public delegate void PowerStatusChangedEventHandler(IDevice device);
 
     protected static OpenLibSys openLibSys;
-    protected LockObject updateLock = new();
+    protected object updateLock = new();
 
     private static IDevice device;
 
@@ -865,11 +865,6 @@ public abstract class IDevice
         }
 
         return false;
-    }
-
-    protected void PowerStatusChange(IDevice device)
-    {
-        PowerStatusChanged?.Invoke(device);
     }
 
     public static IEnumerable<HidDevice> GetHidDevices(int vendorId, int deviceId, int minFeatures = 1)

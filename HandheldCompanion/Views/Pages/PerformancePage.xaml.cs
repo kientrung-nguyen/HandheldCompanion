@@ -380,7 +380,7 @@ namespace HandheldCompanion.Views.Pages
             PowerProfileSettingsDialog.ShowAsync();
         }
 
-        public void SelectionChanged(Guid guid)
+        public void SelectionChanged(PowerProfile powerProfile)
         {
             var idx = -1;
             foreach (var item in ProfilesPicker.Items)
@@ -395,7 +395,7 @@ namespace HandheldCompanion.Views.Pages
 
                 PowerProfile pr = (PowerProfile)parent.Content;
 
-                bool isCurrent = pr.Guid == guid;
+                bool isCurrent = pr.Guid == powerProfile.Guid;
                 if (isCurrent)
                 {
                     idx = ProfilesPicker.Items.IndexOf(parent);

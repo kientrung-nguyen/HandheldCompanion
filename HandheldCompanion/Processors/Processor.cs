@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Managers;
 using System;
-using System.Collections.Generic;
 using System.Timers;
 
 namespace HandheldCompanion.Processors;
@@ -23,17 +22,8 @@ public class Processor
     protected readonly Timer updateTimer = new() { Interval = 3000, AutoReset = true };
 
     public bool CanChangeTDP, CanChangeGPU;
-    protected object IsBusy = new();
+    protected object updateLock = new();
     public bool IsInitialized;
-
-    protected Dictionary<PowerType, int> m_Limits = new();
-
-    protected Dictionary<string, float> m_Misc = new();
-    protected Dictionary<PowerType, int> m_PrevLimits = new();
-    protected Dictionary<string, float> m_PrevMisc = new();
-    protected Dictionary<PowerType, float> m_PrevValues = new();
-
-    protected Dictionary<PowerType, float> m_Values = new();
 
     protected static string Name, ProcessorID;
 
@@ -55,8 +45,6 @@ public class Processor
             "AuthenticAMD" => new AMDProcessor(),
             _ => throw new NotImplementedException()
         };
-        // write default miscs
-        processor.m_Misc["gfx_clk"] = processor.m_PrevMisc["gfx_clk"] = 0;
 
         return processor;
     }
@@ -65,21 +53,10 @@ public class Processor
     {
         StatusChanged?.Invoke(CanChangeTDP, CanChangeGPU);
         Initialized?.Invoke(this);
-
-        // deprecated, we're using HWiNFO to provide values and limits
-        /*
-        if (CanChangeTDP)
-            updateTimer.Start();
-        */
     }
 
     public virtual void Stop()
     {
-        // deprecated, we're using HWiNFO to provide values and limits
-        /*
-        if (CanChangeTDP)
-            updateTimer.Stop();
-        */
     }
 
     public virtual void SetTDPLimit(PowerType type, double limit, bool immediate = false, int result = 0)
@@ -111,55 +88,7 @@ public class Processor
         LogManager.LogDebug("User requested power saving: {0}", result);
     }
 
-    protected virtual void UpdateTimer_Elapsed(object sender, ElapsedEventArgs e)
-    {
-        // search for limit changes
-        foreach (var pair in m_Limits)
-        {
-            if (m_PrevLimits[pair.Key] == pair.Value)
-                continue;
-
-            LimitChanged?.Invoke(pair.Key, pair.Value);
-
-            m_PrevLimits[pair.Key] = pair.Value;
-        }
-
-        // search for value changes
-        foreach (var pair in m_Values)
-        {
-            if (m_PrevValues[pair.Key] == pair.Value)
-                continue;
-
-            ValueChanged?.Invoke(pair.Key, pair.Value);
-
-            m_PrevValues[pair.Key] = pair.Value;
-        }
-
-        // search for misc changes
-        foreach (var pair in m_Misc)
-        {
-            if (m_PrevMisc[pair.Key] == pair.Value)
-                continue;
-
-            MiscChanged?.Invoke(pair.Key, pair.Value);
-
-            m_PrevMisc[pair.Key] = pair.Value;
-        }
-    }
-
     #region events
-
-    public event LimitChangedHandler LimitChanged;
-
-    public delegate void LimitChangedHandler(PowerType type, int limit);
-
-    public event ValueChangedHandler ValueChanged;
-
-    public delegate void ValueChangedHandler(PowerType type, float value);
-
-    public event GfxChangedHandler MiscChanged;
-
-    public delegate void GfxChangedHandler(string misc, float value);
 
     public event StatusChangedHandler StatusChanged;
 

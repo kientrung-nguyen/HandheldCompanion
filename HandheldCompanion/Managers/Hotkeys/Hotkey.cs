@@ -329,7 +329,7 @@ public class Hotkey
                             }
                             break;
                     }
-                            
+
                     // display only one label, default one is not enough
                     if (fontIcon.Glyph != IController.defaultGlyph)
                     {

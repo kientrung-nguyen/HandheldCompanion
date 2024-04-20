@@ -103,8 +103,8 @@ public static class MultimediaManager
                     ScreenRotation.Rotations oldOrientation = screenOrientation.rotation;
                     screenOrientation = new ScreenRotation(screenOrientation.rotationUnnormalized, nativeOrientation);
 
+                    // Though the real orientation didn't change, raise event because the interpretation of it changed
                     if (oldOrientation != screenOrientation.rotation)
-                        // Though the real orientation didn't change, raise event because the interpretation of it changed
                         DisplayOrientationChanged?.Invoke(screenOrientation);
                 }
                 break;
@@ -188,6 +188,7 @@ public static class MultimediaManager
 
     private static void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
     {
+        // get primary screen
         Screen PrimaryScreen = Screen.PrimaryScreen;
 
         if (desktopScreen is null || desktopScreen.PrimaryScreen.DeviceName != PrimaryScreen.DeviceName)

@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Processors;
-using HandheldCompanion.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -9,6 +8,20 @@ using System.Linq;
 using System.Windows.Media;
 
 namespace HandheldCompanion.Managers;
+
+public static class Settings
+{
+    public static readonly string ConfigurableTDPOverrideDown = "ConfigurableTDPOverrideDown";
+    public static readonly string ConfigurableTDPOverrideUp = "ConfigurableTDPOverrideUp";
+    public static readonly string OnScreenDisplayLevel = "OnScreenDisplayLevel";
+    public static readonly string OnScreenDisplayTimeLevel = "OnScreenDisplayTimeLevel";
+    public static readonly string OnScreenDisplayFPSLevel = "OnScreenDisplayFPSLevel";
+    public static readonly string OnScreenDisplayCPULevel = "OnScreenDisplayCPULevel";
+    public static readonly string OnScreenDisplayGPULevel = "OnScreenDisplayGPULevel";
+    public static readonly string OnScreenDisplayRAMLevel = "OnScreenDisplayRAMLevel";
+    public static readonly string OnScreenDisplayVRAMLevel = "OnScreenDisplayVRAMLevel";
+    public static readonly string OnScreenDisplayBATTLevel = "OnScreenDisplayBATTLevel";
+}
 
 public static class SettingsManager
 {

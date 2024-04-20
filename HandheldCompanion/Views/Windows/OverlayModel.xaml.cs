@@ -214,13 +214,14 @@ public partial class OverlayModel : OverlayWindow
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            // update model
+            // Define transformation group for model
             var Transform3DGroupModel = new Transform3DGroup();
 
             // Device transformation based on pose
             var Ax3DDevicePose = new QuaternionRotation3D(DevicePose);
             DeviceRotateTransform = new RotateTransform3D(Ax3DDevicePose);
             Transform3DGroupModel.Children.Add(DeviceRotateTransform);
+
             // User requested resting pitch of device around X axis
             var Ax3DRestingPitch = new AxisAngleRotation3D(new Vector3D(1, 0, 0), DesiredAngleDeg.X);
             RotateTransform3D DeviceRotateTransform3DRestingPitch = new RotateTransform3D(Ax3DRestingPitch);

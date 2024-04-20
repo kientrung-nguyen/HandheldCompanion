@@ -147,7 +147,16 @@ public partial class OverlayQuickTools : GamepadWindow
         _pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickSuspenderPage", suspenderPage);
     }
+	
+	public void LoadPages_MVVM()
+    {
+        overlayPage = new QuickOverlayPage();
+        performancePage = new QuickPerformancePage();
 
+        _pages.Add("QuickOverlayPage", overlayPage);
+        _pages.Add("QuickPerformancePage", performancePage);
+    }
+	
     public static OverlayQuickTools GetCurrent()
     {
         return currentWindow;

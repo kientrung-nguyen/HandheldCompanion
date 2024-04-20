@@ -206,8 +206,8 @@ public class HWiNFO : IPlatform
                 MonitoredSensors[SensorElementType.BatteryRemainingTime] = new();
                 MonitoredSensors[SensorElementType.BatteryChargeRate] = new();
 
-                CPUFanSpeed = IDevice.GetCurrent().ReadFanSpeed();
-                CPUFanDuty = IDevice.GetCurrent().ReadFanDuty();
+                CPUFanSpeed =  IDevice.GetCurrent().ReadFanSpeed();
+                CPUFanDuty =  IDevice.GetCurrent().ReadFanDuty();
 
                 foreach (var sensor in sensors)
                 {

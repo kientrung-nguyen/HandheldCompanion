@@ -522,7 +522,7 @@ namespace HandheldCompanion.Views.Pages
             if (!IsLoaded)
                 return;
 
-            SapientiaUsb.SetStickCustomDeadzone(LegionGo.LeftJoyconIndex, (int) value - 1);
+            SapientiaUsb.SetStickCustomDeadzone(LegionGo.LeftJoyconIndex, (int)value - 1);
         }
 
         private void SliderLeftAutoSleepTime_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

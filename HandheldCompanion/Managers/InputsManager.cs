@@ -220,7 +220,7 @@ public static class InputsManager
             }
 
             // get the associated keys
-            foreach (var chord in IDevice.GetCurrent().OEMChords.Where(a => currentChord.State.Contains(a.state)))
+            foreach (DeviceChord? chord in IDevice.GetCurrent().OEMChords.Where(a => currentChord.State.Contains(a.state)))
             {
                 // it could be the currentChord isn't mapped but a InputsChordType.Long is
                 currentChord.InputsType = InputsChordType.Long;

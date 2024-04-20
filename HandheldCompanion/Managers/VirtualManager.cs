@@ -6,7 +6,9 @@ using HandheldCompanion.Views;
 using Nefarius.ViGEm.Client;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using static HandheldCompanion.Managers.ControllerManager;
 
 namespace HandheldCompanion.Managers
 {
@@ -26,7 +28,7 @@ namespace HandheldCompanion.Managers
         public static ushort ProductId = 0x28E; // Xbox 360
         public static ushort VendorId = 0x45E;  // Microsoft
         public static ushort FakeVendorId = 0x76B;  // HC
-        private static CrossThreadLock threadLock = new CrossThreadLock();
+        private static object threadLock = new();
 
         public static bool IsInitialized;
 
@@ -144,11 +146,14 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        private static void ProfileManager_Applied(Profile profile, UpdateSource source)
+        private static async void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
             // SetControllerMode takes care of ignoring identical mode switching
             if (HIDmode == profile.HID || profile.HID == HIDmode.NotSelected)
                 return;
+
+            while (ControllerManager.managerStatus == ControllerManagerStatus.Busy)
+                await Task.Delay(1000);
 
             switch (profile.HID)
             {
@@ -161,8 +166,11 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        private static void ProfileManager_Discarded(Profile profile)
+        private static async void ProfileManager_Discarded(Profile profile)
         {
+            while (ControllerManager.managerStatus == ControllerManagerStatus.Busy)
+                await Task.Delay(1000);
+
             // restore default HID mode
             if (profile.HID != HIDmode.NotSelected)
                 SetControllerMode(defaultHIDmode);
@@ -178,76 +186,67 @@ namespace HandheldCompanion.Managers
 
         public static void SetControllerMode(HIDmode mode)
         {
-            if (!threadLock.TryEnter(3000))
-                return;
-
-            // do not disconnect if similar to previous mode and connected
-            if (HIDmode == mode)
+            lock (threadLock)
             {
-                if (HIDstatus == HIDstatus.Disconnected)
+                // do not disconnect if similar to previous mode and connected
+                if (HIDmode == mode)
                 {
-                    threadLock.Exit();
+                    if (HIDstatus == HIDstatus.Disconnected)
+                        return;
+                    else if (vTarget is not null && vTarget.IsConnected)
+                        return;
+                }
+
+                // disconnect current virtual controller
+                if (vTarget is not null)
+                {
+                    vTarget.Disconnect();
+                    vTarget.Dispose();
+                    vTarget = null;
+                }
+
+                switch (mode)
+                {
+                    default:
+                    case HIDmode.NoController:
+                        if (vTarget is not null)
+                        {
+                            vTarget.Disconnect();
+                            vTarget.Dispose();
+                            vTarget = null;
+                        }
+                        break;
+
+                    case HIDmode.DualShock4Controller:
+                        vTarget = new DualShock4Target();
+                        break;
+
+                    case HIDmode.Xbox360Controller:
+                        // Generate a new random ProductId to help the controller pick empty slot rather than getting its previous one
+                        VendorId = (ushort)new Random().Next(ushort.MinValue, ushort.MaxValue);
+                        ProductId = (ushort)new Random().Next(ushort.MinValue, ushort.MaxValue);
+                        vTarget = new Xbox360Target(VendorId, ProductId);
+                        break;
+                }
+
+                ControllerSelected?.Invoke(mode);
+
+                // failed to initialize controller
+                if (vTarget is null)
+                {
+                    if (mode != HIDmode.NoController)
+                        LogManager.LogError("Failed to initialise virtual controller with HIDmode: {0}", mode);
+
                     return;
                 }
-                else if (vTarget is not null && vTarget.IsConnected)
-                {
-                    threadLock.Exit();
-                    return;
-                }
+
+                vTarget.Connected += OnTargetConnected;
+                vTarget.Disconnected += OnTargetDisconnected;
+                vTarget.Vibrated += OnTargetVibrated;
+
+                // update current HIDmode
+                HIDmode = mode;
             }
-
-            // disconnect current virtual controller
-            if (vTarget is not null)
-            {
-                vTarget.Disconnect();
-                vTarget.Dispose();
-                vTarget = null;
-            }
-
-            switch (mode)
-            {
-                default:
-                case HIDmode.NoController:
-                    if (vTarget is not null)
-                    {
-                        vTarget.Disconnect();
-                        vTarget.Dispose();
-                        vTarget = null;
-                    }
-                    break;
-
-                case HIDmode.DualShock4Controller:
-                    vTarget = new DualShock4Target();
-                    break;
-
-                case HIDmode.Xbox360Controller:
-                    // Generate a new random ProductId to help the controller pick empty slot rather than getting its previous one
-                    VendorId = (ushort)new Random().Next(ushort.MinValue, ushort.MaxValue);
-                    ProductId = (ushort)new Random().Next(ushort.MinValue, ushort.MaxValue);
-                    vTarget = new Xbox360Target(VendorId, ProductId);
-                    break;
-            }
-
-            ControllerSelected?.Invoke(mode);
-
-            // failed to initialize controller
-            if (vTarget is null)
-            {
-                if (mode != HIDmode.NoController)
-                    LogManager.LogError("Failed to initialise virtual controller with HIDmode: {0}", mode);
-
-                threadLock.Exit();
-                return;
-            }
-
-            vTarget.Connected += OnTargetConnected;
-            vTarget.Disconnected += OnTargetDisconnected;
-            vTarget.Vibrated += OnTargetVibrated;
-
-            // update current HIDmode
-            HIDmode = mode;
-
-            threadLock.Exit();
 
             // update status
             SetControllerStatus(HIDstatus);
@@ -255,30 +254,25 @@ namespace HandheldCompanion.Managers
 
         public static void SetControllerStatus(HIDstatus status)
         {
-            if (!threadLock.TryEnter(3000))
-                return;
-
-            if (vTarget is null)
+            lock (threadLock)
             {
-                threadLock.Exit();
-                return;
+                if (vTarget is null)
+                    return;
+
+                switch (status)
+                {
+                    default:
+                    case HIDstatus.Connected:
+                        vTarget.Connect();
+                        break;
+                    case HIDstatus.Disconnected:
+                        vTarget.Disconnect();
+                        break;
+                }
+
+                // update current HIDstatus
+                HIDstatus = status;
             }
-
-            switch (status)
-            {
-                default:
-                case HIDstatus.Connected:
-                    vTarget.Connect();
-                    break;
-                case HIDstatus.Disconnected:
-                    vTarget.Disconnect();
-                    break;
-            }
-
-            // update current HIDstatus
-            HIDstatus = status;
-
-            threadLock.Exit();
         }
 
         private static void OnTargetConnected(ViGEmTarget target)

@@ -2,14 +2,20 @@
 using HandheldCompanion.Controls;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Properties;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using iNKORE.UI.WPF.Modern.Controls;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 using static HandheldCompanion.Utils.XInputPlusUtils;
 
 namespace HandheldCompanion.Managers;
@@ -17,8 +23,9 @@ namespace HandheldCompanion.Managers;
 public static class ProfileManager
 {
     private const string DefaultName = "Default";
-    private static readonly Dictionary<string, Profile> profiles = new(StringComparer.InvariantCultureIgnoreCase);
-    private static List<Profile> subProfiles = [];
+
+    public static ConcurrentDictionary<string, Profile> profiles = new(StringComparer.InvariantCultureIgnoreCase);
+    public static List<Profile> subProfiles = new();
     private static Profile currentProfile;
 
     private static readonly string profilesPath;
@@ -54,12 +61,13 @@ public static class ProfileManager
             Filter = "*.json",
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.Size
         };
+        profileWatcher.Created += ProfileCreated;
         profileWatcher.Deleted += ProfileDeleted;
 
         // process existing profiles
         var fileEntries = Directory.GetFiles(profilesPath, "*.json", SearchOption.AllDirectories);
         foreach (var fileName in fileEntries)
-            ProcessProfile(fileName);
+            ProcessProfile(fileName, false);
 
         // check for default profile
         if (!HasDefault())
@@ -208,7 +216,7 @@ public static class ProfileManager
             return;
 
         // get index of currently applied profile
-        int currentIndex = subProfilesList.IndexOf(currentProfile);        
+        int currentIndex = subProfilesList.IndexOf(currentProfile);
         int newIndex = currentIndex;
 
         // previous? decrement, next? increment
@@ -377,8 +385,25 @@ public static class ProfileManager
         }
     }
 
+    private static void ProfileCreated(object sender, FileSystemEventArgs e)
+    {
+        if (pendingCreation.Contains(e.FullPath))
+        {
+            pendingCreation.Remove(e.FullPath);
+            return;
+        }
+
+        ProcessProfile(e.FullPath, true);
+    }
+
     private static void ProfileDeleted(object sender, FileSystemEventArgs e)
     {
+        if (pendingDeletion.Contains(e.FullPath))
+        {
+            pendingDeletion.Remove(e.FullPath);
+            return;
+        }
+
         // not ideal
         var ProfileName = e.Name.Replace(".json", "");
         var profile = profiles.Values.FirstOrDefault(p => p.Name.Equals(ProfileName, StringComparison.InvariantCultureIgnoreCase));
@@ -417,7 +442,7 @@ public static class ProfileManager
         return GetDefault();
     }
 
-    private static void ProcessProfile(string fileName)
+    private static void ProcessProfile(string fileName, bool imported = false)
     {
         Profile profile = null;
         try
@@ -467,6 +492,72 @@ public static class ProfileManager
             return;
         }
 
+        if (imported)
+        {
+            bool skipImported = true;
+            ManualResetEventSlim waitHandle = new ManualResetEventSlim(false);
+
+            // UI thread
+            Application.Current.Dispatcher.Invoke(async () =>
+            {
+                // todo: localize me
+                Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+                {
+                    Title = $"Importing profile for {profile.Name}",
+                    Content = $"Would you like to import this profile to your database ?",
+                    PrimaryButtonText = Resources.ProfilesPage_OK,
+                    CloseButtonText = Resources.ProfilesPage_Cancel
+                }.ShowAsync();
+
+                ContentDialogResult result = await dialogTask; // await the task
+
+                switch (result)
+                {
+                    case ContentDialogResult.Primary:
+                        skipImported = false;
+                        break;
+                    default:
+                        skipImported = true;
+                        break;
+                }
+
+                // Signal the waiting thread that the dialog has been closed
+                waitHandle.Set();
+            });
+
+            // Wait until the dialog has been closed
+            waitHandle.Wait();
+
+            // delete file and exit if user decided to skip this profile
+            if (skipImported)
+            {
+                File.Delete(fileName);
+                return;
+            }
+        }
+
+        // if a profile for this path exists, make this one a subprofile
+        bool alreadyExist = Contains(profile.Path);
+        if (alreadyExist)
+        {
+            // give the profile a new guid
+            profile.Guid = Guid.NewGuid();
+
+            // set as sub-profile
+            profile.IsSubProfile = true;
+            profile.IsFavoriteSubProfile = false;
+
+            // delete current file, profile manager will take care of creating a proper subprofile
+            File.Delete(fileName);
+        }
+        else
+        {
+            // if imported profile targeted file doesn't exist, use executable as path
+            bool pathExist = File.Exists(profile.Path);
+            if (!pathExist)
+                profile.Path = profile.Executable;
+        }
+
         UpdateOrCreateProfile(profile, UpdateSource.Serializer);
 
         // default specific
@@ -474,17 +565,20 @@ public static class ProfileManager
             ApplyProfile(profile, UpdateSource.Serializer);
     }
 
+    private static List<string> pendingCreation = new();
+    private static List<string> pendingDeletion = new();
+
     public static void DeleteProfile(Profile profile)
     {
-        var profilePath = Path.Combine(profilesPath, profile.GetFileName());
+        string profilePath = Path.Combine(profilesPath, profile.GetFileName());
+        pendingDeletion.Add(profilePath);
 
         if (profiles.ContainsKey(profile.Path))
         {
             // delete associated subprofiles
             foreach (Profile subprofile in GetSubProfilesFromPath(profile.Path, false))
-            {
                 DeleteSubProfile(subprofile);
-            }
+
             LogManager.LogInformation("Deleted subprofiles for profile {0}", profile);
 
             // Unregister application from HidHide
@@ -493,10 +587,10 @@ public static class ProfileManager
             // Remove XInputPlus (extended compatibility)
             XInputPlus.UnregisterApplication(profile);
 
-            profiles.Remove(profile.Path);
+            _ = profiles.TryRemove(profile.Path, out Profile removedValue);
 
             // warn owner
-            var isCurrent = false;
+            bool isCurrent = false;
 
             if (currentProfile != null)
                 isCurrent = profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
@@ -523,7 +617,8 @@ public static class ProfileManager
 
     public static void DeleteSubProfile(Profile subProfile)
     {
-        var profilePath = Path.Combine(profilesPath, subProfile.GetFileName());
+        string profilePath = Path.Combine(profilesPath, subProfile.GetFileName());
+        pendingDeletion.Add(profilePath);
 
         if (subProfiles.Contains(subProfile))
         {
@@ -531,7 +626,10 @@ public static class ProfileManager
             subProfiles.Remove(subProfile);
 
             // warn owner
-            var isCurrent = subProfile.Guid == currentProfile.Guid;
+            bool isCurrent = false;
+
+            if (currentProfile != null)
+                isCurrent = subProfile.Guid == currentProfile.Guid;
 
             // raise event
             Discarded?.Invoke(subProfile);
@@ -559,6 +657,10 @@ public static class ProfileManager
 
     public static void SerializeProfile(Profile profile)
     {
+        // prepare for writing
+        string profilePath = Path.Combine(profilesPath, profile.GetFileName());
+        pendingCreation.Add(profilePath);
+
         // update profile version to current build
         profile.Version = new Version(MainWindow.fileVersionInfo.FileVersion);
 
@@ -566,9 +668,6 @@ public static class ProfileManager
         {
             TypeNameHandling = TypeNameHandling.All
         });
-
-        // prepare for writing
-        var profilePath = Path.Combine(profilesPath, profile.GetFileName());
 
         try
         {
@@ -605,7 +704,7 @@ public static class ProfileManager
 
         // looks like profile power profile was deleted, restore balanced
         if (!PowerProfileManager.Contains(profile.PowerProfile))
-            profile.PowerProfile = OSPowerMode.Recommended;
+            profile.PowerProfile = OSPowerMode.BetterPerformance;
     }
 
     public static void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)

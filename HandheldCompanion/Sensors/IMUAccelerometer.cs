@@ -1,7 +1,6 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views;
 using System;
 using System.Numerics;
 using Windows.Devices.Sensors;
