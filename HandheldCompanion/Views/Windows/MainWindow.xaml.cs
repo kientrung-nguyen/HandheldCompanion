@@ -314,7 +314,7 @@ public partial class MainWindow : GamepadWindow
     private void ControllerManager_ControllerSelected(IController Controller)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             GamepadUISelectIcon.Glyph = Controller.GetGlyph(ButtonFlags.B1);
             GamepadUISelectIcon.Foreground = Controller.GetGlyphColor(ButtonFlags.B1);
@@ -330,7 +330,7 @@ public partial class MainWindow : GamepadWindow
     private void GamepadFocusManagerOnFocused(Control control)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             // todo : localize me
             string controlType = control.GetType().Name;
@@ -491,7 +491,7 @@ public partial class MainWindow : GamepadWindow
         _pages.Add("AboutPage", aboutPage);
     }
 
-	private void loadWindows()
+    private void loadWindows()
     {
         // initialize overlay
         overlayModel = new OverlayModel();
@@ -504,7 +504,7 @@ public partial class MainWindow : GamepadWindow
         // todo: improve me
         currentDevice.PullSensors();
 
-        aboutPage.UpdateDevice(device);
+        //aboutPage.UpdateDevice(device);
         //settingsPage.UpdateDevice(device);
     }
 
@@ -576,7 +576,7 @@ public partial class MainWindow : GamepadWindow
         bool hasNotification = Convert.ToBoolean(status);
 
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             HasNotifications.Visibility = hasNotification ? Visibility.Visible : Visibility.Collapsed;
         });

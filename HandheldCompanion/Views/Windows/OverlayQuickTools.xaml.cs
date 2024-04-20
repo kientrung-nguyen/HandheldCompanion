@@ -209,7 +209,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private void UpdateLocation(int QuickToolsLocation)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (QuickToolsLocation)
             {
@@ -240,7 +240,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private void PowerManager_PowerStatusChanged(PowerStatus status)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             var BatteryLifePercent = (int)Math.Truncate(status.BatteryLifePercent * 100.0f);
             BatteryIndicatorPercentage.Text = $"{BatteryLifePercent}%";

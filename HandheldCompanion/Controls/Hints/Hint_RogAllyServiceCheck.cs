@@ -76,7 +76,7 @@ namespace HandheldCompanion.Controls.Hints
             }
 
             // UI thread (async)
-            Application.Current.Dispatcher.BeginInvoke(() =>
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 this.Visibility = anyRunning ? Visibility.Visible : Visibility.Collapsed;
             });

@@ -30,7 +30,7 @@ namespace HandheldCompanion.Controls.Hints
         private void HWiNFO_SettingValueChanged(string name, object value)
         {
             // UI thread (async)
-            Application.Current.Dispatcher.BeginInvoke(() =>
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 switch(name)
                 {
