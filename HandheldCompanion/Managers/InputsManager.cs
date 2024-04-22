@@ -4,7 +4,6 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Simulators;
-using HandheldCompanion.Views;
 using PrecisionTiming;
 using System;
 using System.Collections.Generic;

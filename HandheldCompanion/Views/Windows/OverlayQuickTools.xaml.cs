@@ -20,11 +20,10 @@ using System.Windows.Threading;
 using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 using Application = System.Windows.Application;
+using Button = System.Windows.Controls.Button;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Page = System.Windows.Controls.Page;
-using Button = System.Windows.Controls.Button;
 using PowerLineStatus = System.Windows.Forms.PowerLineStatus;
 using Screen = WpfScreenHelper.Screen;
 using SystemManager = HandheldCompanion.Managers.SystemManager;
@@ -194,12 +193,12 @@ public partial class OverlayQuickTools : GamepadWindow
         UpdateLocation(QuickToolsLocation);
     }
 
-    private void UpdateLocation(int QuickToolsLocation)
+    private void UpdateLocation(int quickToolsLocation)
     {
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
-            switch (QuickToolsLocation)
+            switch (quickToolsLocation)
             {
                 // top, left
                 // bottom, left
@@ -219,8 +218,8 @@ public partial class OverlayQuickTools : GamepadWindow
                     break;
             }
 
-            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (2.0d * Margin.Top));
-            Width = MinWidth = MaxWidth = (int)(Screen.PrimaryScreen.WpfBounds.Width / 2.5);
+            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (6.0d * Margin.Top));
+            //Width = MinWidth = MaxWidth = (int)(Screen.PrimaryScreen.WpfBounds.Width / 2.5);
             Top = Margin.Top;
         });
     }
@@ -300,8 +299,7 @@ public partial class OverlayQuickTools : GamepadWindow
     {
         // load gamepad navigation maanger
         gamepadFocusManager = new(this, ContentFrame);
-        hwndSource = PresentationSource.FromVisual(this) as HwndSource;
-        if (hwndSource != null)
+        if (PresentationSource.FromVisual(this) is HwndSource hwndSource)
         {
             hwndSource.AddHook(WndProc);
             hwndSource.CompositionTarget.RenderMode = RenderMode.SoftwareOnly;
@@ -553,7 +551,7 @@ public partial class OverlayQuickTools : GamepadWindow
         var timeFormat = CultureInfo.InstalledUICulture.DateTimeFormat.ShortTimePattern;
         PlatformManager.HWiNFO.ReaffirmRunningProcess();
         Time.Text = string.Empty;
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUUsage, out var cpuUsage) &&
                 PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUTemperature, out var cpuTemp) &&
@@ -642,7 +640,7 @@ public partial class OverlayQuickTools : GamepadWindow
                 // UI thread
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    UpdateVolumeIcon(volume);
+                    UpdateVolumeIcon(volume, MultimediaManager.GetMute());
                     SliderVolume.Value = Math.Round(volume);
                 });
             }
@@ -679,7 +677,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private void UpdateVolumeIcon(float volume, bool mute = false)
     {
-        string glyph = mute ? "\uE74F" :
+        VolumeIcon.Glyph = mute ? "\uE74F" :
             volume switch
             {
                 <= 0 => "\uE74F",// Mute icon
@@ -687,15 +685,27 @@ public partial class OverlayQuickTools : GamepadWindow
                 <= 65 => "\uE994",// Medium volume icon
                 _ => "\uE995",// High volume icon (default)
             };
-        VolumeIcon.Glyph = glyph;
     }
 
     private void VolumeButton_Click(object sender, RoutedEventArgs e)
     {
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        if (volumeLock.TryEnter())
         {
-            UpdateVolumeIcon((float)MultimediaManager.GetVolume(), MultimediaManager.ToggleMute());
-        });
+            try
+            {
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var isMute = MultimediaManager.ToggleMute();
+                    UpdateVolumeIcon(float.NaN, isMute);
+                });
+            }
+            finally
+            {
+                volumeLock.Exit();
+            }
+        }
+
     }
 
     private void QuickButton_Click(object sender, RoutedEventArgs e)

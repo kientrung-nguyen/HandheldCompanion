@@ -994,7 +994,7 @@ public static class PerformanceManager
             {
                 processor.SetTDPLimit((PowerType)idx, values[idx], immediate);
                 currentTDP[idx] = values[idx];
-                await Task.Delay(12);
+            	await Task.Delay(20);
             }
         }
     }

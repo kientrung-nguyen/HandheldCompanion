@@ -276,7 +276,7 @@ public abstract class IPlatform : IDisposable
             // set lock
             IsStarting = true;
 
-            Process? process = null;
+            Process process = null;
             while (process is null && Tentative < MaxTentative)
             {
                 // increase tentative counter
@@ -295,10 +295,7 @@ public abstract class IPlatform : IDisposable
                     CreateNoWindow = true
                 });
 
-                if (process is not null)
-                    LogManager.LogDebug($"Process {process.ProcessName} starting {process.HasExited}");
-
-                Thread.Sleep(2000);
+                Thread.Sleep(500);
             }
 
             if (process is not null && !process.HasExited)

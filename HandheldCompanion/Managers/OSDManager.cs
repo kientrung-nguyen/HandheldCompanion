@@ -58,7 +58,7 @@ public static class OSDManager
     private static readonly PrecisionTimer RefreshTimer;
     private static int RefreshInterval = 100;
 
-    private static ConcurrentDictionary<int, OSD> OnScreenDisplay = new();
+    private static readonly ConcurrentDictionary<int, OSD> OnScreenDisplay = new();
     private static uint OnScreenAppEntryOSDFrameId;
     private static AppEntry OnScreenAppEntry;
     private static List<string> Content;
@@ -100,7 +100,7 @@ public static class OSDManager
     {
         try
         {
-            LogManager.LogDebug($"{nameof(OSDManager)} RTSS hooked {appEntry.Name} ({appEntry.ProcessId})");
+            // update foreground id
             OnScreenAppEntryOSDFrameId = appEntry.OSDFrameId;
             OnScreenAppEntry = appEntry;
 
@@ -118,10 +118,7 @@ public static class OSDManager
         IsInitialized = true;
         Initialized?.Invoke();
 
-        OnScreenDisplay = new();
         OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(SettingsManager.GetInt("OnScreenDisplayLevel")));
-
-        PlatformManager.RTSS.Start();
 
         LogManager.LogInformation("{0} has started", "OSDManager");
 
@@ -153,7 +150,6 @@ public static class OSDManager
                     else
                     {
                         processOSD.Update(string.Empty);
-                        processOSD.Dispose();
                     }
                 }
             }

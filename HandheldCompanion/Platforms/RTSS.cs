@@ -30,6 +30,8 @@ public class RTSS : IPlatform
     private bool ProfileLoaded;
     private int RequestedFramerate;
 
+    protected bool halting = false;
+
     private AppFlags[] appFlags = [
         AppFlags.DirectDraw,
         AppFlags.Direct3D9,
@@ -104,27 +106,30 @@ public class RTSS : IPlatform
 
     public override bool Start()
     {
-            // start RTSS if not running
-            if (!IsRunning)
-                StartProcess();
-            else
-                Process.Exited += Process_Exited;
+        // start RTSS if not running
+        if (!IsRunning)
+            StartProcess();
+        else
             // hook into current process
-            ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-            ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
-            ProfileManager.Applied += ProfileManager_Applied;
+            Process.Exited += Process_Exited;
 
-            // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
-            if (SettingsManager.IsInitialized)
-            {
-                var foregroundProcess = ProcessManager.GetForegroundProcess();
-                if (foregroundProcess is not null)
-                    ProcessManager_ForegroundChanged(foregroundProcess, null);
+        ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
+        ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
+        ProfileManager.Applied += ProfileManager_Applied;
 
-                ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
-            }
+        halting = false;
 
-            return base.Start();
+        // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
+        if (SettingsManager.IsInitialized)
+        {
+            var foregroundProcess = ProcessManager.GetForegroundProcess();
+            if (foregroundProcess is not null)
+                ProcessManager_ForegroundChanged(foregroundProcess, null);
+
+            ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+        }
+
+        return base.Start();
     }
 
     public override bool Stop(bool kill = false)
@@ -132,6 +137,8 @@ public class RTSS : IPlatform
         ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
         ProfileManager.Applied -= ProfileManager_Applied;
+
+        halting = true;
 
         return base.Stop(kill);
     }
@@ -177,6 +184,9 @@ public class RTSS : IPlatform
              * - process no longer exists
              * - RTSS was closed
              */
+            if (halting)
+                return;
+
             try
             {
                 var entries = OSD.GetAppEntries();
@@ -186,8 +196,7 @@ public class RTSS : IPlatform
                     );
             }
             catch (FileNotFoundException) { return; }
-            catch (Exception ex)
-            { }
+            catch { }
             await Task.Delay(1000);
         } while (appEntry is null && ProcessManager.HasProcess(processId) && KeepAlive);
 

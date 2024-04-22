@@ -613,6 +613,7 @@ public partial class MainWindow : GamepadWindow
                         // resume platform(s)
                         //PlatformManager.LibreHardwareMonitor.Start();
                         PlatformManager.HWiNFO.Start();
+                        PlatformManager.RTSS.Start();
                     }
 
                     // open device, when ready
@@ -641,6 +642,7 @@ public partial class MainWindow : GamepadWindow
                     // suspend platform(s)
                     //PlatformManager.LibreHardwareMonitor.Stop();
                     PlatformManager.HWiNFO.Stop();
+                    PlatformManager.RTSS.Stop();
 
                     // close current device
                     currentDevice.Close();
