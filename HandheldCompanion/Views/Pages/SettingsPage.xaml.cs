@@ -64,7 +64,7 @@ public partial class SettingsPage : Page
     private void HWiNFO_Updated(PlatformStatus status)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (status)
             {
@@ -81,7 +81,7 @@ public partial class SettingsPage : Page
     private void RTSS_Updated(PlatformStatus status)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (status)
             {
@@ -97,8 +97,8 @@ public partial class SettingsPage : Page
 
     private void SettingsManager_SettingValueChanged(string? name, object value)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (name)
             {
@@ -245,7 +245,7 @@ public partial class SettingsPage : Page
     private void UpdateManager_Updated(UpdateStatus status, UpdateFile updateFile, object value)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (status)
             {

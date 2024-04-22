@@ -9,18 +9,18 @@ using System.Collections.Generic;
 using static HandheldCompanion.Platforms.HWiNFO;
 
 namespace HandheldCompanion.Managers;
+public enum OverlayDisplayLevel : short
+{
+    Disabled,
+    Minimal,
+    Extended,
+    Full,
+    Custom,
+    External
+}
 
 public static class OSDManager
 {
-    public enum OverlayDisplayLevel : short
-    {
-        Disabled,
-        Minimal,
-        Extended,
-        Full,
-        Custom,
-        External
-    }
 
     public enum OverlayEntryLevel
     {
@@ -157,7 +157,7 @@ public static class OSDManager
                     }
                 }
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 LogManager.LogError($"{nameof(OSDManager)} UpdateOSD ({processId}) error {ex.Message} {ex.StackTrace}");
             }

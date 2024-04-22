@@ -1,6 +1,5 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
-using HandheldCompanion.Utils;
 using System;
 using System.Numerics;
 using Windows.Devices.Sensors;
@@ -10,14 +9,6 @@ namespace HandheldCompanion.Sensors;
 
 public class IMUGyrometer : IMUSensor
 {
-    public new static SensorSpec sensorSpec = new()
-    {
-        minIn = -128.0f,
-        maxIn = 128.0f,
-        minOut = -2048.0f,
-        maxOut = 2048.0f
-    };
-
     public IMUGyrometer(SensorFamily sensorFamily, int updateInterval, float threshold)
     {
         this.sensorFamily = sensorFamily;

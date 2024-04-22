@@ -266,13 +266,21 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (!IsInitialized)
                 return;
 
-            UpdateTimer = new Timer(UpdateInterval);
-            UpdateTimer.AutoReset = true;
+
+            UpdateTimer = new Timer(UpdateInterval)
+            {
+                Enabled = false,
+                AutoReset = true
+            };
             UpdateTimer.Elapsed += UpdateTimer_Elapsed;
 
-            TelemetryTimer = new Timer(TelemetryInterval);
-            TelemetryTimer.AutoReset = true;
+            TelemetryTimer = new Timer(TelemetryInterval)
+            {
+                Enabled = false,
+                AutoReset = true
+            };
             TelemetryTimer.Elapsed += TelemetryTimer_Elapsed;
+            
         }
 
         private void TelemetryTimer_Elapsed(object? sender, ElapsedEventArgs e)

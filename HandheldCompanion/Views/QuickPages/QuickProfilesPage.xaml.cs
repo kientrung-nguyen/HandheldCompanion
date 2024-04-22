@@ -138,7 +138,7 @@ public partial class QuickProfilesPage : Page
     private void MultimediaManager_Initialized()
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
             desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));
@@ -163,7 +163,7 @@ public partial class QuickProfilesPage : Page
         bool IsGPUScalingEnabled = GPU.GetGPUScaling();
 
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             // GPU-specific settings
             StackProfileRSR.Visibility = GPU is AMDGPU ? Visibility.Visible : Visibility.Collapsed;
@@ -228,7 +228,7 @@ public partial class QuickProfilesPage : Page
     private void RTSS_Updated(PlatformStatus status)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (status)
             {
@@ -252,7 +252,7 @@ public partial class QuickProfilesPage : Page
         List<ScreenFramelimit> frameLimits = desktopScreen.GetFramelimits();
 
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             cB_Framerate.Items.Clear();
 
@@ -274,7 +274,7 @@ public partial class QuickProfilesPage : Page
     private void PowerProfileManager_Deleted(PowerProfile powerProfile)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             int idx = -1;
             foreach (var item in ProfileStack.Children)
@@ -313,7 +313,7 @@ public partial class QuickProfilesPage : Page
     private void PowerProfileManager_Updated(PowerProfile powerProfile, UpdateSource source)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             int idx = -1;
             foreach (var item in ProfileStack.Children)
@@ -387,7 +387,7 @@ public partial class QuickProfilesPage : Page
             return;
 
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             SelectedPowerProfileName.Text = powerProfile.Name;
         });
@@ -549,7 +549,7 @@ public partial class QuickProfilesPage : Page
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ProfileToggle.IsOn = !realProfile.Default && realProfile.Enabled;
-                    ProfileIcon.Source = processEx.imgSource;
+                    ProfileIcon.Source = processEx.ProcessIcon;
 
                     if (processEx.MainWindowHandle != IntPtr.Zero)
                     {

@@ -106,7 +106,7 @@ public static class PlatformManager
             {
                 case "OnScreenDisplayLevel":
                     {
-                        UpdateCurrentNeedsOnScreenDisplay(EnumUtils<OSDManager.OverlayDisplayLevel>.Parse(Convert.ToInt16(value)));
+                        UpdateCurrentNeedsOnScreenDisplay(EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(value)));
                         UpdateTimer.Stop();
                         UpdateTimer.Start();
                     }
@@ -115,23 +115,23 @@ public static class PlatformManager
         });
     }
 
-    private static void UpdateCurrentNeedsOnScreenDisplay(OSDManager.OverlayDisplayLevel level)
+    private static void UpdateCurrentNeedsOnScreenDisplay(OverlayDisplayLevel level)
     {
         switch (level)
         {
-            case OSDManager.OverlayDisplayLevel.Disabled: // Disabled
+            case OverlayDisplayLevel.Disabled: // Disabled
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplayComplex;
                 break;
             default:
-            case OSDManager.OverlayDisplayLevel.Minimal: // Minimal
+            case OverlayDisplayLevel.Minimal: // Minimal
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds &= ~PlatformNeeds.OnScreenDisplayComplex;
                 break;
-            case OSDManager.OverlayDisplayLevel.Extended: // Extended
-            case OSDManager.OverlayDisplayLevel.Full: // Full
-            case OSDManager.OverlayDisplayLevel.Custom:
-            case OSDManager.OverlayDisplayLevel.External: // External
+            case OverlayDisplayLevel.Extended: // Extended
+            case OverlayDisplayLevel.Full: // Full
+            case OverlayDisplayLevel.Custom:
+            case OverlayDisplayLevel.External: // External
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplay;
                 CurrentNeeds |= PlatformNeeds.OnScreenDisplayComplex;
                 break;
@@ -147,6 +147,7 @@ public static class PlatformManager
          * RTSS: AutoTDP, framerate limiter, OSD
          */
 
+        LogManager.LogInformation($"{PreviousNeeds}, {CurrentNeeds}, {HWiNFO.IsInstalled}");
         // Check if the current needs are the same as the previous needs
         if (CurrentNeeds == PreviousNeeds) return;
 
@@ -171,6 +172,7 @@ public static class PlatformManager
                     // Only start LHM if it was not running before or if OnScreenDisplayComplex was false
                     //LibreHardwareMonitor.Start();
                     // Only start HWiNFO if it was not running before or if OnScreenDisplayComplex was false and if it is installed
+                    LogManager.LogInformation($"Only start HWiNFO if it was not running before or if OnScreenDisplayComplex was false and if it is installed");
                     if (HWiNFO.IsInstalled)
                         HWiNFO.Start();
                 }

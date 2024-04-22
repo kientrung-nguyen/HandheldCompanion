@@ -11,6 +11,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Platforms;
@@ -99,19 +100,13 @@ public class RTSS : IPlatform
         // our main watchdog to (re)apply requested settings
         PlatformWatchdog = new Timer(2000) { Enabled = false };
         PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
-
-
     }
 
     public override bool Start()
     {
-        try
-        {
             // start RTSS if not running
             if (!IsRunning)
-            {
                 StartProcess();
-            }
             else
                 Process.Exited += Process_Exited;
             // hook into current process
@@ -130,9 +125,6 @@ public class RTSS : IPlatform
             }
 
             return base.Start();
-        }
-        catch { }
-        return false;
     }
 
     public override bool Stop(bool kill = false)
@@ -172,8 +164,7 @@ public class RTSS : IPlatform
     private async void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
     {
         // hook new process
-        var processId = processEx.GetProcessId();
-        LogManager.LogDebug($"{nameof(RTSS)} process {processEx.Executable} {processEx.Filter} ({processId})");
+        var processId = processEx.ProcessId;
         if (processId == 0) return;
 
         if (processEx.Filter != ProcessEx.ProcessFilter.Allowed) return;
@@ -196,9 +187,7 @@ public class RTSS : IPlatform
             }
             catch (FileNotFoundException) { return; }
             catch (Exception ex)
-            {
-                LogManager.LogError($"{nameof(RTSS)} error {ex.Message}\n{ex.StackTrace}");
-            }
+            { }
             await Task.Delay(1000);
         } while (appEntry is null && ProcessManager.HasProcess(processId) && KeepAlive);
 
@@ -218,7 +207,7 @@ public class RTSS : IPlatform
 
     private void ProcessManager_ProcessStopped(ProcessEx processEx)
     {
-        var processId = processEx.GetProcessId();
+        var processId = processEx.ProcessId;
         if (processId == 0) return;
 
         // raise event
@@ -228,7 +217,7 @@ public class RTSS : IPlatform
 
     private void PlatformWatchdogElapsed()
     {
-        if (Monitor.TryEnter(updateLock))
+        lock (updateLock)
         {
             // reset tentative counter
             Tentative = 0;
@@ -247,8 +236,6 @@ public class RTSS : IPlatform
             // force "On-Screen Display Support" to On
             if (GetEnableOSD() != true)
                 SetEnableOSD(true);
-
-            Monitor.Exit(updateLock);
         }
     }
 
@@ -256,16 +243,6 @@ public class RTSS : IPlatform
     {
         base.Process_Exited(sender, e);
     }
-
-    //private void Process_Exited(object? sender, EventArgs e)
-    //{
-    //    ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
-    //    ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
-    //    ProfileManager.Applied -= ProfileManager_Applied;
-
-    //    if (KeepAlive)
-    //        StartProcess();
-    //}
 
     public double GetFramerate(int processId, out uint osdFrameId)
     {

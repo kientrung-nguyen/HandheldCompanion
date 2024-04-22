@@ -88,8 +88,10 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (UpdateTimer != null && !UpdateTimer.Enabled)
                 UpdateTimer.Start();
 
+            /*
             if (TelemetryTimer != null && !TelemetryTimer.Enabled)
                 TelemetryTimer.Start();
+            */
         }
 
         public virtual void Stop()
@@ -100,8 +102,10 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (UpdateTimer != null && UpdateTimer.Enabled)
                 UpdateTimer.Stop();
 
+            /*
             if (TelemetryTimer != null && TelemetryTimer.Enabled)
                 TelemetryTimer.Stop();
+            */
         }
 
         protected virtual void OnIntegerScalingChanged(bool supported, bool enabled)

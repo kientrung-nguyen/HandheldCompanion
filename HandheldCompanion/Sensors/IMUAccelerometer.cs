@@ -1,6 +1,5 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
-using HandheldCompanion.Utils;
 using System;
 using System.Numerics;
 using Windows.Devices.Sensors;
@@ -10,14 +9,6 @@ namespace HandheldCompanion.Sensors;
 
 public class IMUAccelerometer : IMUSensor
 {
-    public new static SensorSpec sensorSpec = new()
-    {
-        minIn = -2.0f,
-        maxIn = 2.0f,
-        minOut = short.MinValue,
-        maxOut = short.MaxValue
-    };
-
     public IMUAccelerometer(SensorFamily sensorFamily, int updateInterval)
     {
         this.sensorFamily = sensorFamily;

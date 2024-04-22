@@ -64,7 +64,7 @@ public partial class MainWindow : GamepadWindow
 
     public static string CurrentExe, CurrentPath;
 
-    private static MainWindow CurrentWindow;
+    private static MainWindow currentWindow;
     public static FileVersionInfo fileVersionInfo;
 
     public static string InstallPath = string.Empty;
@@ -85,8 +85,9 @@ public partial class MainWindow : GamepadWindow
     private const int WM_DISPLAYCHANGE = 0x007e;
     private const int WM_DEVICECHANGE = 0x0219;
 
+
+    //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime)
     private static DispatcherTimer notifyIconWaitTimer = new(
-        //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime),
         TimeSpan.FromMilliseconds(100),
         DispatcherPriority.Normal,
         notifyIconWaitTimerTicked,
@@ -122,7 +123,7 @@ public partial class MainWindow : GamepadWindow
         this.Tag = "MainWindow";
 
         fileVersionInfo = _fileVersionInfo;
-        CurrentWindow = this;
+        currentWindow = this;
 
         // used by system manager, controller manager
         uiSettings = new UISettings();
@@ -285,6 +286,10 @@ public partial class MainWindow : GamepadWindow
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         SettingsManager.Start();
 
+        // Load MVVM pages after the Models / data have been created.
+        overlayquickTools.LoadPages_MVVM();
+        LoadPages_MVVM();
+
         // update Position and Size
         Height = (int)Math.Max(MinHeight, SettingsManager.GetDouble("MainWindowHeight"));
         Width = (int)Math.Max(MinWidth, SettingsManager.GetDouble("MainWindowWidth"));
@@ -445,7 +450,7 @@ public partial class MainWindow : GamepadWindow
 
     public static MainWindow GetCurrent()
     {
-        return CurrentWindow;
+        return currentWindow;
     }
 
     private void loadPages()
@@ -455,26 +460,26 @@ public partial class MainWindow : GamepadWindow
         controllerPage.Loaded += ControllerPage_Loaded;
 
         devicePage = new DevicePage("device");
-        performancePage = new PerformancePage("performance");
+        //performancePage = new PerformancePage("performance");
         profilesPage = new ProfilesPage("profiles");
         settingsPage = new SettingsPage("settings");
-        aboutPage = new AboutPage("about");
+        //aboutPage = new AboutPage("about");
         overlayPage = new OverlayPage("overlay");
         hotkeysPage = new HotkeysPage("hotkeys");
-        layoutPage = new LayoutPage("layout", navView);
+        //layoutPage = new LayoutPage("layout", navView);
         notificationsPage = new NotificationsPage("notifications");
         notificationsPage.StatusChanged += NotificationsPage_LayoutUpdated;
 
         // store pages
         _pages.Add("ControllerPage", controllerPage);
         _pages.Add("DevicePage", devicePage);
-        _pages.Add("PerformancePage", performancePage);
+        //_pages.Add("PerformancePage", performancePage);
         _pages.Add("ProfilesPage", profilesPage);
-        _pages.Add("AboutPage", aboutPage);
+        //_pages.Add("AboutPage", aboutPage);
         _pages.Add("OverlayPage", overlayPage);
         _pages.Add("SettingsPage", settingsPage);
         _pages.Add("HotkeysPage", hotkeysPage);
-        _pages.Add("LayoutPage", layoutPage);
+        //_pages.Add("LayoutPage", layoutPage);
         _pages.Add("NotificationsPage", notificationsPage);
     }
 
@@ -592,7 +597,6 @@ public partial class MainWindow : GamepadWindow
         {
             case SystemManager.SystemStatus.SystemReady:
                 {
-                    // resume from sleep
                     if (prevStatus == SystemManager.SystemStatus.SystemPending)
                     {
                         // when device resumes from sleep
@@ -608,6 +612,7 @@ public partial class MainWindow : GamepadWindow
 
                         // resume platform(s)
                         //PlatformManager.LibreHardwareMonitor.Start();
+                        PlatformManager.HWiNFO.Start();
                     }
 
                     // open device, when ready
@@ -635,6 +640,7 @@ public partial class MainWindow : GamepadWindow
 
                     // suspend platform(s)
                     //PlatformManager.LibreHardwareMonitor.Stop();
+                    PlatformManager.HWiNFO.Stop();
 
                     // close current device
                     currentDevice.Close();
@@ -682,8 +688,8 @@ public partial class MainWindow : GamepadWindow
 
     public static void NavView_Navigate(Page _page)
     {
-        CurrentWindow.ContentFrame.Navigate(_page);
-        CurrentWindow.scrollViewer.ScrollToTop();
+        currentWindow.ContentFrame.Navigate(_page);
+        currentWindow.scrollViewer.ScrollToTop();
     }
 
     private void navView_BackRequested(NavigationView sender, NavigationViewBackRequestedEventArgs args)

@@ -84,8 +84,8 @@ public partial class OverlayQuickTools : GamepadWindow
     private string preNavItemTag;
 
 
-    private LockObject brightnessLock = new();
-    private LockObject volumeLock = new();
+    private CrossThreadLock brightnessLock = new();
+    private CrossThreadLock volumeLock = new();
 
     private Dictionary<string, System.Windows.Controls.Button> tabButtons = new();
 
@@ -126,29 +126,29 @@ public partial class OverlayQuickTools : GamepadWindow
         MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
         MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
         MultimediaManager.Initialized += SystemManager_Initialized;
+        ProfileManager.Applied += ProfileManager_Applied;
 
         MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
 
-        ProfileManager.Applied += ProfileManager_Applied;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // create pages
         homePage = new("quickhome");
         devicePage = new("quickdevice");
-        performancePage = new("quickperformance");
+        //performancePage = new("quickperformance");
         profilesPage = new("quickprofiles");
-        overlayPage = new("quickoverlay");
+        //overlayPage = new("quickoverlay");
         suspenderPage = new("quicksuspender");
 
         _pages.Add("QuickHomePage", homePage);
         _pages.Add("QuickDevicePage", devicePage);
-        _pages.Add("QuickPerformancePage", performancePage);
+        //_pages.Add("QuickPerformancePage", performancePage);
         _pages.Add("QuickProfilesPage", profilesPage);
-        _pages.Add("QuickOverlayPage", overlayPage);
+        //_pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickSuspenderPage", suspenderPage);
     }
-	
-	public void LoadPages_MVVM()
+
+    public void LoadPages_MVVM()
     {
         overlayPage = new QuickOverlayPage();
         performancePage = new QuickPerformancePage();
@@ -156,7 +156,7 @@ public partial class OverlayQuickTools : GamepadWindow
         _pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickPerformancePage", performancePage);
     }
-	
+
     public static OverlayQuickTools GetCurrent()
     {
         return currentWindow;
@@ -173,8 +173,8 @@ public partial class OverlayQuickTools : GamepadWindow
             Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
         ];
 
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (name)
             {
@@ -182,18 +182,6 @@ public partial class OverlayQuickTools : GamepadWindow
                     {
                         var overlayLevel = Convert.ToInt16(value);
                         t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
-
-                    }
-                    break;
-                case "QuickToolsLocation":
-                    {
-                        var QuickToolsLocation = Convert.ToInt32(value);
-                        UpdateLocation(QuickToolsLocation);
-                    }
-                    break;
-                case "QuickToolsAutoHide":
-                    {
-                        autoHide = Convert.ToBoolean(value);
                     }
                     break;
             }
@@ -230,9 +218,9 @@ public partial class OverlayQuickTools : GamepadWindow
                     Left -= Margin.Right;
                     break;
             }
+
+            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (2.0d * Margin.Top));
             Width = MinWidth = MaxWidth = (int)(Screen.PrimaryScreen.WpfBounds.Width / 2.5);
-            Height = MinHeight = MaxHeight = (int)Screen.PrimaryScreen.WpfBounds.Height - (6.0d * Margin.Top);
-            //Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (6.0d * Margin.Top));
             Top = Margin.Top;
         });
     }
@@ -599,48 +587,69 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private void SystemManager_Initialized()
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        if (MultimediaManager.HasBrightnessSupport())
         {
-            if (MultimediaManager.HasBrightnessSupport())
+            lock (brightnessLock)
             {
-                SliderBrightness.IsEnabled = true;
-                SliderBrightness.Value = MultimediaManager.GetBrightness();
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SliderBrightness.IsEnabled = true;
+                    SliderBrightness.Value = MultimediaManager.GetBrightness();
+                });
             }
+        }
 
-            if (MultimediaManager.HasVolumeSupport())
+        if (MultimediaManager.HasVolumeSupport())
+        {
+            lock (volumeLock)
             {
-                SliderVolume.IsEnabled = true;
-                SliderVolume.Value = Math.Round(MultimediaManager.GetVolume());
-                UpdateVolumeIcon((float)SliderVolume.Value, MultimediaManager.GetMute());
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SliderVolume.IsEnabled = true;
+                    SliderVolume.Value = Math.Round(MultimediaManager.GetVolume());
+                    UpdateVolumeIcon((float)SliderVolume.Value, MultimediaManager.GetMute());
+                });
             }
-        });
+        }
     }
 
     private void SystemManager_BrightnessNotification(int brightness)
     {
-        // UI thread
-        using (new ScopedLock(brightnessLock))
+        if (brightnessLock.TryEnter())
         {
-            // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            try
             {
-                SliderBrightness.Value = brightness;
-            });
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SliderBrightness.Value = brightness;
+                });
+            }
+            finally
+            {
+                brightnessLock.Exit();
+            }
         }
     }
 
     private void SystemManager_VolumeNotification(float volume)
     {
-        // UI thread
-        using (new ScopedLock(volumeLock))
+        if (volumeLock.TryEnter())
         {
-            // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            try
             {
-                UpdateVolumeIcon(volume);
-                SliderVolume.Value = Math.Round(volume);
-            });
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    UpdateVolumeIcon(volume);
+                    SliderVolume.Value = Math.Round(volume);
+                });
+            }
+            finally
+            {
+                volumeLock.Exit();
+            }
         }
     }
 
@@ -649,8 +658,8 @@ public partial class OverlayQuickTools : GamepadWindow
         if (!IsLoaded)
             return;
 
-        // wait until lock is released
-        if (brightnessLock)
+        // prevent update loop
+        if (brightnessLock.IsEntered())
             return;
 
         MultimediaManager.SetBrightness(SliderBrightness.Value);
@@ -661,8 +670,8 @@ public partial class OverlayQuickTools : GamepadWindow
         if (!IsLoaded)
             return;
 
-        // wait until lock is released
-        if (volumeLock)
+        // prevent update loop
+        if (volumeLock.IsEntered())
             return;
 
         MultimediaManager.SetVolume(SliderVolume.Value);

@@ -140,7 +140,8 @@ public class HWiNFO : IPlatform
             var hasSensorsSM = GetProperty("SensorsSM");
             if (!IsRunning || !hasSensorsSM)
             {
-                StopProcess();
+                //if (IsRunning)
+                //    StopProcess();
                 StartProcess();
             }
             else
@@ -158,8 +159,17 @@ public class HWiNFO : IPlatform
 
             return base.Start();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LogManager.LogError(ex.Message + " " + ex.StackTrace);
+        }
+
         return false;
+    }
+
+    protected override void Process_Exited(object? sender, EventArgs e)
+    {
+        base.Process_Exited(sender, e);
     }
 
     public override bool Stop(bool kill = false)
@@ -171,8 +181,8 @@ public class HWiNFO : IPlatform
 
     private void SettingsManager_SettingValueChanged(string name, object value)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (name)
             {
@@ -206,8 +216,8 @@ public class HWiNFO : IPlatform
                 MonitoredSensors[SensorElementType.BatteryRemainingTime] = new();
                 MonitoredSensors[SensorElementType.BatteryChargeRate] = new();
 
-                CPUFanSpeed =  IDevice.GetCurrent().ReadFanSpeed();
-                CPUFanDuty =  IDevice.GetCurrent().ReadFanDuty();
+                CPUFanSpeed = IDevice.GetCurrent().ReadFanSpeed();
+                CPUFanDuty = IDevice.GetCurrent().ReadFanDuty();
 
                 foreach (var sensor in sensors)
                 {
@@ -382,7 +392,7 @@ public class HWiNFO : IPlatform
     }
 
     internal bool GetAutoPerformanceSensors(
-        out double cpuFrequency, out double cpuEffective, 
+        out double cpuFrequency, out double cpuEffective,
         out double gpuFrequency, out double gpuEffective)
     {
         cpuEffective = double.NaN;
@@ -551,7 +561,6 @@ public class HWiNFO : IPlatform
 
         // stop watchdog
         PlatformWatchdog.Stop();
-
         return base.StartProcess();
     }
 
@@ -572,6 +581,9 @@ public class HWiNFO : IPlatform
             StopProcess();
             StartProcess();
         }
+
+        if (HWiNFOWatchdog != null && !HWiNFOWatchdog.Enabled)
+            HWiNFOWatchdog.Start();
 
         //PopulateSensors();
     }

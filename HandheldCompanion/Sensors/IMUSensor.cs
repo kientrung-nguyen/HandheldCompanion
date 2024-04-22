@@ -1,5 +1,4 @@
-﻿using HandheldCompanion.Utils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Windows.Devices.Sensors;
@@ -34,8 +33,6 @@ public class SensorReading
 
 public abstract class IMUSensor : IDisposable
 {
-    protected static SensorSpec sensorSpec;
-
     protected bool disposed;
     protected SensorReading reading = new();
 

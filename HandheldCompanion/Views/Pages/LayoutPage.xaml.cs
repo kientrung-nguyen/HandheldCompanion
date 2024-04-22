@@ -117,7 +117,7 @@ public partial class LayoutPage : Page
     private void ControllerManager_ControllerSelected(IController controller)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             RefreshLayoutList();
 
@@ -141,7 +141,7 @@ public partial class LayoutPage : Page
     private void LayoutManager_Initialized()
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             RefreshLayoutList();
         });
@@ -150,7 +150,7 @@ public partial class LayoutPage : Page
     private void LayoutManager_Updated(LayoutTemplate layoutTemplate)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             // Get template separator index
             var idx = -1;
@@ -197,8 +197,8 @@ public partial class LayoutPage : Page
 
     private void SettingsManager_SettingValueChanged(string? name, object value)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (name)
             {
@@ -461,7 +461,7 @@ public partial class LayoutPage : Page
         var preNavPageType = ContentFrame.CurrentSourcePageType;
 
         // Only navigate if the selected page isn't currently loaded.
-        if (_page is not null && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
+        if (!(_page is null) && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
     }
 
     public void NavView_Navigate(Page _page)

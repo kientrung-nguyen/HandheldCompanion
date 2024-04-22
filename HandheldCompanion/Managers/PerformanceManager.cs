@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Windows.Networking.Proximity;
+using static HandheldCompanion.Platforms.HWiNFO;
 using PowerSchemeAPI = PowerManagerAPI.PowerManager;
 using Timer = System.Timers.Timer;
 
@@ -867,7 +868,7 @@ public static class PerformanceManager
             gfxLock = true;
 
             var GPUdone = false;
-            float currentGfxClock = GPUManager.GetCurrent().GetClock();
+            float currentGfxClock = (float)PlatformManager.HWiNFO.MonitoredSensors[SensorElementType.GPUFrequency].Value; //GPUManager.GetCurrent().GetClock();
 
             if (currentGfxClock != 0)
                 gfxWatchdog.Interval = INTERVAL_DEFAULT;

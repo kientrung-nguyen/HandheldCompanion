@@ -39,8 +39,7 @@
             ItemInvoked="navView_ItemInvoked"
             Loaded="navView_Loaded"
             PaneDisplayMode="Top"
-            SelectionFollowsFocus="Enabled"
-            ScrollViewer.VerticalScrollBarVisibility="Hidden">
+            SelectionFollowsFocus="Enabled">
         <ui:NavigationView.Content>
             <Grid Margin="0,0,0,0">
                 <Grid.RowDefinitions>
@@ -466,6 +465,7 @@
                         Style="{StaticResource BodyTextBlockStyle}" />
                 </DockPanel>
             </ui:NavigationViewItem>
+            <ui:NavigationViewItem IsEnabled="False" />
         </ui:NavigationView.FooterMenuItems>
     </ui:NavigationView>
 </common:GamepadWindow>

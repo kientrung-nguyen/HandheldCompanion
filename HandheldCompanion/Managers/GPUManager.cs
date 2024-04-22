@@ -217,9 +217,11 @@ namespace HandheldCompanion.Managers
             Initialized?.Invoke(IsLoaded_IGCL, IsLoaded_ADLX);
 
             // manage events
+            
             ProfileManager.Applied += ProfileManager_Applied;
             ProfileManager.Discarded += ProfileManager_Discarded;
             ProfileManager.Updated += ProfileManager_Updated;
+            
             DeviceManager.DisplayAdapterArrived += DeviceManager_DisplayAdapterArrived;
             DeviceManager.DisplayAdapterRemoved += DeviceManager_DisplayAdapterRemoved;
             MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
@@ -235,9 +237,11 @@ namespace HandheldCompanion.Managers
             IsInitialized = false;
 
             // manage events
+            
             ProfileManager.Applied -= ProfileManager_Applied;
             ProfileManager.Discarded -= ProfileManager_Discarded;
             ProfileManager.Updated -= ProfileManager_Updated;
+            
             DeviceManager.DisplayAdapterArrived -= DeviceManager_DisplayAdapterArrived;
             DeviceManager.DisplayAdapterRemoved -= DeviceManager_DisplayAdapterRemoved;
             MultimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
