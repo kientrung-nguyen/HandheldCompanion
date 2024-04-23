@@ -90,24 +90,10 @@ namespace HandheldCompanion.Managers
             if (powerProfile is null)
                 return;
 
-            var announce = true;
-            // we've already announced this profile
-            if (currentProfile is not null)
-                if (currentProfile.Guid == profile.Guid)
-                    announce = false;
-
             // update current profile
             currentProfile = powerProfile;
 
             Applied?.Invoke(powerProfile, source);
-            
-            // send toast
-            // todo: localize me
-            if (announce)
-            {
-                LogManager.LogInformation("Power Profile {0} applied", profile.Name);
-                ToastManager.SendToast($"Power Profile {profile.Name} applied");
-            }
         }
 
         private static void ProfileManager_Discarded(Profile profile)

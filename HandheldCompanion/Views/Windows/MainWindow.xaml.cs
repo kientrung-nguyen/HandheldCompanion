@@ -609,6 +609,7 @@ public partial class MainWindow : GamepadWindow
                         VirtualManager.Resume();
                         SensorsManager.Resume(true);
                         GPUManager.Start();
+                        OSDManager.Start();
 
                         // resume platform(s)
                         //PlatformManager.LibreHardwareMonitor.Start();
@@ -638,6 +639,7 @@ public partial class MainWindow : GamepadWindow
                     SensorsManager.Stop();
                     InputsManager.Stop();
                     GPUManager.Stop();
+                    OSDManager.Stop();
 
                     // suspend platform(s)
                     //PlatformManager.LibreHardwareMonitor.Stop();

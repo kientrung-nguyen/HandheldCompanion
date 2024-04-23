@@ -68,45 +68,71 @@ public partial class QuickHomePage : Page
     /*
     private void SystemManager_Initialized()
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        if (MultimediaManager.HasBrightnessSupport())
         {
-            if (MultimediaManager.HasBrightnessSupport())
+            lock (brightnessLock)
             {
-                SliderBrightness.IsEnabled = true;
-                SliderBrightness.Value = MultimediaManager.GetBrightness();
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SliderBrightness.IsEnabled = true;
+                    SliderBrightness.Value = MultimediaManager.GetBrightness();
+                });
             }
+        }
 
-            if (MultimediaManager.HasVolumeSupport())
+        if (MultimediaManager.HasVolumeSupport())
+        {
+            lock (volumeLock)
             {
-                SliderVolume.IsEnabled = true;
-                SliderVolume.Value = Math.Round(MultimediaManager.GetVolume());
-                UpdateVolumeIcon((float)SliderVolume.Value, MultimediaManager.GetMute());
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SliderVolume.IsEnabled = true;
+                    SliderVolume.Value = MultimediaManager.GetVolume();
+                    UpdateVolumeIcon((float)SliderVolume.Value);
+                });
             }
-        });
+        };
     }
 
     private void SystemManager_BrightnessNotification(int brightness)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        if (brightnessLock.TryEnter())
         {
-            using (new ScopedLock(brightnessLock))
-                SliderBrightness.Value = brightness;
-        });
+            try
+            {
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SliderBrightness.Value = brightness;
+                });
+            }
+            finally
+            {
+                brightnessLock.Exit();
+            }
+        }
     }
 
     private void SystemManager_VolumeNotification(float volume)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        if (volumeLock.TryEnter())
         {
-            using (new ScopedLock(volumeLock))
+            try
             {
-                UpdateVolumeIcon(volume);
-                SliderVolume.Value = Math.Round(volume);
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    UpdateVolumeIcon(volume);
+                    SliderVolume.Value = Math.Round(volume);
+                });
             }
-        });
+            finally
+            {
+                volumeLock.Exit();
+            }
+        }
     }
 
     private void SliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -114,11 +140,11 @@ public partial class QuickHomePage : Page
         if (!IsLoaded)
             return;
 
-        // wait until lock is released
-        if (brightnessLock)
+        // prevent update loop
+        if (brightnessLock.IsEntered())
             return;
 
-       MultimediaManager.SetBrightness(SliderBrightness.Value);
+        MultimediaManager.SetBrightness(SliderBrightness.Value);
     }
 
     private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -153,20 +179,19 @@ public partial class QuickHomePage : Page
             Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
         };
 
-        switch (name)
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
-            case "OnScreenDisplayLevel":
-                {
-                    var overlayLevel = Convert.ToInt16(value);
-
-                    // UI thread (async)
-                    Application.Current.Dispatcher.BeginInvoke(() =>
+            switch (name)
+            {
+                case "OnScreenDisplayLevel":
                     {
+                        var overlayLevel = Convert.ToInt16(value);
                         t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
-                    });
-                }
-                break;
-        }
+                    }
+                    break;
+            }
+        });
 
     }
     */

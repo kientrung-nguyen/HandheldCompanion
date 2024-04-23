@@ -225,7 +225,12 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="10*" MinWidth="200" />
                     </Grid.ColumnDefinitions>
-                    <DockPanel Grid.Column="0">
+
+                    <ui:SimpleStackPanel VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Brightness" />
+                    </ui:SimpleStackPanel>
+
+                    <DockPanel Grid.Column="1">
                         <ui:FontIcon
                             Height="40"
                             HorizontalAlignment="Center"

@@ -638,9 +638,10 @@ public partial class OverlayQuickTools : GamepadWindow
             try
             {
                 // UI thread
+                var isMute = MultimediaManager.GetMute();
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    UpdateVolumeIcon(volume, MultimediaManager.GetMute());
+                    UpdateVolumeIcon(volume, isMute);
                     SliderVolume.Value = Math.Round(volume);
                 });
             }
@@ -694,9 +695,9 @@ public partial class OverlayQuickTools : GamepadWindow
             try
             {
                 // UI thread
+                var isMute = MultimediaManager.ToggleMute();
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    var isMute = MultimediaManager.ToggleMute();
                     UpdateVolumeIcon(float.NaN, isMute);
                 });
             }
