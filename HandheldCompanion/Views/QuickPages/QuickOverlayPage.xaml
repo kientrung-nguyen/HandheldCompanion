@@ -27,6 +27,10 @@
                 CornerRadius="{DynamicResource ControlCornerRadius}">
 
                 <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="6*" />
+                        <ColumnDefinition Width="4*" />
+                    </Grid.ColumnDefinitions>
                     <DockPanel>
                         <ui:FontIcon
                             Height="40"
@@ -43,25 +47,28 @@
                                 TextWrapping="Wrap" />
                         </ui:SimpleStackPanel>
                     </DockPanel>
+                    <DockPanel Grid.Column="1" Margin="12,0,0,0">
+                        <ComboBox
+                            HorizontalAlignment="Stretch"
+                            IsEnabled="{Binding IsRunningRTSS, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                            IsReadOnly="True"
+                            SelectedIndex="{Binding OnScreenDisplayLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Disabled}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Minimal}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Extended}" IsEnabled="{Binding IsRunningLHM, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Full}" IsEnabled="{Binding IsRunningLHM, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Custom}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_External}" />
+                        </ComboBox>
+                    </DockPanel>
                 </Grid>
             </Border>
 
             <!--  Content  -->
-            <Border CornerRadius="{DynamicResource ControlCornerRadius}">
-                <ComboBox
-                    HorizontalAlignment="Stretch"
-                    IsEnabled="{Binding IsRunningRTSS, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                    IsReadOnly="True"
-                    SelectedIndex="{Binding OnScreenDisplayLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
 
-                    <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Disabled}" />
-                    <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Minimal}" />
-                    <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Extended}" IsEnabled="{Binding IsRunningLHM, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Full}" IsEnabled="{Binding IsRunningLHM, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Custom}" />
-                    <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_External}" />
-                </ComboBox>
-            </Border>
+            <!--<Border CornerRadius="{DynamicResource ControlCornerRadius}">
+            </Border>-->
 
             <!--  Custom Settings  -->
             <ui:SimpleStackPanel Name="StackCustomSettings" Spacing="6">

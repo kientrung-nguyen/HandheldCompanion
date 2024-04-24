@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Windows.Networking.Proximity;
+using Windows.Security.Authentication.Identity.Core;
 using static HandheldCompanion.Platforms.HWiNFO;
 using PowerSchemeAPI = PowerManagerAPI.PowerManager;
 using Timer = System.Timers.Timer;
@@ -567,7 +568,7 @@ public static class PerformanceManager
         {
             AutoCPUClock = cpuFrequency;
             //AutoGPUClock = gpuFrequency;
-            
+
 
             var processFPSTarget = AutoTDPTargetFPS;//Math.Min(fpsHistory.Max(), AutoTDPTargetFPS);
             var processValueCPUUse = Math.Clamp(cpuEffective * 100 / cpuFrequency, .1d, 100.0d);
@@ -781,7 +782,7 @@ public static class PerformanceManager
                     break;
 
                 var TDP = storedTDP[idx];
-				if (TDP == 0.0d)
+                if (TDP == 0.0d)
                     continue;
 
                 if (processor is AMDProcessor)
@@ -988,13 +989,13 @@ public static class PerformanceManager
 
             // update value read by timer
             storedTDP[idx] = values[idx];
-            
+
             // immediately apply
             if (immediate)
             {
                 processor.SetTDPLimit((PowerType)idx, values[idx], immediate);
                 currentTDP[idx] = values[idx];
-            	await Task.Delay(20);
+                await Task.Delay(20);
             }
         }
     }
@@ -1193,7 +1194,7 @@ public static class PerformanceManager
         LogManager.LogInformation("{0} has started", "PerformanceManager");
     }
 
-    public static void Stop()
+    public static void Stop(bool sleep = false)
     {
         if (!IsInitialized)
             return;
@@ -1206,6 +1207,14 @@ public static class PerformanceManager
         gfxWatchdog.Stop();
         autoWatchdog.Stop();
 
+        if (sleep)
+        {
+            for (PowerType pType = PowerType.Slow; pType <= PowerType.Fast; pType++)
+                RequestTDP(pType, IDevice.GetCurrent().cTDP[0], true);
+            RequestPowerMode(OSPowerMode.BetterBattery);
+            IDevice.GetCurrent().SetFanControl(true);
+            IDevice.GetCurrent().SetFanDuty(0);
+        }
 
         currentEPP = 0x00000032;
         currentCoreCount = 0;
@@ -1217,7 +1226,7 @@ public static class PerformanceManager
 
         IsInitialized = false;
 
-        LogManager.LogInformation("{0} has started", "PerformanceManager");
+        LogManager.LogInformation("{0} has stopped", "PerformanceManager");
     }
 
     public static Processor GetProcessor()

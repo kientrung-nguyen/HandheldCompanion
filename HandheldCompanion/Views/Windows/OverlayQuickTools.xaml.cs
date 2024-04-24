@@ -218,8 +218,7 @@ public partial class OverlayQuickTools : GamepadWindow
                     break;
             }
 
-            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (6.0d * Margin.Top));
-            //Width = MinWidth = MaxWidth = (int)(Screen.PrimaryScreen.WpfBounds.Width / 2.5);
+            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (8.0d * Margin.Top));
             Top = Margin.Top;
         });
     }

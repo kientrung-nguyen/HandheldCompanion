@@ -108,8 +108,8 @@
             Visibility="Collapsed">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="5*" MinWidth="200" />
-                    <ColumnDefinition Width="5*" MinWidth="200" />
+                    <ColumnDefinition Width="6*" />
+                    <ColumnDefinition Width="4*" />
                 </Grid.ColumnDefinitions>
                 <DockPanel>
                     <ui:FontIcon
@@ -146,8 +146,8 @@
                 <Expander.Header>
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" />
-                            <ColumnDefinition Width="5*" />
+                            <ColumnDefinition Width="4*" />
+                            <ColumnDefinition Width="6*" />
                         </Grid.ColumnDefinitions>
 
                         <DockPanel Margin="0,12,12,12">
@@ -186,8 +186,8 @@
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" />
-                            <ColumnDefinition Width="5*" />
+                            <ColumnDefinition Width="6*" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
                         <TextBlock

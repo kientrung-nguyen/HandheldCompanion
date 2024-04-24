@@ -13,12 +13,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Numerics;
-using System.Threading;
 using System.Windows.Media;
 using Windows.Devices.Sensors;
-using Windows.UI.Notifications;
 using WindowsInput.Events;
-using static HandheldCompanion.OneEuroFilter;
 using static HandheldCompanion.OpenLibSys;
 using static HandheldCompanion.Utils.DeviceUtils;
 

@@ -7,8 +7,6 @@ public class GPDWinMax2_2023_7840U : GPDWinMax2AMD
     public GPDWinMax2_2023_7840U()
     {
         // https://www.amd.com/en/products/apu/amd-ryzen-7-7840u
-        nTDP = [15, 15, 28];
-        cTDP = [5, 30];
         GfxClock = [400, 2700];
         CpuClock = 5100;
     }

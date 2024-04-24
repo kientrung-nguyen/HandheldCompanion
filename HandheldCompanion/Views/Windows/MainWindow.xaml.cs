@@ -610,6 +610,7 @@ public partial class MainWindow : GamepadWindow
                         SensorsManager.Resume(true);
                         GPUManager.Start();
                         OSDManager.Start();
+                        PerformanceManager.Start();
 
                         // resume platform(s)
                         //PlatformManager.LibreHardwareMonitor.Start();
@@ -643,8 +644,9 @@ public partial class MainWindow : GamepadWindow
 
                     // suspend platform(s)
                     //PlatformManager.LibreHardwareMonitor.Stop();
-                    PlatformManager.HWiNFO.Stop();
-                    PlatformManager.RTSS.Stop();
+                    PerformanceManager.Stop(true);
+                    PlatformManager.HWiNFO.Stop(true);
+                    PlatformManager.RTSS.Stop(true);
 
                     // close current device
                     currentDevice.Close();
