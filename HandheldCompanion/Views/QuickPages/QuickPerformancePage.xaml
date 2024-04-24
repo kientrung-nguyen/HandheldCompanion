@@ -460,8 +460,8 @@
                 CornerRadius="{DynamicResource ControlCornerRadius}">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="6*" MinWidth="200" />
-                        <ColumnDefinition Width="4*" MinWidth="200" />
+                        <ColumnDefinition Width="6*" />
+                        <ColumnDefinition Width="4*" />
                     </Grid.ColumnDefinitions>
 
                     <DockPanel>
@@ -507,8 +507,8 @@
 
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="6*" MinWidth="200" />
-                        <ColumnDefinition Width="4*" MinWidth="200" />
+                        <ColumnDefinition Width="6*" />
+                        <ColumnDefinition Width="4*" />
                     </Grid.ColumnDefinitions>
 
                     <DockPanel>
@@ -552,8 +552,8 @@
 
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="6*" MinWidth="200" />
-                        <ColumnDefinition Width="4*" MinWidth="200" />
+                        <ColumnDefinition Width="6*" />
+                        <ColumnDefinition Width="4*" />
                     </Grid.ColumnDefinitions>
 
                     <DockPanel>
