@@ -1,19 +1,17 @@
 using HandheldCompanion.Devices;
-using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
-using HandheldCompanion.Utils;
-using HandheldCompanion.Views;
 using PowerManagerAPI;
 using RTSSSharedMemoryNET;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using Windows.Networking.Proximity;
-using Windows.Security.Authentication.Identity.Core;
+using System.Windows;
+using Windows.Devices.Radios;
 using static HandheldCompanion.Platforms.HWiNFO;
 using PowerSchemeAPI = PowerManagerAPI.PowerManager;
 using Timer = System.Timers.Timer;
@@ -499,7 +497,7 @@ public static class PerformanceManager
 
     private static void RestoreCPUClock(bool immediate)
     {
-        RequestCPUClock(/*0x00000000*/IDevice.GetCurrent().CpuClock, immediate);
+        RequestCPUClock(0x00000000/*IDevice.GetCurrent().CpuClock*/, immediate);
     }
 
     private static void RestoreGPUClock(bool immediate)
@@ -1194,6 +1192,7 @@ public static class PerformanceManager
         LogManager.LogInformation("{0} has started", "PerformanceManager");
     }
 
+    private static IReadOnlyList<Radio> radios;
     public static void Stop(bool sleep = false)
     {
         if (!IsInitialized)
@@ -1212,8 +1211,6 @@ public static class PerformanceManager
             for (PowerType pType = PowerType.Slow; pType <= PowerType.Fast; pType++)
                 RequestTDP(pType, IDevice.GetCurrent().cTDP[0], true);
             RequestPowerMode(OSPowerMode.BetterBattery);
-            IDevice.GetCurrent().SetFanControl(true);
-            IDevice.GetCurrent().SetFanDuty(0);
         }
 
         currentEPP = 0x00000032;

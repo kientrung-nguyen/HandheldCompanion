@@ -149,8 +149,9 @@
                             Maximum="100"
                             Minimum="0"
                             SmallChange="1"
-                            TickFrequency="1"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                            TickFrequency="10"
+                            TickPlacement="BottomRight"
+                            ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
                             ValueChanged="SliderBrightness_ValueChanged" />
                     </Grid>
                 </Grid>
@@ -188,8 +189,9 @@
                             Maximum="100"
                             Minimum="0"
                             SmallChange="1"
-                            TickFrequency="1"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                            TickFrequency="10"
+                            TickPlacement="BottomRight"
+                            ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
                             ValueChanged="SliderVolume_ValueChanged" />
                     </Grid>
                 </Grid>
@@ -238,7 +240,7 @@
                                             Name="QuickHomePage"
                                             Height="54"
                                             HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
                                             Click="QuickButton_Click">
                                             <Grid>
                                                 <DockPanel HorizontalAlignment="Center">
@@ -266,7 +268,8 @@
                                             Name="QuickDevicePage"
                                             Height="54"
                                             HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
+                                            BorderBrush="Transparent"
                                             Click="QuickButton_Click">
                                             <Grid>
                                                 <DockPanel HorizontalAlignment="Center">
@@ -294,7 +297,7 @@
                                             Name="QuickProfilesPage"
                                             Height="54"
                                             HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
                                             Click="QuickButton_Click">
                                             <Grid>
                                                 <DockPanel HorizontalAlignment="Center">
@@ -331,7 +334,7 @@
                                             Name="QuickOverlayPage"
                                             Height="54"
                                             HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
                                             Click="QuickButton_Click">
                                             <Grid>
                                                 <DockPanel HorizontalAlignment="Center">
@@ -368,7 +371,7 @@
                                             Name="QuickSuspenderPage"
                                             Height="54"
                                             HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
                                             Click="QuickButton_Click">
                                             <Grid>
                                                 <DockPanel HorizontalAlignment="Center">

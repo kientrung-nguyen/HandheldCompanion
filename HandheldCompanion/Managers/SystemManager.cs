@@ -7,11 +7,11 @@ using SystemPowerManager = Windows.System.Power.PowerManager;
 
 namespace HandheldCompanion.Managers;
 
-public static class SystemManager
+public static partial class SystemManager
 {
     // Import SetThreadExecutionState Win32 API and define flags
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    public static extern uint SetThreadExecutionState(uint esFlags);
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    public static partial uint SetThreadExecutionState(uint esFlags);
 
     public const uint ES_CONTINUOUS = 0x80000000;
     public const uint ES_SYSTEM_REQUIRED = 0x00000001;

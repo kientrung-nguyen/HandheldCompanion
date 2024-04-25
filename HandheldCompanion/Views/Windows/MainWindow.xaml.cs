@@ -151,7 +151,7 @@ public partial class MainWindow : GamepadWindow
             Text = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visible = false,
-            ContextMenuStrip = new ContextMenuStrip()
+            ContextMenuStrip = new CustomContextMenu()
         };
 
         notifyIcon.DoubleClick += (sender, e) =>
@@ -569,8 +569,7 @@ public partial class MainWindow : GamepadWindow
     private void ControllerPage_Loaded(object sender, RoutedEventArgs e)
     {
         // hide splashscreen
-        if (SplashScreen is not null)
-            SplashScreen.Close();
+        SplashScreen?.Close();
 
         // home page is ready, display main window
         this.Visibility = Visibility.Visible;
@@ -641,12 +640,12 @@ public partial class MainWindow : GamepadWindow
                     InputsManager.Stop();
                     GPUManager.Stop();
                     OSDManager.Stop();
+                    PerformanceManager.Stop(true);
 
                     // suspend platform(s)
                     //PlatformManager.LibreHardwareMonitor.Stop();
-                    PerformanceManager.Stop(true);
-                    PlatformManager.HWiNFO.Stop(true);
-                    PlatformManager.RTSS.Stop(true);
+                    PlatformManager.HWiNFO.Stop();
+                    PlatformManager.RTSS.Stop();
 
                     // close current device
                     currentDevice.Close();
@@ -874,9 +873,9 @@ public partial class MainWindow : GamepadWindow
 
     #endregion
 
-    [DllImport("uxtheme.dll", EntryPoint = "#135", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern int SetPreferredAppMode(int preferredAppMode);
+    [LibraryImport("uxtheme.dll", EntryPoint = "#135", SetLastError = true)]
+    private static partial int SetPreferredAppMode(int preferredAppMode);
 
-    [DllImport("uxtheme.dll", EntryPoint = "#136", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern void FlushMenuThemes();
+    [LibraryImport("uxtheme.dll", EntryPoint = "#136", SetLastError = true)]
+    private static partial void FlushMenuThemes();
 }

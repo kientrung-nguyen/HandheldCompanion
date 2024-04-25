@@ -35,7 +35,7 @@ namespace HandheldCompanion.Views.Windows;
 /// <summary>
 ///     Interaction logic for QuickTools.xaml
 /// </summary>
-public partial class OverlayQuickTools : GamepadWindow
+public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
 {
     private const int SC_MOVE = 0xF010;
     private readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
@@ -86,7 +86,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private CrossThreadLock brightnessLock = new();
     private CrossThreadLock volumeLock = new();
 
-    private Dictionary<string, System.Windows.Controls.Button> tabButtons = new();
+    private Dictionary<string, Button> tabButtons = new();
 
     private Dictionary<string, bool> _activeTabs;
 
@@ -121,7 +121,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
         // create manager(s)
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
-
+        
         MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
         MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
         MultimediaManager.Initialized += SystemManager_Initialized;
@@ -145,6 +145,40 @@ public partial class OverlayQuickTools : GamepadWindow
         _pages.Add("QuickProfilesPage", profilesPage);
         //_pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickSuspenderPage", suspenderPage);
+
+        activeTabs = new()
+        {
+            { "QuickHomePage", true },
+            { "QuickDevicePage", false },
+            //{ "QuickPerformancePage", false },
+            { "QuickProfilesPage", false },
+            { "QuickOverlayPage", false },
+            { "QuickSuspenderPage", false }
+        };
+
+        tabButtons = new()
+        {
+            { "QuickHomePage", QuickHomePage },
+            { "QuickDevicePage", QuickDevicePage },
+            { "QuickProfilesPage", QuickProfilesPage },
+            { "QuickOverlayPage", QuickOverlayPage },
+            { "QuickSuspenderPage", QuickSuspenderPage }
+        };
+        NotifyPropertyChanged(nameof(activeTabs));
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private void NotifyPropertyChanged(string propertyName = "")
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        foreach (var activeTab in activeTabs)
+        {
+            if (activeTab.Value)
+                tabButtons[activeTab.Key].Style = Application.Current.FindResource("AccentButtonStyle") as Style;
+            else
+                tabButtons[activeTab.Key].Style = Application.Current.FindResource("DefaultButtonStyle") as Style;
+        }
     }
 
     public void LoadPages_MVVM()
@@ -711,6 +745,18 @@ public partial class OverlayQuickTools : GamepadWindow
     private void QuickButton_Click(object sender, RoutedEventArgs e)
     {
         var button = (Button)sender;
+        if (tabButtons.ContainsKey($"{button.Name}"))
+        {
+            tabButtons[$"{button.Name}"] = button;
+            activeTabs[$"{button.Name}"] = true;
+            activeTabs.Where(x => x.Key != $"{button.Name}").ToList().ForEach(x => activeTabs[x.Key] = false);
+        }
+        else
+        {
+            tabButtons.Add($"{button.Name}", button);
+        }
+        NotifyPropertyChanged(nameof(activeTabs));
+
         MainWindow.overlayquickTools.NavView_Navigate(button.Name);
     }
 

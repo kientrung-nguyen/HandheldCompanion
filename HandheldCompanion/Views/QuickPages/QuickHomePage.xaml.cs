@@ -59,13 +59,13 @@ public partial class QuickHomePage : Page
             QuickHotkeys.Children.Add(hotkey.GetPin());
     }
 
+    /*
     private void QuickButton_Click(object sender, RoutedEventArgs e)
     {
         Button button = (Button)sender;
         MainWindow.overlayquickTools.NavView_Navigate(button.Name);
     }
 
-    /*
     private void SystemManager_Initialized()
     {
         if (MultimediaManager.HasBrightnessSupport())

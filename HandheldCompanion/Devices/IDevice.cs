@@ -158,8 +158,6 @@ public abstract class IDevice
 
     public IDevice()
     {
-        GamepadMotion = new(ProductIllustration, CalibrationMode.Manual | CalibrationMode.SensorFusion);
-
         VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
         DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
@@ -492,6 +490,7 @@ public abstract class IDevice
         device.ProductName = ProductName;
         device.Processor = Processor;
         device.SystemName = SystemName;
+        device.GamepadMotion = new(device.ProductIllustration, CalibrationMode.Manual | CalibrationMode.SensorFusion);
 
         return device;
     }
@@ -577,8 +576,9 @@ public abstract class IDevice
         if (gyrometer is not null && accelerometer is not null)
         {
             // check sensor
-            string DeviceId = CommonUtils.Between(gyrometer.DeviceId, @"\\?\", @"#{").Replace(@"#", @"\");
-            USBDeviceInfo sensor = GetUSBDevice(DeviceId);
+            string deviceId = CommonUtils.Between(gyrometer.DeviceId, @"\\?\", @"#{").Replace(@"#", @"\");
+            LogManager.LogInformation($"Sensor Id {deviceId}");
+            USBDeviceInfo sensor = GetUSBDevice(deviceId);
             if (sensor is not null)
                 InternalSensorName = sensor.Name;
 
@@ -828,8 +828,7 @@ public abstract class IDevice
 
         StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedDevices");
 
-        if (deviceInstanceIds is null)
-            deviceInstanceIds = new();
+        deviceInstanceIds ??= new();
 
         foreach (string InstanceId in deviceInstanceIds)
         {
@@ -846,12 +845,13 @@ public abstract class IDevice
     protected bool SuspendDevice(string InterfaceId)
     {
         PnPDevice pnPDevice = PnPDevice.GetDeviceByInterfaceId(InterfaceId);
+
         if (pnPDevice is not null)
         {
+            LogManager.LogDebug($"PnPDevice {InterfaceId}");
             StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedDevices");
 
-            if (deviceInstanceIds is null)
-                deviceInstanceIds = new();
+            deviceInstanceIds ??= new();
 
             if (!deviceInstanceIds.Contains(pnPDevice.InstanceId))
                 deviceInstanceIds.Add(pnPDevice.InstanceId);
@@ -860,6 +860,8 @@ public abstract class IDevice
 
             return PnPUtil.DisableDevice(pnPDevice.InstanceId);
         }
+
+        LogManager.LogDebug($"PnPDevice null {InterfaceId}");
 
         return false;
     }

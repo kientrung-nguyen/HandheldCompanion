@@ -51,20 +51,20 @@ namespace HandheldCompanion.Views.Classes
         public override Color ImageMarginGradientMiddle => Color.MediumSeaGreen;
     }
 
-    public class CustomContextMenu : ContextMenuStrip
+    public partial class CustomContextMenu : ContextMenuStrip
     {
-        [DllImport("dwmapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern long DwmSetWindowAttribute(nint hwnd,
+        [LibraryImport("dwmapi.dll", SetLastError = true)]
+        private static partial long DwmSetWindowAttribute(nint hwnd,
                                                             DWMWINDOWATTRIBUTE attribute,
                                                             ref DWM_WINDOW_CORNER_PREFERENCE pvAttribute,
                                                             uint cbAttribute);
 
 
-        [DllImport("uxtheme.dll", EntryPoint = "#135", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern int SetPreferredAppMode(int preferredAppMode);
+        [LibraryImport("uxtheme.dll", EntryPoint = "#135", SetLastError = true)]
+        private static partial int SetPreferredAppMode(int preferredAppMode);
 
-        [DllImport("uxtheme.dll", EntryPoint = "#136", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern void FlushMenuThemes();
+        [LibraryImport("uxtheme.dll", EntryPoint = "#136", SetLastError = true)]
+        private static partial void FlushMenuThemes();
 
         public CustomContextMenu()
         {
@@ -74,14 +74,8 @@ namespace HandheldCompanion.Views.Classes
                                   ref preference,
                                   sizeof(uint));
             RenderMode = ToolStripRenderMode.Professional;
-            Renderer = new ToolStripProfessionalRenderer(new MenuColorTable());
             SetPreferredAppMode(2);
             FlushMenuThemes();
-        }
-
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
         }
 
         public enum DWMWINDOWATTRIBUTE
