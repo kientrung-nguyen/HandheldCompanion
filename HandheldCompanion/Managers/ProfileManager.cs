@@ -38,14 +38,6 @@ public static class ProfileManager
         profilesPath = Path.Combine(MainWindow.SettingsPath, "profiles");
         if (!Directory.Exists(profilesPath))
             Directory.CreateDirectory(profilesPath);
-
-        ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-        ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
-        ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
-
-        PowerProfileManager.Deleted += PowerProfileManager_Deleted;
-
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
     }
 
     public static FileSystemWatcher profileWatcher { get; set; }
@@ -88,6 +80,13 @@ public static class ProfileManager
 
         isInitialized = true;
         Initialized?.Invoke();
+
+        // listen to external events when ready
+        ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
+        ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
+        ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
+        PowerProfileManager.Deleted += PowerProfileManager_Deleted;
+        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
 
         LogManager.LogInformation("{0} has started", "ProfileManager");
     }
@@ -238,8 +237,7 @@ public static class ProfileManager
     }
 
 
-    private static void ApplyProfile(Profile profile, UpdateSource source = UpdateSource.Background,
-        bool announce = true)
+    private static void ApplyProfile(Profile profile, UpdateSource source = UpdateSource.Background, bool announce = true)
     {
         // might not be the same anymore if disabled
         profile = GetProfileFromGuid(profile.Guid, false, profile.IsSubProfile);
@@ -255,12 +253,24 @@ public static class ProfileManager
         // raise event
         Applied?.Invoke(profile, source);
 
-        // send toast
         // todo: localize me
         if (announce)
         {
-            LogManager.LogInformation("Profile {0} applied", profile.Name);
-            ToastManager.SendToast($"Profile {profile.Name} applied");
+            string announcement = string.Empty;
+            switch(profile.IsSubProfile)
+            {
+                case false:
+                    announcement = $"Profile {profile.Name} applied";
+                    break;
+                case true:
+                    string mainProfileName = GetProfileForSubProfile(profile).Name;
+                    announcement = $"Subprofile {mainProfileName} {profile.Name} applied";
+                    break;
+            }
+
+            // push announcement
+            LogManager.LogInformation(announcement);
+            ToastManager.SendToast(announcement);
         }
     }
 
@@ -356,33 +366,38 @@ public static class ProfileManager
         }
     }
 
-    private static void ProcessManager_ForegroundChanged(ProcessEx proc, ProcessEx back)
+    private static void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
     {
+        if (processEx is null || processEx == ProcessManager.Empty)
+            return;
+
         try
         {
-            var profile = GetProfileFromPath(proc.Path, false);
+            Profile profile = GetProfileFromPath(processEx.Path, false);
 
             // update profile executable path
             if (!profile.Default)
             {
-                profile.Path = proc.Path;
-                UpdateOrCreateProfile(profile);
+                if (!profile.Path.Equals(processEx.Path))
+                {
+                    // update profile path
+                    profile.Path = processEx.Path;
+                    UpdateOrCreateProfile(profile);
+                }
             }
 
             // raise event
-            if (back is not null)
+            if (backgroundEx is not null)
             {
-                var backProfile = GetProfileFromPath(back.Path, false);
+                Profile backProfile = GetProfileFromPath(backgroundEx.Path, false);
 
-                if (backProfile != profile)
+                if (!backProfile.Guid.Equals(profile.Guid))
                     Discarded?.Invoke(backProfile);
             }
 
             ApplyProfile(profile);
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     private static void ProfileCreated(object sender, FileSystemEventArgs e)
@@ -444,11 +459,15 @@ public static class ProfileManager
 
     private static void ProcessProfile(string fileName, bool imported = false)
     {
-        Profile profile = null;
+        Profile profile;
         try
         {
-            var outputraw = File.ReadAllText(fileName);
-            var jObject = JObject.Parse(outputraw);
+            string outputraw = File.ReadAllText(fileName);
+            JObject jObject = JObject.Parse(outputraw);
+
+            string rawName = Path.GetFileNameWithoutExtension(fileName);
+            if (string.IsNullOrEmpty(rawName))
+                throw new Exception("Profile has an incorrect file name.");
 
             // latest pre-versionning release
             Version version = new("0.15.0.4");
@@ -475,20 +494,19 @@ public static class ProfileManager
                     break;
             }
 
-            profile = JsonConvert.DeserializeObject<Profile>(outputraw, new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            });
+            // parse profile
+            profile = JsonConvert.DeserializeObject<Profile>(outputraw, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
         }
         catch (Exception ex)
         {
             LogManager.LogError("Could not parse profile {0}. {1}", fileName, ex.Message);
+            return;
         }
 
         // failed to parse
-        if (profile is null || profile.Name is null || profile.Path is null)
+        if (!profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
         {
-            LogManager.LogError("Failed to parse profile {0}", fileName);
+            LogManager.LogError("Corrupted profile {0}. Profile has an empty name or an empty path.", fileName);
             return;
         }
 
@@ -709,7 +727,8 @@ public static class ProfileManager
 
     public static void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)
     {
-        LogManager.LogInformation($"Attempting to update/create profile {profile.Name} => sub profile? {profile.IsSubProfile}");
+        LogManager.LogInformation($"Attempting to update/create {(profile.IsSubProfile ? "subprofile" : "profile")} {profile.Name}");
+
         bool isCurrent = false;
         switch (source)
         {
@@ -774,7 +793,6 @@ public static class ProfileManager
         }
 
         // apply profile (silently)
-        LogManager.LogInformation($"Checking if profile: {profile} is current => {isCurrent}");
         if (isCurrent)
         {
             SetSubProfileAsFavorite(profile); // if sub profile, set it as favorite for main profile

@@ -211,10 +211,15 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
         {
             switch (name)
             {
-                case "OnScreenDisplayLevel":
+                case "QuickToolsLocation":
                     {
-                        var overlayLevel = Convert.ToInt16(value);
-                        t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
+                        var QuickToolsLocation = Convert.ToInt32(value);
+                        UpdateLocation(QuickToolsLocation);
+                    }
+                    break;
+                case "QuickToolsAutoHide":
+                    {
+                        autoHide = Convert.ToBoolean(value);
                     }
                     break;
             }
@@ -239,7 +244,7 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
                 case 0:
                 case 2:
                     this.SetWindowPosition(WindowPositions.Left, Screen.PrimaryScreen);
-                    Left += Margin.Left;
+                    //Left += Margin.Left;
                     break;
 
                 // top, right
@@ -248,12 +253,13 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
                 case 1:
                 case 3:
                     this.SetWindowPosition(WindowPositions.Right, Screen.PrimaryScreen);
-                    Left -= Margin.Right;
+                    //Left -= Margin.Right;
                     break;
             }
 
-            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfBounds.Height - (8.0d * Margin.Top));
-            Top = Margin.Top;
+            Top = 0;
+            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfWorkingArea.Height /* - (8.0d * Margin.Top)*/);
+            //Top = Margin.Top;
         });
     }
 
@@ -266,11 +272,11 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
             BatteryIndicatorPercentage.Text = $"{BatteryLifePercent}%";
 
             // get status key
-            var KeyStatus = string.Empty;
+            var keyStatus = string.Empty;
             switch (status.PowerLineStatus)
             {
                 case PowerLineStatus.Online:
-                    KeyStatus = "Charging";
+                    keyStatus = "Charging";
                     break;
                 default:
                     {
@@ -278,7 +284,7 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
                         switch (energy)
                         {
                             case EnergySaverStatus.On:
-                                KeyStatus = "Saver";
+                                keyStatus = "Saver";
                                 break;
                         }
                     }
@@ -289,7 +295,7 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
             var keyValue = (int)Math.Truncate(status.BatteryLifePercent * 10);
 
             // set key
-            var Key = $"Battery{KeyStatus}{keyValue}";
+            var Key = $"Battery{keyStatus}{keyValue}";
 
             if (SystemManager.PowerStatusIcon.TryGetValue(Key, out var glyph))
                 BatteryIndicatorIcon.Glyph = glyph;
@@ -335,8 +341,10 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
         if (PresentationSource.FromVisual(this) is HwndSource hwndSource)
         {
             hwndSource.AddHook(WndProc);
-            hwndSource.CompositionTarget.RenderMode = RenderMode.SoftwareOnly;
+            hwndSource.CompositionTarget.RenderMode = RenderMode.Default;
             WinAPI.SetWindowPos(hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+            int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
+            UpdateLocation(QuickToolsLocation);
         }
     }
 
@@ -461,7 +469,6 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
                         WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
 
                     InvokeGotGamepadWindowFocus();
-
                     clockUpdateTimer.Start();
                     break;
                 case Visibility.Visible:
@@ -542,7 +549,6 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
     {
         // Add handler for ContentFrame navigation.
         ContentFrame.Navigated += On_Navigated;
-
         // NavView doesn't load any page by default, so load home page.
         //navView.SelectedItem = navView.MenuItems[0];
 
@@ -582,33 +588,33 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
     private void UpdateTime(object? sender, EventArgs e)
     {
         var timeFormat = CultureInfo.InstalledUICulture.DateTimeFormat.ShortTimePattern;
-        PlatformManager.HWiNFO.ReaffirmRunningProcess();
         Time.Text = string.Empty;
+        //PlatformManager.HWiNFO.ReaffirmRunningProcess();
         Application.Current.Dispatcher.Invoke(() =>
         {
-            if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUUsage, out var cpuUsage) &&
-                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUTemperature, out var cpuTemp) &&
-                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUPower, out var cpuPower) &&
-                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.PhysicalMemoryUsage, out var cpuMem) &&
-                !float.IsNaN(PlatformManager.HWiNFO.CPUFanSpeed))
-            {
-                CPUUsage.Text = $"{cpuUsage.Value:0}{cpuUsage.Unit}";
-                CPUTemp.Text = $"{cpuTemp.Value:0}{cpuTemp.Unit}";
-                CPUPower.Text = $"{cpuPower.Value:0}{cpuPower.Unit}";
-                CPUMem.Text = $"{(cpuMem.Value / 1024):0.0}GB";
-                CPUFan.Text = $"{PlatformManager.HWiNFO.CPUFanSpeed}rpm";
-            }
+            //if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUUsage, out var cpuUsage) &&
+            //    PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUTemperature, out var cpuTemp) &&
+            //    PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUPower, out var cpuPower) &&
+            //    PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.PhysicalMemoryUsage, out var cpuMem) &&
+            //    !float.IsNaN(PlatformManager.HWiNFO.CPUFanSpeed))
+            //{
+            //    CPUUsage.Text = $"{cpuUsage.Value:0}{cpuUsage.Unit}";
+            //    CPUTemp.Text = $"{cpuTemp.Value:0}{cpuTemp.Unit}";
+            //    CPUPower.Text = $"{cpuPower.Value:0}{cpuPower.Unit}";
+            //    CPUMem.Text = $"{(cpuMem.Value / 1024):0.0}GB";
+            //    CPUFan.Text = $"{PlatformManager.HWiNFO.CPUFanSpeed}rpm";
+            //}
 
-            if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUUsage, out var gpuUsage) &&
-                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUTemperature, out var gpuTemp) &&
-                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUPower, out var gpuPower) &&
-                PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUMemoryUsage, out var gpuMem))
-            {
-                GPUUsage.Text = $"{gpuUsage.Value:0}{gpuUsage.Unit}";
-                GPUTemp.Text = $"{gpuTemp.Value:0}{gpuTemp.Unit}";
-                GPUPower.Text = $"{gpuPower.Value:0}{gpuPower.Unit}";
-                GPUMem.Text = $"{(gpuMem.Value / 1024):0.0}GB";
-            }
+            //if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUUsage, out var gpuUsage) &&
+            //    PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUTemperature, out var gpuTemp) &&
+            //    PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUPower, out var gpuPower) &&
+            //    PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUMemoryUsage, out var gpuMem))
+            //{
+            //    GPUUsage.Text = $"{gpuUsage.Value:0}{gpuUsage.Unit}";
+            //    GPUTemp.Text = $"{gpuTemp.Value:0}{gpuTemp.Unit}";
+            //    GPUPower.Text = $"{gpuPower.Value:0}{gpuPower.Unit}";
+            //    GPUMem.Text = $"{(gpuMem.Value / 1024):0.0}GB";
+            //}
             Time.Text = $"{DateTime.Now.ToString(timeFormat)}";
         });
     }
@@ -767,5 +773,17 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
         {
             t_CurrentProfile.Text = profile.ToString();
         });
+    }
+
+    private void GamepadWindow_Deactivated(object sender, EventArgs e)
+    {
+        Window window = (Window)sender;
+        window.Topmost = true;
+    }
+
+    private void GamepadWindow_PreviewLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        Window window = (Window)sender;
+        window.Topmost = true;
     }
 }

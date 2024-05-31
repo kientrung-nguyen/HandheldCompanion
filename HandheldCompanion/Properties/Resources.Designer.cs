@@ -8263,6 +8263,8 @@ namespace HandheldCompanion.Properties {
                 return ResourceManager.GetString("SettingsPage_SensorCalibrationDesc", resourceCulture);
             }
         }
+        
+        /// <summary>
         ///   Looks up a localized string similar to External.
         /// </summary>
         public static string SettingsPage_SensorExternal {

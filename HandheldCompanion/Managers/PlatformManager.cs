@@ -6,6 +6,7 @@ using System;
 using System.Diagnostics;
 using System.Timers;
 using System.Windows;
+using System.Xml.Linq;
 
 namespace HandheldCompanion.Managers;
 
@@ -36,7 +37,9 @@ public static class PlatformManager
     public static void Start()
     {
         if (Steam.IsInstalled)
-            Steam.Start();
+        {
+            //Steam.Start();
+        }
 
         if (GOGGalaxy.IsInstalled)
         {
@@ -50,7 +53,7 @@ public static class PlatformManager
 
         if (RTSS.IsInstalled)
         {
-            UpdateCurrentNeedsOnScreenDisplay(OSDManager.OverlayLevel);
+            //UpdateCurrentNeedsOnScreenDisplay(OSDManager.OverlayLevel);
         }
 
         if (HWiNFO.IsInstalled)
@@ -58,7 +61,7 @@ public static class PlatformManager
             // do something
         }
 
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        //SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         ProfileManager.Applied += ProfileManager_Applied;
         PowerProfileManager.Applied += PowerProfileManager_Applied;
 
@@ -83,6 +86,11 @@ public static class PlatformManager
         else
             CurrentNeeds &= ~PlatformNeeds.AutoTDP;
 
+        if (profile.FanProfile.FanMode == FanMode.Software)
+            CurrentNeeds |= PlatformNeeds.FanModeSoftware;
+        else
+            CurrentNeeds &= ~PlatformNeeds.FanModeSoftware;
+
         UpdateTimer.Stop();
         UpdateTimer.Start();
     }
@@ -94,11 +102,12 @@ public static class PlatformManager
             CurrentNeeds |= PlatformNeeds.FramerateLimiter;
         else
             CurrentNeeds &= ~PlatformNeeds.FramerateLimiter;
+        UpdateCurrentNeedsOnScreenDisplay(profile.OverlayLevel);
 
         UpdateTimer.Stop();
         UpdateTimer.Start();
     }
-
+    /*
     private static void SettingsManager_SettingValueChanged(string name, object value)
     {
         // UI thread
@@ -116,7 +125,7 @@ public static class PlatformManager
             }
         });
     }
-
+    */
     private static void UpdateCurrentNeedsOnScreenDisplay(OverlayDisplayLevel level)
     {
         switch (level)
@@ -174,7 +183,6 @@ public static class PlatformManager
                     // Only start LHM if it was not running before or if OnScreenDisplayComplex was false
                     //LibreHardwareMonitor.Start();
                     // Only start HWiNFO if it was not running before or if OnScreenDisplayComplex was false and if it is installed
-                    LogManager.LogInformation($"Only start HWiNFO if it was not running before or if OnScreenDisplayComplex was false and if it is installed");
                     if (HWiNFO.IsInstalled)
                         HWiNFO.Start();
                 }
@@ -195,7 +203,8 @@ public static class PlatformManager
         else if (CurrentNeeds.HasFlag(PlatformNeeds.AutoTDP) || CurrentNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
         {
             // If AutoTDP or framerate limiter is needed, start only RTSS and stop LHM
-            if (!PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) && !PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
+            if (!PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) &&
+                !PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
             {
                 // Only start RTSS if it was not running before and if it is installed
                 if (RTSS.IsInstalled)
@@ -216,10 +225,27 @@ public static class PlatformManager
             //if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplayComplex))
             //    LibreHardwareMonitor.Stop(true);
         }
+        else if (CurrentNeeds.HasFlag(PlatformNeeds.FanModeSoftware))
+        {
+            // If AutoTDP or framerate limiter is needed, start only HWiNFO and stop LHM
+            if (!PreviousNeeds.HasFlag(PlatformNeeds.FanModeSoftware))
+            {
+                // Only start RTSS if it was not running before and if it is installed
+                if (HWiNFO.IsInstalled)
+                    HWiNFO.Start();
+            }
+            else
+            {
+                if (HWiNFO.IsInstalled)
+                    HWiNFO.Stop();
+            }
+        }
         else
         {
             // If none of the needs are present, stop both LHM and RTSS
-            if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay) || PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) ||
+            if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay) ||
+                PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) ||
+                PreviousNeeds.HasFlag(PlatformNeeds.FanModeSoftware) ||
                 PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
             {
                 // Only stop LHM and RTSS if they were running before and if they are installed
@@ -297,6 +323,7 @@ public static class PlatformManager
         AutoTDP = 1,
         FramerateLimiter = 2,
         OnScreenDisplay = 4,
-        OnScreenDisplayComplex = 8
+        OnScreenDisplayComplex = 8,
+        FanModeSoftware = 16
     }
 }

@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
@@ -140,8 +141,7 @@ public class HWiNFO : IPlatform
             var hasSensorsSM = GetProperty("SensorsSM");
             if (!IsRunning || !hasSensorsSM)
             {
-                //if (IsRunning)
-                //    StopProcess();
+                StopProcess();
                 StartProcess();
             }
             else
@@ -151,6 +151,9 @@ public class HWiNFO : IPlatform
             }
 
             SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            ProfileManager.Applied += ProfileManager_Applied;
+            PowerProfileManager.Applied += PowerProfileManager_Applied;
+
             HWiNFOReader = new();
 
             // our main watchdog to (re)apply requested settings
@@ -176,6 +179,8 @@ public class HWiNFO : IPlatform
     {
         HWiNFOWatchdog?.Stop();
         SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ProfileManager.Applied -= ProfileManager_Applied;
+        PowerProfileManager.Applied -= PowerProfileManager_Applied;
         return base.Stop(kill);
     }
 
@@ -194,11 +199,22 @@ public class HWiNFO : IPlatform
         });
     }
 
+    private void ProfileManager_Applied(Profile profile, UpdateSource source)
+    {
+        if (profile.OverlayLevel != OverlayDisplayLevel.Disabled && profile.OverlayLevel != OverlayDisplayLevel.External)
+            HWiNFOWatchdog?.Start();
+    }
+
+    private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+    {
+        if (profile.FanProfile.FanMode == FanMode.Software)
+            HWiNFOWatchdog?.Start();
+    }
+
     private void PlatformWatchdogElapsed()
     {
         // reset tentative counter
         Tentative = 0;
-        HWiNFOWatchdog?.Start();
     }
 
     public void PopulateSensors()
@@ -210,12 +226,9 @@ public class HWiNFO : IPlatform
                 var sensors = HWiNFOReader.ReadLocal();
                 double? apuSTAPMPower = 0.0d;
                 double? cpuPackagePower = 0.0d;
-                MonitoredSensors[SensorElementType.CPUBusClock] = new();
-                MonitoredSensors[SensorElementType.CPUCoreRatio] = new();
-                MonitoredSensors[SensorElementType.CPUFrequencyEffective] = new();
+                var cpuCoreRatio = 0d;
+                var cpuFrequencyEffective = 0d;
                 MonitoredSensors[SensorElementType.BatteryRemainingTime] = new();
-                MonitoredSensors[SensorElementType.BatteryChargeRate] = new();
-
                 CPUFanSpeed = IDevice.GetCurrent().ReadFanSpeed();
                 CPUFanDuty = IDevice.GetCurrent().ReadFanDuty();
 
@@ -269,8 +282,11 @@ public class HWiNFO : IPlatform
                                 case "Core 6 Ratio" or "Core 15 Ratio" or "Core 7 Ratio" or "Core 16 Ratio":
                                 case "Core 8 Ratio" or "Core 17 Ratio" or "Core 9 Ratio" or "Core 18 Ratio":
                                     {
-                                        if (!MonitoredSensors.TryGetValue(SensorElementType.CPUCoreRatio, out var curSensor) || sensor.Value > curSensor.Value)
+                                        if (!MonitoredSensors.TryGetValue(SensorElementType.CPUCoreRatio, out var curSensor) || sensor.Value > cpuCoreRatio)
+                                        {
+                                            cpuCoreRatio = sensor.Value;
                                             MonitoredSensors[SensorElementType.CPUCoreRatio] = sensor;
+                                        }
                                     }
                                     break;
                                 case "Bus Clock": MonitoredSensors[SensorElementType.CPUBusClock] = sensor; break;
@@ -323,8 +339,11 @@ public class HWiNFO : IPlatform
                                 case "Core 17 T0 Effective Clock" or "Core 17 T1 Effective Clock":
                                 case "Core 18 T0 Effective Clock" or "Core 18 T1 Effective Clock":
                                     {
-                                        if (!MonitoredSensors.TryGetValue(SensorElementType.CPUFrequencyEffective, out var curSensor) || sensor.Value > curSensor.Value)
+                                        if (!MonitoredSensors.TryGetValue(SensorElementType.CPUFrequencyEffective, out var curSensor) || sensor.Value > cpuFrequencyEffective)
+                                        {
+                                            cpuFrequencyEffective = sensor.Value;
                                             MonitoredSensors[SensorElementType.CPUFrequencyEffective] = sensor;
+                                        }
                                     }
                                     break;
                                 case "Remaining Capacity": MonitoredSensors[SensorElementType.BatteryRemainingCapacity] = sensor; break;
@@ -582,10 +601,7 @@ public class HWiNFO : IPlatform
             StartProcess();
         }
 
-        if (HWiNFOWatchdog != null && !HWiNFOWatchdog.Enabled)
-            HWiNFOWatchdog.Start();
-
-        //PopulateSensors();
+        PopulateSensors();
     }
 
     private void DisposeMemory()

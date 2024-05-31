@@ -248,7 +248,6 @@ public abstract class IPlatform : IDisposable
     protected virtual void Process_Exited(object? sender, EventArgs e)
     {
         LogManager.LogDebug("{0} has exited", GetType());
-
         if (KeepAlive)
         {
             if (Tentative < MaxTentative)
@@ -276,7 +275,7 @@ public abstract class IPlatform : IDisposable
             // set lock
             IsStarting = true;
 
-            Process process = null;
+            Process? process = null;
             while (process is null && Tentative < MaxTentative)
             {
                 // increase tentative counter
@@ -295,7 +294,7 @@ public abstract class IPlatform : IDisposable
                     CreateNoWindow = true
                 });
 
-                Thread.Sleep(500);
+                Thread.Sleep(3000);
             }
 
             if (process is not null && !process.HasExited)

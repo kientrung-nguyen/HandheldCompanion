@@ -3,7 +3,9 @@ using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using Newtonsoft.Json;
 using System;
+using System.IO;
 using System.Collections.Generic;
+using static HandheldCompanion.Managers.OSDManager;
 using static HandheldCompanion.Utils.XInputPlusUtils;
 
 namespace HandheldCompanion;
@@ -104,6 +106,15 @@ public partial class Profile : ICloneable, IComparable
     public bool RISEnabled { get; set; } = false;
     public int RISSharpness { get; set; } = 80; // default AMD value
 
+    public OverlayDisplayLevel OverlayLevel { get; set; } = OverlayDisplayLevel.Disabled;
+    public OverlayEntryLevel OverlayTimeLevel { get; set; } = OverlayEntryLevel.Disabled;
+    public OverlayEntryLevel OverlayFPSLevel { get; set; } = OverlayEntryLevel.Disabled;
+    public OverlayEntryLevel OverlayCPULevel { get; set; } = OverlayEntryLevel.Disabled;
+    public OverlayEntryLevel OverlayRAMLevel { get; set; } = OverlayEntryLevel.Disabled;
+    public OverlayEntryLevel OverlayGPULevel { get; set; } = OverlayEntryLevel.Disabled;
+    public OverlayEntryLevel OverlayVRAMLevel { get; set; } = OverlayEntryLevel.Disabled;
+    public OverlayEntryLevel OverlayBATTLevel { get; set; } = OverlayEntryLevel.Disabled;
+
     // AppCompatFlags
     public bool FullScreenOptimization { get; set; } = true;
     public bool HighDPIAware { get; set; } = true;
@@ -126,15 +137,14 @@ public partial class Profile : ICloneable, IComparable
     {
         if (!string.IsNullOrEmpty(path))
         {
+            Dictionary<string, string> AppProperties = ProcessUtils.GetAppProperties(path);
 
-            var AppProperties = ProcessUtils.GetAppProperties(path);
-
-            var ProductName = AppProperties.TryGetValue("FileDescription", out var property) ? property : AppProperties["ItemFolderNameDisplay"];
+            string ProductName = AppProperties.TryGetValue("FileDescription", out var property) ? property : AppProperties["ItemFolderNameDisplay"];
             // string Version = AppProperties.ContainsKey("FileVersion") ? AppProperties["FileVersion"] : "1.0.0.0";
             // string Company = AppProperties.ContainsKey("Company") ? AppProperties["Company"] : AppProperties.ContainsKey("Copyright") ? AppProperties["Copyright"] : "Unknown";
 
-            Executable = AppProperties["FileName"];
-            Name = ProductName;
+            Executable = System.IO.Path.GetFileName(path);
+            Name = string.IsNullOrEmpty(ProductName) ? Executable : ProductName;
             Path = path;
         }
 

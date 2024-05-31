@@ -458,6 +458,14 @@ public partial class QuickProfilesPage : Page
                     PowerProfile powerProfile = PowerProfileManager.GetProfile(profile.PowerProfile);
                     powerProfile?.Check(this);
 
+                    comboBoxOSDLevel.SelectedIndex = (int)selectedProfile.OverlayLevel;
+                    comboBoxTimeDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayTimeLevel;
+                    comboBoxFPSDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayFPSLevel;
+                    comboBoxCPUDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayCPULevel;
+                    comboBoxGPUDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayGPULevel;
+                    comboBoxRAMDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayRAMLevel;
+                    comboBoxVRAMDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayVRAMLevel;
+                    comboBoxBATTDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayBATTLevel;
                     // gyro layout
                     if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
                     {
@@ -533,7 +541,7 @@ public partial class QuickProfilesPage : Page
             ProcessManager_ForegroundChanged(currentProcess, null);
     }
 
-    private void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
+    private void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
     {
         if (foregroundLock.TryEnter())
         {
@@ -542,16 +550,21 @@ public partial class QuickProfilesPage : Page
                 // update current process
                 currentProcess = processEx;
 
+                // get path
+                string path = currentProcess != null ? currentProcess.Path : string.Empty;
+                ImageSource imageSource = currentProcess != null ? currentProcess.ProcessIcon : null;
+                nint handle = currentProcess != null ? currentProcess.MainWindowHandle : IntPtr.Zero;
+
                 // update real profile
-                realProfile = ProfileManager.GetProfileFromPath(processEx.Path, true);
+                realProfile = ProfileManager.GetProfileFromPath(path, true);
 
                 // UI thread
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ProfileToggle.IsOn = !realProfile.Default && realProfile.Enabled;
-                    ProfileIcon.Source = processEx.ProcessIcon;
+                    ProfileIcon.Source = imageSource;
 
-                    if (processEx.MainWindowHandle != IntPtr.Zero)
+                    if (handle != IntPtr.Zero)
                     {
                         // string MainWindowTitle = ProcessUtils.GetWindowTitle(processEx.MainWindowHandle);
 
@@ -608,7 +621,7 @@ public partial class QuickProfilesPage : Page
 
     private void CreateProfile()
     {
-        if (currentProcess is null)
+        if (currentProcess is null || currentProcess == ProcessManager.Empty)
             return;
 
         // create profile
@@ -995,7 +1008,6 @@ public partial class QuickProfilesPage : Page
         if (cb_SubProfiles.SelectedIndex == -1)
             return;
 
-        LogManager.LogInformation($"Subprofile changed in Quick Settings - ind: {cb_SubProfiles.SelectedIndex} - subprofile: {cb_SubProfiles.SelectedItem}");
         selectedProfile = (Profile)cb_SubProfiles.SelectedItem;
         UpdateProfile();
     }
@@ -1102,5 +1114,74 @@ public partial class QuickProfilesPage : Page
                 graphicLock.Exit();
             }
         }
+    }
+
+    void BindOSDToProfile()
+    {
+        if (comboBoxOSDLevel.SelectedIndex >= 0 &&
+            comboBoxTimeDisplayLevel.SelectedIndex >= 0 &&
+            comboBoxFPSDisplayLevel.SelectedIndex >= 0 &&
+            comboBoxCPUDisplayLevel.SelectedIndex >= 0 &&
+            comboBoxGPUDisplayLevel.SelectedIndex >= 0 &&
+            comboBoxRAMDisplayLevel.SelectedIndex >= 0 &&
+            comboBoxVRAMDisplayLevel.SelectedIndex >= 0 &&
+            comboBoxBATTDisplayLevel.SelectedIndex >= 0)
+        {
+            selectedProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(comboBoxOSDLevel.SelectedIndex);
+            selectedProfile.OverlayTimeLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxTimeDisplayLevel.SelectedIndex);
+            selectedProfile.OverlayFPSLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxFPSDisplayLevel.SelectedIndex);
+            selectedProfile.OverlayCPULevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxCPUDisplayLevel.SelectedIndex);
+            selectedProfile.OverlayGPULevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxGPUDisplayLevel.SelectedIndex);
+            selectedProfile.OverlayRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxRAMDisplayLevel.SelectedIndex);
+            selectedProfile.OverlayVRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxVRAMDisplayLevel.SelectedIndex);
+            selectedProfile.OverlayBATTLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxBATTDisplayLevel.SelectedIndex);
+
+            UpdateProfile();
+        }
+    }
+
+    private void comboBoxOSDLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void comboBoxTimeOSDLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void comboBoxTimeDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void comboBoxFPSDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void comboBoxCPUDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void comboBoxRAMDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void comboBoxGPUDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void comboBoxVRAMDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void comboBoxBATTDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
     }
 }

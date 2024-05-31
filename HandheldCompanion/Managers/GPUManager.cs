@@ -23,9 +23,9 @@ namespace HandheldCompanion.Managers
         public delegate void UnhookedEventHandler(GPU GPU);
         #endregion
 
-        public static bool IsInitialized;
-        public static bool IsLoaded_IGCL;
-        public static bool IsLoaded_ADLX;
+        public static bool IsInitialized = false;
+        public static bool IsLoaded_IGCL = false;
+        public static bool IsLoaded_ADLX = false;
 
         private static GPU currentGPU = null;
         private static ConcurrentDictionary<AdapterInformation, GPU> DisplayGPU = new();
@@ -205,8 +205,14 @@ namespace HandheldCompanion.Managers
             if (IsInitialized)
                 return;
 
-            IsLoaded_IGCL = IGCLBackend.Initialize();
-            IsLoaded_ADLX = ADLXBackend.IntializeAdlx();
+            lock (GPU.functionLock)
+            {
+                if (!IsLoaded_IGCL)
+                    IsLoaded_IGCL = IGCLBackend.Initialize();
+
+                if (!IsLoaded_ADLX)
+                    IsLoaded_ADLX = ADLXBackend.IntializeAdlx();
+            }
 
             // todo: check if usefull on resume
             // it could be DeviceManager_DisplayAdapterArrived is called already, making this redundant
@@ -265,8 +271,10 @@ namespace HandheldCompanion.Managers
 
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
+            LogManager.LogInformation("GPUManager Profile {0} applied", profile.Name);
             if (!IsInitialized || currentGPU is null)
                 return;
+            /*
 
             try
             {
@@ -328,6 +336,7 @@ namespace HandheldCompanion.Managers
                 }
             }
             catch { }
+            */
         }
 
         private static void ProfileManager_Discarded(Profile profile)
@@ -342,21 +351,23 @@ namespace HandheldCompanion.Managers
                 if (profile.GPUScaling && currentGPU.GetGPUScaling())
                     currentGPU.SetGPUScaling(false);
                 */
+                /*
 
-                // restore default RSR
-                if (currentGPU is AMDGPU amdGPU)
-                {
-                    if (profile.RSREnabled && amdGPU.GetRSR())
-                        amdGPU.SetRSR(false);
-                }
+                    // restore default RSR
+                    if (currentGPU is AMDGPU amdGPU)
+                    {
+                        if (profile.RSREnabled && amdGPU.GetRSR())
+                            amdGPU.SetRSR(false);
+                    }
 
-                // restore default integer scaling
-                if (profile.IntegerScalingEnabled && currentGPU.GetIntegerScaling())
-                    currentGPU.SetIntegerScaling(false, 0);
+                    // restore default integer scaling
+                    if (profile.IntegerScalingEnabled && currentGPU.GetIntegerScaling())
+                        currentGPU.SetIntegerScaling(false, 0);
 
-                // restore default image sharpening
-                if (profile.RISEnabled && currentGPU.GetImageSharpening())
-                    currentGPU.SetImageSharpening(false);
+                    // restore default image sharpening
+                    if (profile.RISEnabled && currentGPU.GetImageSharpening())
+                        currentGPU.SetImageSharpening(false);
+                */
             }
             catch { }
         }
@@ -364,8 +375,74 @@ namespace HandheldCompanion.Managers
         // todo: moveme
         private static void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
         {
+            LogManager.LogInformation("GPUManager Profile {0} updated", profile.Name);
+            if (!IsInitialized || currentGPU is null)
+                return;
+            /*
+            try
+            {
+                // apply profile GPU Scaling
+                // apply profile scaling mode
+                if (profile.GPUScaling)
+                {
+                    if (!currentGPU.GetGPUScaling())
+                        currentGPU.SetGPUScaling(true);
+
+                    if (currentGPU.GetScalingMode() != profile.ScalingMode)
+                        currentGPU.SetScalingMode(profile.ScalingMode);
+                }
+                else if (currentGPU.GetGPUScaling())
+                {
+                    currentGPU.SetGPUScaling(false);
+                }
+
+                // apply profile RSR
+                if (currentGPU is AMDGPU amdGPU)
+                {
+                    if (profile.RSREnabled)
+                    {
+                        if (!amdGPU.GetRSR())
+                            amdGPU.SetRSR(true);
+
+                        if (amdGPU.GetRSRSharpness() != profile.RSRSharpness)
+                            amdGPU.SetRSRSharpness(profile.RSRSharpness);
+                    }
+                    else if (amdGPU.GetRSR())
+                    {
+                        amdGPU.SetRSR(false);
+                    }
+                }
+
+                // apply profile Integer Scaling
+                if (profile.IntegerScalingEnabled)
+                {
+                    if (!currentGPU.GetIntegerScaling())
+                        currentGPU.SetIntegerScaling(true, profile.IntegerScalingType);
+                }
+                else if (currentGPU.GetIntegerScaling())
+                {
+                    currentGPU.SetIntegerScaling(false, 0);
+                }
+
+                // apply profile image sharpening
+                if (profile.RISEnabled)
+                {
+                    if (!currentGPU.GetImageSharpening())
+                        currentGPU.SetImageSharpening(profile.RISEnabled);
+
+                    if (currentGPU.GetImageSharpeningSharpness() != profile.RISSharpness)
+                        currentGPU.SetImageSharpeningSharpness(profile.RISSharpness);
+                }
+                else if (currentGPU.GetImageSharpening())
+                {
+                    currentGPU.SetImageSharpening(false);
+                }
+            }
+            catch { }
+
             ProcessEx.SetAppCompatFlag(profile.Path, ProcessEx.DisabledMaximizedWindowedValue, !profile.FullScreenOptimization);
             ProcessEx.SetAppCompatFlag(profile.Path, ProcessEx.HighDPIAwareValue, !profile.HighDPIAware);
+            */
         }
     }
 }

@@ -8,11 +8,11 @@
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     Title="QuickTools"
-    Width="500"
+    Width="540"
     Height="720"
-    MinWidth="500"
+    MinWidth="540"
     MinHeight="450"
-    MaxWidth="500"
+    MaxWidth="540"
     Margin="12"
     ui:ThemeManager.IsThemeAware="True"
     ui:TitleBar.ExtendViewIntoTitleBar="True"
@@ -21,15 +21,19 @@
     ui:WindowHelper.UseAeroBackdrop="True"
     ui:WindowHelper.UseModernWindowStyle="True"
     DataContext="{Binding RelativeSource={RelativeSource Self}}"
-    Closing="Window_Closing"
-    Loaded="Window_Loaded"
     ResizeMode="NoResize"
     ShowActivated="False"
     ShowInTaskbar="False"
-    Topmost="False"
+    Topmost="True"
+    Top="0"
+    Left="0"
     WindowStyle="ToolWindow"
-    mc:Ignorable="d">
-
+    SizeToContent="Height"
+    mc:Ignorable="d" 
+    Closing="Window_Closing"
+    Loaded="Window_Loaded"
+    Deactivated="GamepadWindow_Deactivated"
+    PreviewLostKeyboardFocus="GamepadWindow_PreviewLostKeyboardFocus">
     <ui:NavigationView
             Name="navView"
             Margin="0,-30,0,0"
@@ -43,17 +47,17 @@
         <ui:NavigationView.Content>
             <Grid Margin="0,0,0,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="100" />
+                    <!--<RowDefinition Height="100" />-->
                     <RowDefinition Height="*" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MaxWidth="60" />
+                    <ColumnDefinition Width="*" MaxWidth="80" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                <!--<Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Top">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
                         <RowDefinition Height="30" />
@@ -119,11 +123,11 @@
                     </Border>
 
                     <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" x:Name="navHeader" FontSize="20" />
-                </Grid>
-                <Grid Grid.Row="1"
+                </Grid>-->
+                <Grid Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="0" 
-                        Margin="0,0,0,0">
+                        Margin="4,8,4,4">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
                         <RowDefinition Height="70" />
@@ -149,17 +153,15 @@
                             Maximum="100"
                             Minimum="0"
                             SmallChange="1"
-                            TickFrequency="10"
-                            TickPlacement="BottomRight"
+                            TickFrequency="1"
                             ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
                             ValueChanged="SliderBrightness_ValueChanged" />
                     </Grid>
                 </Grid>
-                <Grid 
-                    Grid.Row="3"
+                <Grid Grid.Row="2"
                     Grid.RowSpan="2"
                     Grid.Column="0"
-                    Margin="0,0,0,0">
+                    Margin="4,4,4,4">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
                         <RowDefinition Height="70" />
@@ -189,28 +191,27 @@
                             Maximum="100"
                             Minimum="0"
                             SmallChange="1"
-                            TickFrequency="10"
-                            TickPlacement="BottomRight"
+                            TickFrequency="1"
                             ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
                             ValueChanged="SliderVolume_ValueChanged" />
                     </Grid>
                 </Grid>
 
                 <Border
-                    Grid.Row="1"
-                    Grid.RowSpan="5"
+                    Grid.Row="0"
+                    Grid.RowSpan="4"
                     Grid.Column="1"
                     Margin="0"
                     Background="{StaticResource ControlExampleDisplayBrush}"
                     CornerRadius="10">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
+                            <RowDefinition Height="223*" />
+                            <RowDefinition Height="392*"/>
                             <RowDefinition Height="70" />
                         </Grid.RowDefinitions>
                         <Border
-                            Grid.Row="1"
-                            Margin="0"
+                            Grid.Row="2"
                             Padding="0,0,0,0"
                             VerticalAlignment="Center"
                             Background="{StaticResource ControlExampleDisplayBrush}"
@@ -222,7 +223,6 @@
                                         <RowDefinition Height="*" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
@@ -254,12 +254,6 @@
                                                                    Text="{x:Static resx:Resources.QuickHomePage_Title}" />
                                                     </ui:SimpleStackPanel>
                                                 </DockPanel>
-                                                <!--<ui:FontIcon
-                                                    Margin="0,0,7,0"
-                                                    HorizontalAlignment="Right"
-                                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                                    FontSize="12"
-                                                    Glyph="&#xE974;" />-->
                                             </Grid>
                                         </Button>
                                     </Border>
@@ -283,12 +277,6 @@
                                                                    Text="{x:Static resx:Resources.QuickDevicePage_Title}" />
                                                     </ui:SimpleStackPanel>
                                                 </DockPanel>
-                                                <!--<ui:FontIcon
-                                                    Margin="0,0,7,0"
-                                                    HorizontalAlignment="Right"
-                                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                                    FontSize="12"
-                                                    Glyph="&#xE974;" />-->
                                             </Grid>
                                         </Button>
                                     </Border>
@@ -329,7 +317,7 @@
                                             </Grid>
                                         </Button>
                                     </Border>
-                                    <Border Grid.Row="0" Grid.Column="3">
+                                    <Border Grid.Row="0" Grid.Column="3" Visibility="Collapsed">
                                         <Button
                                             Name="QuickOverlayPage"
                                             Height="54"
@@ -357,16 +345,10 @@
                                                     Visibility="Collapsed"
                                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                                     Style="{StaticResource BodyTextBlockStyle}" />
-                                                <!--<ui:FontIcon
-                                                    Margin="0,0,7,0"
-                                                    HorizontalAlignment="Right"
-                                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                                    FontSize="12"
-                                                    Glyph="&#xE974;" />-->
                                             </Grid>
                                         </Button>
                                     </Border>
-                                    <Border Grid.Row="0" Grid.Column="4">
+                                    <Border Grid.Row="0" Grid.Column="3">
                                         <Button
                                             Name="QuickSuspenderPage"
                                             Height="54"
@@ -398,12 +380,11 @@
                                 </Grid>
                             </ui:SimpleStackPanel>
                         </Border>
-                        <ui:ContentDialog Name="ContentDialog" />
-                        <common:TouchScrollViewer x:Name="scrollViewer"
-                                                  VerticalContentAlignment="Stretch"
-                                                  VerticalAlignment="Stretch"
-                                                  Margin="0,0,0,0" 
-                                                  PanningMode="VerticalOnly">
+                        <TextBlock Grid.Row="0" x:Name="navHeader" FontSize="20" Margin="12,0,0,0" Grid.RowSpan="2" />
+                        <ui:ContentDialog Name="ContentDialog" Grid.RowSpan="2" />
+                        <common:TouchScrollViewer x:Name="scrollViewer" Margin="0,30,0,0"
+                                                  VerticalContentAlignment="Stretch" 
+                                                  PanningMode="VerticalOnly" Grid.RowSpan="2">
                             <ui:Frame Name="ContentFrame" 
                                       Grid.Row="0"
                                       Margin="0,0,10,0" />

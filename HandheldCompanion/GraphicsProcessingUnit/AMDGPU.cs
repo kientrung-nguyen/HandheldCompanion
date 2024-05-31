@@ -288,9 +288,16 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (halting)
                 return;
 
-            lock (telemetryLock)
+            if (Monitor.TryEnter(telemetryLock))
             {
-                TelemetryData = GetTelemetry();
+                try
+                {
+                    TelemetryData = GetTelemetry();
+                }
+                finally
+                {
+                    Monitor.Exit(telemetryLock);
+                }
             }
         }
 
@@ -312,9 +319,11 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (halting)
                 return;
 
-            lock (updateLock)
+            if (Monitor.TryEnter(updateLock))
             {
-                bool GPUScaling = false;
+                try
+                {
+                    bool GPUScaling = false;
 
                 try
                 {
@@ -405,11 +414,16 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         // raise event
                         base.OnImageSharpeningChanged(ImageSharpening, ImageSharpeningSharpness);
 
-                        prevImageSharpening = ImageSharpening;
-                        prevImageSharpeningSharpness = ImageSharpeningSharpness;
+                            prevImageSharpening = ImageSharpening;
+                            prevImageSharpeningSharpness = ImageSharpeningSharpness;
+                        }
                     }
+                    catch { }
                 }
-                catch { }
+                finally
+                {
+                    Monitor.Exit(updateLock);
+                }
             }
         }
     }

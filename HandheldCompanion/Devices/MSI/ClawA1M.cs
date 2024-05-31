@@ -2,6 +2,7 @@
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using HidLibrary;
+using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Collections.Generic;
 using System.Management;
@@ -71,6 +72,9 @@ public class ClawA1M : IDevice
 
     private ManagementEventWatcher? specialKeyWatcher;
     private Dictionary<byte, HidDevice> hidDevices = new();
+
+    // todo: find the right value, this is placeholder
+    private const byte INPUT_HID_ID = 0x01;
 
     public ClawA1M()
     {
@@ -235,11 +239,23 @@ public class ClawA1M : IDevice
             if (device.Capabilities.InputReportByteLength != 64)
                 continue;
 
-            byte[] msg = { 15, 0, 0, 60, (byte)CommandType.SwitchMode, (byte)GamepadMode.XInput, (byte)MKeysFunction.Macro };
-            device.Write(msg);
+            hidDevices[INPUT_HID_ID] = device;
+            break;
         }
 
-        return true;
+        if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice hidDevice))
+        {
+            PnPDevice pnpDevice = PnPDevice.GetDeviceByInterfaceId(hidDevice.DevicePath);
+            string device_parent = pnpDevice.GetProperty<string>(DevicePropertyKey.Device_Parent);
+
+            PnPDevice pnpParent = PnPDevice.GetDeviceByInstanceId(device_parent);
+            Guid parent_guid = pnpParent.GetProperty<Guid>(DevicePropertyKey.Device_ClassGuid);
+            string parent_instanceId = pnpParent.GetProperty<string>(DevicePropertyKey.Device_InstanceId);
+
+            return DeviceHelper.IsDeviceAvailable(parent_guid, parent_instanceId);
+        }
+
+        return false;
     }
 
     public override bool Open()
@@ -251,6 +267,13 @@ public class ClawA1M : IDevice
         // start WMI event monitor
         StartWatching();
 
+        // configure controller to XInput
+        if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice device))
+        {
+            byte[] msg = { 15, 0, 0, 60, (byte)CommandType.SwitchMode, (byte)GamepadMode.XInput, (byte)MKeysFunction.Macro };
+            device.Write(msg);
+        }
+
         return true;
     }
 
@@ -258,6 +281,26 @@ public class ClawA1M : IDevice
     {
         // stop WMI event monitor
         StopWatching();
+
+        // configure controller to Desktop
+        if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice device))
+        {
+            byte[] msg = { 15, 0, 0, 60, (byte)CommandType.SwitchMode, (byte)GamepadMode.Desktop, (byte)MKeysFunction.Macro };
+            device.Write(msg);
+        }
+
+        // close devices
+        foreach (HidDevice hidDevice in hidDevices.Values)
+        {
+            if (!hidDevice.IsConnected)
+                continue;
+
+            if (hidDevice.IsOpen)
+            {
+                hidDevice.MonitorDeviceEvents = false;
+                hidDevice.CloseDevice();
+            }
+        }
 
         base.Close();
     }

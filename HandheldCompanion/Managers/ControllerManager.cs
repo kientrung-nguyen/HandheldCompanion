@@ -192,8 +192,9 @@ public static class ControllerManager
         CheckControllerScenario();
     }
 
-    private static void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
+    private static void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
     {
+        // update current process
         foregroundProcess = processEx;
 
         // check applicable scenarios
@@ -272,7 +273,7 @@ public static class ControllerManager
                                     watchdogThread = null;
                                 }
 
-                                UpdateStatus(ControllerManagerStatus.Failed);
+                                UpdateStatus(ControllerManagerStatus.Pending);
                             }
                             break;
                     }
@@ -700,7 +701,7 @@ public static class ControllerManager
                             }
 
                             // suspend virtual controller
-                            VirtualManager.Suspend();
+                            VirtualManager.Suspend(false);
 
                             // suspend all physical controllers
                             foreach (XInputController xInputController in GetPhysicalControllers().OfType<XInputController>())
@@ -710,7 +711,7 @@ public static class ControllerManager
                             }
 
                             // resume virtual controller
-                            VirtualManager.Resume();
+                            VirtualManager.Resume(false);
 
                             // resume all physical controllers
                             StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedControllers");
@@ -718,8 +719,8 @@ public static class ControllerManager
                                 ResumeControllers();
 
                             // suspend and resume virtual controller
-                            VirtualManager.Suspend();
-                            VirtualManager.Resume();
+                            VirtualManager.Suspend(false);
+                            VirtualManager.Resume(false);
 
                             // increment attempt counter (if no wireless controller is power cycling)
                             if (!HasCyclingController)
@@ -749,7 +750,7 @@ public static class ControllerManager
     private static void UpdateStatus(ControllerManagerStatus status)
     {
         managerStatus = status;
-        StatusChanged?.Invoke(status);
+        StatusChanged?.Invoke(status, ControllerManagementAttempts);
     }
 
     private static async void XUsbDeviceArrived(PnPDetails details, DeviceEventArgs obj)
@@ -1087,7 +1088,7 @@ public static class ControllerManager
     }
 
     private static ControllerState mutedState = new ControllerState();
-    private static void UpdateInputs(ControllerState controllerState, GamepadMotion gamepadMotion, float delta)
+    private static void UpdateInputs(ControllerState controllerState, GamepadMotion gamepadMotion, float deltaTimeSeconds)
     {
         // raise event
         InputsUpdated?.Invoke(controllerState);
@@ -1097,15 +1098,15 @@ public static class ControllerManager
             case SensorFamily.Windows:
             case SensorFamily.SerialUSBIMU:
                 gamepadMotion = IDevice.GetCurrent().GamepadMotion;
-                SensorsManager.UpdateReport(controllerState, gamepadMotion, ref delta);
+                SensorsManager.UpdateReport(controllerState, gamepadMotion, ref deltaTimeSeconds);
                 break;
         }
 
         // compute motion
         if (gamepadMotion is not null)
         {
-            MotionManager.UpdateReport(controllerState, gamepadMotion, delta);
-            MainWindow.overlayModel.UpdateReport(controllerState, gamepadMotion);
+            MotionManager.UpdateReport(controllerState, gamepadMotion);
+            MainWindow.overlayModel.UpdateReport(controllerState, gamepadMotion, deltaTimeSeconds);
         }
 
         // controller is muted
@@ -1165,7 +1166,7 @@ public static class ControllerManager
     public delegate void InputsUpdatedEventHandler(ControllerState Inputs);
 
     public static event StatusChangedEventHandler StatusChanged;
-    public delegate void StatusChangedEventHandler(ControllerManagerStatus status);
+    public delegate void StatusChangedEventHandler(ControllerManagerStatus status, int attempts);
 
     public static event InitializedEventHandler Initialized;
     public delegate void InitializedEventHandler();

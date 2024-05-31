@@ -14,9 +14,7 @@
     d:DesignWidth="640"
     KeepAlive="True"
     mc:Ignorable="d">
-
     <ui:SimpleStackPanel Margin="0,6,0,6" Spacing="10">
-
         <Grid>
             <!--  Header  -->
             <Border CornerRadius="{DynamicResource ControlCornerRadius}">
@@ -142,12 +140,12 @@
             <Expander
                 HorizontalAlignment="Stretch"
                 d:IsExpanded="true"
-                IsExpanded="True">
+                IsExpanded="False">
                 <Expander.Header>
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="4*" />
                             <ColumnDefinition Width="6*" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
                         <DockPanel Margin="0,12,12,12">
@@ -183,7 +181,6 @@
 
                     <!--  Separator  -->
                     <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="6*" />
@@ -207,6 +204,256 @@
                 </ui:SimpleStackPanel>
             </Expander>
 
+            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{x:Static resx:Resources.QuickOverlayPage_Desc}" />
+            <Border
+                Padding="15,0,12,0"
+                Background="{DynamicResource ExpanderHeaderBackground}"
+                CornerRadius="{DynamicResource ControlCornerRadius}">
+                <ui:SimpleStackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <DockPanel Margin="0,12,12,12">
+                            <ui:FontIcon
+                                Height="40"
+                                HorizontalAlignment="Center"
+                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                Glyph="&#xE78B;" />
+
+                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel}" />
+                                <TextBlock
+                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevelDesc}"
+                                    TextWrapping="Wrap" />
+                            </ui:SimpleStackPanel>
+                        </DockPanel>
+                        <DockPanel Grid.Column="1" Margin="12,0,0,0">
+                            <ComboBox
+                                Name="comboBoxOSDLevel"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center"
+                                IsReadOnly="True"
+                                SelectionChanged="comboBoxOSDLevel_SelectionChanged">
+                                <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Disabled}" />
+                                <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Minimal}" />
+                                <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Extended}" />
+                                <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Full}" />
+                                <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Custom}" />
+                                <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayLevel_External}" />
+                            </ComboBox>
+                        </DockPanel>
+                    </Grid>
+                </ui:SimpleStackPanel>
+            </Border>
+
+            <Border
+                CornerRadius="{DynamicResource ControlCornerRadius}"
+                Background="{DynamicResource ExpanderContentBackground}"
+                Margin="0,-6,0,0"
+                Visibility="{Binding ElementName=comboBoxOSDLevel, Path=SelectedIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
+                <!--  Custom Settings  -->
+                <ui:SimpleStackPanel Name="StackCustomSettings" Spacing="6" Margin="12,12,12,12">
+                    <Separator Margin="-16,-20,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.OverlayPage_TimeLevel}" />
+                            <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Static resx:Resources.OverlayPage_TimeLevelDesc}"
+                                    TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ComboBox
+                                    Name="comboBoxTimeDisplayLevel"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Stretch"
+                                    IsReadOnly="True"
+                                    SelectionChanged="comboBoxTimeDisplayLevel_SelectionChanged">
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Disabled}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Minimal}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Full}" />
+                        </ComboBox>
+                    </Grid>
+                    <!--  Separator  -->
+                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.OverlayPage_FPSLevel}" />
+                            <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Static resx:Resources.OverlayPage_FPSLevelDesc}"
+                                        TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ComboBox
+                                    Name="comboBoxFPSDisplayLevel"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Stretch"
+                                    IsReadOnly="True"
+                                    SelectionChanged="comboBoxFPSDisplayLevel_SelectionChanged">
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Disabled}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Minimal}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Full}" />
+                        </ComboBox>
+                    </Grid>
+                    <!--  Separator  -->
+                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.OverlayPage_CPULevel}" />
+                            <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Static resx:Resources.OverlayPage_CPULevelDesc}"
+                                        TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ComboBox
+                                    Name="comboBoxCPUDisplayLevel"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Stretch"
+                                    IsReadOnly="True"
+                                    SelectionChanged="comboBoxCPUDisplayLevel_SelectionChanged">
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Disabled}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Minimal}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Full}" />
+                        </ComboBox>
+                    </Grid>
+                    <!--  Separator  -->
+                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.OverlayPage_RAMLevel}" />
+                            <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Static resx:Resources.OverlayPage_RAMLevelDesc}"
+                                        TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ComboBox
+                                    Name="comboBoxRAMDisplayLevel"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Stretch"
+                                    IsReadOnly="True"
+                                    SelectionChanged="comboBoxRAMDisplayLevel_SelectionChanged">
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Disabled}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Minimal}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Full}" />
+                        </ComboBox>
+                    </Grid>
+                    <!--  Separator  -->
+                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.OverlayPage_GPULevel}" />
+                            <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Static resx:Resources.OverlayPage_GPULevelDesc}"
+                                        TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ComboBox
+                                    Name="comboBoxGPUDisplayLevel"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Stretch"
+                                    IsReadOnly="True"
+                                    SelectionChanged="comboBoxGPUDisplayLevel_SelectionChanged">
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Disabled}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Minimal}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Full}" />
+                        </ComboBox>
+                    </Grid>
+                    <!--  Separator  -->
+                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.OverlayPage_VRAMLevel}" />
+                            <TextBlock 
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Static resx:Resources.OverlayPage_VRAMLevelDesc}"
+                                        TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ComboBox
+                                    Name="comboBoxVRAMDisplayLevel"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Stretch"
+                                    IsReadOnly="True"
+                                    SelectionChanged="comboBoxVRAMDisplayLevel_SelectionChanged">
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Disabled}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Minimal}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Full}" />
+                        </ComboBox>
+                    </Grid>
+                    <!--  Separator  -->
+                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.OverlayPage_BATTLevel}" />
+                            <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Static resx:Resources.OverlayPage_BATTLevelDesc}"
+                                        TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ComboBox
+                                    Name="comboBoxBATTDisplayLevel"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Stretch"
+                                    IsReadOnly="True"
+                                    SelectionChanged="comboBoxBATTDisplayLevel_SelectionChanged">
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Disabled}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Minimal}" />
+                            <ComboBoxItem Content="{x:Static resx:Resources.OverlayPage_OverlayDisplayCustomLevel_Full}" />
+                        </ComboBox>
+                    </Grid>
+                </ui:SimpleStackPanel>
+            </Border>
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{x:Static resx:Resources.ProfilesPage_MotionControlSettings}" />
             <Expander
                 HorizontalAlignment="Stretch"
@@ -233,7 +480,6 @@
 
                 <Expander.Content>
                     <ui:SimpleStackPanel Margin="0,-10,0,-4" Spacing="6">
-
                         <!--  Controller layout  -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -292,7 +538,6 @@
                         </Grid>
 
                         <ui:SimpleStackPanel Spacing="6" Visibility="{Binding ElementName=cB_Output, Path=SelectedIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|2|3|4|5}">
-
                             <!--  Separator  -->
                             <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
 
@@ -549,12 +794,12 @@
                 </Expander.Content>
             </Expander>
 
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Graphics settings" />
+            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Graphics settings" Visibility="Collapsed" />
 
             <Expander
                 HorizontalAlignment="Stretch"
                 d:IsExpanded="true"
-                IsExpanded="False">
+                IsExpanded="False" Visibility="Collapsed">
                 <Expander.Header>
                     <DockPanel Margin="0,12,12,12">
                         <ui:FontIcon

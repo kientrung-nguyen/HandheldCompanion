@@ -143,8 +143,6 @@ public partial class QuickDevicePage : Page
                 // Bluetooth
                 BluetoothToggle.IsEnabled = radios.Where(radio => radio.Kind == RadioKind.Bluetooth).Any();
                 BluetoothToggle.IsOn = radios.Where(radio => radio.Kind == RadioKind.Bluetooth && radio.State == RadioState.On).Any();
-                
-                NightLightToggle.IsOn = NightLight.Enabled;
             });
         }).Start();
     }

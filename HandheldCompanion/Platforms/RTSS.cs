@@ -29,6 +29,7 @@ public class RTSS : IPlatform
     private readonly ConcurrentList<int> HookedProcessIds = new();
     private bool ProfileLoaded;
     private int RequestedFramerate;
+    private OverlayDisplayLevel OverlayLevel = OverlayDisplayLevel.Disabled;
 
     protected bool halting = false;
 
@@ -122,11 +123,8 @@ public class RTSS : IPlatform
         // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
         if (SettingsManager.IsInitialized)
         {
-            var foregroundProcess = ProcessManager.GetForegroundProcess();
-            if (foregroundProcess is not null)
-                ProcessManager_ForegroundChanged(foregroundProcess, null);
-
             ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+            ProcessManager_ForegroundChanged(ProcessManager.GetForegroundProcess(), null);
         }
 
         return base.Start();
@@ -166,13 +164,20 @@ public class RTSS : IPlatform
             // These conditions prevent 0 from being set on every profile change 
             RequestFPS(frameLimit);
         }
+
+        OverlayLevel = profile.OverlayLevel;
     }
 
-    private async void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
+    private async void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
     {
+        if (processEx is null || processEx == ProcessManager.Empty)
+            return;
+
         // hook new process
         var processId = processEx.ProcessId;
         if (processId == 0) return;
+
+        if (OverlayLevel == OverlayDisplayLevel.Disabled) return;
 
         if (processEx.Filter != ProcessEx.ProcessFilter.Allowed) return;
         AppEntry? appEntry = null;

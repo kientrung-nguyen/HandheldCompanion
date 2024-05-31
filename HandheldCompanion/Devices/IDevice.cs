@@ -158,6 +158,8 @@ public abstract class IDevice
 
     public IDevice()
     {
+        GamepadMotion = new(ProductIllustration, CalibrationMode.Manual | CalibrationMode.SensorFusion);
+
         VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
         DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
@@ -242,6 +244,9 @@ public abstract class IDevice
                         case "AOKZOE A1 Pro":
                             device = new AOKZOEA1Pro();
                             break;
+                        case "AOKZOE A2 Pro":
+                            device = new AOKZOEA2();
+                            break;
                     }
                 }
                 break;
@@ -304,6 +309,12 @@ public abstract class IDevice
                         case "GEEK 1S":
                             device = new AYANEO2S();
                             break;
+                        case "FLIP KB":
+                            device = new AYANEOFlipKB();
+                            break;
+                        case "FLIP DS":
+                            device = new AYANEOFlipDS();
+                            break;
                     }
                 }
                 break;
@@ -352,6 +363,13 @@ public abstract class IDevice
                                 case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
                                     device = new GPDWin4_2023_7840U();
                                     break;
+                                case "AMD Ryzen 5 8640U w/ Radeon 760M Graphics":
+                                    device = new GPDWin4_2024_8640U();
+                                    break;
+                                case "AMD Ryzen 7 8840U w/ Radeon 780M Graphics":
+                                    device = new GPDWin4_2024_8840U();
+                                    break;
+
                             }
                             break;
                         case "G1619-03":
@@ -374,6 +392,12 @@ public abstract class IDevice
                 {
                     switch (ProductName)
                     {
+                        case "ONEXPLAYER X1 i":
+                            device = new OneXPlayerX1Intel();
+                            break;
+                        case "ONEXPLAYER X1 a": // TDOO: check name after release
+                            device = new OneXPlayerX1AMD();
+                            break;
                         case "ONEXPLAYER F1":
                             {
                                 switch (Version)
@@ -490,7 +514,6 @@ public abstract class IDevice
         device.ProductName = ProductName;
         device.Processor = Processor;
         device.SystemName = SystemName;
-        device.GamepadMotion = new(device.ProductIllustration, CalibrationMode.Manual | CalibrationMode.SensorFusion);
 
         return device;
     }
@@ -848,7 +871,6 @@ public abstract class IDevice
 
         if (pnPDevice is not null)
         {
-            LogManager.LogDebug($"PnPDevice {InterfaceId}");
             StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedDevices");
 
             deviceInstanceIds ??= new();
@@ -860,8 +882,6 @@ public abstract class IDevice
 
             return PnPUtil.DisableDevice(pnPDevice.InstanceId);
         }
-
-        LogManager.LogDebug($"PnPDevice null {InterfaceId}");
 
         return false;
     }
@@ -881,13 +901,13 @@ public abstract class IDevice
 
     public GlyphIconInfo GetGlyphIconInfo(ButtonFlags button, int fontIconSize = 14)
     {
-        var glyph = GetGlyph(button);
+        string? glyph = GetGlyph(button);
         return new GlyphIconInfo
         {
             Name = GetButtonName(button),
-            Glyph = glyph,
-            FontSize = glyph is not null ? 28 : fontIconSize,
-            FontFamily = glyph is not null ? GlyphFontFamily : null,
+            Glyph = glyph is not null ? glyph : defaultGlyph,
+            FontSize = fontIconSize,
+            FontFamily = GlyphFontFamily,
             Foreground = null
         };
     }
@@ -903,10 +923,7 @@ public abstract class IDevice
         };
 
         if (FontIcon.Glyph is not null)
-        {
             FontIcon.FontFamily = GlyphFontFamily;
-            FontIcon.FontSize = 28;
-        }
 
         return FontIcon;
     }

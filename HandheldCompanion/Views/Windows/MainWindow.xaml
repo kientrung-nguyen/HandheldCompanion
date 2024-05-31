@@ -122,7 +122,6 @@
                 <ui:NavigationViewItem.Icon>
                     <Grid>
                         <ui:FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xea8f;" />
-
                         <Grid
                             Name="HasNotifications"
                             Margin="11,-11,-11,11"
@@ -146,6 +145,15 @@
                 Name="navSettings"
                 Content="{x:Static resx:Resources.MainWindow_Settings}"
                 Tag="SettingsPage">
+                <ui:NavigationViewItem.Icon>
+                    <ui:SymbolIcon Symbol="Setting" />
+                </ui:NavigationViewItem.Icon>
+            </ui:NavigationViewItem>
+            <!--  Settings  -->
+            <ui:NavigationViewItem
+                Name="navQuit"
+                Content="Quit"
+                Tag="WindowsExit">
                 <ui:NavigationViewItem.Icon>
                     <ui:SymbolIcon Symbol="Setting" />
                 </ui:NavigationViewItem.Icon>
@@ -191,7 +199,8 @@
                         <ui:SimpleStackPanel
                             Name="GamepadUIToggle"
                             Orientation="Horizontal"
-                            Spacing="2">
+                            Spacing="2"
+                            Visibility="Collapsed">
                             <ui:FontIcon
                                 Name="GamepadUIToggleIcon"
                                 Height="40"
@@ -209,7 +218,8 @@
                         <ui:SimpleStackPanel
                             Name="GamepadUISelect"
                             Orientation="Horizontal"
-                            Spacing="2">
+                            Spacing="2"
+                            Visibility="Collapsed">
                             <ui:FontIcon
                                 Name="GamepadUISelectIcon"
                                 Height="40"
@@ -227,7 +237,8 @@
                         <ui:SimpleStackPanel
                             Name="GamepadUIBack"
                             Orientation="Horizontal"
-                            Spacing="2">
+                            Spacing="2"
+                            Visibility="Collapsed">
                             <ui:FontIcon
                                 Name="GamepadUIBackIcon"
                                 Height="40"

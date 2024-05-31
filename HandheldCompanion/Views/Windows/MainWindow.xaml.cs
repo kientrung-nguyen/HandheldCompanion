@@ -8,6 +8,7 @@ using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
+using iNKORE.UI.WPF.TrayIcons;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Collections.Generic;
@@ -72,8 +73,8 @@ public partial class MainWindow : GamepadWindow
     public static string CurrentPageName = string.Empty;
 
     private bool appClosing;
-    private readonly NotifyIcon notifyIcon;
-    private bool NotifyInTaskbar;
+    private TrayIcon notifyIcon;
+    private bool notifyInTaskbar;
     private string preNavItemTag;
 
     private WindowState prevWindowState;
@@ -146,15 +147,15 @@ public partial class MainWindow : GamepadWindow
         XInputPlus.ExtractXInputPlusLibraries();
 
         // initialize notifyIcon
-        notifyIcon = new NotifyIcon
+        notifyIcon = new TrayIcon
         {
-            Text = Title,
+            ToolTipText = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
-            Visible = false,
-            ContextMenuStrip = new CustomContextMenu()
+            Visibility = Visibility.Collapsed,
+            ContextMenu = new ContextMenu()
         };
-
-        notifyIcon.DoubleClick += (sender, e) =>
+        
+        notifyIcon.TrayMouseDoubleClick += (sender, e) =>
         {
             // Stop the timer from ticking.
             notifyIconWaitTimer.Stop();
@@ -162,11 +163,31 @@ public partial class MainWindow : GamepadWindow
                 overlayquickTools.ToggleVisibility();
             SwapWindowState();
         };
-        notifyIcon.Click += (sender, e) =>
+        notifyIcon.TrayLeftMouseUp += (sender, e) =>
         {
-            if (e is System.Windows.Forms.MouseEventArgs me && me.Button == MouseButtons.Left)
-                notifyIconWaitTimer.Start();
+            notifyIconWaitTimer.Start();
         };
+
+        //notifyIcon = new NotifyIcon
+        //{
+        //    Text = Title,
+        //    Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
+        //    Visible = false,
+        //    ContextMenuStrip = new CustomContextMenu()
+        //};
+        //notifyIcon.DoubleClick += (sender, e) =>
+        //{
+        //    // Stop the timer from ticking.
+        //    notifyIconWaitTimer.Stop();
+        //    if (overlayquickTools.Visibility == Visibility.Visible)
+        //        overlayquickTools.ToggleVisibility();
+        //    SwapWindowState();
+        //};
+        //notifyIcon.Click += (sender, e) =>
+        //{
+        //    if (e is System.Windows.Forms.MouseEventArgs me && me.Button == MouseButtons.Left)
+        //        notifyIconWaitTimer.Start();
+        //};
 
         AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow);
         AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools);
@@ -191,7 +212,7 @@ public partial class MainWindow : GamepadWindow
         currentDevice.PullSensors();
 
         // initialize title
-        Title += $" ({fileVersionInfo.FileVersion}) {currentDevice.ProductName} ({currentDevice.Processor})";
+        Title += $" ({fileVersionInfo.FileVersion}) {currentDevice.ProductName}";
         string currentDeviceType = currentDevice.GetType().Name;
         switch (currentDeviceType)
         {
@@ -393,24 +414,49 @@ public partial class MainWindow : GamepadWindow
 
     private void AddNotifyIconItem(string name, object tag = null)
     {
-        if (notifyIcon.ContextMenuStrip is null)
+        if (notifyIcon.ContextMenu is null)
             return;
 
         tag ??= string.Concat(name.Where(c => !char.IsWhiteSpace(c)));
-
-        var menuItemMainWindow = new ToolStripMenuItem(name);
-        menuItemMainWindow.Tag = tag;
-        menuItemMainWindow.Click += MenuItem_Click;
-        notifyIcon.ContextMenuStrip.Items.Add(menuItemMainWindow);
+        var menuItemMainWindow = new MenuItem()
+        {
+            Header = name,
+            Tag = tag
+        };
+        menuItemMainWindow.Click += (sender, e) =>
+        {
+            if (sender is MenuItem menuItem)
+                switch (menuItem.Tag)
+                {
+                    case "MainWindow":
+                        SwapWindowState();
+                        break;
+                    case "QuickTools":
+                        overlayquickTools.ToggleVisibility();
+                        break;
+                    case "Exit":
+                        appClosing = true;
+                        Close();
+                        break;
+                }
+        };
+        //MenuItem_Click;
+        notifyIcon.ContextMenu.Items.Add(menuItemMainWindow);
+    }
+    private void UnloadNotifyIcon()
+    {
+        notifyIcon.Visibility = Visibility.Collapsed;
+        notifyIcon.Dispose();
+        notifyIcon = null;
     }
 
     private void AddNotifyIconSeparator()
     {
-        if (notifyIcon.ContextMenuStrip is null)
+        if (notifyIcon.ContextMenu is null)
             return;
-
-        var separator = new ToolStripSeparator();
-        notifyIcon.ContextMenuStrip.Items.Add(separator);
+        
+        var separator = new Separator();
+        notifyIcon.ContextMenu.Items.Add(separator);
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value)
@@ -508,9 +554,6 @@ public partial class MainWindow : GamepadWindow
     {
         // todo: improve me
         currentDevice.PullSensors();
-
-        //aboutPage.UpdateDevice(device);
-        //settingsPage.UpdateDevice(device);
     }
 
     private void InputsManager_TriggerRaised(string listener, InputsChord input, InputsHotkeyType type, bool IsKeyDown,
@@ -605,7 +648,7 @@ public partial class MainWindow : GamepadWindow
                         // resume manager(s)
                         InputsManager.Start();
                         TimerManager.Start();
-                        VirtualManager.Resume();
+                        VirtualManager.Resume(true);
                         SensorsManager.Resume(true);
                         GPUManager.Start();
                         OSDManager.Start();
@@ -622,7 +665,7 @@ public partial class MainWindow : GamepadWindow
                     {
                         // wait for all HIDs to be ready
                         while (!currentDevice.IsReady())
-                            Thread.Sleep(500);
+                            Thread.Sleep(100);
 
                         // open current device (threaded to avoid device to hang)
                         currentDevice.Open();
@@ -634,7 +677,7 @@ public partial class MainWindow : GamepadWindow
                 {
                     // when device goes to sleep
                     // suspend manager(s)
-                    VirtualManager.Suspend();
+                    VirtualManager.Suspend(true);
                     TimerManager.Stop();
                     SensorsManager.Stop();
                     InputsManager.Stop();
@@ -680,6 +723,12 @@ public partial class MainWindow : GamepadWindow
 
     public void NavView_Navigate(string navItemTag)
     {
+        if (navItemTag == "WindowsExit")
+        {
+            appClosing = true;
+            Close();
+            return;
+        }
         var item = _pages.FirstOrDefault(p => p.Key.Equals(navItemTag));
         var _page = item.Value;
 
@@ -706,8 +755,7 @@ public partial class MainWindow : GamepadWindow
     {
         currentDevice.Close();
 
-        notifyIcon.Visible = false;
-        notifyIcon.Dispose();
+        UnloadNotifyIcon();
 
         overlayModel.Close();
         overlayTrackpad.Close();
@@ -784,19 +832,19 @@ public partial class MainWindow : GamepadWindow
         switch (WindowState)
         {
             case WindowState.Minimized:
-                notifyIcon.Visible = true;
+                notifyIcon.Visibility = Visibility.Visible;
                 ShowInTaskbar = false;
 
-                if (!NotifyInTaskbar)
+                if (!notifyInTaskbar)
                 {
                     ToastManager.SendToast(Title, "is running in the background");
-                    NotifyInTaskbar = true;
+                    notifyInTaskbar = true;
                 }
 
                 break;
             case WindowState.Normal:
             case WindowState.Maximized:
-                notifyIcon.Visible = false;
+                notifyIcon.Visibility = Visibility.Collapsed;
                 ShowInTaskbar = true;
 
                 Activate();

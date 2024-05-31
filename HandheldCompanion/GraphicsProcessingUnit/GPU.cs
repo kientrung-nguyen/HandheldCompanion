@@ -58,6 +58,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                     {
                         lock (functionLock)
                         {
+                            // make sure while we were waiting for the lock
+                            // that someone else didn't unitialize the GPU backend
                             if (!halting && GPUManager.IsInitialized)
                                 return func();
                             else
@@ -84,10 +86,10 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         {
             // release halting flag
             halting = false;
-
+            /*
             if (UpdateTimer != null && !UpdateTimer.Enabled)
                 UpdateTimer.Start();
-
+            */
             /*
             if (TelemetryTimer != null && !TelemetryTimer.Enabled)
                 TelemetryTimer.Start();
@@ -98,10 +100,10 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         {
             // set halting flag
             halting = true;
-
+            /*
             if (UpdateTimer != null && UpdateTimer.Enabled)
                 UpdateTimer.Stop();
-
+            */
             /*
             if (TelemetryTimer != null && TelemetryTimer.Enabled)
                 TelemetryTimer.Stop();
