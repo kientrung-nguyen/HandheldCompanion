@@ -62,7 +62,7 @@ public partial class OverlayModel : OverlayWindow
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         float samplePeriod = TimerManager.GetPeriod() / 1000f;
-        madgwickAHRS = new(samplePeriod, 0.05f);
+        madgwickAHRS = new(samplePeriod, 0.01f);
 
         ResetModelPose();
 
@@ -226,9 +226,9 @@ public partial class OverlayModel : OverlayWindow
             -InputUtils.deg2rad(gyroX), 
             InputUtils.deg2rad(gyroY), 
             -InputUtils.deg2rad(gyroZ),
-            accelX,
-            -accelY,
-            accelZ, 
+            -accelX,
+            accelY,
+            -accelZ, 
             gamepadMotion.deltaTime
             );
 

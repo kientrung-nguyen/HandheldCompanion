@@ -43,13 +43,13 @@ public partial class QuickHomePage : Page
     private void HotkeysManager_HotkeyUpdated(Hotkey hotkey)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() => { UpdatePins(); });
+        Application.Current.Dispatcher.Invoke(UpdatePins);
     }
 
     private void HotkeysManager_HotkeyCreated(Hotkey hotkey)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() => { UpdatePins(); });
+        Application.Current.Dispatcher.Invoke(UpdatePins);
     }
 
     private void UpdatePins()

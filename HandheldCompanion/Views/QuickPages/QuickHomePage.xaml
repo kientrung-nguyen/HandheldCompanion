@@ -5,10 +5,11 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
+    xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     Name="QuickHome"
-    Title="{x:Static resx:Resources.QuickHomePage_Title}"
-    Margin="15,0,0,0"
+    Title="{l:Static resx:Resources.QuickHomePage_Title}"
+    Margin="15,0,12,0"
     d:Background="White"
     d:DesignHeight="1200"
     d:DesignWidth="640"
@@ -26,7 +27,7 @@
             VerticalAlignment="Top"
             Spacing="6">
             <TextBlock Style="{StaticResource BaseTextBlockStyle}"
-                       Text="{x:Static resx:Resources.QuickSettingsPage_Title}"
+                       Text="{l:Static resx:Resources.QuickSettingsPage_Title}"
                        Visibility="Collapsed" />
 
             <!--  Shortcuts  -->
@@ -36,7 +37,7 @@
                 Columns="4">
                 <UniformGrid.Resources>
                     <Style TargetType="{x:Type ui:SimpleStackPanel}">
-                        <Setter Property="Margin" Value="6" />
+                        <Setter Property="Margin" Value="0,6,6,6" />
                     </Style>
                 </UniformGrid.Resources>
             </UniformGrid>
@@ -66,11 +67,11 @@
                             Glyph="&#xE70A;" />
 
                         <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.QuickDevicePage_Title}" />
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.QuickDevicePage_Title}" />
                             <TextBlock
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{x:Static resx:Resources.QuickDevicePage_Desc}"
+                                Text="{l:Static resx:Resources.QuickDevicePage_Desc}"
                                 TextWrapping="Wrap" />
                         </ui:SimpleStackPanel>
                     </DockPanel>
@@ -110,11 +111,11 @@
                             Glyph="&#xE77B;" />
 
                         <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.QuickProfilesPage_Title}" />
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.QuickProfilesPage_Title}" />
                             <TextBlock
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{x:Static resx:Resources.QuickProfilesPage_Desc}"
+                                Text="{l:Static resx:Resources.QuickProfilesPage_Desc}"
                                 TextWrapping="Wrap" />
                         </ui:SimpleStackPanel>
                     </DockPanel>
@@ -154,11 +155,11 @@
                             Glyph="&#xE78B;" />
 
                         <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.QuickOverlayPage_Title}" />
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.QuickOverlayPage_Title}" />
                             <TextBlock
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{x:Static resx:Resources.QuickOverlayPage_Desc}"
+                                Text="{l:Static resx:Resources.QuickOverlayPage_Desc}"
                                 TextWrapping="Wrap" />
                         </ui:SimpleStackPanel>
                     </DockPanel>
@@ -198,11 +199,11 @@
                             Glyph="&#xEC0A;" />
 
                         <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.QuickSuspenderPage_Title}" />
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.QuickSuspenderPage_Title}" />
                             <TextBlock
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{x:Static resx:Resources.QuickSuspenderPage_Desc}"
+                                Text="{l:Static resx:Resources.QuickSuspenderPage_Desc}"
                                 TextWrapping="Wrap" />
                         </ui:SimpleStackPanel>
                     </DockPanel>

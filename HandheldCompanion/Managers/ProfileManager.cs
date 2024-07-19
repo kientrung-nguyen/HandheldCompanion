@@ -375,7 +375,6 @@ public static class ProfileManager
         {
             Profile profile = GetProfileFromPath(processEx.Path, false);
 
-            // update profile executable path
             if (!profile.Default)
             {
                 if (!profile.Path.Equals(processEx.Path))

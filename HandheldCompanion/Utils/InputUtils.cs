@@ -5,14 +5,6 @@ using System.Numerics;
 
 namespace HandheldCompanion.Utils;
 
-public struct SensorSpec
-{
-    public float minIn;
-    public float maxIn;
-    public float minOut;
-    public float maxOut;
-}
-
 public enum MotionInput
 {
     /// <summary>
@@ -43,7 +35,7 @@ public enum MotionInput
     JoystickSteering = 3
 }
 
-public enum MotionOuput
+public enum MotionOutput
 {
     Disabled = 0,
     LeftStick = 1,

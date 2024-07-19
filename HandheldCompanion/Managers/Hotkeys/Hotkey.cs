@@ -297,8 +297,7 @@ public class Hotkey
             if (HasInput())
             {
                 IController? controller = ControllerManager.GetTargetController();
-                if (controller is null)
-                    controller = ControllerManager.GetEmulatedController();
+                controller ??= ControllerManager.GetEmulatedController();
                 IDevice? device = IDevice.GetCurrent();
 
                 foreach (var button in inputsChord.State.Buttons)

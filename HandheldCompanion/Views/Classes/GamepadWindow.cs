@@ -13,6 +13,7 @@ namespace HandheldCompanion.Views.Classes
     public class GamepadWindow : Window
     {
         public List<Control> controlElements = new();
+        public List<Control> controlScrollViewer = new();
         public List<FrameworkElement> frameworkElements = new();
 
         public ContentDialog currentDialog;
@@ -23,21 +24,23 @@ namespace HandheldCompanion.Views.Classes
             LayoutUpdated += OnLayoutUpdated;
         }
 
+        /*
         protected override void OnVisualChildrenChanged(DependencyObject visualAdded, DependencyObject visualRemoved)
         {
             // Track when objects are added and removed
             if (visualAdded != null && visualAdded is Control)
                 controlElements.Add((Control)visualAdded);
-
+            
             if (visualRemoved != null && visualRemoved is Control)
                 controlElements.Remove((Control)visualRemoved);
 
             base.OnVisualChildrenChanged(visualAdded, visualRemoved);
         }
+        */
 
         public ScrollViewer GetScrollViewer(DependencyObject depObj)
         {
-            if (depObj is ScrollViewer) { return depObj as ScrollViewer; }
+            if (depObj is ScrollViewer) return (ScrollViewer)depObj;
 
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
             {
@@ -51,7 +54,7 @@ namespace HandheldCompanion.Views.Classes
 
         private void OnLayoutUpdated(object? sender, EventArgs e)
         {
-            if (!this.IsActive || this.Visibility != Visibility.Visible)
+            if (!IsActive || Visibility != Visibility.Visible)
                 return;
 
             // get all FrameworkElement(s)
@@ -77,6 +80,7 @@ namespace HandheldCompanion.Views.Classes
             {
                 // get all Control(s)
                 controlElements = frameworkElements.OfType<Control>().ToList();
+                controlScrollViewer = WPFUtils.FindChildren(GetScrollViewer(this)).OfType<Control>().ToList();
 
                 if (currentDialog is not null)
                 {

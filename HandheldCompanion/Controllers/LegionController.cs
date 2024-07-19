@@ -212,8 +212,11 @@ namespace HandheldCompanion.Controllers
                 if (dataThread is null)
                 {
                     dataThreadRunning = true;
-                    dataThread = new Thread(dataThreadLoop);
-                    dataThread.IsBackground = true;
+                    dataThread = new Thread(dataThreadLoop)
+                    {
+                        IsBackground = true,
+                        Priority = ThreadPriority.Highest
+                    };
                     dataThread.Start();
                 }
             }
@@ -295,9 +298,9 @@ namespace HandheldCompanion.Controllers
                 default:
                 case LegionGo.LeftJoyconIndex:
                     {
-                        aX = (short)(Data[34] << 8 | Data[35]) * -(2.0f / short.MaxValue);
-                        aZ = (short)(Data[36] << 8 | Data[37]) * -(2.0f / short.MaxValue);
-                        aY = (short)(Data[38] << 8 | Data[39]) * -(2.0f / short.MaxValue);
+                        aX = (short)(Data[34] << 8 | Data[35]) * -(4.0f / short.MaxValue);
+                        aZ = (short)(Data[36] << 8 | Data[37]) * -(4.0f / short.MaxValue);
+                        aY = (short)(Data[38] << 8 | Data[39]) * -(4.0f / short.MaxValue);
 
                         gX = (short)(Data[40] << 8 | Data[41]) * -(2000.0f / short.MaxValue);
                         gZ = (short)(Data[42] << 8 | Data[43]) * -(2000.0f / short.MaxValue);
@@ -307,9 +310,9 @@ namespace HandheldCompanion.Controllers
 
                 case LegionGo.RightJoyconIndex:
                     {
-                        aX = (short)(Data[49] << 8 | Data[50]) * -(2.0f / short.MaxValue);
-                        aZ = (short)(Data[47] << 8 | Data[48]) * (2.0f / short.MaxValue);
-                        aY = (short)(Data[51] << 8 | Data[52]) * -(2.0f / short.MaxValue);
+                        aX = (short)(Data[49] << 8 | Data[50]) * -(4.0f / short.MaxValue);
+                        aZ = (short)(Data[47] << 8 | Data[48]) * (4.0f / short.MaxValue);
+                        aY = (short)(Data[51] << 8 | Data[52]) * -(4.0f / short.MaxValue);
 
                         gX = (short)(Data[55] << 8 | Data[56]) * -(2000.0f / short.MaxValue);
                         gZ = (short)(Data[53] << 8 | Data[54]) * (2000.0f / short.MaxValue);
@@ -327,12 +330,12 @@ namespace HandheldCompanion.Controllers
             {
                 default:
                 case LegionGo.LeftJoyconIndex:
-                    gamepadMotion.ProcessMotion(gX, gY, gZ, aX, aY, aZ, delta);
-                    base.UpdateInputs(ticks, delta);
+                    gamepadMotion.ProcessMotion(gX, gY, gZ, aX, aY, aZ);
+                    base.UpdateInputs(ticks, gamepadMotion.deltaTime);
                     break;
                 case LegionGo.RightJoyconIndex:
-                    gamepadMotionR.ProcessMotion(gX, gY, gZ, aX, aY, aZ, delta);
-                    base.UpdateInputs(ticks, delta, gamepadMotionR);
+                    gamepadMotionR.ProcessMotion(gX, gY, gZ, aX, aY, aZ);
+                    base.UpdateInputs(ticks, gamepadMotionR.deltaTime, gamepadMotionR);
                     break;
             }
         }
@@ -351,20 +354,26 @@ namespace HandheldCompanion.Controllers
             }
         }
 
-        private async void dataThreadLoop(object? obj)
+        private void dataThreadLoop(object? obj)
         {
             // pull latest Data
             while (dataThreadRunning)
             {
-                if (hidDevice is null)
-                    continue;
-
-                HidReport report = hidDevice.ReadReport();
+                HidDeviceData report = hidDevice?.ReadData(0);
                 if (report is not null)
                 {
-                    // check if packet is safe
-                    if (READY_STATES.Contains(report.Data[STATUS_IDX]))
-                        Data = report.Data;
+                    Buffer.BlockCopy(report.Data, 1, Data, 0, report.Data.Length - 1);
+
+                    switch (GyroIndex)
+                    {
+                        default:
+                        case LegionGo.LeftJoyconIndex:
+                            gamepadMotion.deltaTime = TimerManager.GetDelta();
+                            break;
+                        case LegionGo.RightJoyconIndex:
+                            gamepadMotionR.deltaTime = TimerManager.GetDelta();
+                            break;
+                    }
                 }
             }
         }

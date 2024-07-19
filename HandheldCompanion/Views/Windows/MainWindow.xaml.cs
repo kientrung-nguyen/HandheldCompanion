@@ -88,8 +88,8 @@ public partial class MainWindow : GamepadWindow
 
 
     //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime)
-    private static DispatcherTimer notifyIconWaitTimer = new(
-        TimeSpan.FromMilliseconds(100),
+    private static readonly DispatcherTimer notifyIconWaitTimer = new(
+        TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime),
         DispatcherPriority.Normal,
         notifyIconWaitTimerTicked,
         Dispatcher.CurrentDispatcher)
@@ -152,9 +152,12 @@ public partial class MainWindow : GamepadWindow
             ToolTipText = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visibility = Visibility.Collapsed,
-            ContextMenu = new ContextMenu()
+            ContextMenu = new ContextMenu
+            {
+                StaysOpen = true
+            }
         };
-        
+
         notifyIcon.TrayMouseDoubleClick += (sender, e) =>
         {
             // Stop the timer from ticking.
@@ -163,10 +166,17 @@ public partial class MainWindow : GamepadWindow
                 overlayquickTools.ToggleVisibility();
             SwapWindowState();
         };
-        notifyIcon.TrayLeftMouseUp += (sender, e) =>
+
+        notifyIcon.TrayLeftMouseDown += (sender, e) =>
         {
             notifyIconWaitTimer.Start();
         };
+
+        notifyIcon.TrayRightMouseDown += (sender, e) =>
+        {
+            notifyIcon.ContextMenu.IsOpen = true;
+        };
+
 
         //notifyIcon = new NotifyIcon
         //{
@@ -436,6 +446,7 @@ public partial class MainWindow : GamepadWindow
                         break;
                     case "Exit":
                         appClosing = true;
+                        notifyIcon.ContextMenu.IsOpen = false;
                         Close();
                         break;
                 }
@@ -454,7 +465,7 @@ public partial class MainWindow : GamepadWindow
     {
         if (notifyIcon.ContextMenu is null)
             return;
-        
+
         var separator = new Separator();
         notifyIcon.ContextMenu.Items.Add(separator);
     }

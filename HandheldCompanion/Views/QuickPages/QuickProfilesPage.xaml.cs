@@ -63,7 +63,7 @@ public partial class QuickProfilesPage : Page
         GPUManager.Hooked += GPUManager_Hooked;
         GPUManager.Unhooked += GPUManager_Unhooked;
 
-        foreach (var mode in Enum.GetValues<MotionOuput>())
+        foreach (var mode in Enum.GetValues<MotionOutput>())
         {
             // create panel
             ComboBoxItem comboBoxItem = new ComboBoxItem()
@@ -386,6 +386,10 @@ public partial class QuickProfilesPage : Page
         if (selectedProfile is null)
             return;
 
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
@@ -457,6 +461,7 @@ public partial class QuickProfilesPage : Page
                     // power profile
                     PowerProfile powerProfile = PowerProfileManager.GetProfile(profile.PowerProfile);
                     powerProfile?.Check(this);
+                    SelectedPowerProfileName.Text = powerProfile?.Name;
 
                     comboBoxOSDLevel.SelectedIndex = (int)selectedProfile.OverlayLevel;
                     comboBoxTimeDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayTimeLevel;
@@ -470,7 +475,7 @@ public partial class QuickProfilesPage : Page
                     if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
                     {
                         // no gyro layout available, mark as disabled
-                        cB_Output.SelectedIndex = (int)MotionOuput.Disabled;
+                        cB_Output.SelectedIndex = (int)MotionOutput.Disabled;
                     }
                     else
                     {
@@ -670,16 +675,16 @@ public partial class QuickProfilesPage : Page
         // try get current actions, if exists
         selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions gyroActions);
 
-        MotionOuput motionOuput = (MotionOuput)cB_Output.SelectedIndex;
+        MotionOutput motionOuput = (MotionOutput)cB_Output.SelectedIndex;
         switch (motionOuput)
         {
-            case MotionOuput.Disabled:
+            case MotionOutput.Disabled:
                 selectedProfile.Layout.RemoveLayout(AxisLayoutFlags.Gyroscope);
                 gyroActions = null;
                 break;
 
-            case MotionOuput.LeftStick:
-            case MotionOuput.RightStick:
+            case MotionOutput.LeftStick:
+            case MotionOutput.RightStick:
                 {
                     if (gyroActions is null || gyroActions is not AxisActions)
                     {
@@ -689,13 +694,13 @@ public partial class QuickProfilesPage : Page
                         };
                     }
 
-                    ((AxisActions)gyroActions).Axis = motionOuput == MotionOuput.LeftStick ? AxisLayoutFlags.LeftStick : AxisLayoutFlags.RightStick;
+                    ((AxisActions)gyroActions).Axis = motionOuput == MotionOutput.LeftStick ? AxisLayoutFlags.LeftStick : AxisLayoutFlags.RightStick;
                     ((AxisActions)gyroActions).MotionTrigger = GyroHotkey.inputsChord.State.Clone() as ButtonState;
                 }
                 break;
 
-            case MotionOuput.MoveCursor:
-            case MotionOuput.ScrollWheel:
+            case MotionOutput.MoveCursor:
+            case MotionOutput.ScrollWheel:
                 {
                     if (gyroActions is null || gyroActions is not MouseActions)
                     {

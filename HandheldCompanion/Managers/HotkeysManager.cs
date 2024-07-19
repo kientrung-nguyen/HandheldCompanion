@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Xml.Linq;
 using Windows.System;
 using static HandheldCompanion.Managers.InputsHotkey;
 using static HandheldCompanion.Managers.InputsManager;
@@ -125,6 +126,18 @@ public static class HotkeysManager
                     hasProfileHID = false;
                     break;
                 }
+        }
+
+        // set lastOSDLevel to be used in OSD toggle hotkey
+        SettingsManager.SetProperty("LastOnScreenDisplayLevel", (int)profile.OverlayLevel);
+
+        // manage toggle type hotkeys
+        foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("OnScreenDisplayToggle")).ToList())
+        {
+            if (!hotkey.inputsHotkey.IsToggle)
+                continue;
+
+            hotkey.SetToggle(profile.OverlayLevel != OverlayDisplayLevel.Disabled);
         }
 
         // enable/disable hotkey based on profile HIDmode
@@ -246,7 +259,6 @@ public static class HotkeysManager
         {
             if (!hotkey.inputsHotkey.IsToggle)
                 continue;
-
             var toggle = Convert.ToBoolean(value);
             hotkey.SetToggle(toggle);
         }
@@ -456,25 +468,33 @@ public static class HotkeysManager
                     }
                     break;
                 case "shortcutKillApp":
-                    if (fProcess is not null) fProcess.Process.Kill();
+                    fProcess?.Process.Kill();
                     break;
                 case "OnScreenDisplayToggle":
                     {
                         // check current OSD level
                         // .. if 0 (disabled) -> set OSD level to LastOnScreenDisplayLevel
                         // .. else (enabled) -> set OSD level to 0
-                        int currentOSDLevel = SettingsManager.GetInt("OnScreenDisplayLevel");
+                        var currentProfile = ProfileManager.GetCurrent();
+                        int currentOSDLevel = (int)currentProfile.OverlayLevel;
+                            //SettingsManager.GetInt("OnScreenDisplayLevel");
                         int lastOSDLevel = SettingsManager.GetInt("LastOnScreenDisplayLevel");
 
                         switch (currentOSDLevel)
                         {
                             case 0:
+                                if (lastOSDLevel == 0)
+                                    lastOSDLevel = (int)OverlayDisplayLevel.Full;
                                 SettingsManager.SetProperty("OnScreenDisplayLevel", lastOSDLevel);
+                                currentProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(lastOSDLevel);
                                 break;
                             default:
                                 SettingsManager.SetProperty("OnScreenDisplayLevel", 0);
+                                currentProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(0);
                                 break;
                         }
+
+                        ProfileManager.UpdateOrCreateProfile(currentProfile, UpdateSource.Background);
                     }
                     break;
                 case "OnScreenDisplayLevel":

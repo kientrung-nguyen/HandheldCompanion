@@ -59,12 +59,6 @@
     <Setting Name="OverlayControllerRestingPitch" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
-    <Setting Name="OverlayControllerRestingYaw" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">0</Value>
-    </Setting>
-    <Setting Name="OverlayControllerRestingRoll" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">0</Value>
-    </Setting>
     <Setting Name="SensorPlacementUpsideDown" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
@@ -78,7 +72,7 @@
       <Value Profile="(Default)">30</Value>
     </Setting>
     <Setting Name="OverlayRenderAntialiasing" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
+      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="OverlayFaceCamera" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
@@ -180,7 +174,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="QuickToolsLocation" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">3</Value>
+      <Value Profile="(Default)">1</Value>
     </Setting>
     <Setting Name="QuicktoolsBackdrop" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1</Value>
@@ -269,13 +263,10 @@
     <Setting Name="OnScreenDisplayVRAMLevel" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
     </Setting>
-    <Setting Name="OnScreenDisplayBatteryLevel" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">2</Value>
-    </Setting>
     <Setting Name="OnScreenDisplayFPSLevel" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
     </Setting>
-    <Setting Name="OnScreenDisplayBATTLevel" Type="System.String" Scope="User">
+    <Setting Name="OnScreenDisplayBATTLevel" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
     </Setting>
     <Setting Name="OnScreenDisplayOrder" Type="System.String" Scope="User">

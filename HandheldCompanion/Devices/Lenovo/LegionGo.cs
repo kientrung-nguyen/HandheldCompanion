@@ -82,10 +82,16 @@ public class LegionGo : IDevice
         "Fan_Set_Table",
         new() { { "FanTable", fanTable.GetBytes() } });
 
-    private Task SetSmartFanMode(int FanMode) => WMI.CallAsync("root\\WMI",
+    public static Task<int> GetSmartFanModeAsync() => WMI.CallAsync("root\\WMI",
+        $"SELECT * FROM LENOVO_GAMEZONE_DATA",
+        "GetSmartFanMode",
+        [],
+        pdc => Convert.ToInt32(pdc["Data"].Value));
+
+    private Task SetSmartFanMode(int fanMode) => WMI.CallAsync("root\\WMI",
         $"SELECT * FROM LENOVO_GAMEZONE_DATA",
         "SetSmartFanMode",
-        new() { { "Data", FanMode } });
+        new() { { "Data", fanMode } });
 
     public Task SetCPUPowerLimit(CapabilityID capabilityID, int limit) =>
         WMI.CallAsync("root\\WMI",
@@ -96,6 +102,19 @@ public class LegionGo : IDevice
                 { "IDs", (int)capabilityID },
                 { "value", limit },
             });
+
+    // InstantBootAc (0x03010001) controls the 80% power charge limit.
+    // https://github.com/aarron-lee/LegionGoRemapper/blob/ab823f2042fc857cca856687a385a033d68c58bf/py_modules/legion_space.py#L138
+    public Task SetBatteryChargeLimit(bool enabled) =>
+        WMI.CallAsync("root\\WMI",
+            $"SELECT * FROM LENOVO_OTHER_METHOD",
+            "SetFeatureValue",
+            new()
+            {
+                { "IDs", (int)CapabilityID.InstantBootAc },
+                { "value", enabled ? 1 : 0 },
+            });
+
 
     public const byte INPUT_HID_ID = 0x04;
 
@@ -190,6 +209,7 @@ public class LegionGo : IDevice
         });
 
         PowerProfileManager.Applied += PowerProfileManager_Applied;
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         OEMChords.Add(new DeviceChord("LegionR",
             new List<KeyCode>(), new List<KeyCode>(),
@@ -210,11 +230,6 @@ public class LegionGo : IDevice
         DefaultLayout.ButtonLayout[ButtonFlags.B6] = new List<IActions>() { new MouseActions { MouseType = MouseActionsType.MiddleButton } };
         DefaultLayout.ButtonLayout[ButtonFlags.B7] = new List<IActions>() { new MouseActions { MouseType = MouseActionsType.ScrollUp } };
         DefaultLayout.ButtonLayout[ButtonFlags.B8] = new List<IActions>() { new MouseActions { MouseType = MouseActionsType.ScrollDown } };
-
-        /*
-        Task<bool> task = Task.Run(async () => await GetFanFullSpeedAsync());
-        bool FanFullSpeed = task.Result;
-        */
     }
 
     private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
@@ -236,8 +251,14 @@ public class LegionGo : IDevice
             });
         }
 
+        // update fan table
         SetFanTable(fanTable);
-        SetSmartFanMode(profile.OEMPowerMode);
+
+        Task<int> fanModeTask = Task.Run(async () => await GetSmartFanModeAsync());
+        int fanMode = fanModeTask.Result;
+
+        if (fanMode != profile.OEMPowerMode)
+            SetSmartFanMode(profile.OEMPowerMode);
     }
 
     public override bool Open()
@@ -423,8 +444,35 @@ public class LegionGo : IDevice
                 return "\u2216";
             case ButtonFlags.OEM8:
                 return "\u2217";
+
+            case ButtonFlags.L4:
+                return "\u2215";
+            case ButtonFlags.L5:
+                return "\u2216";
+            case ButtonFlags.R4:
+                return "\u2214";
+            case ButtonFlags.R5:
+                return "\u2217";
+            case ButtonFlags.B5:
+                return "\u2213";
+            case ButtonFlags.B6:
+                return "\u27F7";
+            case ButtonFlags.B7:
+                return "\u27F0";
+            case ButtonFlags.B8:
+                return "\u27F1";
         }
 
         return defaultGlyph;
+    }
+
+    private void SettingsManager_SettingValueChanged(string name, object value)
+    {
+        switch (name)
+        {
+            case "LegionBatteryChargeLimit":
+                SetBatteryChargeLimit(Convert.ToBoolean(value));
+                break;
+        }
     }
 }

@@ -472,6 +472,13 @@ public partial class ProfilesPage : Page
 
     private void PowerProfile_Selected(PowerProfile powerProfile)
     {
+        if (selectedProfile is null)
+            return;
+
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
@@ -612,6 +619,7 @@ public partial class ProfilesPage : Page
                     // power profile
                     PowerProfile powerProfile = PowerProfileManager.GetProfile(selectedProfile.PowerProfile);
                     powerProfile.Check(this);
+                    SelectedPowerProfileName.Text = powerProfile.Name;
 
                     // display warnings
                     WarningContent.Text = EnumUtils.GetDescriptionFromEnumValue(selectedProfile.ErrorCode);

@@ -248,6 +248,7 @@ public abstract class IPlatform : IDisposable
     protected virtual void Process_Exited(object? sender, EventArgs e)
     {
         LogManager.LogDebug("{0} has exited", GetType());
+
         if (KeepAlive)
         {
             if (Tentative < MaxTentative)

@@ -41,8 +41,8 @@ public class OverlayWindow : Window
         if (_hotkeyId == 0)
             return;
 
-        if (HotkeysManager.Hotkeys.TryGetValue(_hotkeyId, out Hotkey hotkey))
-            hotkey.SetToggle(this.Visibility == Visibility.Visible ? true : false);
+        if (HotkeysManager.Hotkeys.TryGetValue(_hotkeyId, out var hotkey))
+            hotkey.SetToggle(Visibility == Visibility.Visible);
     }
 
     public new HorizontalAlignment HorizontalAlignment

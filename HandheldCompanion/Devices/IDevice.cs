@@ -346,6 +346,9 @@ public abstract class IDevice
                                 case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
                                     device = new GPDWinMini_7840U();
                                     break;
+                                case "AMD Ryzen 7 8840U w/ Radeon 780M Graphics":
+                                    device = new GPDWinMini_8840U();
+                                    break;
                             }
                             break;
                         case "G1618-03":
@@ -395,8 +398,11 @@ public abstract class IDevice
                         case "ONEXPLAYER X1 i":
                             device = new OneXPlayerX1Intel();
                             break;
-                        case "ONEXPLAYER X1 a": // TDOO: check name after release
+                        case "ONEXPLAYER X1 A":
                             device = new OneXPlayerX1AMD();
+                            break;
+                        case "ONEXPLAYER X1 mini":
+                            device = new OneXPlayerX1Mini();
                             break;
                         case "ONEXPLAYER F1":
                             {

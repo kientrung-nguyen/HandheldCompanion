@@ -799,7 +799,7 @@
         </Setter>
     </Style>
 
-    <Style x:Key="NavigationViewStyle1" TargetType="local:NavigationView">
+    <Style x:Key="NavigationViewItemBottomStyle" TargetType="local:NavigationView">
         <Setter Property="PaneToggleButtonStyle" Value="{DynamicResource PaneToggleButtonStyle}" />
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="ScrollViewer.PanningMode" Value="Both" />
@@ -1062,7 +1062,8 @@
                                 <Border x:Name="TopNavContentOverlayAreaGrid" ui:DecoratorHelper.Child="{TemplateBinding ContentOverlay}" />
                             </StackPanel>
 
-                            <!--  Displaymode (compact/minimal/normal) left  -->
+                            <!--  Displaymode (compact/minimal/normal) left  
+                            CornerRadius="{Binding Value, Source={StaticResource OverlayCornerRadiusProxy}, Converter={StaticResource RightCornerRadiusFilterConverter}}"-->
                             <local:SplitView
                                 x:Name="RootSplitView"
                                 Grid.Row="0"
@@ -1070,7 +1071,7 @@
                                 BorderBrush="{DynamicResource NavigationViewItemSeparatorForeground}"
                                 BorderThickness="{DynamicResource NavigationViewBorderThickness}"
                                 CompactPaneLength="{TemplateBinding CompactPaneLength}"
-                                CornerRadius="{Binding Value, Source={StaticResource OverlayCornerRadiusProxy}, Converter={StaticResource RightCornerRadiusFilterConverter}}"
+                                
                                 DisplayMode="Inline"
                                 IsPaneOpen="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsPaneOpen, Mode=TwoWay}"
                                 IsTabStop="False"
