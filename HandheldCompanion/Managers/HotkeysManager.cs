@@ -259,6 +259,7 @@ public static class HotkeysManager
         {
             if (!hotkey.inputsHotkey.IsToggle)
                 continue;
+
             var toggle = Convert.ToBoolean(value);
             hotkey.SetToggle(toggle);
         }

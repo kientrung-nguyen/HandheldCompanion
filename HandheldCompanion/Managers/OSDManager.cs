@@ -189,7 +189,7 @@ public static class OSDManager
                 {
                     if (OnScreenAppEntry.ProcessId == processId)
                     {
-                        PlatformManager.RTSS.GetFramerate(processId, out var osdFrameId);
+                        var osdFrameId = PlatformManager.RTSS.GetFrameId();
                         processOSD.Update(Draw(osdFrameId));
                         OnScreenAppEntryOSDFrameId = osdFrameId;
                     }
@@ -377,6 +377,7 @@ public static class OSDManager
 
         }
 
+    Exit:
         return string.Join("\n", Content);
     }
 

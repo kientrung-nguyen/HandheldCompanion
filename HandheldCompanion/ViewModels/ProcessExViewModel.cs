@@ -1,12 +1,22 @@
 ﻿using HandheldCompanion.Controls;
+using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Windows;
+using iNKORE.UI.WPF.Modern.Controls;
 using System;
+using System.Drawing;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
+using WpfScreenHelper.Enum;
 
 namespace HandheldCompanion.ViewModels
 {
     public class ProcessExViewModel : BaseViewModel
     {
+        QuickApplicationsPageViewModel PageViewModel;
+
         private ProcessEx _process;
         public ProcessEx Process
         {
@@ -23,7 +33,7 @@ namespace HandheldCompanion.ViewModels
 
         public string Title => Process.MainWindowTitle;
 
-        public ImageSource ProcessIcon => Process.ProcessIcon;
+        public ImageSource Icon => Process.ProcessIcon;
 
         public bool IsSuspended
         {
@@ -51,14 +61,46 @@ namespace HandheldCompanion.ViewModels
         }
 
         public ICommand KillProcessCommand { get; private set; }
+        public ICommand BringProcessCommand { get; private set; }
 
-        public ProcessExViewModel(ProcessEx process)
+        public ProcessExViewModel(ProcessEx process, QuickApplicationsPageViewModel pageViewModel)
         {
             Process = process;
+            PageViewModel = pageViewModel;
 
             KillProcessCommand = new DelegateCommand(() =>
             {
                 Process.Process?.Kill();
+            });
+
+            BringProcessCommand = new DelegateCommand(async () =>
+            {
+                OverlayQuickTools qtWindow = OverlayQuickTools.GetCurrent();
+
+                ContentDialogResult result = await qtWindow.applicationsPage.ProfileRenameDialog.ShowAsync();
+                switch (result)
+                {
+                    case ContentDialogResult.None:
+                        qtWindow.applicationsPage.ProfileRenameDialog.Hide();
+                        return;
+                }
+
+                // Get the screen where the reference window is located
+                Screen screen = Screen.FromHandle(qtWindow.hwndSource.Handle);
+                if (screen is null)
+                    return;
+
+                int style = WinAPI.GetWindowLong(Process.MainWindowHandle, WinAPI.GWL_STYLE);
+                if (PageViewModel.BorderlessEnabled && PageViewModel.BorderlessToggle)
+                {
+                    WinAPI.SetWindowLong(Process.MainWindowHandle, WinAPI.GWL_STYLE, (style & ~WinAPI.WS_BORDER & ~WinAPI.WS_CAPTION & ~WinAPI.WS_SYSMENU));
+                }
+                else if ((style & WinAPI.WS_BORDER) == 0 && (style & WinAPI.WS_CAPTION) == 0)
+                {
+                    WinAPI.SetWindowLong(Process.MainWindowHandle, WinAPI.GWL_STYLE, (style | WinAPI.WS_BORDER | WinAPI.WS_CAPTION | WinAPI.WS_SYSMENU));
+                }
+
+                WinAPI.MoveWindow(Process.MainWindowHandle, screen, PageViewModel.windowPositions);
             });
         }
 
@@ -80,6 +122,7 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(IsSuspended));
             OnPropertyChanged(nameof(FullScreenOptimization));
             OnPropertyChanged(nameof(HighDPIAware));
+            OnPropertyChanged(nameof(Title));
         }
 
         public override void Dispose()

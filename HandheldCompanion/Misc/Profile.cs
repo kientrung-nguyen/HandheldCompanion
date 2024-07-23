@@ -3,9 +3,8 @@ using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using Newtonsoft.Json;
 using System;
-using System.IO;
 using System.Collections.Generic;
-using static HandheldCompanion.Managers.OSDManager;
+using System.IO;
 using static HandheldCompanion.Utils.XInputPlusUtils;
 
 namespace HandheldCompanion;
@@ -16,9 +15,9 @@ public enum ProfileErrorCode
     None = 0,
     MissingExecutable = 1,
     MissingPath = 2,
-    MissingPermission = 3,
-    Default = 4,
-    Running = 5
+    MissingPermission = 4,
+    Default = 8,
+    Running = 16
 }
 
 [Flags]
@@ -49,6 +48,8 @@ public partial class Profile : ICloneable, IComparable
 
     public string Name { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
+    public string Arguments { get; set; } = string.Empty;
+
     public bool IsSubProfile { get; set; } = false;
     public bool IsFavoriteSubProfile { get; set; } = false;
 

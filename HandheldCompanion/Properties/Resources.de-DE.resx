@@ -117,11 +117,33 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="xinput1_x64" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\xinput1_x64.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="xinput1_x86" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\xinput1_x86.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="XInputPlus" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\XInputPlus.ini;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-16</value>
+  </data>
+  <data name="chord_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\controller_base\chord_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="empty_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\controller_base\empty_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="AboutPage_About" xml:space="preserve">
     <value>Über</value>
   </data>
   <data name="AboutPage_AboutDescription" xml:space="preserve">
     <value>Eine Kombination aus einem Windows-Dienst und einer für das Touch-Overlay optimierten GUI, um Ihr Handheld-Gaming-Computer-Erlebnis zu verbessern. Zu den Funktionen gehören: Bewegungssteuerung (Gyrometer), virtuelle Controller-Simulation, Quick-Tools-Overlay, virtuelle Touchpads, 3D-Controller-Modell, anwendungsbasiertes Profileinstellungssystem. Handheld Companion basiert auf dem ViGEmBus-Treiber und den ViGEmClient-Bibliotheken sowie dem HidHide-Filtertreiber für den Kernel-Modus. Die Algorithmen zur Bewegungssteuerung basieren auf der Arbeit von Jibbsmart und den verfügbaren Informationen im GyroWiki. </value>
+  </data>
+  <data name="AboutPage_Accelerometer" xml:space="preserve">
+    <value>Accelerometer</value>
   </data>
   <data name="AboutPage_Author" xml:space="preserve">
     <value>Autor</value>
@@ -487,6 +509,118 @@
   <data name="ProcessEx_processSuspend" xml:space="preserve">
     <value>Pausieren</value>
   </data>
+  <data name="SettingsMode0_AdditionalSettings" xml:space="preserve">
+    <value>Zusätzliche Einstellungen</value>
+  </data>
+  <data name="SettingsMode0_AimingDownSights" xml:space="preserve">
+    <value>Multiplikator für Bewegungen beim Zielen
+</value>
+  </data>
+  <data name="SettingsMode0_AimingDownSightsActivation" xml:space="preserve">
+    <value>Aktivierungstaste</value>
+  </data>
+  <data name="SettingsMode0_AimingDownSightsDesc" xml:space="preserve">
+    <value>Ein zusätzlicher Multiplikator für die Bewegungsempfindlichkeit beim Anvisieren der Visierung oder des Zielfernrohrs durch die Verwendung der konfigurierten Aktivierungstaste</value>
+  </data>
+  <data name="SettingsMode0_AimingDownSightsMultiplier" xml:space="preserve">
+    <value>Multiplikatorwert</value>
+  </data>
+  <data name="SettingsMode0_CameraOptions" xml:space="preserve">
+    <value>Kamera-Optionen</value>
+  </data>
+  <data name="SettingsMode0_CustomResponseCurve" xml:space="preserve">
+    <value>Benutzerdefinierte Reaktionskurve</value>
+  </data>
+  <data name="SettingsMode0_CustomResponseCurveGameOutput" xml:space="preserve">
+    <value>Ausgabe an das Spiel gesendet</value>
+  </data>
+  <data name="SettingsMode0_CustomResponseIntensity" xml:space="preserve">
+    <value>Bewegungsintensität</value>
+  </data>
+  <data name="SettingsMode0_CustomResponsePresetAgressive" xml:space="preserve">
+    <value>Aggressiv</value>
+  </data>
+  <data name="SettingsMode0_CustomResponsePresetDefault" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="SettingsMode0_CustomResponsePresetOptions" xml:space="preserve">
+    <value>Voreinstellungs-Optionen</value>
+  </data>
+  <data name="SettingsMode0_CustomResponsePresetPrecise" xml:space="preserve">
+    <value>Präzise</value>
+  </data>
+  <data name="SettingsMode0_FlickDuration" xml:space="preserve">
+    <value>Streifendauer</value>
+  </data>
+  <data name="SettingsMode0_FlickDurationDesc" xml:space="preserve">
+    <value>Ändern Sie die Streifendauer, kalibrieren Sie auf eine 180-Grad-Drehung, in Millisekunden</value>
+  </data>
+  <data name="SettingsMode0_FlickStick" xml:space="preserve">
+    <value>Flick-Stick (Experimental)</value>
+  </data>
+  <data name="SettingsMode0_FlickStickDesc" xml:space="preserve">
+    <value>Richten Sie die Kamera in Richtung des (rechten) Joysticks, drehen Sie die Kamera rein in der horizontalen Ebene durch Drehen</value>
+  </data>
+  <data name="SettingsMode0_FlickStickEnable" xml:space="preserve">
+    <value>Aktiviere Flick-Stick</value>
+  </data>
+  <data name="SettingsMode0_Sensitivity" xml:space="preserve">
+    <value>Empfindlichkeit</value>
+  </data>
+  <data name="SettingsMode0_SensitivityDesc" xml:space="preserve">
+    <value>Ändern Sie die Bewegungsempfindlichkeit der horizontalen und vertikalen Achse</value>
+  </data>
+  <data name="SettingsMode0_SensitivityX" xml:space="preserve">
+    <value>Empfindlichkeit X</value>
+  </data>
+  <data name="SettingsMode0_SensitivityXDesc" xml:space="preserve">
+    <value>Ändern Sie die Bewegungsempfindlichkeit der horizontalen Achse</value>
+  </data>
+  <data name="SettingsMode0_SensitivityY" xml:space="preserve">
+    <value>Empfindlichkeit Y</value>
+  </data>
+  <data name="SettingsMode0_SensitivityYDesc" xml:space="preserve">
+    <value>Ändern Sie die Bewegungsempfindlichkeit der vertikalen Achse</value>
+  </data>
+  <data name="SettingsMode0_StickSensitivtity" xml:space="preserve">
+    <value>Stick-Empfindlichkeit</value>
+  </data>
+  <data name="SettingsMode0_StickSensitivtityDesc" xml:space="preserve">
+    <value>Drehrate ändern</value>
+  </data>
+  <data name="SettingsMode1_AdditionalSettings" xml:space="preserve">
+    <value>Zusätzliche Einstellungen</value>
+  </data>
+  <data name="SettingsMode1_Deadzone" xml:space="preserve">
+    <value>Deadzone</value>
+  </data>
+  <data name="SettingsMode1_DeadzoneDesc" xml:space="preserve">
+    <value>Ändern Sie die Deadzone in Grad. Verbessert das Geradeauslaufen</value>
+  </data>
+  <data name="SettingsMode1_JoystickGameInput" xml:space="preserve">
+    <value>Joystick-Spiel Eingabe</value>
+  </data>
+  <data name="SettingsMode1_JoystickSteering" xml:space="preserve">
+    <value>Joystick-Lenkung</value>
+  </data>
+  <data name="SettingsMode1_JoystickSteeringOptions" xml:space="preserve">
+    <value>Joystick-Lenkung-Optionen</value>
+  </data>
+  <data name="SettingsMode1_JoystickSteeringPreview" xml:space="preserve">
+    <value>Joystick-Lenkung-Vorschau</value>
+  </data>
+  <data name="SettingsMode1_MaxSteeringAngle" xml:space="preserve">
+    <value>Maximaler Lenkwinkel</value>
+  </data>
+  <data name="SettingsMode1_MaxSteeringAngleDesc" xml:space="preserve">
+    <value>Den maximalen Lenkwinkelwert in Grad ändern</value>
+  </data>
+  <data name="SettingsMode1_SteeringLinearity" xml:space="preserve">
+    <value>Linearität der Lenkung</value>
+  </data>
+  <data name="SettingsMode1_SteeringLinearityDesc" xml:space="preserve">
+    <value>Zuordnung zwischen Eingabe und Lenkung. Niedrigere Werte bieten mehr Genauigkeit in der Nähe des vollen Lenkausschlags, aber weniger Genauigkeit in der Nähe der Mittellage. Höhere Werte bieten mehr Genauigkeit in der Nähe der Mittellage, aber weniger Genauigkeit beim vollen Lenkausschlag. Ein Wert von 1,0 entspricht einer linearen Zuordnung.</value>
+  </data>
   <data name="ProfilesPage_AccelerometerMultiplier" xml:space="preserve">
     <value>Beschleunigungssensor-Multiplikator</value>
   </data>
@@ -574,8 +708,11 @@
   <data name="ProfilesPage_OK" xml:space="preserve">
     <value>OK</value>
   </data>
-  <data name="ProfilesPage_PowerSettings" xml:space="preserve">
-    <value>Energie-Einstellungen</value>
+  <data name="ProfilesPage_PowerPreset" xml:space="preserve">
+    <value>Power preset</value>
+  </data>
+  <data name="ProfilesPage_PowerPresetDesc" xml:space="preserve">
+    <value>Change the selected power preset</value>
   </data>
   <data name="ProfilesPage_ProfileDetails" xml:space="preserve">
     <value>Profil-Details</value>

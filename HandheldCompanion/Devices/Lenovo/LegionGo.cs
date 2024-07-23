@@ -164,6 +164,7 @@ public class LegionGo : IDevice
         Capabilities |= DeviceCapabilities.FanControl;
         Capabilities |= DeviceCapabilities.DynamicLighting;
         Capabilities |= DeviceCapabilities.DynamicLightingBrightness;
+        Capabilities |= DeviceCapabilities.BatteryChargeLimit;
 
         // dynamic lighting capacities
         DynamicLightingCapabilities |= LEDLevel.SolidColor;
@@ -470,7 +471,7 @@ public class LegionGo : IDevice
     {
         switch (name)
         {
-            case "LegionBatteryChargeLimit":
+            case "BatteryChargeLimit":
                 SetBatteryChargeLimit(Convert.ToBoolean(value));
                 break;
         }

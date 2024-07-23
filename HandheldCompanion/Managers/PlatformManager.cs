@@ -37,9 +37,7 @@ public static class PlatformManager
     public static void Start()
     {
         if (Steam.IsInstalled)
-        {
-            //Steam.Start();
-        }
+            Steam.Start();
 
         if (GOGGalaxy.IsInstalled)
         {
@@ -158,7 +156,6 @@ public static class PlatformManager
          * RTSS: AutoTDP, framerate limiter, OSD
          */
 
-        LogManager.LogInformation($"{PreviousNeeds}, {CurrentNeeds}, {HWiNFO.IsInstalled}");
         // Check if the current needs are the same as the previous needs
         if (CurrentNeeds == PreviousNeeds) return;
 

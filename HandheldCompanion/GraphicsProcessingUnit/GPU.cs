@@ -190,9 +190,19 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             return 0;
         }
 
+        public virtual bool HasClock()
+        {
+            return false;
+        }
+
         public virtual float GetClock()
         {
             return 0.0f;
+        }
+
+        public virtual bool HasLoad()
+        {
+            return false;
         }
 
         public virtual float GetLoad()
@@ -200,9 +210,19 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             return 0.0f;
         }
 
+        public virtual bool HasPower()
+        {
+            return false;
+        }
+
         public virtual float GetPower()
         {
             return 0.0f;
+        }
+
+        public virtual bool HasTemperature()
+        {
+            return false;
         }
 
         public virtual float GetTemperature()

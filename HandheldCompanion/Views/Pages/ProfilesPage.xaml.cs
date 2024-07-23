@@ -84,7 +84,7 @@ public partial class ProfilesPage : Page
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
-            DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
+            DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
             desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));
         });
     }
@@ -526,8 +526,9 @@ public partial class ProfilesPage : Page
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     // disable delete button if is default profile or any sub profile is running
-                    b_DeleteProfile.IsEnabled = !selectedProfile.ErrorCode.HasFlag(ProfileErrorCode.Default & ProfileErrorCode.Running); //TODO consider sub profiles pertaining to this main profile is running
-                                                                                                                                         // prevent user from renaming default profile
+                    //TODO consider sub profiles pertaining to this main profile is running
+                    b_DeleteProfile.IsEnabled = (selectedProfile.ErrorCode & (ProfileErrorCode.Default | ProfileErrorCode.Running)) == 0;
+                    // prevent user from renaming default profile
                     b_ProfileRename.IsEnabled = !selectedMainProfile.Default;
                     // prevent user from disabling default profile
                     Toggle_EnableProfile.IsEnabled = !selectedProfile.Default;
@@ -556,6 +557,7 @@ public partial class ProfilesPage : Page
                     // Profile info
                     tB_ProfileName.Text = selectedMainProfile.Name;
                     tB_ProfilePath.Text = selectedProfile.Path;
+                    tB_ProfileArguments.Text = selectedProfile.Arguments;
                     Toggle_EnableProfile.IsOn = selectedProfile.Enabled;
 
                     // Global settings
@@ -587,7 +589,7 @@ public partial class ProfilesPage : Page
                     UpdateMotionControlsVisibility();
 
                     // Framerate limit
-                    DesktopScreen? desktopScreen = MultimediaManager.GetDesktopScreen();
+                    DesktopScreen? desktopScreen = MultimediaManager.PrimaryDesktop;
                     if (desktopScreen is not null)
                         cB_Framerate.SelectedItem = desktopScreen.GetClosest(selectedProfile.FramerateValue);
 
@@ -797,7 +799,7 @@ public partial class ProfilesPage : Page
         LayoutTemplate layoutTemplate = new(selectedProfile.Layout)
         {
             Name = selectedProfile.LayoutTitle,
-            Description = "Your modified layout for this executable.",
+            Description = Properties.Resources.ProfilesPage_Layout_Desc,
             Author = Environment.UserName,
             Executable = selectedProfile.Executable,
             Product = selectedProfile.Name,
@@ -1219,7 +1221,7 @@ public partial class ProfilesPage : Page
     {
         // create a new sub profile matching the original profile's settings
         Profile newSubProfile = (Profile)selectedProfile.Clone();
-        newSubProfile.Name = "(New Sub Profile)";
+        newSubProfile.Name = Properties.Resources.ProfilesPage_NewSubProfile;
         newSubProfile.Guid = Guid.NewGuid(); // must be unique
         newSubProfile.IsSubProfile = true;
         newSubProfile.IsFavoriteSubProfile = true;
@@ -1430,6 +1432,19 @@ public partial class ProfilesPage : Page
             return;
 
         selectedProfile.HighDPIAware = UseHighDPIAwareness.IsOn;
+        UpdateProfile();
+    }
+
+    private void tB_ProfileArguments_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (selectedProfile is null)
+            return;
+
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
+        selectedProfile.Arguments = tB_ProfileArguments.Text;
         UpdateProfile();
     }
 }

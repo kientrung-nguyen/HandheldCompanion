@@ -1,5 +1,6 @@
 using HandheldCompanion.Actions;
 using HandheldCompanion.Controls;
+using HandheldCompanion.Devices;
 using HandheldCompanion.Extensions;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Inputs;
@@ -140,7 +141,7 @@ public partial class QuickProfilesPage : Page
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
-            DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
+            DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
             desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));
         });
     }
@@ -166,7 +167,8 @@ public partial class QuickProfilesPage : Page
         Application.Current.Dispatcher.Invoke(() =>
         {
             // GPU-specific settings
-            StackProfileRSR.Visibility = GPU is AMDGPU ? Visibility.Visible : Visibility.Collapsed;
+            //StackProfileRSR.Visibility = GPU is AMDGPU ? Visibility.Visible : Visibility.Collapsed;
+            StackProfileRSR.Visibility = Visibility.Collapsed;
             IntegerScalingTypeGrid.Visibility = GPU is IntelGPU ? Visibility.Visible : Visibility.Collapsed;
 
             StackProfileRSR.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasRSRSupport;
@@ -174,6 +176,8 @@ public partial class QuickProfilesPage : Page
             StackProfileRIS.IsEnabled = HasGPUScalingSupport; // check if processor is AMD should be enough
             GPUScalingToggle.IsEnabled = HasGPUScalingSupport;
             GPUScalingComboBox.IsEnabled = HasGPUScalingSupport && HasScalingModeSupport;
+
+            CurrentDeviceName.Text = GPU.adapterInformation.Details.Description;
         });
     }
 
@@ -508,7 +512,7 @@ public partial class QuickProfilesPage : Page
                     }
 
                     // Framerate limit
-                    DesktopScreen? desktopScreen = MultimediaManager.GetDesktopScreen();
+                    DesktopScreen? desktopScreen = MultimediaManager.PrimaryDesktop;
                     if (desktopScreen is not null)
                         cB_Framerate.SelectedItem = desktopScreen.GetClosest(selectedProfile.FramerateValue);
 
@@ -995,7 +999,10 @@ public partial class QuickProfilesPage : Page
         int idx = PowerProfileManager.profiles.Values.Where(p => !p.IsDefault()).Count() + 1;
 
         string Name = string.Format(Properties.Resources.PowerProfileManualName, idx);
-        PowerProfile powerProfile = new PowerProfile(Name, Properties.Resources.PowerProfileManualDescription);
+        PowerProfile powerProfile = new PowerProfile(Name, Properties.Resources.PowerProfileManualDescription)
+        {
+            TDPOverrideValues = IDevice.GetCurrent().nTDP
+        };
 
         PowerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
     }

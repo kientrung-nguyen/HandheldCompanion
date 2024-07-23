@@ -254,30 +254,6 @@ namespace HandheldCompanion.Properties
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public double OverlayControllerRestingYaw {
-            get {
-                return ((double)(this["OverlayControllerRestingYaw"]));
-            }
-            set {
-                this["OverlayControllerRestingYaw"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public double OverlayControllerRestingRoll {
-            get {
-                return ((double)(this["OverlayControllerRestingRoll"]));
-            }
-            set {
-                this["OverlayControllerRestingRoll"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool SensorPlacementUpsideDown {
             get {
@@ -326,7 +302,7 @@ namespace HandheldCompanion.Properties
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool OverlayRenderAntialiasing {
             get {
                 return ((bool)(this["OverlayRenderAntialiasing"]));
@@ -734,7 +710,7 @@ namespace HandheldCompanion.Properties
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
         public int QuickToolsLocation {
             get {
                 return ((int)(this["QuickToolsLocation"]));
@@ -973,6 +949,18 @@ namespace HandheldCompanion.Properties
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int LEDPresetIndex {
+            get {
+                return ((int)(this["LEDPresetIndex"]));
+            }
+            set {
+                this["LEDPresetIndex"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         public global::System.Collections.Specialized.StringCollection SuspendedDevices {
             get {
                 return ((global::System.Collections.Specialized.StringCollection)(this["SuspendedDevices"]));
@@ -1093,18 +1081,6 @@ namespace HandheldCompanion.Properties
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("2")]
-        public int OnScreenDisplayBatteryLevel {
-            get {
-                return ((int)(this["OnScreenDisplayBatteryLevel"]));
-            }
-            set {
-                this["OnScreenDisplayBatteryLevel"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("2")]
         public int OnScreenDisplayFPSLevel {
             get {
                 return ((int)(this["OnScreenDisplayFPSLevel"]));
@@ -1117,9 +1093,9 @@ namespace HandheldCompanion.Properties
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("2")]
-        public string OnScreenDisplayBATTLevel {
+        public int OnScreenDisplayBATTLevel {
             get {
-                return ((string)(this["OnScreenDisplayBATTLevel"]));
+                return ((int)(this["OnScreenDisplayBATTLevel"]));
             }
             set {
                 this["OnScreenDisplayBATTLevel"] = value;
@@ -1147,6 +1123,66 @@ namespace HandheldCompanion.Properties
             }
             set {
                 this["LegionControllerGyroIndex"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool BatteryChargeLimit {
+            get {
+                return ((bool)(this["BatteryChargeLimit"]));
+            }
+            set {
+                this["BatteryChargeLimit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string TelemetryApproved {
+            get {
+                return ((string)(this["TelemetryApproved"]));
+            }
+            set {
+                this["TelemetryApproved"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool TelemetryEnabled {
+            get {
+                return ((bool)(this["TelemetryEnabled"]));
+            }
+            set {
+                this["TelemetryEnabled"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("480")]
+        public double QuickToolsWidth {
+            get {
+                return ((double)(this["QuickToolsWidth"]));
+            }
+            set {
+                this["QuickToolsWidth"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string QuickToolsScreen {
+            get {
+                return ((string)(this["QuickToolsScreen"]));
+            }
+            set {
+                this["QuickToolsScreen"] = value;
             }
         }
     }

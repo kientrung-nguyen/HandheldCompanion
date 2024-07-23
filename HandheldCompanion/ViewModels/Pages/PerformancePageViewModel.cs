@@ -159,7 +159,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public double AutoTDPMaximum => MultimediaManager.GetDesktopScreen().devMode.dmDisplayFrequency;
+        public double AutoTDPMaximum => MultimediaManager.PrimaryDesktop.devMode.dmDisplayFrequency;
 
         public bool TDPOverrideEnabled
         {
@@ -535,7 +535,10 @@ namespace HandheldCompanion.ViewModels
                 string name = string.Format(baseName, idx);
 
                 // Create the new power profile
-                PowerProfile powerProfile = new PowerProfile(name, Resources.PowerProfileManualDescription);
+                PowerProfile powerProfile = new PowerProfile(name, Resources.PowerProfileManualDescription)
+                {
+                    TDPOverrideValues = IDevice.GetCurrent().nTDP
+                };
 
                 // Update or create the profile
                 PowerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
@@ -543,18 +546,20 @@ namespace HandheldCompanion.ViewModels
 
             DeletePresetCommand = new DelegateCommand(async () =>
             {
-                Task<ContentDialogResult> dialogTask = new Dialog(isQuickTools ? OverlayQuickTools.GetCurrent() : MainWindow.GetCurrent())
+                Dialog dialog = new Dialog(isQuickTools ? OverlayQuickTools.GetCurrent() : MainWindow.GetCurrent())
                 {
                     Title = $"{Resources.ProfilesPage_AreYouSureDelete1} \"{SelectedPreset.Name}\"?",
                     Content = Resources.ProfilesPage_AreYouSureDelete2,
                     CloseButtonText = Resources.ProfilesPage_Cancel,
                     PrimaryButtonText = Resources.ProfilesPage_Delete
-                }.ShowAsync();
+                };
 
-                await dialogTask; // sync call
-
-                switch (dialogTask.Result)
+                ContentDialogResult result = await dialog.ShowAsync();
+                switch (result)
                 {
+                    case ContentDialogResult.None:
+                        dialog.Hide();
+                        break;
                     case ContentDialogResult.Primary:
                         PowerProfileManager.DeleteProfile(SelectedPreset);
                         break;

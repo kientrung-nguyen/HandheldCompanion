@@ -8,6 +8,7 @@ using HandheldCompanion.Utils;
 using HidLibrary;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
+using Sentry;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -15,6 +16,7 @@ using System.Linq;
 using System.Numerics;
 using System.Windows.Media;
 using Windows.Devices.Sensors;
+using HandheldCompanion.Models;
 using WindowsInput.Events;
 using static HandheldCompanion.OpenLibSys;
 using static HandheldCompanion.Utils.DeviceUtils;
@@ -31,6 +33,7 @@ public enum DeviceCapabilities : ushort
     DynamicLighting = 8,
     DynamicLightingBrightness = 16,
     DynamicLightingSecondLEDColor = 32,
+    BatteryChargeLimit = 64,
 }
 
 public struct ECDetails
@@ -94,6 +97,7 @@ public abstract class IDevice
 
     public DeviceCapabilities Capabilities = DeviceCapabilities.None;
     public LEDLevel DynamicLightingCapabilities = LEDLevel.SolidColor;
+    public List<LEDPreset> LEDPresets { get; protected set; } = [];
 
     protected const byte EC_OBF = 0x01;  // Output Buffer Full
     protected const byte EC_IBF = 0x02;  // Input Buffer Full
@@ -116,16 +120,7 @@ public abstract class IDevice
     public double Tjmax = 95;
 
     // power profile(s)
-    public List<PowerProfile> DevicePowerProfiles = new List<PowerProfile>()
-    {
-        // Default profile
-        new(Properties.Resources.PowerProfileDefaultName, Properties.Resources.PowerProfileDefaultDescription)
-        {
-            Default = true,
-            Guid = Guid.Empty,
-            OSPowerMode = OSPowerMode.BetterPerformance
-        }
-    };
+    public List<PowerProfile> DevicePowerProfiles = new List<PowerProfile>();
 
     public List<double[]> fanPresets = new()
     {
@@ -160,6 +155,15 @@ public abstract class IDevice
     {
         GamepadMotion = new(ProductIllustration, CalibrationMode.Manual | CalibrationMode.SensorFusion);
 
+        // add default power profile
+        DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileDefaultName, Properties.Resources.PowerProfileDefaultDescription)
+        {
+            Default = true,
+            Guid = Guid.Empty,
+            OSPowerMode = OSPowerMode.BetterPerformance,
+            TDPOverrideValues = new double[] { this.nTDP[0], this.nTDP[1], this.nTDP[2] }
+        });
+
         VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
         DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
@@ -191,9 +195,11 @@ public abstract class IDevice
     public string ManufacturerName = string.Empty;
     public string ProductName = string.Empty;
     public string SystemName = string.Empty;
+    public string SystemModel = string.Empty;
     public string Version = string.Empty;
     public string Processor = string.Empty;
     public int NumberOfCores = 0;
+    public string DeviceType = "Handheld";
 
     public static IDevice GetCurrent()
     {
@@ -203,6 +209,7 @@ public abstract class IDevice
         var ManufacturerName = MotherboardInfo.Manufacturer.ToUpper();
         var ProductName = MotherboardInfo.Product;
         var SystemName = MotherboardInfo.SystemName;
+        var SystemModel = MotherboardInfo.SystemModel;
         var Version = MotherboardInfo.Version;
         var Processor = MotherboardInfo.ProcessorName;
         var NumberOfCores = MotherboardInfo.NumberOfCores;
@@ -492,6 +499,18 @@ public abstract class IDevice
                         case "LNVNB161216":
                             device = new LegionGo();
                             break;
+
+                        // Weird...
+                        case "INVALID":
+                            {
+                                switch (SystemModel)
+                                {
+                                    case "83E1":
+                                        device = new LegionGo();
+                                        break;
+                                }    
+                            }
+                            break;
                     }
                 }
                 break;
@@ -507,6 +526,16 @@ public abstract class IDevice
                 break;
         }
 
+        // update sentry device context
+        SentrySdk.ConfigureScope(scope =>
+        {
+            scope.Contexts.Device.Model = SystemModel;
+            scope.Contexts.Device.Manufacturer = ManufacturerName;
+            scope.Contexts.Device.Name = ProductName;
+            scope.Contexts.Device.CpuDescription = Processor;
+            scope.Contexts.Device.DeviceType = device is not null ? device.DeviceType : "Desktop";
+        });
+
         LogManager.LogInformation("{0} from {1}", ProductName, ManufacturerName);
 
         if (device is null)
@@ -515,11 +544,14 @@ public abstract class IDevice
             LogManager.LogWarning("Device not yet supported. The behavior of the application will be unpredictable");
         }
 
-        // get the actual handheld device
+        // update device details
         device.ManufacturerName = ManufacturerName;
         device.ProductName = ProductName;
-        device.Processor = Processor;
         device.SystemName = SystemName;
+        device.SystemModel = SystemModel;
+        device.Version = Version;
+        device.Processor = Processor;
+        device.NumberOfCores = NumberOfCores;
 
         return device;
     }
@@ -605,9 +637,8 @@ public abstract class IDevice
         if (gyrometer is not null && accelerometer is not null)
         {
             // check sensor
-            string deviceId = CommonUtils.Between(gyrometer.DeviceId, @"\\?\", @"#{").Replace(@"#", @"\");
-            LogManager.LogInformation($"Sensor Id {deviceId}");
-            USBDeviceInfo sensor = GetUSBDevice(deviceId);
+            string DeviceId = CommonUtils.Between(gyrometer.DeviceId, @"\\?\", @"#{").Replace(@"#", @"\");
+            USBDeviceInfo sensor = GetUSBDevice(DeviceId);
             if (sensor is not null)
                 InternalSensorName = sensor.Name;
 
@@ -685,6 +716,11 @@ public abstract class IDevice
     }
 
     public virtual bool SetLedColor(Color MainColor, Color SecondaryColor, LEDLevel level, int speed = 100)
+    {
+        return true;
+    }
+
+    public virtual bool SetLEDPreset(LEDPreset? preset)
     {
         return true;
     }

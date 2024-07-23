@@ -1,5 +1,4 @@
-﻿using HandheldCompanion.Managers;
-using iNKORE.UI.WPF.Modern.Controls;
+﻿using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -81,39 +80,6 @@ public static class WPFUtils
             // Compare the Canvas.Top and Canvas.Left properties of the current control with those of the top-left control
             // If the current control is farther up or to the left, replace it with the farthest control to the left
             if (Canvas.GetTop(current) < Canvas.GetTop(topLeft) || (Canvas.GetTop(current) == Canvas.GetTop(topLeft) && Canvas.GetLeft(current) < Canvas.GetLeft(topLeft)))
-            {
-                topLeft = current;
-            }
-        }
-
-        // Return the top left control
-        return topLeft;
-    }
-
-    // A function that takes a list of controls and returns the top-left control
-    public static Control GetBottomLeftControl<T>(List<Control> controls) where T : Control
-    {
-        // filter list
-        controls = controls.Where(c => c is T).ToList();
-
-        // If no controls are found, return null
-        if (controls == null || controls.Count == 0)
-        {
-            return null;
-        }
-
-        // Initialize the top left control with the first element of the list
-        Control topLeft = controls[0];
-
-        // Browse other list items
-        for (int i = 1; i < controls.Count; i++)
-        {
-            // Get current control
-            Control current = controls[i];
-
-            // Compare the Canvas.Top and Canvas.Left properties of the current control with those of the top-left control
-            // If the current control is farther up or to the left, replace it with the farthest control to the left
-            if (Canvas.GetTop(current) > Canvas.GetTop(topLeft) || (Canvas.GetLeft(current) < Canvas.GetLeft(topLeft)))
             {
                 topLeft = current;
             }
@@ -215,10 +181,7 @@ public static class WPFUtils
             // Return the Euclidean distance between the nearest edges
             return Math.Sqrt(dx * dx + dy * dy);
         }
-        catch (Exception ex)
-        {
-            LogManager.LogError(ex.Message + ": " + ex.StackTrace);
-        }
+        catch { }
 
         return 9999.0d;
     }
@@ -261,7 +224,7 @@ public static class WPFUtils
 
     public static List<FrameworkElement> FindChildren(DependencyObject startNode)
     {
-        var count = VisualTreeHelper.GetChildrenCount(startNode);
+        int count = VisualTreeHelper.GetChildrenCount(startNode);
         List<FrameworkElement> childs = new();
 
         for (int i = 0; i < count; i++)

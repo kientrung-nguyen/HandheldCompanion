@@ -10,6 +10,7 @@ using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using iNKORE.UI.WPF.TrayIcons;
 using Nefarius.Utilities.DeviceManagement.PnP;
+using Sentry;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -31,6 +32,7 @@ using Windows.UI.ViewManagement;
 using static HandheldCompanion.Managers.InputsHotkey;
 using Application = System.Windows.Application;
 using Control = System.Windows.Controls.Control;
+using MessageBox = iNKORE.UI.WPF.Modern.Controls.MessageBox;
 using Page = System.Windows.Controls.Page;
 using RadioButton = System.Windows.Controls.RadioButton;
 
@@ -149,7 +151,6 @@ public partial class MainWindow : GamepadWindow
         // initialize notifyIcon
         notifyIcon = new TrayIcon
         {
-            ToolTipText = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visibility = Visibility.Collapsed,
             ContextMenu = new ContextMenu
@@ -223,43 +224,22 @@ public partial class MainWindow : GamepadWindow
 
         // initialize title
         Title += $" ({fileVersionInfo.FileVersion}) {currentDevice.ProductName}";
-        string currentDeviceType = currentDevice.GetType().Name;
-        switch (currentDeviceType)
+		if (FirstStart)
         {
-            /*
-             * workaround for Bosch BMI320/BMI323 (as of 06/20/2023)
-             * todo: check if still needed with Bosch G-sensor Driver V1.0.1.7
-             * https://dlcdnets.asus.com/pub/ASUS/IOTHMD/Image/Driver/Chipset/34644/BoschG-sensor_ROG_Bosch_Z_V1.0.1.7_34644.exe?model=ROG%20Ally%20(2023)
-
-                case "AYANEOAIRPlus":
-                case "ROGAlly":
+            string currentDeviceType = currentDevice.GetType().Name;
+            switch (currentDeviceType)
+            {
+                case "SteamDeck":
                     {
-                        LogManager.LogInformation("Restarting: {0}", CurrentDevice.InternalSensorName);
-
-                        if (CurrentDevice.RestartSensor())
-                        {
-                            // give the device some breathing space once restarted
-                            Thread.Sleep(500);
-
-                            LogManager.LogInformation("Successfully restarted: {0}", CurrentDevice.InternalSensorName);
-                        }
-                        else
-                            LogManager.LogError("Failed to restart: {0}", CurrentDevice.InternalSensorName);
+                        // prevent Steam Deck controller from being hidden by default
+                        if (FirstStart)
+                            SettingsManager.SetProperty("HIDcloakonconnect", false);
                     }
                     break;
-            */
+            }
 
-            case "SteamDeck":
-                {
-                    // prevent Steam Deck controller from being hidden by default
-                    if (FirstStart)
-                        SettingsManager.SetProperty("HIDcloakonconnect", false);
-                }
-                break;
+            SettingsManager.SetProperty("FirstStart", false);
         }
-
-        // initialize splash screen on first start only
-        SettingsManager.SetProperty("FirstStart", false);
 
         // initialize UI sounds board
         UISounds uiSounds = new UISounds();
@@ -484,6 +464,14 @@ public partial class MainWindow : GamepadWindow
                 var DesktopLayout = Convert.ToBoolean(value);
                 SettingsManager.SetProperty("DesktopLayoutEnabled", DesktopLayout, false, true);
                 break;
+            case "TelemetryApproved":
+
+                // If the input is null or empty, return false or handle as needed
+                if (string.IsNullOrEmpty(Convert.ToString(value)))
+                    break;
+
+                bool test = Convert.ToBoolean(value);
+                break;
         }
     }
 
@@ -609,6 +597,10 @@ public partial class MainWindow : GamepadWindow
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        // hide splashscreen
+        if (SplashScreen is not null)
+            SplashScreen.Close();
+
         // load gamepad navigation maanger
         gamepadFocusManager = new(this, ContentFrame);
 
@@ -622,11 +614,19 @@ public partial class MainWindow : GamepadWindow
 
     private void ControllerPage_Loaded(object sender, RoutedEventArgs e)
     {
-        // hide splashscreen
-        SplashScreen?.Close();
-
         // home page is ready, display main window
         this.Visibility = Visibility.Visible;
+
+        string TelemetryApproved = SettingsManager.GetString("TelemetryApproved");
+        if (string.IsNullOrEmpty(TelemetryApproved))
+        {
+            string Title = Properties.Resources.MainWindow_TelemetryTitle;
+            string Content = Properties.Resources.MainWindow_TelemetryText;
+
+            MessageBoxResult result = MessageBox.Show(Content, Title, MessageBoxButton.YesNo);
+            SettingsManager.SetProperty("TelemetryApproved", result == MessageBoxResult.Yes ? "True" : "False");
+            SettingsManager.SetProperty("TelemetryEnabled", result == MessageBoxResult.Yes ? true : false);
+        }
     }
 
     private void NotificationsPage_LayoutUpdated(int status)

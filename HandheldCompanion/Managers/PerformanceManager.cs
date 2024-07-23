@@ -518,18 +518,18 @@ public static class PerformanceManager
 
     private static void AutoTDPWatchdog_Elapsed(object? sender, ElapsedEventArgs e)
     {
-        // We don't have any hooked process
-        if (AutoTDPProcessId == 0)
+        if (!PlatformManager.RTSS.HasHook())
             return;
 
         if (autoLock.TryEnter())
         {
             // todo: Store fps for data gathering from multiple points (OSD, Performance)
-            double processValueFPS = PlatformManager.RTSS.GetFramerate(AutoTDPProcessId, out var osdFrameId);
-            if (double.IsNaN(processValueFPS) || processValueFPS <= 0 || AutoTDPOSDFrameId == osdFrameId)
+            double processValueFPS = PlatformManager.RTSS.GetFramerate(true);
+            var processOsdID = PlatformManager.RTSS.GetFrameId(); 
+            if (double.IsNaN(processValueFPS) || processValueFPS <= 0 || AutoTDPOSDFrameId == processOsdID)
                 goto Exit;
 
-            AutoTDPOSDFrameId = osdFrameId;
+            AutoTDPOSDFrameId = processOsdID;
 
             // Ensure realistic process values, prevent divide by 0
             processValueFPS = Math.Clamp(processValueFPS, 1, 500);
@@ -1008,11 +1008,6 @@ public static class PerformanceManager
 
     private static void RequestPowerMode(Guid guid)
     {
-        //currentPowerMode = guid;
-        //LogManager.LogDebug("User requested power scheme: {0}", currentPowerMode);
-
-        //if (PowerSetActiveOverlayScheme(currentPowerMode) != 0)
-        //    LogManager.LogWarning("Failed to set requested power scheme: {0}", currentPowerMode);
         if (currentPowerMode != guid)
         {
             PowerSchemeAPI.SetPowerMode(guid);

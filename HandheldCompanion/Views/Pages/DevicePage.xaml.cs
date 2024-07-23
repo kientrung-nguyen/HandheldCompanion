@@ -13,6 +13,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Windows.UI.ViewManagement;
+using HandheldCompanion.Models;
 using static HandheldCompanion.Utils.DeviceUtils;
 using Page = System.Windows.Controls.Page;
 
@@ -37,6 +38,7 @@ namespace HandheldCompanion.Views.Pages
             DynamicLightingPanel.IsEnabled = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting);
             LEDBrightness.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLightingBrightness) ? Visibility.Visible : Visibility.Collapsed;
             StackSecondColor.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLightingSecondLEDColor) ? Visibility.Visible : Visibility.Collapsed;
+            BatteryChargeLimit.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.BatteryChargeLimit) ? Visibility.Visible : Visibility.Collapsed;
 
             SetControlEnabledAndVisible(LEDSolidColor, LEDLevel.SolidColor);
             SetControlEnabledAndVisible(LEDBreathing, LEDLevel.Breathing);
@@ -45,7 +47,7 @@ namespace HandheldCompanion.Views.Pages
             SetControlEnabledAndVisible(LEDWheel, LEDLevel.Wheel);
             SetControlEnabledAndVisible(LEDGradient, LEDLevel.Gradient);
             SetControlEnabledAndVisible(LEDAmbilight, LEDLevel.Ambilight);
-
+            SetControlEnabledAndVisible(LEDPreset, LEDLevel.LEDPreset);
         }
 
         public DevicePage(string? Tag) : this()
@@ -94,6 +96,20 @@ namespace HandheldCompanion.Views.Pages
                 SapientiaUsb.LegionTriggerDeadzone legionGoRightTrigger = SapientiaUsb.GetTriggerDeadzoneAndMargin(LegionGo.RightJoyconIndex);
                 SliderRightTriggerDeadzone.Value = legionGoRightTrigger.Deadzone + 1;
                 SliderRightTriggerMargin.Value = legionGoRightTrigger.Margin + 1;
+            }
+
+            if (LedPresetsComboBox.ItemsSource is null)
+            {
+                // First Time
+                LedPresetsComboBox.ItemsSource = IDevice.GetCurrent().LEDPresets;
+            }
+            else
+            {
+                // Refresh preset ComboBox when localization changed or re-enter page
+                int currentSelected = LedPresetsComboBox.SelectedIndex;
+                LedPresetsComboBox.ItemsSource = null;
+                LedPresetsComboBox.ItemsSource = IDevice.GetCurrent().LEDPresets;
+                LedPresetsComboBox.SelectedIndex = currentSelected;
             }
         }
 
@@ -159,11 +175,20 @@ namespace HandheldCompanion.Views.Pages
                     case "LEDUseSecondColor":
                         Toggle_UseSecondColor.IsOn = Convert.ToBoolean(value);
                         break;
+                    case "LEDPresetIndex":
+                        int presetIndex = Convert.ToInt32(value);
+                        if (presetIndex < IDevice.GetCurrent().LEDPresets.Count) {
+                            LedPresetsComboBox.SelectedIndex = presetIndex;
+                        }
+                        break;
                     case "LegionControllerPassthrough":
                         Toggle_TouchpadPassthrough.IsOn = Convert.ToBoolean(value);
                         break;
                     case "LegionControllerGyroIndex":
                         ComboBox_GyroController.SelectedIndex = Convert.ToInt32(value);
+                        break;
+                    case "BatteryChargeLimit":
+                        Toggle_BatteryChargeLimit.IsOn = Convert.ToBoolean(value);
                         break;
                     case "SensorSelection":
                         {
@@ -335,6 +360,15 @@ namespace HandheldCompanion.Views.Pages
 
             SettingsManager.SetProperty("LEDSettingsLevel", level);
         }
+        
+        private void LEDOEMPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded)
+                return;
+
+            int selectedIndex = LedPresetsComboBox.SelectedIndex;
+            SettingsManager.SetProperty("LEDPresetIndex", selectedIndex);
+        }
 
         private void MainColorPicker_ColorChanged(object sender, RoutedEventArgs e)
         {
@@ -505,12 +539,12 @@ namespace HandheldCompanion.Views.Pages
             SettingsManager.SetProperty("LegionControllerPassthrough", Toggle_TouchpadPassthrough.IsOn);
         }
 
-        private void Toggle_LegionBatteryChargeLimit_Toggled(object sender, RoutedEventArgs e)
+        private void Toggle_BatteryChargeLimit_Toggled(object sender, RoutedEventArgs e)
         {
             if (!IsLoaded)
                 return;
 
-            SettingsManager.SetProperty("LegionBatteryChargeLimit", Toggle_LegionBatteryChargeLimit.IsOn);
+            SettingsManager.SetProperty("BatteryChargeLimit", Toggle_BatteryChargeLimit.IsOn);
         }
 
         private void ComboBox_GyroController_SelectionChanged(object sender, SelectionChangedEventArgs e)

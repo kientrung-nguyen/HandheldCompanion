@@ -83,7 +83,7 @@ namespace HandheldCompanion.Managers
 
             try
             {
-                AdapterInformation key = DisplayGPU.Keys.FirstOrDefault(GPU => GPU.Details.DeviceName == screen.PrimaryScreen.DeviceName);
+                AdapterInformation key = DisplayGPU.Keys.FirstOrDefault(GPU => GPU.Details.DeviceName == screen.screen.DeviceName);
                 if (DisplayGPU.TryGetValue(key, out GPU gpu))
                 {
                     // a new GPU was connected, disconnect from current gpu
@@ -271,7 +271,6 @@ namespace HandheldCompanion.Managers
 
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
-            LogManager.LogInformation("GPUManager Profile {0} applied", profile.Name);
             if (!IsInitialized || currentGPU is null)
                 return;
             /*

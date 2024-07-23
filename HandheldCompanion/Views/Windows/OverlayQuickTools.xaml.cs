@@ -7,6 +7,7 @@ using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -35,7 +36,7 @@ namespace HandheldCompanion.Views.Windows;
 /// <summary>
 ///     Interaction logic for QuickTools.xaml
 /// </summary>
-public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
+public partial class OverlayQuickTools : GamepadWindow
 {
     private const int SC_MOVE = 0xF010;
     private readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
@@ -60,10 +61,7 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
     const int WS_EX_NOACTIVATE = 0x08000000;
     const int GWL_EXSTYLE = -20;
 
-    private HwndSource hwndSource;
-
-    private Dictionary<UIElement, CacheMode> cacheModes = new();
-    private Timer WM_PAINT_TIMER;
+    public HwndSource hwndSource;
 
     // page vars
     private readonly Dictionary<string, Page> _pages = new();
@@ -77,7 +75,7 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
     public QuickPerformancePage performancePage;
     public QuickProfilesPage profilesPage;
     public QuickOverlayPage overlayPage;
-    public QuickSuspenderPage suspenderPage;
+    public QuickApplicationsPage applicationsPage;
 
     private static OverlayQuickTools currentWindow;
     private string preNavItemTag;
@@ -116,8 +114,7 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
         };
         clockUpdateTimer.Tick += UpdateTime;
 
-        WM_PAINT_TIMER = new(250) { AutoReset = false };
-        WM_PAINT_TIMER.Elapsed += WM_PAINT_TIMER_Tick;
+        WMPaintTimer.Elapsed += WMPaintTimer_Elapsed;
 
         // create manager(s)
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
@@ -125,7 +122,6 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
         MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
         MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
         MultimediaManager.Initialized += SystemManager_Initialized;
-        ProfileManager.Applied += ProfileManager_Applied;
 
         MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
 
@@ -137,14 +133,14 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
         //performancePage = new("quickperformance");
         profilesPage = new("quickprofiles");
         //overlayPage = new("quickoverlay");
-        suspenderPage = new("quicksuspender");
+        applicationsPage = new("quickapplications");
 
         _pages.Add("QuickHomePage", homePage);
         _pages.Add("QuickDevicePage", devicePage);
         //_pages.Add("QuickPerformancePage", performancePage);
         _pages.Add("QuickProfilesPage", profilesPage);
         //_pages.Add("QuickOverlayPage", overlayPage);
-        _pages.Add("QuickSuspenderPage", suspenderPage);
+        _pages.Add("QuickApplicationsPage", applicationsPage);
 
         activeTabs = new()
         {
@@ -153,33 +149,8 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
             //{ "QuickPerformancePage", false },
             { "QuickProfilesPage", false },
             { "QuickOverlayPage", false },
-            { "QuickSuspenderPage", false }
+            { "QuickApplicationsPage", false }
         };
-
-        tabButtons = new()
-        {
-            { "QuickHomePage", QuickHomePage },
-            { "QuickDevicePage", QuickDevicePage },
-            { "QuickProfilesPage", QuickProfilesPage },
-            { "QuickOverlayPage", QuickOverlayPage },
-            { "QuickSuspenderPage", QuickSuspenderPage }
-        };
-        NotifyPropertyChanged(nameof(activeTabs));
-    }
-
-    public event PropertyChangedEventHandler PropertyChanged;
-
-    private void NotifyPropertyChanged(string propertyName = "")
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        foreach (var activeTab in activeTabs)
-        {
-            if (activeTab.Value)
-                tabButtons[activeTab.Key].Style = Application.Current.FindResource("AccentButtonStyle") as Style;
-
-            else
-                tabButtons[activeTab.Key].Style = Application.Current.FindResource("DefaultButtonStyle") as Style;
-        }
     }
 
     public void LoadPages_MVVM()
@@ -213,15 +184,13 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
             switch (name)
             {
                 case "QuickToolsLocation":
-                    {
-                        var QuickToolsLocation = Convert.ToInt32(value);
-                        UpdateLocation(QuickToolsLocation);
-                    }
+                    UpdateLocation();
                     break;
                 case "QuickToolsAutoHide":
-                    {
-                        autoHide = Convert.ToBoolean(value);
-                    }
+                    autoHide = Convert.ToBoolean(value);
+                    break;
+                case "QuickToolsScreen":
+                    UpdateLocation();
                     break;
             }
         });
@@ -229,38 +198,63 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
 
     private void SystemManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
     {
-        int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
-        UpdateLocation(QuickToolsLocation);
+        // ignore if we're not ready yet
+        if (!MultimediaManager.IsInitialized)
+            return;
+
+        UpdateLocation();
     }
 
-    private void UpdateLocation(int quickToolsLocation)
+    private const double _Margin = 12;
+    private const double _MaxHeight = 960;
+    private const double _MaxWidth = 960;
+    private const WindowStyle _Style = WindowStyle.ToolWindow;
+
+    private void UpdateLocation()
     {
-        // UI thread (async)
+        // pull quicktools settings
+        int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
+        string FriendlyName = SettingsManager.GetString("QuickToolsScreen");
+
+        // Attempt to find the screen with the specified friendly name
+        DesktopScreen friendlyScreen = MultimediaManager.AllScreens.Values.FirstOrDefault(a => a.FriendlyName.Equals(FriendlyName)) ?? MultimediaManager.PrimaryDesktop;
+
+        // Find the corresponding Screen object
+        Screen targetScreen = Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName.Equals(friendlyScreen.screen.DeviceName));
+
+        // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
-            switch (quickToolsLocation)
+            // Common settings across cases 0 and 1
+            MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfWorkingArea.Width);
+            Width = (int)Math.Max(MinWidth, SettingsManager.GetDouble("QuickToolsWidth"));
+            MaxHeight = Math.Min(targetScreen.WpfWorkingArea.Height - _Margin * 2, _MaxHeight);
+            Height = MinHeight = MaxHeight;
+            WindowStyle = _Style;
+
+            switch (QuickToolsLocation)
             {
-                // top, left
-                // bottom, left
-                case 0:
-                case 2:
-                    this.SetWindowPosition(WindowPositions.Left, Screen.PrimaryScreen);
-                    //Left += Margin.Left;
+                case 0: // Left
+                    this.SetWindowPosition(WindowPositions.BottomLeft, targetScreen);
+                    Left += _Margin;
                     break;
 
-                // top, right
-                // bottom, right
-                default:
-                case 1:
-                case 3:
-                    this.SetWindowPosition(WindowPositions.Right, Screen.PrimaryScreen);
-                    //Left -= Margin.Right;
+                case 1: // Right
+                    this.SetWindowPosition(WindowPositions.BottomRight, targetScreen);
+                    Left -= _Margin;
                     break;
+
+                case 2: // Maximized
+                    Top = 0;
+                    MaxWidth = double.PositiveInfinity;
+                    MaxHeight = double.PositiveInfinity;
+                    WindowStyle = WindowStyle.None;
+                    this.SetWindowPosition(WindowPositions.Maximize, targetScreen);
+                    return; // Early return for case 2
             }
 
-            Top = 0;
-            Height = MinHeight = MaxHeight = (int)(Screen.PrimaryScreen.WpfWorkingArea.Height/* - (8.0d * Margin.Top)*/);
-            //Top = Margin.Top;
+            // Common operation for case 0 and 1 after switch
+            Top = targetScreen.WpfWorkingArea.Bottom - Height - _Margin;
         });
     }
 
@@ -307,24 +301,11 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
 
                 string remaining;
                 if (status.BatteryLifeRemaining >= 3600)
-                    remaining = $"{time.Hours}h {time.Minutes}m";
+                    remaining = $"{time.Hours}h {time.Minutes}min";
                 else
-                    remaining = $"{time.Minutes}m";
+                    remaining = $"{time.Minutes}min";
 
-                BatteryIndicatorLifeRemaining.Text = $"({remaining})";
-                BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
-            }
-            else if (status.BatteryFullLifetime > 0)
-            {
-                var time = TimeSpan.FromSeconds(status.BatteryFullLifetime);
-
-                string remaining;
-                if (status.BatteryFullLifetime >= 3600)
-                    remaining = $"{time.Hours}h {time.Minutes}m";
-                else
-                    remaining = $"{time.Minutes}m";
-
-                BatteryIndicatorLifeRemaining.Text = $"({remaining})";
+                BatteryIndicatorLifeRemaining.Text = $"({remaining} remaining)";
                 BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
             }
             else
@@ -344,8 +325,8 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
             hwndSource.AddHook(WndProc);
             hwndSource.CompositionTarget.RenderMode = RenderMode.Default;
             WinAPI.SetWindowPos(hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-            int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
-            UpdateLocation(QuickToolsLocation);
+            //int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
+            //UpdateLocation(QuickToolsLocation);
         }
     }
 
@@ -415,21 +396,31 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
 
             case WM_PAINT:
                 {
-                    // Loop through all visual elements in the window
-                    foreach (var element in WPFUtils.FindVisualChildren<UIElement>(this))
-                    {
-                        if (element.CacheMode is not null)
-                        {
-                            // Store the previous CacheMode value
-                            cacheModes[element] = element.CacheMode.Clone();
+                    DateTime drawTime = DateTime.Now;
 
-                            // Set the CacheMode to null
-                            element.CacheMode = null;
+                    double drawDiff = Math.Abs((prevDraw - drawTime).TotalMilliseconds);
+                    if (drawDiff < 200)
+                    {
+                        if (!WMPaintPending)
+                        {
+                            // disable GPU acceleration
+                            RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+
+                            // set flag
+                            WMPaintPending = true;
+
+                            LogManager.LogError("ProcessRenderMode set to {0}", RenderOptions.ProcessRenderMode);
                         }
                     }
 
-                    WM_PAINT_TIMER.Stop();
-                    WM_PAINT_TIMER.Start();
+                    // update previous drawing time
+                    prevDraw = drawTime;
+
+                    if (WMPaintPending)
+                    {
+                        WMPaintTimer.Stop();
+                        WMPaintTimer.Start();
+                    }
                 }
                 break;
         }
@@ -437,16 +428,24 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
         return IntPtr.Zero;
     }
 
-    private void WM_PAINT_TIMER_Tick(object? sender, EventArgs e)
+    DateTime prevDraw = DateTime.MinValue;
+
+    private void WMPaintTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        if (WMPaintPending)
         {
-            // Set the CacheMode back to the previous value
-            foreach (UIElement element in cacheModes.Keys)
-                element.CacheMode = cacheModes[element];
-        });
+            // enable GPU acceleration
+            RenderOptions.ProcessRenderMode = RenderMode.Default;
+
+            // reset flag
+            WMPaintPending = false;
+
+            LogManager.LogError("ProcessRenderMode set to {0}", RenderOptions.ProcessRenderMode);
+        }
     }
+
+    private Timer WMPaintTimer = new(100) { AutoReset = false };
+    private bool WMPaintPending = false;
 
     private void HandleEsc(object sender, KeyEventArgs e)
     {
@@ -486,6 +485,13 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
 
     private void Window_Closing(object sender, CancelEventArgs e)
     {
+        switch (WindowStyle)
+        {
+            case WindowStyle.ToolWindow:
+                SettingsManager.SetProperty("QuickToolsWidth", ActualWidth);
+                break;
+        }
+
         e.Cancel = !isClosing;
 
         if (!isClosing)
@@ -553,7 +559,7 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
         // Add handler for ContentFrame navigation.
         ContentFrame.Navigated += On_Navigated;
         // NavView doesn't load any page by default, so load home page.
-        navView.SelectedItem = navView.FooterMenuItems[0];
+        navView.SelectedItem = navView.MenuItems[1];
 
         // If navigation occurs on SelectionChanged, this isn't needed.
         // Because we use ItemInvoked to navigate, we need to call Navigate
@@ -590,12 +596,12 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
             var preNavPageType = ContentFrame.CurrentSourcePageType;
             var preNavPageName = preNavPageType.Name;
 
-            var NavViewItem = navView.FooterMenuItems
+            var NavViewItem = navView.MenuItems
                 .OfType<NavigationViewItem>().FirstOrDefault(n => n.Tag.Equals(preNavPageName));
 
             if (NavViewItem is not null)
                 navView.SelectedItem = NavViewItem;
-            navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
+            //navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
         }
     }
 
@@ -736,32 +742,6 @@ public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
 
     }
 
-    private void QuickButton_Click(object sender, RoutedEventArgs e)
-    {
-        var button = (Button)sender;
-        if (tabButtons.ContainsKey($"{button.Name}"))
-        {
-            tabButtons[$"{button.Name}"] = button;
-            activeTabs[$"{button.Name}"] = true;
-            activeTabs.Where(x => x.Key != $"{button.Name}").ToList().ForEach(x => activeTabs[x.Key] = false);
-        }
-        else
-        {
-            tabButtons.Add($"{button.Name}", button);
-        }
-        NotifyPropertyChanged(nameof(activeTabs));
-
-        MainWindow.overlayquickTools.NavView_Navigate(button.Name);
-    }
-
-    private void ProfileManager_Applied(Profile profile, UpdateSource source)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            t_CurrentProfile.Text = profile.ToString();
-        });
-    }
 
     private void GamepadWindow_Deactivated(object sender, EventArgs e)
     {

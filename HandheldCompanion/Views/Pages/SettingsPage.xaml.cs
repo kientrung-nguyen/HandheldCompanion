@@ -8,16 +8,18 @@ using iNKORE.UI.WPF.Modern;
 using iNKORE.UI.WPF.Modern.Controls;
 using iNKORE.UI.WPF.Modern.Controls.Helpers;
 using iNKORE.UI.WPF.Modern.Helpers.Styles;
-using Nefarius.Utilities.DeviceManagement.PnP;
+using Microsoft.Win32;
+using Sentry;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using System.Windows.Forms;
 using static HandheldCompanion.Managers.UpdateManager;
-using static HandheldCompanion.Utils.DeviceUtils;
+using Application = System.Windows.Application;
 using Page = System.Windows.Controls.Page;
 
 namespace HandheldCompanion.Views.Pages;
@@ -46,6 +48,9 @@ public partial class SettingsPage : Page
         // initialize manager(s)
         UpdateManager.Updated += UpdateManager_Updated;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        MultimediaManager.ScreenConnected += MultimediaManager_ScreenConnected;
+        MultimediaManager.ScreenDisconnected += MultimediaManager_ScreenDisconnected;
+        MultimediaManager.Initialized += MultimediaManager_Initialized;
 
         PlatformManager.RTSS.Updated += RTSS_Updated;
         PlatformManager.HWiNFO.Updated += HWiNFO_Updated;
@@ -54,6 +59,59 @@ public partial class SettingsPage : Page
         // todo: make PlatformManager static
         RTSS_Updated(PlatformManager.RTSS.Status);
         HWiNFO_Updated(PlatformManager.HWiNFO.Status);
+    }
+
+    private void MultimediaManager_ScreenConnected(DesktopScreen screen)
+    {
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            int idx = -1;
+            foreach (DesktopScreen desktopScreen in cB_QuickToolsScreen.Items.OfType<DesktopScreen>())
+            {
+                if (desktopScreen.FriendlyName.Equals(screen.FriendlyName))                    
+                    idx = cB_QuickToolsScreen.Items.IndexOf(desktopScreen);
+            }
+
+            if (idx != -1)
+                cB_QuickToolsScreen.Items[idx] = screen;
+            else
+                cB_QuickToolsScreen.Items.Add(screen);
+        });
+    }
+
+    private void MultimediaManager_ScreenDisconnected(DesktopScreen screen)
+    {
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            // check if current target was disconnected
+            if (cB_QuickToolsScreen.SelectedItem is DesktopScreen targetScreen)
+                if (targetScreen.FriendlyName.Equals(screen.FriendlyName))
+                    cB_QuickToolsScreen.SelectedIndex = 0;
+
+            int idx = -1;
+            foreach (DesktopScreen desktopScreen in cB_QuickToolsScreen.Items.OfType<DesktopScreen>())
+            {
+                if (desktopScreen.FriendlyName.Equals(screen.FriendlyName))
+                    idx = cB_QuickToolsScreen.Items.IndexOf(desktopScreen);
+            }
+
+            if (idx != -1)
+                cB_QuickToolsScreen.Items.RemoveAt(idx);
+        });
+    }
+
+    private void MultimediaManager_Initialized()
+    {
+        string QuickToolsScreen = SettingsManager.GetString("QuickToolsScreen");
+
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (string.IsNullOrEmpty(QuickToolsScreen))
+                cB_QuickToolsScreen.SelectedIndex = 0;
+        });
     }
 
     public SettingsPage(string? Tag) : this()
@@ -77,7 +135,6 @@ public partial class SettingsPage : Page
             }
         });
     }
-
     private void RTSS_Updated(PlatformStatus status)
     {
         // UI thread (async)
@@ -147,19 +204,19 @@ public partial class SettingsPage : Page
                     switch (nativeOrientation)
                     {
                         case ScreenRotation.Rotations.DEFAULT:
-                            Text_NativeDisplayOrientation.Text = "Landscape";
+                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_Landscape;
                             break;
                         case ScreenRotation.Rotations.D90:
-                            Text_NativeDisplayOrientation.Text = "Portrait";
+                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_Portrait;
                             break;
                         case ScreenRotation.Rotations.D180:
-                            Text_NativeDisplayOrientation.Text = "Flipped Landscape";
+                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_FlippedLandscape;
                             break;
                         case ScreenRotation.Rotations.D270:
-                            Text_NativeDisplayOrientation.Text = "Flipped Portrait";
+                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_FlippedPortrait;
                             break;
                         default:
-                            Text_NativeDisplayOrientation.Text = "Not set";
+                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_NotSet;
                             break;
                     }
 
@@ -186,6 +243,33 @@ public partial class SettingsPage : Page
                 case "UISounds":
                     Toggle_UISounds.IsEnabled = MultimediaManager.HasVolumeSupport();
                     Toggle_UISounds.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "TelemetryEnabled":
+                    {
+                        // ignore if loading
+                        if (!SettingsManager.IsInitialized)
+                            return;
+
+                        // send device details to sentry
+                        bool IsSentryEnabled = Convert.ToBoolean(value);
+                        Toggle_Telemetry.IsOn = IsSentryEnabled;
+
+                        if (SentrySdk.IsEnabled && IsSentryEnabled)
+                            SentrySdk.CaptureMessage("Telemetry enabled on the device");
+                    }
+                    break;
+                case "QuickToolsScreen":
+                    {
+                        string FriendlyName = Convert.ToString(value);
+
+                        DesktopScreen? selectedScreen = cB_QuickToolsScreen.Items.OfType<DesktopScreen>()
+                        .FirstOrDefault(screen => screen.FriendlyName.Equals(FriendlyName));
+
+                        if (selectedScreen != null)
+                            cB_QuickToolsScreen.SelectedItem = selectedScreen;
+                        else
+                            cB_QuickToolsScreen.SelectedIndex = 0;
+                    }
                     break;
             }
         });
@@ -365,6 +449,8 @@ public partial class SettingsPage : Page
         SettingsManager.SetProperty("CurrentCulture", culture.Name);
 
         Localization.TranslationSource.Instance.CurrentCulture = CultureInfo.GetCultureInfo(culture.Name);
+        
+        NavigationService?.Refresh();
     }
 
     private void Toggle_Notification_Toggled(object? sender, RoutedEventArgs? e)
@@ -497,5 +583,22 @@ public partial class SettingsPage : Page
             return;
 
         SettingsManager.SetProperty("UISounds", Toggle_UISounds.IsOn);
+    }
+
+    private void Toggle_Telemetry_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        SettingsManager.SetProperty("TelemetryEnabled", Toggle_Telemetry.IsOn);
+    }
+    
+    private void cB_QuickToolsScreen_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        if (cB_QuickToolsScreen.SelectedItem is DesktopScreen desktopScreen)
+            SettingsManager.SetProperty("QuickToolsScreen", desktopScreen.FriendlyName);
     }
 }

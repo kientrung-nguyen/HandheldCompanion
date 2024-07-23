@@ -1,4 +1,6 @@
+using HandheldCompanion.Managers;
 using LibreHardwareMonitor.Hardware;
+using System;
 using System.Timers;
 
 namespace HandheldCompanion.Platforms
@@ -42,6 +44,19 @@ namespace HandheldCompanion.Platforms
                 IsMemoryEnabled = true,
                 IsBatteryEnabled = true,
             };
+
+            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        }
+
+        private void SettingsManager_SettingValueChanged(string name, object value)
+        {
+            switch(name)
+            {
+                case "OnScreenDisplayRefreshRate":
+                    updateInterval = Convert.ToInt32(value);
+                    updateTimer.Interval = updateInterval;
+                    break;
+            }
         }
 
         public override bool Start()
@@ -137,7 +152,7 @@ namespace HandheldCompanion.Platforms
                 if (value > currentHighest)
                 {
                     CPUClock = (float)sensor.Value;
-                    CPULoadChanged?.Invoke(CPUPower);
+                    CPUClockChanged?.Invoke(CPUPower);
                     return value;
                 }
             }

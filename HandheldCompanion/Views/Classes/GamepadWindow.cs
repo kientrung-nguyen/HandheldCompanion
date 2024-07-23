@@ -73,7 +73,7 @@ namespace HandheldCompanion.Views.Classes
                     // get all Control(s)
                     controlElements = WPFUtils.GetElementsFromPopup<Control>(frameworkElements);
 
-                    ContentDialogOpened?.Invoke();
+                    ContentDialogOpened?.Invoke(currentDialog);
                 }
             }
             else if (dialog is null)
@@ -84,6 +84,7 @@ namespace HandheldCompanion.Views.Classes
 
                 if (currentDialog is not null)
                 {
+                    ContentDialogClosed?.Invoke(currentDialog);
                     currentDialog = null;
                 }
             }
@@ -91,26 +92,26 @@ namespace HandheldCompanion.Views.Classes
 
         protected void InvokeGotGamepadWindowFocus()
         {
-            GotGamepadWindowFocus?.Invoke();
+            GotGamepadWindowFocus?.Invoke(this);
         }
 
         protected void InvokeLostGamepadWindowFocus()
         {
-            LostGamepadWindowFocus?.Invoke();
+            LostGamepadWindowFocus?.Invoke(this);
         }
 
         #region events
         public event GotGamepadWindowFocusEventHandler GotGamepadWindowFocus;
-        public delegate void GotGamepadWindowFocusEventHandler();
+        public delegate void GotGamepadWindowFocusEventHandler(object sender);
 
         public event LostGamepadWindowFocusEventHandler LostGamepadWindowFocus;
-        public delegate void LostGamepadWindowFocusEventHandler();
+        public delegate void LostGamepadWindowFocusEventHandler(object sender);
 
         public event ContentDialogOpenedEventHandler ContentDialogOpened;
-        public delegate void ContentDialogOpenedEventHandler();
+        public delegate void ContentDialogOpenedEventHandler(ContentDialog contentDialog);
 
         public event ContentDialogClosedEventHandler ContentDialogClosed;
-        public delegate void ContentDialogClosedEventHandler();
+        public delegate void ContentDialogClosedEventHandler(ContentDialog contentDialog);
         #endregion
     }
 }
