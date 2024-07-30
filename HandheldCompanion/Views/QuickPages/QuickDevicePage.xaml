@@ -9,7 +9,7 @@
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     Name="QuickDevice"
     Title="{l:Static resx:Resources.QuickDevicePage_Title}"
-    Margin="15,0,12,0"
+    Margin="15,0,12,6"
     d:Background="White"
     d:DesignHeight="1200"
     d:DesignWidth="640"

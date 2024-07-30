@@ -2,6 +2,7 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Properties;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
@@ -9,6 +10,7 @@ using HandheldCompanion.Views.Pages;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using iNKORE.UI.WPF.TrayIcons;
+using LiveCharts.Wpf.Charts.Base;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using Sentry;
 using System;
@@ -21,6 +23,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
@@ -28,6 +31,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Navigation;
 using System.Windows.Threading;
+using Windows.Devices.Power;
 using Windows.UI.ViewManagement;
 using static HandheldCompanion.Managers.InputsHotkey;
 using Application = System.Windows.Application;
@@ -75,9 +79,17 @@ public partial class MainWindow : GamepadWindow
     public static string CurrentPageName = string.Empty;
 
     private bool appClosing;
-    private TrayIcon notifyIcon;
+    private static TrayIcon notifyIcon;
     private bool notifyInTaskbar;
     private string preNavItemTag;
+    private static DispatcherTimer sensorTimer = new(
+        TimeSpan.FromMilliseconds(1000),
+        DispatcherPriority.Normal,
+        sensorTimer_Elapsed,
+        Dispatcher.CurrentDispatcher)
+    {
+        IsEnabled = false
+    };
 
     private WindowState prevWindowState;
     public static SplashScreen SplashScreen;
@@ -87,7 +99,6 @@ public partial class MainWindow : GamepadWindow
     private const int WM_QUERYENDSESSION = 0x0011;
     private const int WM_DISPLAYCHANGE = 0x007e;
     private const int WM_DEVICECHANGE = 0x0219;
-
 
     //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime)
     private static readonly DispatcherTimer notifyIconWaitTimer = new(
@@ -148,9 +159,9 @@ public partial class MainWindow : GamepadWindow
         // initialize XInputWrapper
         XInputPlus.ExtractXInputPlusLibraries();
 
-        // initialize notifyIcon
         notifyIcon = new TrayIcon
         {
+            ToolTipText = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visibility = Visibility.Collapsed,
             ContextMenu = new ContextMenu
@@ -159,6 +170,7 @@ public partial class MainWindow : GamepadWindow
             }
         };
 
+        // initialize notifyIcon
         notifyIcon.TrayMouseDoubleClick += (sender, e) =>
         {
             // Stop the timer from ticking.
@@ -178,34 +190,23 @@ public partial class MainWindow : GamepadWindow
             notifyIcon.ContextMenu.IsOpen = true;
         };
 
+        notifyIcon.TrayToolTipOpen += (sender, e) =>
+        {
+            RefreshSensors();
+            sensorTimer.Start();
+        };
 
-        //notifyIcon = new NotifyIcon
-        //{
-        //    Text = Title,
-        //    Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
-        //    Visible = false,
-        //    ContextMenuStrip = new CustomContextMenu()
-        //};
-        //notifyIcon.DoubleClick += (sender, e) =>
-        //{
-        //    // Stop the timer from ticking.
-        //    notifyIconWaitTimer.Stop();
-        //    if (overlayquickTools.Visibility == Visibility.Visible)
-        //        overlayquickTools.ToggleVisibility();
-        //    SwapWindowState();
-        //};
-        //notifyIcon.Click += (sender, e) =>
-        //{
-        //    if (e is System.Windows.Forms.MouseEventArgs me && me.Button == MouseButtons.Left)
-        //        notifyIconWaitTimer.Start();
-        //};
+        notifyIcon.TrayToolTipClose += (sender, e) =>
+        {
+            sensorTimer.Stop();
+        };
 
-        AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow);
-        AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools);
+        AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow, "MainWindow");
+        AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools, "QuickTools");
 
         AddNotifyIconSeparator();
 
-        AddNotifyIconItem(Properties.Resources.MainWindow_Exit);
+        AddNotifyIconItem(Properties.Resources.MainWindow_Exit, "Quit");
 
         // paths
         Process process = Process.GetCurrentProcess();
@@ -224,7 +225,7 @@ public partial class MainWindow : GamepadWindow
 
         // initialize title
         Title += $" ({fileVersionInfo.FileVersion}) {currentDevice.ProductName}";
-		if (FirstStart)
+        if (FirstStart)
         {
             string currentDeviceType = currentDevice.GetType().Name;
             switch (currentDeviceType)
@@ -310,6 +311,55 @@ public partial class MainWindow : GamepadWindow
 
         SetPreferredAppMode(2);
         FlushMenuThemes();
+    }
+
+
+    private static void sensorTimer_Elapsed(object? sender, EventArgs e)
+    {
+        RefreshSensors();
+    }
+
+    private static void RefreshSensors()
+    {
+        if (!notifyIcon.IsTrayIconCreated)
+            return;
+
+        SystemManager.ReadBatterySensors();
+        PlatformManager.HWiNFO.ReaffirmRunningProcess();
+        string cpuTemp = "";
+        string gpuTemp = "";
+        string battery = "";
+        string charge = "";
+
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUPower, out var cpuPower))
+            cpuTemp += $":\t{Math.Round((decimal)cpuPower.Value)}W";
+
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUTemperature, out var cpuSensor))
+            cpuTemp += $" {Math.Round((decimal)cpuSensor.Value)}°C";
+
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUUsage, out var cpuUsage))
+            cpuTemp += $" {Math.Round((decimal)cpuUsage.Value)}%";
+
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUPower, out var gpuPower))
+            gpuTemp += $":\t{Math.Round((decimal)gpuPower.Value)}W";
+
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUTemperature, out var gpuSensor))
+            gpuTemp += $" {Math.Round((decimal)gpuSensor.Value)}°C";
+
+        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUUsage, out var gpuUsagae))
+            gpuTemp += $" {Math.Round((decimal)gpuUsagae.Value)}%";
+
+        if (SystemManager.batteryRate < 0)
+            battery = $":\t{Properties.Resources.Discharging} {Math.Round(-(decimal)SystemManager.batteryRate, 1)}W";
+        else if (SystemManager.batteryRate > 0)
+            battery = $":\t{Properties.Resources.Charging} {Math.Round((decimal)SystemManager.batteryRate, 1)}W";
+
+        string trayTip = $"CPU{cpuTemp}";
+        if (gpuTemp.Length > 0) trayTip += "\nGPU" + gpuTemp;
+        if (!float.IsNaN(PlatformManager.HWiNFO.CPUFanSpeed)) trayTip += $"\nFAN:\t{PlatformManager.HWiNFO.CPUFanSpeed}RPM";
+        if (battery.Length > 0) trayTip += "\nBATT" + battery;
+
+        notifyIcon.ToolTipText = trayTip;
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -410,6 +460,16 @@ public partial class MainWindow : GamepadWindow
         tag ??= string.Concat(name.Where(c => !char.IsWhiteSpace(c)));
         var menuItemMainWindow = new MenuItem()
         {
+            Icon = new FontIcon
+            {
+                Glyph = tag switch
+                {
+                    "MainWindow" => "\uE7C4",
+                    "QuickTools" => "\uEC7A",
+                    "Quit" => "\uF3B1",
+                    _ => "\uE713"
+                }
+            },
             Header = name,
             Tag = tag
         };
@@ -424,7 +484,7 @@ public partial class MainWindow : GamepadWindow
                     case "QuickTools":
                         overlayquickTools.ToggleVisibility();
                         break;
-                    case "Exit":
+                    case "Quit":
                         appClosing = true;
                         notifyIcon.ContextMenu.IsOpen = false;
                         Close();
@@ -434,6 +494,7 @@ public partial class MainWindow : GamepadWindow
         //MenuItem_Click;
         notifyIcon.ContextMenu.Items.Add(menuItemMainWindow);
     }
+
     private void UnloadNotifyIcon()
     {
         notifyIcon.Visibility = Visibility.Collapsed;

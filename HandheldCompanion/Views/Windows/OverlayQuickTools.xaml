@@ -24,6 +24,8 @@
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
     Loaded="Window_Loaded"
+    Deactivated="GamepadWindow_Deactivated"
+    PreviewLostKeyboardFocus="GamepadWindow_PreviewLostKeyboardFocus"
     ResizeMode="NoResize"
     ShowActivated="False"
     ShowInTaskbar="False"
@@ -36,33 +38,100 @@
             <ColumnDefinition Width="78*"/>
             <ColumnDefinition Width="331*"/>
         </Grid.ColumnDefinitions>
-        <DockPanel Margin="14,4,0,0" VerticalAlignment="Top" Grid.ColumnSpan="3">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="51" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <DockPanel
+            Margin="0,12,0,0"
+            VerticalAlignment="Top"
+            Grid.Row="0"
+            Grid.ColumnSpan="3">
             <!--<TextBlock x:Name="navHeader" />-->
-            <ui:FontIcon
-                Name="BatteryIndicatorIcon"
-                VerticalAlignment="Center"
-                HorizontalAlignment="Center"
-                FontSize="24"
-                Glyph="&#xE83F;" />
-            <TextBlock
-                Name="BatteryIndicatorPercentage"
-                Margin="4,0,0,0"
-                VerticalAlignment="Center"
-                Style="{StaticResource BodyTextBlockStyle}" />
-            <TextBlock
-                Name="BatteryIndicatorLifeRemaining"
-                Margin="4,0,0,0"
-                VerticalAlignment="Center"
-                Style="{StaticResource BodyTextBlockStyle}" />
-            <TextBlock
-                Name="Time"
-                Margin="14,0,0,0"
-                VerticalAlignment="Center"
-                Style="{StaticResource BodyTextBlockStyle}" />
+            <ui:SimpleStackPanel 
+                VerticalAlignment="Top"
+                HorizontalAlignment="Stretch"
+                Orientation="Horizontal"
+                Spacing="12">
+                <StackPanel 
+                    Margin="14,0,0,0"
+                    VerticalAlignment="Top" 
+                    Orientation="Horizontal">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <ui:FontIcon
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Name="TimeIcon"
+                            VerticalAlignment="Top"
+                            HorizontalAlignment="Center"
+                            FontWeight="Bold"
+                            FontSize="18"
+                            Glyph="&#xE823;" />
+                        <TextBlock
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Name="Time"
+                            Margin="4,0,0,0"
+                            VerticalAlignment="Top"
+                            FontSize="13"
+                            Style="{StaticResource BodyTextBlockStyle}" />
+                    </Grid>
+                </StackPanel>
+                <StackPanel 
+                    Margin="0,0,0,0"
+                    VerticalAlignment="Top"
+                    Orientation="Horizontal">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <ui:FontIcon
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Margin="0,0,0,0"
+                            Name="BatteryIndicatorIcon"
+                            VerticalAlignment="Top"
+                            HorizontalAlignment="Left"
+                            FontWeight="Bold"
+                            FontSize="26"
+                            Glyph="&#xE83F;" />
+                        <DockPanel 
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            HorizontalAlignment="Left">
+                            <TextBlock
+                                Name="BatteryIndicatorPercentage"
+                                Margin="4,0,0,0"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                FontSize="13"
+                                Style="{StaticResource BodyTextBlockStyle}" />
+                            <TextBlock
+                                Name="BatteryIndicatorLifeRemaining"
+                                Margin="4,0,0,0"
+                                VerticalAlignment="Top"
+                                FontSize="13"
+                                Style="{StaticResource BodyTextBlockStyle}" />
+                        </DockPanel>
+                    </Grid>
+                </StackPanel>
+            </ui:SimpleStackPanel>
         </DockPanel>
         <ui:NavigationView
             Name="navView"
-            Margin="0,31,0,4"
+            Margin="0,0,0,4"
             BackRequested="navView_BackRequested"
             IsBackButtonVisible="Collapsed"
             IsBackEnabled="False"
@@ -73,7 +142,9 @@
             PaneDisplayMode="Top"
             SelectionFollowsFocus="Enabled" 
             Background="{StaticResource ControlExampleDisplayBrush}"
-	        Style="{StaticResource NavigationViewStyle1}"  Grid.ColumnSpan="3">
+	        Style="{StaticResource NavigationViewStyle1}"
+            Grid.Row="1"
+            Grid.ColumnSpan="3">
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem IsEnabled="False">
                     <ui:NavigationViewItem.Icon>
@@ -102,10 +173,10 @@
                     Content="{l:Static resx:Resources.QuickDevicePage_Title}">
                     <ui:NavigationViewItem.Icon>
                         <ui:FontIcon 
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        FontFamily="{StaticResource SymbolThemeFontFamily}"
-                        Glyph="&#xE70A;" />
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            FontFamily="{StaticResource SymbolThemeFontFamily}"
+                            Glyph="&#xE70A;" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem 
@@ -128,6 +199,7 @@
                     Tag="QuickOverlayPage"
                     FontSize="12"
                     Style="{StaticResource NavigationViewItemStyle1}"
+                    Visibility="Collapsed"
                     Content="{l:Static resx:Resources.QuickOverlayPage_Title}">
                     <ui:NavigationViewItem.Icon>
                         <ui:FontIcon 
@@ -146,10 +218,10 @@
                     Content="{l:Static resx:Resources.QuickApplicationsPage_Title}">
                     <ui:NavigationViewItem.Icon>
                         <ui:FontIcon 
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        FontFamily="{StaticResource SymbolThemeFontFamily}"
-                        Glyph="&#xE71D;" />
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            FontFamily="{StaticResource SymbolThemeFontFamily}"
+                            Glyph="&#xE71D;" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem IsEnabled="False">
@@ -173,8 +245,8 @@
                     <Border 
                         Grid.Row="0"
                         Grid.Column="0"
-                        Padding="4,12,4,12"
-                        Margin="0,12,0,4">
+                        Padding="4,4,4,4"
+                        Margin="4,4,0,4">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
@@ -211,8 +283,8 @@
                     <Border 
                         Grid.Row="1"
                         Grid.Column="0"
-                        Padding="4,12,4,12"
-                        Margin="0,4,0,12">
+                        Padding="4,4,4,4"
+                        Margin="4,4,0,4">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
@@ -225,34 +297,37 @@
                                     Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" 
                                     BorderBrush="{x:Null}" Background="{x:Null}">
                                     <ui:FontIcon
-                                    Name="VolumeIcon"
-                                    Height="40"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center" 
-                                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                    Glyph="&#xE767;" FontWeight="Bold" />
+                                        Name="VolumeIcon"
+                                        Height="40"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" 
+                                        FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                        Glyph="&#xE767;" FontWeight="Bold" />
                                 </Button>
                             </Grid>
                             <Grid Grid.Row="0">
                                 <Slider
-                                x:Name="SliderVolume"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Stretch"
-                                AutoToolTipPrecision="0"
-                                IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
-                                Orientation="Vertical"
-                                LargeChange="10"
-                                Maximum="100"
-                                Minimum="0"
-                                SmallChange="1"
-                                TickFrequency="1"
-                                ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
-                                ValueChanged="SliderVolume_ValueChanged" />
+                                    x:Name="SliderVolume"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Stretch"
+                                    AutoToolTipPrecision="0"
+                                    IsMoveToPointEnabled="True"
+                                    IsSnapToTickEnabled="True"
+                                    Orientation="Vertical"
+                                    LargeChange="10"
+                                    Maximum="100"
+                                    Minimum="0"
+                                    SmallChange="1"
+                                    TickFrequency="1"
+                                    ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
+                                    ValueChanged="SliderVolume_ValueChanged" />
                             </Grid>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" 
+                    <Border 
+                        Grid.Row="0" 
+                        Grid.RowSpan="2" 
+                        Grid.Column="1" 
                         Background="{StaticResource ControlExampleDisplayBrush}"
                         CornerRadius="{StaticResource ControlCornerRadius}">
                         <Grid>
@@ -261,13 +336,15 @@
                             </Grid.RowDefinitions>
                             <ui:ContentDialog Name="ContentDialog" Grid.Row="0" />
                             <common:TouchScrollViewer 
-                            x:Name="scrollViewer" Grid.Row="0" 
-                            Margin="0,0,0,12"
-                            VerticalContentAlignment="Stretch"
-                            PanningMode="VerticalOnly">
-                                <ui:Frame Name="ContentFrame" 
-                                      HorizontalContentAlignment="Stretch"
-                                      Margin="0,0,0,0" />
+                                x:Name="scrollViewer"
+                                Grid.Row="0" 
+                                Margin="0,0,0,12"
+                                VerticalContentAlignment="Stretch"
+                                PanningMode="VerticalOnly">
+                                <ui:Frame
+                                    Name="ContentFrame" 
+                                    HorizontalContentAlignment="Stretch"
+                                    Margin="0,0,0,0" />
                             </common:TouchScrollViewer>
                         </Grid>
                     </Border>

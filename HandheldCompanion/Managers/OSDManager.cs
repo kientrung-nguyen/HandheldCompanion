@@ -92,7 +92,7 @@ public static class OSDManager
 
         if (OverlayLevel != OverlayDisplayLevel.Disabled)
         {
-            
+
 
             if (OverlayLevel == OverlayDisplayLevel.External)
             {
@@ -217,10 +217,10 @@ public static class OSDManager
             default:
             case OverlayDisplayLevel.Disabled: // Disabled
             case OverlayDisplayLevel.External: // External
-            /*
-             * Intended to simply allow RTSS/HWINFO to run, and let the user configure the overlay within those
-             * tools as they wish
-             */
+                /*
+                 * Intended to simply allow RTSS/HWINFO to run, and let the user configure the overlay within those
+                 * tools as they wish
+                 */
                 break;
 
             case OverlayDisplayLevel.Minimal: // Minimal
@@ -318,7 +318,7 @@ public static class OSDManager
                     AddElementIfFound(BATTentry, SensorElementType.BatteryChargeRate);
                     //AddElementIfFound(BATTentry, SensorElementType.BatteryRemainingTime);
                     //BATTentry.elements.Add(new OverlayEntryElement("<TIME=%X>", ""));
-                    
+
                     rowBatt.entries.Add(BATTentry);
 
                     using OverlayEntry TIMEentry = new("", "C0");
@@ -609,75 +609,76 @@ public static class OSDManager
 
                     // set OSD toggle hotkey state
                     SettingsManager.SetProperty("OnScreenDisplayToggle", Convert.ToBoolean(value));
-                } break;
-                    /*
-                        case "OnScreenDisplayLevel":
+                }
+                break;
+                /*
+                    case "OnScreenDisplayLevel":
+                        {
+                            OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(value));
+
+                            // set OSD toggle hotkey state
+                            SettingsManager.SetProperty("OnScreenDisplayToggle", Convert.ToBoolean(value));
+
+                            if (OverlayLevel != OverlayDisplayLevel.Disabled)
                             {
-                                OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(value));
+                                // set lastOSDLevel to be used in OSD toggle hotkey
+                                SettingsManager.SetProperty("LastOnScreenDisplayLevel", value);
 
-                                // set OSD toggle hotkey state
-                                SettingsManager.SetProperty("OnScreenDisplayToggle", Convert.ToBoolean(value));
-
-                                if (OverlayLevel != OverlayDisplayLevel.Disabled)
+                                if (OverlayLevel == OverlayDisplayLevel.External)
                                 {
-                                    // set lastOSDLevel to be used in OSD toggle hotkey
-                                    SettingsManager.SetProperty("LastOnScreenDisplayLevel", value);
-
-                                    if (OverlayLevel == OverlayDisplayLevel.External)
-                                    {
-                                        // No need to update OSD in External
-                                        RefreshTimer.Stop();
-
-                                        // Remove previous UI in External
-                                        foreach (var pair in OnScreenDisplay)
-                                        {
-                                            var processOSD = pair.Value;
-                                            processOSD.Update(string.Empty);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // Other modes need the refresh timer to update OSD
-                                        if (!RefreshTimer.IsRunning())
-                                            RefreshTimer.Start();
-                                    }
-                                }
-                                else
-                                {
+                                    // No need to update OSD in External
                                     RefreshTimer.Stop();
 
-                                    // clear UI on stop
+                                    // Remove previous UI in External
                                     foreach (var pair in OnScreenDisplay)
                                     {
                                         var processOSD = pair.Value;
                                         processOSD.Update(string.Empty);
                                     }
                                 }
+                                else
+                                {
+                                    // Other modes need the refresh timer to update OSD
+                                    if (!RefreshTimer.IsRunning())
+                                        RefreshTimer.Start();
+                                }
                             }
-                            break;
-                        case "OnScreenDisplayTimeLevel":
-                            OverlayTimeLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                            break;
-                        case "OnScreenDisplayFPSLevel":
-                            OverlayFPSLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                            break;
-                        case "OnScreenDisplayCPULevel":
-                            OverlayCPULevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                            break;
-                        case "OnScreenDisplayRAMLevel":
-                            OverlayRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                            break;
-                        case "OnScreenDisplayGPULevel":
-                            OverlayGPULevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                            break;
-                        case "OnScreenDisplayVRAMLevel":
-                            OverlayVRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                            break;
-                        case "OnScreenDisplayBATTLevel":
-                            OverlayBATTLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                            break;
-                */
-                }
+                            else
+                            {
+                                RefreshTimer.Stop();
+
+                                // clear UI on stop
+                                foreach (var pair in OnScreenDisplay)
+                                {
+                                    var processOSD = pair.Value;
+                                    processOSD.Update(string.Empty);
+                                }
+                            }
+                        }
+                        break;
+                    case "OnScreenDisplayTimeLevel":
+                        OverlayTimeLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
+                        break;
+                    case "OnScreenDisplayFPSLevel":
+                        OverlayFPSLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
+                        break;
+                    case "OnScreenDisplayCPULevel":
+                        OverlayCPULevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
+                        break;
+                    case "OnScreenDisplayRAMLevel":
+                        OverlayRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
+                        break;
+                    case "OnScreenDisplayGPULevel":
+                        OverlayGPULevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
+                        break;
+                    case "OnScreenDisplayVRAMLevel":
+                        OverlayVRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
+                        break;
+                    case "OnScreenDisplayBATTLevel":
+                        OverlayBATTLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
+                        break;
+            */
+        }
     }
 }
 

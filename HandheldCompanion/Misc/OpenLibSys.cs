@@ -8,6 +8,7 @@
 //-----------------------------------------------------------------------------
 // This is support library for WinRing0 1.3.x.
 
+using HandheldCompanion.Managers;
 using System;
 using System.Runtime.InteropServices;
 
@@ -260,11 +261,14 @@ public class OpenLibSys : IDisposable
 
     public void Dispose()
     {
+        LogManager.LogDebug(nameof(OpenLibSys) + " disposing");
         if (module != IntPtr.Zero)
         {
+
             DeinitializeOls();
             FreeLibrary(module);
             module = IntPtr.Zero;
+            LogManager.LogDebug(nameof(OpenLibSys) + " disposed");
         }
     }
 

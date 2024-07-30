@@ -58,9 +58,10 @@
                     <ui:SimpleStackPanel Orientation="Horizontal" Spacing="12">
                         <Image
                             Width="120"
-                            Height="50"
+                            Height="70"
                             Source="{Binding DeviceImage, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:SimpleStackPanel VerticalAlignment="Center" Orientation="Vertical">
+                            <TextBlock Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" Text="{Binding SystemName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
                             <TextBlock
                                 FontSize="20"
                                 Style="{StaticResource BaseTextBlockStyle}"
@@ -70,7 +71,113 @@
                     </ui:SimpleStackPanel>
                 </Grid>
             </Border>
+            <Expander HorizontalAlignment="Stretch" IsExpanded="True">
+                <Expander.Header>
+                    <DockPanel Margin="0,12,12,12">
+                        <ui:FontIcon
+                            Height="40"
+                            HorizontalAlignment="Center"
+                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                            Glyph="&#xE950;" />
+                        <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_ProcessorSpecification}" />
+                        </ui:SimpleStackPanel>
+                    </DockPanel>
+                </Expander.Header>
 
+                <Expander.Content>
+                    <Grid FlowDirection="LeftToRight">
+                        <ui:SimpleStackPanel Margin="30,0,0,0" Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="5*" MinWidth="200" />
+                                </Grid.ColumnDefinitions>
+
+                                <ui:SimpleStackPanel Spacing="12">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_Processor}" />
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_Manufacturer}" />
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_Bios}" />
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_Graphic}" />
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_GraphicDriverVersion}" />
+                                </ui:SimpleStackPanel>
+
+                                <ui:SimpleStackPanel Grid.Column="1" Spacing="12">
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{Binding ProcessorName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{Binding ProcessorManufacturer, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{Binding BiosVersion, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{Binding GraphicName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{Binding GraphicDriverVersion, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </ui:SimpleStackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+                    </Grid>
+                </Expander.Content>
+            </Expander>
+            <Expander HorizontalAlignment="Stretch" IsExpanded="True">
+                <Expander.Header>
+                    <DockPanel Margin="0,12,12,12">
+                        <ui:FontIcon
+                            Height="40"
+                            HorizontalAlignment="Center"
+                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                            Glyph="&#xE950;" />
+
+                        <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_MemorySpecification}" />
+                        </ui:SimpleStackPanel>
+                    </DockPanel>
+                </Expander.Header>
+
+                <Expander.Content>
+                    <Grid FlowDirection="LeftToRight">
+                        <ui:SimpleStackPanel Margin="30,0,0,0" Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="5*" MinWidth="200" />
+                                </Grid.ColumnDefinitions>
+
+                                <ui:SimpleStackPanel Spacing="12">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_Memory}" />
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_Manufacturer}" />
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.AboutPage_Model}" />
+                                </ui:SimpleStackPanel>
+
+                                <ui:SimpleStackPanel Grid.Column="1" Spacing="12">
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{Binding MemoryName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{Binding MemoryManufacturer, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{Binding MemoryModel, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </ui:SimpleStackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+                    </Grid>
+                </Expander.Content>
+            </Expander>
             <!--  Sensor specifications  -->
             <Expander HorizontalAlignment="Stretch" IsExpanded="True">
                 <Expander.Header>

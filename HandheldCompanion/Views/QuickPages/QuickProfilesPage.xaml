@@ -9,7 +9,7 @@
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     Name="QuickProfiles"
     Title="{l:Static resx:Resources.QuickProfilesPage_Title}"
-    Margin="15,0,12,0"
+    Margin="15,0,12,6"
     d:Background="Black"
     d:DesignHeight="2000"
     d:DesignWidth="640"
@@ -18,28 +18,25 @@
     <ui:SimpleStackPanel Margin="0,6,0,6" Spacing="10">
         <Grid>
             <!--  Header  -->
-            <Border Padding="15,12,12,12" CornerRadius="{DynamicResource ControlCornerRadius}">
-                <Grid>
-                    <DockPanel>
-                        <Image
-                            Name="ProfileIcon"
-                            Width="24"
-                            Height="24"
-                            HorizontalAlignment="Center" />
-
-                        <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock
-                                Name="ProcessName"
-                                Style="{StaticResource BodyTextBlockStyle}"
-                                Text="{l:Static resx:Resources.QuickProfilesPage_Waiting}" />
-                            <TextBlock
-                                Name="ProcessPath"
-                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                                TextWrapping="Wrap" />
-                        </ui:SimpleStackPanel>
-                    </DockPanel>
-                </Grid>
+            <Border Padding="4,12,12,12" CornerRadius="{StaticResource ControlCornerRadius}">
+                <DockPanel>
+                    <Image
+                        Name="ProfileIcon"
+                        Width="24"
+                        Height="24"
+                        HorizontalAlignment="Center" />
+                    <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock
+                            Name="ProcessName"
+                            Style="{StaticResource BodyTextBlockStyle}"
+                            Text="{l:Static resx:Resources.QuickProfilesPage_Waiting}" />
+                        <TextBlock
+                            Name="ProcessPath"
+                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            TextWrapping="Wrap" />
+                    </ui:SimpleStackPanel>
+                </DockPanel>
             </Border>
         </Grid>
 
@@ -359,7 +356,7 @@
                         </ComboBox>
                     </Grid>
                 </Border>
-                
+
                 <!--  Separator  -->
                 <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
 

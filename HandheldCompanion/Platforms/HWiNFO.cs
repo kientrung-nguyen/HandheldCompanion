@@ -17,6 +17,7 @@ namespace HandheldCompanion.Platforms;
 
 public class HWiNFO : IPlatform
 {
+
     public enum SensorElementType
     {
         CPUTemperature,

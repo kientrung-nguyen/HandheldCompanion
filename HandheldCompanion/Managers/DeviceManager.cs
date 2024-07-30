@@ -763,6 +763,25 @@ public static class DeviceManager
         return deviceDesc;
     }
 
+    public static bool? ToggleTouchscreen()
+    {
+        try
+        {
+            var devices = PnPUtil.GetDeviceDetails("HIDClass");
+            var status = !devices.Any(device => device.Status.Equals("Started", StringComparison.OrdinalIgnoreCase) && device.Description.Contains("touch screen", StringComparison.OrdinalIgnoreCase));
+            if (status)
+                PnPUtil.EnableDevice(devices.First(device => device.Description.Contains("touch screen", StringComparison.OrdinalIgnoreCase)).InstanceID);
+            else
+                PnPUtil.DisableDevice(devices.First(device => device.Description.Contains("touch screen", StringComparison.OrdinalIgnoreCase)).InstanceID);
+            return status;
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError(nameof(ToggleTouchscreen) + ": " + ex.Message);
+            return null;
+        }
+    }
+
     public static IList<Tuple<UIntPtr, UIntPtr>>? GetDeviceMemResources(string PNPString)
     {
         int res = CM_Locate_DevNode(out var devInst, PNPString, 0);

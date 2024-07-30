@@ -843,6 +843,7 @@ public static class PerformanceManager
             }
 
             // release lock
+        Exit:
             cpuLock.Exit();
         }
     }
@@ -1181,7 +1182,7 @@ public static class PerformanceManager
         if (!IsInitialized)
             return;
 
-        if (processor.IsInitialized)
+        if (processor is not null && processor.IsInitialized)
             processor.Stop();
 
         powerWatchdog.Stop();
@@ -1208,10 +1209,7 @@ public static class PerformanceManager
         LogManager.LogInformation("{0} has stopped", "PerformanceManager");
     }
 
-    public static Processor GetProcessor()
-    {
-        return processor;
-    }
+    public static Processor GetProcessor() => processor;
 
     #region imports
 

@@ -286,7 +286,7 @@ public static class MultimediaManager
         BrightnessWatcher.Start();
 
         // force trigger events
-        SystemEvents_DisplaySettingsChanged(null, null);
+        SystemEvents_DisplaySettingsChanged(null, EventArgs.Empty);
 
         // get native resolution
         ScreenResolution nativeResolution = PrimaryDesktop.screenResolutions.First();
@@ -419,7 +419,7 @@ public static class MultimediaManager
     public static double GetVolume()
     {
         if (!VolumeSupport)
-            return -1d;
+            return double.NaN;
 
         return multimediaDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100.0d;
     }

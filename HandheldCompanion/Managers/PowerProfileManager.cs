@@ -2,7 +2,6 @@
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;

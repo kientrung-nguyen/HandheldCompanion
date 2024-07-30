@@ -286,8 +286,7 @@ public static class ProcessUtils
     public static extern bool GetBinaryType(string lpApplicationName, out BinaryType lpBinaryType);
 
     [DllImport("Kernel32.dll")]
-    private static extern uint
-        QueryFullProcessImageName(IntPtr hProcess, uint flags, StringBuilder text, out uint size);
+    private static extern uint QueryFullProcessImageName(IntPtr hProcess, uint flags, StringBuilder text, out uint size);
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);

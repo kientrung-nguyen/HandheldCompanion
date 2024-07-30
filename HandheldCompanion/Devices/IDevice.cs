@@ -198,8 +198,19 @@ public abstract class IDevice
     public string SystemModel = string.Empty;
     public string Version = string.Empty;
     public string Processor = string.Empty;
+    public string ProcessorManufacturer = string.Empty;
     public int NumberOfCores = 0;
+    public int NumberOfLogicalProcessors = 0;
     public string DeviceType = "Handheld";
+    public string MemoryProduct = string.Empty;
+    public string MemoryModel = string.Empty;
+    public double MemoryCapacity = 0;
+    public int MemorySpeed = 0;
+    public string MemoryType = string.Empty;
+    public string BiosVersion = string.Empty;
+    public string BiosManufacturer = string.Empty;
+    public string BiosReleaseDate = string.Empty;
+    public string BiosName = string.Empty;
 
     public static IDevice GetCurrent()
     {
@@ -212,7 +223,20 @@ public abstract class IDevice
         var SystemModel = MotherboardInfo.SystemModel;
         var Version = MotherboardInfo.Version;
         var Processor = MotherboardInfo.ProcessorName;
+        var ProcessorManufacturer = MotherboardInfo.ProcessorManufacturer;
         var NumberOfCores = MotherboardInfo.NumberOfCores;
+        var NumberOfLogicalProcessors = MotherboardInfo.NumberOfLogicalProcessors;
+        var MemoryProduct = MotherboardInfo.MemoryProduct;
+        var MemoryModel = MotherboardInfo.MemoryModel;
+        var MemoryType = MotherboardInfo.MemoryType;
+        var MemoryCapacity = MotherboardInfo.MemoryCapacity;
+        var MemorySpeed = MotherboardInfo.MemorySpeed;
+        var BiosVersion = MotherboardInfo.BiosVersion;
+        var BiosManufacturer = MotherboardInfo.BiosManufacturer;
+        var BiosReleaseDate = MotherboardInfo.BiosReleaseDate;
+        var BiosName = MotherboardInfo.BiosName;
+        var GraphicName = MotherboardInfo.GraphicName;
+        var GraphicDriverVersion = MotherboardInfo.GraphicDriverVersion;
 
         switch (ManufacturerName)
         {
@@ -508,7 +532,7 @@ public abstract class IDevice
                                     case "83E1":
                                         device = new LegionGo();
                                         break;
-                                }    
+                                }
                             }
                             break;
                     }
@@ -551,8 +575,28 @@ public abstract class IDevice
         device.SystemModel = SystemModel;
         device.Version = Version;
         device.Processor = Processor;
+        device.ProcessorManufacturer = ProcessorManufacturer;
         device.NumberOfCores = NumberOfCores;
-
+        device.NumberOfLogicalProcessors = NumberOfLogicalProcessors;
+        device.MemoryProduct = MemoryProduct;
+        device.MemoryModel = MemoryModel;
+        device.MemoryCapacity = MemoryCapacity / 1024 / 1024 / 1024;
+        device.MemorySpeed = MemorySpeed;
+        device.MemoryType = MemoryType switch
+        {
+            20 => "DDR",
+            21 => "DDR2",
+            24 => "DDR3",
+            26 => "DDR4",
+            30 => "LPDDR4",
+            34 => "DDR5",
+            35 => "LPDDR5",
+            _ => $"Unknown ({MemoryType})"
+        };
+        device.BiosManufacturer = BiosManufacturer;
+        device.BiosVersion = BiosVersion;
+        device.BiosReleaseDate = BiosReleaseDate;
+        device.BiosName = BiosName;
         return device;
     }
 

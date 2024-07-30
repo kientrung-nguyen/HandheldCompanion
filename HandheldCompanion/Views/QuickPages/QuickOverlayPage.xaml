@@ -11,19 +11,19 @@
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickDevice"
     Title="{l:Static resx:Resources.QuickOverlayPage_Title}"
-    Margin="15,0,12,0"
-    d:Background="White"
+    Margin="15,0,12,6"
+    d:Background="Black"
     d:DataContext="{d:DesignInstance Type=viewmodels:OverlayPageViewModel}"
     d:DesignHeight="1200"
     d:DesignWidth="640"
     KeepAlive="True"
     mc:Ignorable="d">
 
-    <ui:SimpleStackPanel Spacing="24">
+    <ui:SimpleStackPanel Margin="0,6,0,6" Spacing="24">
 
         <!--  Header  -->
         <ui:SimpleStackPanel Spacing="6">
-            <Border CornerRadius="{DynamicResource ControlCornerRadius}">
+            <Border Padding="4,12,12,12" CornerRadius="{StaticResource ControlCornerRadius}">
                 <DockPanel>
                     <Image
                         Name="ProfileIcon"
@@ -224,8 +224,10 @@
                                     MinWidth="20"
                                     d:Text="100"
                                     Text="{Binding GPUPower, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
-                                    W
+                                <TextBlock 
+                                    VerticalAlignment="Center" 
+                                    Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                                    Text="W">
                                 </TextBlock>
                             </DockPanel>
                         </StackPanel>
@@ -240,8 +242,10 @@
                                     MinWidth="20"
                                     d:Text="100"
                                     Text="{Binding GPUTemperature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
-                                    °C
+                                <TextBlock 
+                                    VerticalAlignment="Center" 
+                                    Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                                    Text="°C">
                                 </TextBlock>
                             </DockPanel>
                         </StackPanel>
@@ -269,7 +273,7 @@
             </ui:SimpleStackPanel>
         </Grid>
 
-        <ui:SimpleStackPanel Spacing="6">
+        <ui:SimpleStackPanel Spacing="6" Visibility="Collapsed">
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Overlay" />
             <!--  Overlay display level  -->
             <ui:SimpleStackPanel Spacing="6">

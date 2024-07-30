@@ -1,6 +1,10 @@
 ﻿using Microsoft.Win32;
+using Microsoft.WindowsAPICodePack.ApplicationServices;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Management;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using SystemPowerManager = Windows.System.Power.PowerManager;
@@ -29,7 +33,7 @@ public static class SystemManager
     private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
     private static SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
 
-    public static bool IsInitialized;
+    private static bool isInitialized;
 
     public static readonly SortedDictionary<string, string> PowerStatusIcon = new()
     {
@@ -90,6 +94,126 @@ public static class SystemManager
 
     #endregion
 
+
+    public static decimal? batteryRate = 0;
+    public static decimal batteryHealth = -1;
+    public static decimal batteryCapacity = -1;
+
+    public static decimal? designCapacity;
+    public static decimal? fullCapacity;
+    public static decimal? chargeCapacity;
+
+    public static void ReadBatterySensors()
+    {
+        ReadFullChargeCapacity();
+        GetBatteryStatus();
+
+        if (fullCapacity > 0 && chargeCapacity > 0)
+        {
+            batteryCapacity = Math.Min(100, ((decimal)chargeCapacity / (decimal)fullCapacity) * 100);
+        }
+    }
+
+    public static void GetBatteryStatus()
+    {
+        batteryRate = 0;
+        chargeCapacity = 0;
+
+        try
+        {
+            ManagementScope scope = new ManagementScope("root\\WMI");
+            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryStatus");
+
+            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
+            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
+            {
+                chargeCapacity = Convert.ToDecimal(obj["RemainingCapacity"]);
+                decimal chargeRate = Convert.ToDecimal(obj["ChargeRate"]);
+                decimal dischargeRate = Convert.ToDecimal(obj["DischargeRate"]);
+
+                if (chargeRate > 0)
+                    batteryRate = chargeRate / 1000;
+                else
+                    batteryRate = -dischargeRate / 1000;
+            }
+
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Discharge Reading: " + ex.Message);
+        }
+
+    }
+    public static void ReadFullChargeCapacity()
+    {
+        if (fullCapacity > 0) return;
+
+        try
+        {
+            ManagementScope scope = new ManagementScope("root\\WMI");
+            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryFullChargedCapacity");
+
+            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
+            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
+            {
+                fullCapacity = Convert.ToDecimal(obj["FullChargedCapacity"]);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Full Charge Reading: " + ex.Message);
+        }
+
+    }
+
+    public static void ReadDesignCapacity()
+    {
+        if (designCapacity > 0) return;
+
+        try
+        {
+            ManagementScope scope = new ManagementScope("root\\WMI");
+            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryStaticData");
+
+            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
+            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
+            {
+                designCapacity = Convert.ToDecimal(obj["DesignedCapacity"]);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Design Capacity Reading: " + ex.Message);
+        }
+    }
+
+    public static void RefreshBatteryHealth()
+    {
+        batteryHealth = GetBatteryHealth() * 100;
+    }
+
+
+    public static decimal GetBatteryHealth()
+    {
+        if (designCapacity is null)
+        {
+            ReadDesignCapacity();
+        }
+        ReadFullChargeCapacity();
+
+        if (designCapacity is null || fullCapacity is null || designCapacity == 0 || fullCapacity == 0)
+        {
+            return -1;
+        }
+
+        decimal health = (decimal)fullCapacity / (decimal)designCapacity;
+        LogManager.LogInformation("Design Capacity: " + designCapacity + "mWh, Full Charge Capacity: " + fullCapacity + "mWh, Health: " + health + "%");
+
+        return health;
+    }
+
     private static void BatteryStatusChanged(object sender, object e)
     {
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
@@ -103,7 +227,7 @@ public static class SystemManager
 
         SystemRoutine();
 
-        IsInitialized = true;
+        isInitialized = true;
         Initialized?.Invoke();
 
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
@@ -113,10 +237,10 @@ public static class SystemManager
 
     public static void Stop()
     {
-        if (!IsInitialized)
+        if (!isInitialized)
             return;
 
-        IsInitialized = false;
+        isInitialized = false;
 
         // stop listening to system events
         SystemEvents.PowerModeChanged -= OnPowerChange;

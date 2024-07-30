@@ -78,7 +78,7 @@ namespace HandheldCompanion.ViewModels
                 OverlayQuickTools qtWindow = OverlayQuickTools.GetCurrent();
 
                 ContentDialogResult result = await qtWindow.applicationsPage.ProfileRenameDialog.ShowAsync();
-                switch (result)
+                switch(result)
                 {
                     case ContentDialogResult.None:
                         qtWindow.applicationsPage.ProfileRenameDialog.Hide();

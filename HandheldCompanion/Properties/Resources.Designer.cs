@@ -97,6 +97,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Bios.
+        /// </summary>
+        public static string AboutPage_Bios {
+            get {
+                return ResourceManager.GetString("AboutPage_Bios", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Contributors.
         /// </summary>
         public static string AboutPage_Contributors {
@@ -120,6 +129,24 @@ namespace HandheldCompanion.Properties {
         public static string AboutPage_Donate {
             get {
                 return ResourceManager.GetString("AboutPage_Donate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Graphic.
+        /// </summary>
+        public static string AboutPage_Graphic {
+            get {
+                return ResourceManager.GetString("AboutPage_Graphic", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Graphic Driver.
+        /// </summary>
+        public static string AboutPage_GraphicDriverVersion {
+            get {
+                return ResourceManager.GetString("AboutPage_GraphicDriverVersion", resourceCulture);
             }
         }
         
@@ -151,6 +178,33 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Memory.
+        /// </summary>
+        public static string AboutPage_Memory {
+            get {
+                return ResourceManager.GetString("AboutPage_Memory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Memory specification.
+        /// </summary>
+        public static string AboutPage_MemorySpecification {
+            get {
+                return ResourceManager.GetString("AboutPage_MemorySpecification", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Model.
+        /// </summary>
+        public static string AboutPage_Model {
+            get {
+                return ResourceManager.GetString("AboutPage_Model", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to N/A.
         /// </summary>
         public static string AboutPage_NotApplicable {
@@ -165,6 +219,24 @@ namespace HandheldCompanion.Properties {
         public static string AboutPage_Partner {
             get {
                 return ResourceManager.GetString("AboutPage_Partner", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Processor.
+        /// </summary>
+        public static string AboutPage_Processor {
+            get {
+                return ResourceManager.GetString("AboutPage_Processor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Processor specification.
+        /// </summary>
+        public static string AboutPage_ProcessorSpecification {
+            get {
+                return ResourceManager.GetString("AboutPage_ProcessorSpecification", resourceCulture);
             }
         }
         
@@ -277,6 +349,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Charge.
+        /// </summary>
+        public static string BatteryCharge {
+            get {
+                return ResourceManager.GetString("BatteryCharge", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Battery Health.
+        /// </summary>
+        public static string BatteryHealth {
+            get {
+                return ResourceManager.GetString("BatteryHealth", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to A,B,X,Y.
         /// </summary>
         public static string ButtonsPage_ABXY {
@@ -318,6 +408,15 @@ namespace HandheldCompanion.Properties {
         public static string ButtonsPage_OEM {
             get {
                 return ResourceManager.GetString("ButtonsPage_OEM", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Charging.
+        /// </summary>
+        public static string Charging {
+            get {
+                return ResourceManager.GetString("Charging", resourceCulture);
             }
         }
         
@@ -1327,6 +1426,15 @@ namespace HandheldCompanion.Properties {
         public static string Dialog_Yes {
             get {
                 return ResourceManager.GetString("Dialog_Yes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Discharging.
+        /// </summary>
+        public static string Discharging {
+            get {
+                return ResourceManager.GetString("Discharging", resourceCulture);
             }
         }
         
@@ -3645,6 +3753,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Fan.
+        /// </summary>
+        public static string Fan {
+            get {
+                return ResourceManager.GetString("Fan", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Integer scaling is not available.
         /// </summary>
         public static string Hint_AMD_IntegerScalingCheck {
@@ -4474,6 +4591,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Touchscreen Toggle.
+        /// </summary>
+        public static string InputsHotkey_touchscreenToggle {
+            get {
+                return ResourceManager.GetString("InputsHotkey_touchscreenToggle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toggle Touchscreen.
+        /// </summary>
+        public static string InputsHotkey_touchscreenToggleDesc {
+            get {
+                return ResourceManager.GetString("InputsHotkey_touchscreenToggleDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to LEFT JOYSTICK.
         /// </summary>
         public static string JoystickPage_Joystick_Left {
@@ -4843,7 +4978,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Exit.
+        ///   Looks up a localized string similar to Quit.
         /// </summary>
         public static string MainWindow_Exit {
             get {
@@ -5032,6 +5167,24 @@ namespace HandheldCompanion.Properties {
         public static string NotificationsPage_NothingToSeeDesc {
             get {
                 return ResourceManager.GetString("NotificationsPage_NothingToSeeDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Off.
+        /// </summary>
+        public static string Off {
+            get {
+                return ResourceManager.GetString("Off", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to On.
+        /// </summary>
+        public static string On {
+            get {
+                return ResourceManager.GetString("On", resourceCulture);
             }
         }
         

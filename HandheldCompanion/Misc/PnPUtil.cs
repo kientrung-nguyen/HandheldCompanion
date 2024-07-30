@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using HandheldCompanion.Managers;
+using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace HandheldCompanion
 {
@@ -15,6 +18,17 @@ namespace HandheldCompanion
             ExitCode = exitCode;
             StandardOutput = output;
         }
+    }
+
+    public class PnPUtilDevice
+    {
+        public string InstanceID;
+        public string Description;
+        public string ClassName;
+        public string ClassGUID;
+        public string ManufacturerName;
+        public string Status;
+        public string DriverName;
     }
 
     public static class PnPUtil
@@ -78,6 +92,44 @@ namespace HandheldCompanion
             }
 
             return instanceIDs;
+        }
+
+        public static List<PnPUtilDevice> GetDeviceDetails(string className, string status = "/connected")
+        {
+            var devices = new List<PnPUtilDevice>();
+            var pattern = @"Instance ID:\s+(?<InstanceID>[^\r\n]+)\r?\n" +
+                         @"Device Description:\s+(?<DeviceDescription>[^\r\n]+)\r?\n" +
+                         @"Class Name:\s+(?<ClassName>[^\r\n]+)\r?\n" +
+                         @"Class GUID:\s+(?<ClassGUID>[^\r\n]+)\r?\n" +
+                         @"Manufacturer Name:\s+(?<ManufacturerName>[^\r\n]+)\r?\n" +
+                         @"Status:\s+(?<Status>[^\r\n]+)\r?\n" +
+                         @"Driver Name:\s+(?<DriverName>[^\r\n]+)";
+            Regex regex = new Regex(pattern);
+
+            // Loop through each line of the input string
+            //
+            string input = GetPnPUtilOutput($"/enum-devices {status} /class {className}");
+
+            // Try to match the line with the regular expression
+            //
+            var matches = regex.Matches(input);
+            foreach (Match match in matches)
+            {
+                // If there is a match, add the Instance ID value to the list
+                devices.Add(new PnPUtilDevice
+                {
+                    InstanceID = match.Groups["InstanceID"].Value,
+                    Description = match.Groups["DeviceDescription"].Value,
+                    ClassName = match.Groups["ClassName"].Value,
+                    ClassGUID = match.Groups["ClassGUID"].Value,
+                    ManufacturerName = match.Groups["ManufacturerName"].Value,
+                    Status = match.Groups["Status"].Value,
+                    DriverName = match.Groups["DriverName"].Value
+                });
+
+            }
+            LogManager.LogInformation(nameof(GetDeviceDetails) + ": " + devices.Count);
+            return devices;
         }
 
         public static Process StartPnPUtil(string arguments)

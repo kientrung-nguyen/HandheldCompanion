@@ -423,7 +423,7 @@ namespace HandheldCompanion.ViewModels
 
             Application.Current.Dispatcher.Invoke(() =>
             {
-                ProcessIcon = processEx != null ? processEx.ProcessIcon : null;
+                ProcessIcon = processEx?.ProcessIcon;
 
                 if (handle != IntPtr.Zero)
                 {

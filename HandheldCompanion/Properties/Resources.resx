@@ -2362,7 +2362,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Back</value>
   </data>
   <data name="MainWindow_Exit" xml:space="preserve">
-    <value>Exit</value>
+    <value>Quit</value>
   </data>
   <data name="MainWindow_MainWindow" xml:space="preserve">
     <value>Main Window</value>
@@ -3248,5 +3248,56 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="ProfilesPage_ProfileArguments" xml:space="preserve">
     <value>Arguments</value>
+  </data>
+  <data name="InputsHotkey_touchscreenToggle" xml:space="preserve">
+    <value>Touchscreen Toggle</value>
+  </data>
+  <data name="InputsHotkey_touchscreenToggleDesc" xml:space="preserve">
+    <value>Toggle Touchscreen</value>
+  </data>
+  <data name="Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="AboutPage_Bios" xml:space="preserve">
+    <value>Bios</value>
+  </data>
+  <data name="AboutPage_Memory" xml:space="preserve">
+    <value>Memory</value>
+  </data>
+  <data name="AboutPage_MemorySpecification" xml:space="preserve">
+    <value>Memory specification</value>
+  </data>
+  <data name="AboutPage_Model" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="AboutPage_Processor" xml:space="preserve">
+    <value>Processor</value>
+  </data>
+  <data name="AboutPage_ProcessorSpecification" xml:space="preserve">
+    <value>Processor specification</value>
+  </data>
+  <data name="AboutPage_Graphic" xml:space="preserve">
+    <value>Graphic</value>
+  </data>
+  <data name="AboutPage_GraphicDriverVersion" xml:space="preserve">
+    <value>Graphic Driver</value>
+  </data>
+  <data name="BatteryHealth" xml:space="preserve">
+    <value>Battery Health</value>
+  </data>
+  <data name="BatteryCharge" xml:space="preserve">
+    <value>Charge</value>
+  </data>
+  <data name="Charging" xml:space="preserve">
+    <value>Charging</value>
+  </data>
+  <data name="Discharging" xml:space="preserve">
+    <value>Discharging</value>
+  </data>
+  <data name="Fan" xml:space="preserve">
+    <value>Fan</value>
   </data>
 </root>

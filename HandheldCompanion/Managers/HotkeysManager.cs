@@ -110,7 +110,7 @@ public static class HotkeysManager
         // check if profile-specific HIDmode -> disable emulated controller hotkey, else -> enable it
         HIDmode HIDmode;
 
-        switch ((HIDmode)profile.HID)
+        switch (profile.HID)
         {
             case HIDmode.Xbox360Controller:
             case HIDmode.DualShock4Controller:
@@ -255,7 +255,7 @@ public static class HotkeysManager
     private static void SettingsManager_SettingValueChanged(string name, object value)
     {
         // manage toggle type hotkeys
-        foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals(name)).ToList())
+        foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals(name)))
         {
             if (!hotkey.inputsHotkey.IsToggle)
                 continue;
@@ -265,7 +265,7 @@ public static class HotkeysManager
         }
 
         // manage settings type hotkeys
-        foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Settings.Contains(name)).ToList())
+        foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Settings.Contains(name)))
         {
             var enabled = SettingsManager.GetBoolean(hotkey.inputsHotkey.Settings);
             hotkey.IsEnabled = enabled;
@@ -467,6 +467,11 @@ public static class HotkeysManager
                         else
                             ProcessManager.SuspendProcess(fProcess);
                     }
+                    break;
+                case "touchscreenToggle":
+                    var touchscreenStatus = DeviceManager.ToggleTouchscreen();
+                    if (touchscreenStatus is not null)
+                        ToastManager.SendToast(Resources.InputsHotkey_touchscreenToggle + " " + ((bool)touchscreenStatus ? Resources.On : Resources.Off));
                     break;
                 case "shortcutKillApp":
                     fProcess?.Process.Kill();

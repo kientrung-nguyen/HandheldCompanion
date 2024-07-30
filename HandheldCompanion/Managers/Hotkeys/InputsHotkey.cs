@@ -60,6 +60,11 @@ public class InputsHotkey
             new InputsHotkey(InputsHotkeyType.Quicktools, "\uE769", "suspendResumeTask", "Segoe Fluent Icons", 20,
                 false, true, null, string.Empty)
         },
+        {
+            14,
+            new InputsHotkey(InputsHotkeyType.Quicktools, "\uEDA4", "touchscreenToggle", "Segoe Fluent Icons", 20,
+                false, true, null, string.Empty)
+        },
 
         // Microsoft Windows hotkeys
         {
@@ -89,7 +94,7 @@ public class InputsHotkey
         },
         {
             25,
-            new InputsHotkey(InputsHotkeyType.Windows, "\uE71D", "shortcutTaskManager", "Segoe Fluent Icons", 20, false,
+            new InputsHotkey(InputsHotkeyType.Windows, "\uE9D9", "shortcutTaskManager", "Segoe Fluent Icons", 20, false,
                 true, null, string.Empty)
         },
         {

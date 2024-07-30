@@ -10,7 +10,7 @@
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickPerformance"
     Title="{Binding PresetName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-    Margin="15,0,12,0"
+    Margin="15,0,12,6"
     d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:PerformancePageViewModel}"
     d:DesignHeight="1500"

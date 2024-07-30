@@ -157,7 +157,11 @@
                 Content="{x:Static resx:Resources.MainWindow_Exit}"
                 Tag="WindowsExit">
                 <ui:NavigationViewItem.Icon>
-                    <ui:SymbolIcon Symbol="Setting" />
+                    <ui:FontIcon 
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        FontFamily="{StaticResource SymbolThemeFontFamily}"
+                        Glyph="&#xF3B1;" />
                 </ui:NavigationViewItem.Icon>
             </ui:NavigationViewItem>
         </ui:NavigationView.FooterMenuItems>
