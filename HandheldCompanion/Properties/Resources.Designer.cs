@@ -4591,7 +4591,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Touchscreen Toggle.
+        ///   Looks up a localized string similar to Touchscreen.
         /// </summary>
         public static string InputsHotkey_touchscreenToggle {
             get {

@@ -19,6 +19,6 @@
             HorizontalAlignment="Center"
             Style="{StaticResource CaptionTextBlockStyle}"
             TextAlignment="Center"
-            TextWrapping="NoWrap" />
+            TextWrapping="Wrap" />
     </ui:SimpleStackPanel>
 </UserControl>

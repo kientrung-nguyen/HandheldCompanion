@@ -4,6 +4,8 @@ using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
 using iNKORE.UI.WPF.Modern.Controls;
+using SharpDX.Direct3D9;
+using SharpDX.Multimedia;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -191,9 +193,9 @@ public partial class OverlayQuickTools : GamepadWindow
         Application.Current.Dispatcher.Invoke(() =>
         {
             // Common settings across cases 0 and 1
-            MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfBounds.Width);
+            MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfWorkingArea.Width);
             Width = (int)Math.Max(MinWidth, SettingsManager.GetDouble("QuickToolsWidth"));
-            MaxHeight = Math.Min(targetScreen.WpfBounds.Height - (_Margin * 8), _MaxHeight);
+            MaxHeight = Math.Min(targetScreen.WpfWorkingArea.Height - (_Margin * 2), _MaxHeight);
             Height = MinHeight = MaxHeight;
             WindowStyle = _Style;
 
@@ -229,9 +231,6 @@ public partial class OverlayQuickTools : GamepadWindow
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
-            //var BatteryLifePercent = (int)Math.Truncate(status.BatteryLifePercent * 100.0f);
-            //BatteryIndicatorPercentage.Text = $"{BatteryLifePercent}%";
-
             // get status key
             var keyStatus = string.Empty;
             switch (status.PowerLineStatus)
@@ -260,41 +259,6 @@ public partial class OverlayQuickTools : GamepadWindow
 
             if (SystemManager.PowerStatusIcon.TryGetValue(key, out var glyph))
                 BatteryIndicatorIcon.Glyph = glyph;
-
-            //if (status.BatteryLifeRemaining > 0)
-            //{
-            //    var time = TimeSpan.FromSeconds(status.BatteryLifeRemaining);
-
-            //    string remaining;
-            //    if (status.BatteryLifeRemaining >= 3600)
-            //        remaining = $"{time.Hours}h {time.Minutes}min";
-            //    else
-            //        remaining = $"{time.Minutes}min";
-
-            //    BatteryIndicatorLifeRemaining.Text = $"[{Math.Round(-(decimal)SystemManager.batteryRate, 1).ToString() + "W"}] ({remaining} remaining)";
-            //    BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
-            //}
-            //else
-            //{
-            //    if (keyStatus == "Charging")
-            //    {
-            //        var batteryLifeFullCharge = (double)((SystemManager.fullCapacity - SystemManager.batteryCapacity) / SystemManager.batteryRate) * 60d * 60d;
-            //        var time = TimeSpan.FromSeconds(batteryLifeFullCharge);
-            //        string remaining;
-            //        if (batteryLifeFullCharge >= 3600)
-            //            remaining = $"{time.Hours}h {time.Minutes}min";
-            //        else
-            //            remaining = $"{time.Minutes}min";
-
-            //        BatteryIndicatorLifeRemaining.Text = $"[{Math.Round((decimal)SystemManager.batteryRate, 1).ToString() + "W"}] ({remaining} till charged)";
-            //        BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
-            //    }
-            //    else
-            //    {
-            //        BatteryIndicatorLifeRemaining.Text = string.Empty;
-            //        BatteryIndicatorLifeRemaining.Visibility = Visibility.Collapsed;
-            //    }
-            //}
         });
     }
 
@@ -585,43 +549,82 @@ public partial class OverlayQuickTools : GamepadWindow
         }
     }
 
-
-    private void ShowBatteryWear()
-    {
-        //Refresh again only after 15 Minutes since the last refresh
-        SystemManager.RefreshBatteryHealth();
-        LogManager.LogInformation(Properties.Resources.BatteryHealth + ": " + Math.Round(SystemManager.batteryHealth, 1) + "%");
-        if (SystemManager.batteryHealth != -1)
-        {
-            BatteryIndicatorPercentage.Text = Properties.Resources.BatteryHealth + ": " + Math.Round(SystemManager.batteryHealth, 1) + "%";
-        }
-    }
-
+    static long lastRefresh;
+    
     private void UpdateTime(object? sender, EventArgs e)
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
             Time.Text = $"{DateTime.Now.ToString(CultureInfo.InstalledUICulture.DateTimeFormat.ShortTimePattern).ToLowerInvariant()}";
             ShowBatteryCharge();
+            ShowCPUText();
         });
+    }
+
+    private void ShowCPUText()
+    {
+        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 2000) return;
+        lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+        string cpuTemp = "";
+        string gpuTemp = "";
+        string battery = "";
+
+        if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
+            CPUPower.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
+
+        if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
+            CPUTemp.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
+
+        if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
+        {
+            CPULoad.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value, 1):0.0}%";
+            CPULoadRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value, 1);
+        }
+
+        if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
+            GPUPower.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
+
+        if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
+            GPUTemp.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
+
+        if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
+        {
+            GPULoad.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value, 1):0.0}%";
+            GPULoadRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value, 1);
+        }
+
+        //if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
+        //    battery = $":\t{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity, 1)}%";
+
+        //if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
+        //    battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+        //else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
+        //    battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+
+        //if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
+        //    battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+
+        //string trayTip = $"CPU{cpuTemp}";
+        //if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"\nFAN:\t{PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
+        //if (battery.Length > 0) trayTip += "\nBAT" + battery;
+
     }
 
     private void ShowBatteryCharge()
     {
-        SystemManager.ReadBatterySensors();
+        BatteryIndicatorPercentage.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity, 1)}%";
 
-        BatteryIndicatorPercentage.Text = $"{Math.Round(SystemManager.batteryCapacity, 1)}%";
-
-        if (SystemManager.batteryRate == 0)
+        if (PlatformManager.LibreHardwareMonitor.BatteryPower == 0)
         {
             BatteryIndicatorLifeRemaining.Visibility = Visibility.Collapsed;
         }
         else
         {
 
-            if (SystemManager.batteryRate > 0)
+            if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
             {
-                var batteryLifeFullCharge = (double)(((SystemManager.fullCapacity / 1000) - (SystemManager.chargeCapacity / 1000)) / SystemManager.batteryRate) * 60d * 60d;
+                var batteryLifeFullCharge = (double)(((PlatformManager.LibreHardwareMonitor.BatteryFullCapacity / 1000) - (PlatformManager.LibreHardwareMonitor.BatteryRemainingCapacity / 1000)) / PlatformManager.LibreHardwareMonitor.BatteryPower) * 60d * 60d;
                 var time = TimeSpan.FromSeconds(batteryLifeFullCharge);
                 string remaining;
                 if (batteryLifeFullCharge >= 3600)
@@ -629,13 +632,13 @@ public partial class OverlayQuickTools : GamepadWindow
                 else
                     remaining = $"{time.Minutes}min";
 
-                BatteryIndicatorLifeRemaining.Text = $"[{Math.Round((decimal)SystemManager.batteryRate, 1).ToString() + "W"}] ({remaining} till full)";
+                BatteryIndicatorLifeRemaining.Text = $"({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W"}) {remaining} to fully charge";
                 BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
 
             }
             else
             {
-                var batteryLifeRemaining = Math.Abs((double)((SystemManager.chargeCapacity / 1000) / SystemManager.batteryRate) * 60d * 60d);
+                var batteryLifeRemaining = Math.Abs((double)((decimal)PlatformManager.LibreHardwareMonitor.BatteryRemainingCapacity / 1000 / (decimal)PlatformManager.LibreHardwareMonitor.BatteryPower) * 60d * 60d);
                 var time = TimeSpan.FromSeconds(batteryLifeRemaining);
 
                 string remaining;
@@ -644,7 +647,7 @@ public partial class OverlayQuickTools : GamepadWindow
                 else
                     remaining = $"{time.Minutes}min";
 
-                BatteryIndicatorLifeRemaining.Text = $"[{Math.Round((decimal)SystemManager.batteryRate, 1).ToString() + "W"}] ({remaining} remaining)";
+                BatteryIndicatorLifeRemaining.Text = $"({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W"}) {remaining} remaining";
                 BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
             }
         }

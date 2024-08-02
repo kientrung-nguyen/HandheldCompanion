@@ -6,6 +6,7 @@ using HandheldCompanion.Properties;
 using HandheldCompanion.Simulators;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using HandheldCompanion.Views.Classes;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;

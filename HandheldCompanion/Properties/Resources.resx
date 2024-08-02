@@ -3250,7 +3250,7 @@ Thank you for using HC and helping us make it better.</value>
     <value>Arguments</value>
   </data>
   <data name="InputsHotkey_touchscreenToggle" xml:space="preserve">
-    <value>Touchscreen Toggle</value>
+    <value>Touchscreen</value>
   </data>
   <data name="InputsHotkey_touchscreenToggleDesc" xml:space="preserve">
     <value>Toggle Touchscreen</value>

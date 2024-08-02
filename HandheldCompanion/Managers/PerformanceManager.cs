@@ -132,8 +132,8 @@ public static class PerformanceManager
         PowerProfileManager.Applied += PowerProfileManager_Applied;
         PowerProfileManager.Discarded += PowerProfileManager_Discarded;
         //PlatformManager.LibreHardwareMonitor.GPUClockChanged += LibreHardwareMonitor_GPUClockChanged;
-        PlatformManager.HWiNFO.GPUFrequencyChanged += HWiNFO_GPUFrequencyChanged;
-        PlatformManager.HWiNFO.PowerLimitChanged += HWiNFO_PowerLimitChanged;
+        //PlatformManager.HWiNFO.GPUFrequencyChanged += HWiNFO_GPUFrequencyChanged;
+        //PlatformManager.HWiNFO.PowerLimitChanged += HWiNFO_PowerLimitChanged;
         PlatformManager.RTSS.Hooked += RTSS_Hooked;
         PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
         SettingsManager.SettingValueChanged += SettingsManagerOnSettingValueChanged;
@@ -142,36 +142,35 @@ public static class PerformanceManager
         currentCoreCount = MotherboardInfo.NumberOfCores;
     }
 
-    private static void HWiNFO_GPUFrequencyChanged(double value)
-    {
-        currentGfxClock = (uint)value;
-        //LogManager.LogDebug("GPUFrequencyChanged: {0} Mhz", value);
-    }
+    //private static void HWiNFO_GPUFrequencyChanged(double value)
+    //{
+    //    currentGfxClock = (uint)value;
+    //}
 
-    private static void HWiNFO_PowerLimitChanged(PowerType type, int limit)
-    {
-        var idx = (int)type;
-        currentTDP[idx] = limit;
+    //private static void HWiNFO_PowerLimitChanged(PowerType type, int limit)
+    //{
+    //    var idx = (int)type;
+    //    currentTDP[idx] = limit;
 
-        // workaround, HWiNFO doesn't have the ability to report MSR
-        switch (type)
-        {
-            case PowerType.Stapm:
-                currentTDP[(int)PowerType.Stapm] = limit;
-                break;
-            case PowerType.Slow:
-                currentTDP[(int)PowerType.MsrSlow] = limit;
-                break;
-            case PowerType.Fast:
-                currentTDP[(int)PowerType.MsrFast] = limit;
-                break;
-        }
+    //    // workaround, HWiNFO doesn't have the ability to report MSR
+    //    switch (type)
+    //    {
+    //        case PowerType.Stapm:
+    //            currentTDP[(int)PowerType.Stapm] = limit;
+    //            break;
+    //        case PowerType.Slow:
+    //            currentTDP[(int)PowerType.MsrSlow] = limit;
+    //            break;
+    //        case PowerType.Fast:
+    //            currentTDP[(int)PowerType.MsrFast] = limit;
+    //            break;
+    //    }
 
-        // raise event
-        PowerLimitChanged?.Invoke(type, limit);
+    //    // raise event
+    //    PowerLimitChanged?.Invoke(type, limit);
 
-        //LogManager.LogDebug("PowerLimitChanged: {0}\t{1} W", type, limit);
-    }
+    //    //LogManager.LogDebug("PowerLimitChanged: {0}\t{1} W", type, limit);
+    //}
 
     private static void SettingsManagerOnSettingValueChanged(string name, object value)
     {
@@ -525,7 +524,7 @@ public static class PerformanceManager
         {
             // todo: Store fps for data gathering from multiple points (OSD, Performance)
             double processValueFPS = PlatformManager.RTSS.GetFramerate(true);
-            var processOsdID = PlatformManager.RTSS.GetFrameId(); 
+            var processOsdID = PlatformManager.RTSS.GetFrameId();
             if (double.IsNaN(processValueFPS) || processValueFPS <= 0 || AutoTDPOSDFrameId == processOsdID)
                 goto Exit;
 
@@ -553,29 +552,30 @@ public static class PerformanceManager
 
     private static void AutoPerf(double processValueFPS)
     {
-        if (PlatformManager.HWiNFO.GetAutoPerformanceSensors(
-            out var cpuFrequency, out var cpuEffective,
-            out var gpuFrequency, out var gpuEffective))
-        {
-            AutoCPUClock = cpuFrequency;
-            AutoGPUClock = gpuFrequency;
+            //if (PlatformManager.HWiNFO.GetAutoPerformanceSensors(
+            //    out var cpuFrequency, out var cpuEffective,
+            //    out var gpuFrequency, out var gpuEffective))
+
+            AutoCPUClock = (double)PlatformManager.LibreHardwareMonitor.CPUClock;
+        AutoGPUClock = (double)PlatformManager.LibreHardwareMonitor.GPUClock;
 
 
-            var processFPSTarget = AutoTDPTargetFPS;//Math.Min(fpsHistory.Max(), AutoTDPTargetFPS);
+        var processFPSTarget = AutoTDPTargetFPS;//Math.Min(fpsHistory.Max(), AutoTDPTargetFPS);
 
-            var fpsTarget = Math.Clamp(fpsHistory.Max(), 1, processFPSTarget + 1);
-            var fpsDipper = AutoTDPDipper(processValueFPS, fpsTarget);
+        var fpsTarget = Math.Clamp(fpsHistory.Max(), 1, processFPSTarget + 1);
+        var fpsDipper = AutoTDPDipper(processValueFPS, fpsTarget);
 
-            var processValueCPUUse = Math.Clamp(cpuEffective * 100 / cpuFrequency, .1d, 100.0d);
-            var fpsCPU = Math.Max(processValueFPS * 2 - fpsTarget, Math.Max(fpsTarget / 2, 1));
-            AutoCpu(fpsTarget / fpsCPU, processValueCPUUse, AutoTargetCPU);
-            
-            //var processValueGPUUse = Math.Clamp(gpuEffective * 100 / gpuFrequency, .1d, 100.0d);
-            //var fpsGPU = Math.Max(processValueFPS, Math.Max(fpsTarget * .8, 1));
-            //AutoGpu(fpsDipper > 0 ? 1d : fpsTarget / fpsGPU, processValueGPUUse, AutoTargetGPU);
-            
-            //AutoTdp(fpsDipper, processValueFPS, processFPSTarget);
-        }
+        //var processValueCPUUse = Math.Clamp(cpuEffective * 100 / cpuFrequency, .1d, 100.0d);
+        var processValueCPUUse = (double)PlatformManager.LibreHardwareMonitor.CPULoad;
+        var fpsCPU = Math.Max(processValueFPS * 2 - fpsTarget, Math.Max(fpsTarget / 2, 1));
+        AutoCpu(fpsTarget / fpsCPU, processValueCPUUse, AutoTargetCPU);
+
+        //var processValueGPUUse = Math.Clamp(gpuEffective * 100 / gpuFrequency, .1d, 100.0d);
+        //var fpsGPU = Math.Max(processValueFPS, Math.Max(fpsTarget * .8, 1));
+        //AutoGpu(fpsDipper > 0 ? 1d : fpsTarget / fpsGPU, processValueGPUUse, AutoTargetGPU);
+
+        //AutoTdp(fpsDipper, processValueFPS, processFPSTarget);
+
     }
 
     private static void AutoTdp(double fpsDipper, double processValueFPS, double fpsSetPoint)
@@ -842,7 +842,7 @@ public static class PerformanceManager
                 }
             }
 
-            // release lock
+        // release lock
         Exit:
             cpuLock.Exit();
         }

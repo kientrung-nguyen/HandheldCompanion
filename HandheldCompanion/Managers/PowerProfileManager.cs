@@ -29,7 +29,6 @@ namespace HandheldCompanion.Managers
                 Directory.CreateDirectory(ProfilesPath);
 
             PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
-            PlatformManager.HWiNFO.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
             ProfileManager.Applied += ProfileManager_Applied;
             ProfileManager.Discarded += ProfileManager_Discarded;
         }

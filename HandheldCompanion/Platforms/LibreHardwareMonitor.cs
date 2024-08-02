@@ -1,3 +1,4 @@
+using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using LibreHardwareMonitor.Hardware;
 using System;
@@ -10,20 +11,37 @@ namespace HandheldCompanion.Platforms
         private Computer computer;
         private string ProductName;
 
-        private Timer updateTimer;
+        private Timer sensorTImer;
         private int updateInterval = 1000;
         private object updateLock = new();
 
         public float? CPULoad;
         public float? CPUClock;
         public float? CPUPower;
-        public float? CPUTemperatur;
+        public float? CPUTemp;
+
+
+        public float? CPUFanSpeed;
+        public float? CPUFanDuty;
+
+        public float? GPULoad;
+        public float? GPUClock;
+        public float? GPUPower;
+        public float? GPUTemp;
 
         public float? MemoryUsage;
+        public float? GPUMemoryUsage;
 
-        public float? BatteryLevel;
-        public float? BatteryPower;
+        public float? BatteryChargeLevel;
+        public float? BatteryPower = 0f;
         public float? BatteryTimeSpan;
+
+        public float? BatteryDesignCapacity;
+        public float? BatteryFullCapacity;
+        public float? BatteryRemainingCapacity;
+        public float? BatteryCapacity = -1f;
+        public float? BatteryHealth = -1f;
+
 
         public LibreHardwareMonitor()
         {
@@ -34,8 +52,8 @@ namespace HandheldCompanion.Platforms
             ProductName = MotherboardInfo.Product;
 
             // watchdog to populate sensors
-            updateTimer = new Timer(updateInterval) { Enabled = false };
-            updateTimer.Elapsed += UpdateTimer_Elapsed;
+            sensorTImer = new Timer(updateInterval) { Enabled = false };
+            sensorTImer.Elapsed += sensorTImer_Elapsed;
 
             // prepare for sensors reading
             computer = new Computer
@@ -43,6 +61,7 @@ namespace HandheldCompanion.Platforms
                 IsCpuEnabled = true,
                 IsMemoryEnabled = true,
                 IsBatteryEnabled = true,
+                IsGpuEnabled = true
             };
 
             SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
@@ -50,11 +69,11 @@ namespace HandheldCompanion.Platforms
 
         private void SettingsManager_SettingValueChanged(string name, object value)
         {
-            switch(name)
+            switch (name)
             {
                 case "OnScreenDisplayRefreshRate":
                     updateInterval = Convert.ToInt32(value);
-                    updateTimer.Interval = updateInterval;
+                    sensorTImer.Interval = updateInterval;
                     break;
             }
         }
@@ -62,36 +81,32 @@ namespace HandheldCompanion.Platforms
         public override bool Start()
         {
             // open computer, slow
-            if (computer is not null)
-                computer.Open();
+            computer?.Open();
 
-            if (updateTimer is not null)
-                updateTimer.Start();
+            sensorTImer?.Start();
 
             return base.Start();
         }
 
         public override bool Stop(bool kill = false)
         {
-            if (updateTimer is not null)
-                updateTimer.Stop();
+            sensorTImer?.Stop();
 
             // wait until all tasks are complete
             lock (updateLock)
             {
-                if (computer is not null)
-                    computer.Close();
+                computer?.Close();
             }
 
             return base.Stop(kill);
         }
 
-        private void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
+        private void sensorTImer_Elapsed(object? sender, ElapsedEventArgs e)
         {
             lock (updateLock)
             {
                 // pull temperature sensor
-                foreach (IHardware? hardware in computer.Hardware)
+                foreach (IHardware hardware in computer.Hardware)
                 {
                     hardware.Update();
 
@@ -99,6 +114,9 @@ namespace HandheldCompanion.Platforms
                     {
                         case HardwareType.Cpu:
                             HandleCPU(hardware);
+                            break;
+                        case HardwareType.GpuAmd:
+                            HandleGPU(hardware);
                             break;
                         case HardwareType.Memory:
                             HandleMemory(hardware);
@@ -111,10 +129,18 @@ namespace HandheldCompanion.Platforms
             }
         }
 
-        #region cpu updates
+        private void HandleCPUFan()
+        {
+            CPUFanSpeed = IDevice.GetCurrent().ReadFanSpeed();
+            CPUFanDuty = IDevice.GetCurrent().ReadFanDuty();
+        }
+
+        #region CPU updates
+
         private void HandleCPU(IHardware cpu)
         {
-            float highestClock = 0;
+            HandleCPUFan();
+            var highestClock = 0f;
             foreach (var sensor in cpu.Sensors)
             {
                 switch (sensor.SensorType)
@@ -129,7 +155,7 @@ namespace HandheldCompanion.Platforms
                         HandleCPU_Power(sensor);
                         break;
                     case SensorType.Temperature:
-                        HandleCPU_Temperatur(sensor);
+                        HandleCPU_Temp(sensor);
                         break;
                 }
             }
@@ -137,23 +163,27 @@ namespace HandheldCompanion.Platforms
 
         private void HandleCPU_Load(ISensor sensor)
         {
-            if (sensor.Name == "CPU Total")
+            switch (sensor.Name)
             {
-                CPULoad = (float)sensor.Value;
-                CPULoadChanged?.Invoke(CPULoad);
+                case "CPU Total":
+                    //case "CPU Core Max":
+                    CPULoad = sensor.Value;
+                    CPULoadChanged?.Invoke(CPUPower);
+                    break;
             }
         }
 
         private float HandleCPU_Clock(ISensor sensor, float currentHighest)
         {
-            if ((sensor.Name.StartsWith("CPU Core #") || sensor.Name.StartsWith("Core #")))
+            if (sensor.Name.StartsWith("Core #", StringComparison.OrdinalIgnoreCase) ||
+                sensor.Name.StartsWith("CPU Core #", StringComparison.OrdinalIgnoreCase))
             {
-                var value = (float)sensor.Value;
+                var value = sensor.Value;
                 if (value > currentHighest)
                 {
-                    CPUClock = (float)sensor.Value;
-                    CPUClockChanged?.Invoke(CPUPower);
-                    return value;
+                    CPUClock = sensor.Value;
+                    CPUClockChanged?.Invoke(CPUClock);
+                    return value ?? 0f;
                 }
             }
             return currentHighest;
@@ -165,32 +195,115 @@ namespace HandheldCompanion.Platforms
             {
                 case "Package":
                 case "CPU Package":
-                    CPUPower = (float)sensor.Value;
+                    CPUPower = sensor.Value;
                     CPUPowerChanged?.Invoke(CPUPower);
                     break;
             }
         }
 
-        private void HandleCPU_Temperatur(ISensor sensor)
+        private void HandleCPU_Temp(ISensor sensor)
         {
-            if (sensor.Name == "CPU Package" || sensor.Name == "Core (Tctl/Tdie)")
+            switch (sensor.Name)
             {
-                CPUTemperatur = (float)sensor.Value;
-
-                // dirty
-                switch (ProductName)
-                {
-                    case "Galileo":
-                        CPUTemperatur /= 2.0f;
-                        break;
-                }
-
-                CPUTemperatureChanged?.Invoke(CPUTemperatur);
+                case "CPU Package":
+                case "Core (Tctl/Tdie)":
+                    CPUTemp = sensor.Value;
+                    // dirty
+                    switch (ProductName)
+                    {
+                        case "Galileo":
+                            CPUTemp /= 2.0f;
+                            break;
+                    }
+                    CPUTemperatureChanged?.Invoke(CPUTemp);
+                    break;
             }
         }
+
         #endregion
 
-        #region memory updates
+        #region GPU updates
+
+        private void HandleGPU(IHardware gpu)
+        {
+            foreach (var sensor in gpu.Sensors)
+            {
+                switch (sensor.SensorType)
+                {
+                    case SensorType.Load:
+                        HandleGPU_Load(sensor);
+                        break;
+                    case SensorType.Clock:
+                        HandleGPU_Clock(sensor);
+                        break;
+                    case SensorType.Power:
+                        HandleGPU_Power(sensor);
+                        break;
+                    case SensorType.Temperature:
+                        HandleGPU_Temp(sensor);
+                        break;
+                    case SensorType.Data:
+                        HandleGPU_Data(sensor);
+                        break;
+                }
+            }
+        }
+
+        private void HandleGPU_Clock(ISensor sensor)
+        {
+            switch (sensor.Name)
+            {
+                case "GPU Core":
+                    GPUClock = sensor.Value;
+                    break;
+            }
+        }
+
+        private void HandleGPU_Temp(ISensor sensor)
+        {
+            switch (sensor.Name)
+            {
+                case "GPU VR SoC":
+                    GPUTemp = sensor.Value;
+                    break;
+            }
+        }
+
+        private void HandleGPU_Load(ISensor sensor)
+        {
+            switch (sensor.Name)
+            {
+                case "D3D 3D":
+                    GPULoad = sensor.Value;
+                    break;
+            }
+        }
+
+        private void HandleGPU_Power(ISensor sensor)
+        {
+            switch (sensor.Name)
+            {
+                case "GPU Core":
+                    GPUPower = sensor.Value;
+                    break;
+            }
+        }
+
+
+        private void HandleGPU_Data(ISensor sensor)
+        {
+            switch (sensor.Name)
+            {
+                case "D3D Dedicated Memory Used":
+                    GPUMemoryUsage = sensor.Value;
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region Memory updates
+
         private void HandleMemory(IHardware cpu)
         {
             foreach (var sensor in cpu.Sensors)
@@ -206,15 +319,19 @@ namespace HandheldCompanion.Platforms
 
         private void HandleMemory_Data(ISensor sensor)
         {
-            if (sensor.Name == "Memory Used")
+            switch (sensor.Name)
             {
-                MemoryUsage = ((float)sensor.Value) * 1024;
-                MemoryUsageChanged?.Invoke(MemoryUsage);
+                case "Memory Used":
+                    MemoryUsage = sensor.Value * 1024;
+                    MemoryUsageChanged?.Invoke(MemoryUsage);
+                    break;
             }
         }
+
         #endregion
 
-        #region battery updates
+        #region Battery updates
+
         private void HandleBattery(IHardware cpu)
         {
             foreach (var sensor in cpu.Sensors)
@@ -230,44 +347,88 @@ namespace HandheldCompanion.Platforms
                     case SensorType.TimeSpan:
                         HandleBattery_TimeSpan(sensor);
                         break;
+                    case SensorType.Energy:
+                        HandleBattery_Energy(sensor);
+                        break;
                 }
             }
+
+            if (BatteryFullCapacity > 0 && BatteryRemainingCapacity > 0)
+            {
+                BatteryCapacity = (float)Math.Min(100, ((decimal)BatteryRemainingCapacity / (decimal)BatteryFullCapacity) * 100);
+            }
+
+            RefreshBatteryHealth();
+        }
+
+        private void RefreshBatteryHealth()
+        {
+            BatteryHealth = GetBatteryHealth() * 100;
+        }
+
+        private float GetBatteryHealth()
+        {
+            decimal health = (decimal)BatteryFullCapacity / (decimal)BatteryDesignCapacity;
+            return (float)health;
         }
 
         private void HandleBattery_Level(ISensor sensor)
         {
-            if (sensor.Name == "Charge Level")
+            switch (sensor.Name)
             {
-                BatteryLevel = (float)sensor.Value;
-                BatteryLevelChanged?.Invoke(BatteryLevel);
+                case "Charge Level":
+                    BatteryChargeLevel = sensor.Value;
+                    BatteryLevelChanged?.Invoke(BatteryChargeLevel);
+                    break;
             }
         }
 
         private void HandleBattery_Power(ISensor sensor)
         {
-            if (sensor.Name == "Charge Rate")
+            switch (sensor.Name)
             {
-                BatteryPower = (float)sensor.Value;
-                BatteryPowerChanged?.Invoke(BatteryPower);
-            }
-            if (sensor.Name == "Discharge Rate")
-            {
-                BatteryPower = -(float)sensor.Value;
-                BatteryPowerChanged?.Invoke(BatteryPower);
+                case "Discharge Rate":
+                    BatteryPower = -sensor.Value;
+                    BatteryPowerChanged?.Invoke(BatteryPower);
+                    break;
+                case "Charge Rate":
+                    BatteryPower = sensor.Value;
+                    BatteryPowerChanged?.Invoke(BatteryPower);
+                    break;
             }
         }
 
         private void HandleBattery_TimeSpan(ISensor sensor)
         {
-            if (sensor.Name == "Remaining Time (Estimated)")
+            switch (sensor.Name)
             {
-                BatteryTimeSpan = ((float)sensor.Value) / 60;
-                BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
+                case "Remaining Time (Estimated)":
+                    BatteryTimeSpan = sensor.Value / 60;
+                    BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
+                    break;
             }
         }
+
+        private void HandleBattery_Energy(ISensor sensor)
+        {
+            switch (sensor.Name)
+            {
+                case "Designed Capacity":
+                    BatteryDesignCapacity = sensor.Value;
+                    break;
+                case "Full Charged Capacity":
+                    BatteryFullCapacity = sensor.Value;
+                    break;
+                case "Remaining Capacity":
+                    BatteryRemainingCapacity = sensor.Value;
+                    break;
+            }
+        }
+
         #endregion
 
-        #region events
+        #region Events
+
         public delegate void ChangedHandler(float? value);
 
         public event ChangedHandler CPULoadChanged;

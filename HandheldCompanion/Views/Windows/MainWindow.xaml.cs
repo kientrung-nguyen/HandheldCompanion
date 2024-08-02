@@ -11,6 +11,7 @@ using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using iNKORE.UI.WPF.TrayIcons;
 using LiveCharts.Wpf.Charts.Base;
+using Microsoft.Diagnostics.Tracing.Parsers.IIS_Trace;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using Sentry;
 using System;
@@ -26,6 +27,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -72,6 +74,7 @@ public partial class MainWindow : GamepadWindow
     public static string CurrentExe, CurrentPath;
 
     private static MainWindow currentWindow;
+
     public static FileVersionInfo fileVersionInfo;
 
     public static string InstallPath = string.Empty;
@@ -102,7 +105,7 @@ public partial class MainWindow : GamepadWindow
 
     //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime)
     private static readonly DispatcherTimer notifyIconWaitTimer = new(
-        TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime),
+        TimeSpan.FromMilliseconds(300),
         DispatcherPriority.Normal,
         notifyIconWaitTimerTicked,
         Dispatcher.CurrentDispatcher)
@@ -161,7 +164,6 @@ public partial class MainWindow : GamepadWindow
 
         notifyIcon = new TrayIcon
         {
-            ToolTipText = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visibility = Visibility.Collapsed,
             ContextMenu = new ContextMenu
@@ -169,7 +171,6 @@ public partial class MainWindow : GamepadWindow
                 StaysOpen = true
             }
         };
-
         // initialize notifyIcon
         notifyIcon.TrayMouseDoubleClick += (sender, e) =>
         {
@@ -185,14 +186,13 @@ public partial class MainWindow : GamepadWindow
             notifyIconWaitTimer.Start();
         };
 
-        notifyIcon.TrayRightMouseDown += (sender, e) =>
+        notifyIcon.TrayMouseMove += (sender, e) =>
         {
-            notifyIcon.ContextMenu.IsOpen = true;
+            RefreshSensors();
         };
 
         notifyIcon.TrayToolTipOpen += (sender, e) =>
         {
-            RefreshSensors();
             sensorTimer.Start();
         };
 
@@ -200,6 +200,8 @@ public partial class MainWindow : GamepadWindow
         {
             sensorTimer.Stop();
         };
+
+
 
         AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow, "MainWindow");
         AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools, "QuickTools");
@@ -319,45 +321,51 @@ public partial class MainWindow : GamepadWindow
         RefreshSensors();
     }
 
-    private static void RefreshSensors()
-    {
-        if (!notifyIcon.IsTrayIconCreated)
-            return;
+    static long lastRefresh;
+    static long lastBatteryRefresh;
 
-        SystemManager.ReadBatterySensors();
-        PlatformManager.HWiNFO.ReaffirmRunningProcess();
+    private static void RefreshSensors(bool force = false)
+    {
+        if (!force && Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 2000) return;
+        lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
         string cpuTemp = "";
         string gpuTemp = "";
         string battery = "";
-        string charge = "";
 
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUPower, out var cpuPower))
-            cpuTemp += $":\t{Math.Round((decimal)cpuPower.Value)}W";
+        if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
+            cpuTemp += $":\t{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
 
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUTemperature, out var cpuSensor))
-            cpuTemp += $" {Math.Round((decimal)cpuSensor.Value)}°C";
+        if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
+            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
 
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.CPUUsage, out var cpuUsage))
-            cpuTemp += $" {Math.Round((decimal)cpuUsage.Value)}%";
+        if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
+            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value, 1):0.0}%";
 
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUPower, out var gpuPower))
-            gpuTemp += $":\t{Math.Round((decimal)gpuPower.Value)}W";
+        if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
+            gpuTemp += $":\t{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
 
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUTemperature, out var gpuSensor))
-            gpuTemp += $" {Math.Round((decimal)gpuSensor.Value)}°C";
+        if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
+            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
 
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(Platforms.HWiNFO.SensorElementType.GPUUsage, out var gpuUsagae))
-            gpuTemp += $" {Math.Round((decimal)gpuUsagae.Value)}%";
+        if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
+            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value, 1):0.0}%";
 
-        if (SystemManager.batteryRate < 0)
-            battery = $":\t{Properties.Resources.Discharging} {Math.Round(-(decimal)SystemManager.batteryRate, 1)}W";
-        else if (SystemManager.batteryRate > 0)
-            battery = $":\t{Properties.Resources.Charging} {Math.Round((decimal)SystemManager.batteryRate, 1)}W";
+        if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
+            battery = $":\t{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity, 1)}%";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
+            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+        else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
+            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
+            battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
 
         string trayTip = $"CPU{cpuTemp}";
         if (gpuTemp.Length > 0) trayTip += "\nGPU" + gpuTemp;
-        if (!float.IsNaN(PlatformManager.HWiNFO.CPUFanSpeed)) trayTip += $"\nFAN:\t{PlatformManager.HWiNFO.CPUFanSpeed}RPM";
-        if (battery.Length > 0) trayTip += "\nBATT" + battery;
+        if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"\nFAN:\t{PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
+        if (battery.Length > 0) trayTip += "\nBAT" + battery;
 
         notifyIcon.ToolTipText = trayTip;
     }
@@ -491,7 +499,6 @@ public partial class MainWindow : GamepadWindow
                         break;
                 }
         };
-        //MenuItem_Click;
         notifyIcon.ContextMenu.Items.Add(menuItemMainWindow);
     }
 
@@ -499,7 +506,6 @@ public partial class MainWindow : GamepadWindow
     {
         notifyIcon.Visibility = Visibility.Collapsed;
         notifyIcon.Dispose();
-        notifyIcon = null;
     }
 
     private void AddNotifyIconSeparator()
@@ -727,9 +733,7 @@ public partial class MainWindow : GamepadWindow
                         PerformanceManager.Start();
 
                         // resume platform(s)
-                        //PlatformManager.LibreHardwareMonitor.Start();
-                        PlatformManager.HWiNFO.Start();
-                        PlatformManager.RTSS.Start();
+                        PlatformManager.LibreHardwareMonitor.Start();
                     }
 
                     // open device, when ready
@@ -758,9 +762,7 @@ public partial class MainWindow : GamepadWindow
                     PerformanceManager.Stop(true);
 
                     // suspend platform(s)
-                    //PlatformManager.LibreHardwareMonitor.Stop();
-                    PlatformManager.HWiNFO.Stop();
-                    PlatformManager.RTSS.Stop();
+                    PlatformManager.LibreHardwareMonitor.Stop();
 
                     // close current device
                     currentDevice.Close();

@@ -1,4 +1,6 @@
-﻿using Microsoft.Toolkit.Uwp.Notifications;
+﻿using HandheldCompanion.Views;
+using HandheldCompanion.Views.Classes;
+using Microsoft.Toolkit.Uwp.Notifications;
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -19,7 +21,6 @@ public static class ToastManager
     static ToastManager()
     {
     }
-
     public static void SendToast(string title, string content = "", string img = "Toast")
     {
         if (!IsEnabled)
