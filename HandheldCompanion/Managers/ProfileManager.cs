@@ -270,7 +270,7 @@ public static class ProfileManager
 
             // push announcement
             LogManager.LogInformation(announcement);
-            ToastManager.SendToast(announcement);
+            ToastManager.SendToast("Profile", announcement);
         }
     }
 
@@ -625,7 +625,7 @@ public static class ProfileManager
 
             // send toast
             // todo: localize me
-            ToastManager.SendToast($"Profile {profile.Name} deleted");
+            ToastManager.SendToast("Profile", $"Profile {profile.Name} deleted");
 
             LogManager.LogInformation("Deleted profile {0}", profilePath);
 
@@ -661,7 +661,7 @@ public static class ProfileManager
 
             // send toast
             // todo: localize me
-            ToastManager.SendToast($"Subprofile {subProfile.Name} deleted");
+            ToastManager.SendToast("Sub-Profile", $"Subprofile {subProfile.Name} deleted");
 
             LogManager.LogInformation("Deleted subprofile {0}", profilePath);
 

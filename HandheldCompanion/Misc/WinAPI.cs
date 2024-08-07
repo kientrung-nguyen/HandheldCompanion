@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HandheldCompanion.Managers;
+using System;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -28,6 +29,9 @@ public static class WinAPI
     public const int WM_SETFOCUS = 0x0007;
     public const int WM_WINDOWPOSCHANGING = 0x0046;
     public const int WM_SYSCOMMAND = 0x0112;
+
+    private const int SC_MONITORPOWER = 0xF170;
+    private const int MONITOR_OFF = 2;
 
     public const int WS_VISIBLE = 0x10000000;
     public const int WS_OVERLAPPED = 0x00000000;
@@ -220,6 +224,19 @@ public static class WinAPI
     private static extern int GetDpiForWindow(nint hwnd);
 
 
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern uint FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, out string lpBuffer, uint nSize, IntPtr Arguments);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr SendMessage(nint hWnd, int hMsg, int wParam, int lParam);
+
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool LockWorkStation();
+
+
+
     [Flags]
     public enum MonitorOptions : uint
     {
@@ -247,6 +264,31 @@ public static class WinAPI
         RECT rect = new RECT(screen.Bounds);
         IntPtr hMonitor = MonitorFromRect(ref rect, MonitorOptions.MONITOR_DEFAULTTONEAREST);
         return hMonitor;
+    }
+
+    public static void LockScreen()
+    {
+        LockWorkStation();
+    }
+
+
+    public static void TurnOffScreen()
+    {
+        Form f = new Form();
+        IntPtr result = SendMessage(f.Handle, WM_SYSCOMMAND, SC_MONITORPOWER, MONITOR_OFF);
+
+        if (result == IntPtr.Zero)
+        {
+            int error = Marshal.GetLastWin32Error();
+            string message = "";
+            uint formatFlags = 0x00001000 | 0x00000200 | 0x00000100 | 0x00000080;
+            uint formatResult = FormatMessage(formatFlags, IntPtr.Zero, (uint)error, 0, out message, 0, IntPtr.Zero);
+            if (formatResult == 0)
+            {
+                message = "Unknown error.";
+            }
+            LogManager.LogError($"Failed to turn off screen. Error code: {error}. {message}");
+        }
     }
 
     public static void MoveWindow(nint hWnd, Screen targetScreen, WindowPositions position)

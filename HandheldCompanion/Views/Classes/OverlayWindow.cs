@@ -41,8 +41,8 @@ public class OverlayWindow : Window
         if (_hotkeyId == 0)
             return;
 
-        if (HotkeysManager.Hotkeys.TryGetValue(_hotkeyId, out Hotkey hotkey))
-            hotkey.SetToggle(this.Visibility == Visibility.Visible ? true : false);
+        if (HotkeysManager.Hotkeys.TryGetValue(_hotkeyId, out var hotkey))
+            hotkey.SetToggle(Visibility == Visibility.Visible);
     }
 
     public new HorizontalAlignment HorizontalAlignment
@@ -69,8 +69,8 @@ public class OverlayWindow : Window
 
     private void OverlayWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        var source = PresentationSource.FromVisual(this) as HwndSource;
-        source.AddHook(WndProc);
+        if (PresentationSource.FromVisual(this) is HwndSource source)
+            source.AddHook(WndProc);
 
         //Set the window style to noactivate.
         var helper = new WindowInteropHelper(this);

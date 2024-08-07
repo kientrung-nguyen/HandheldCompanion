@@ -3300,4 +3300,10 @@ Thank you for using HC and helping us make it better.</value>
   <data name="Fan" xml:space="preserve">
     <value>Fan</value>
   </data>
+  <data name="Muted" xml:space="preserve">
+    <value>Muted</value>
+  </data>
+  <data name="Unmuted" xml:space="preserve">
+    <value>Unmuted</value>
+  </data>
 </root>

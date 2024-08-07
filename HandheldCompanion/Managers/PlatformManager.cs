@@ -1,12 +1,8 @@
 ﻿using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
-using HandheldCompanion.Utils;
-using HandheldCompanion.Views;
 using System;
 using System.Diagnostics;
 using System.Timers;
-using System.Windows;
-using System.Xml.Linq;
 
 namespace HandheldCompanion.Managers;
 
@@ -53,8 +49,8 @@ public static class PlatformManager
         {
             //UpdateCurrentNeedsOnScreenDisplay(OSDManager.OverlayLevel);
         }
-		
-		if (LibreHardwareMonitor.IsInstalled)
+
+        if (LibreHardwareMonitor.IsInstalled)
             LibreHardwareMonitor.Start();
 
         //SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;

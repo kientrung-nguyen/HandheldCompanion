@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Views.Windows;
 using Microsoft.Win32;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
@@ -47,7 +48,7 @@ public static class MultimediaManager
         Scope.Connect();
 
         // creating the watcher
-        BrightnessWatcher = new ManagementEventWatcher(Scope, new EventQuery("Select * From WmiMonitorBrightnessEvent"));
+        BrightnessWatcher = new ManagementEventWatcher(Scope, new EventQuery("SELECT * FROM WmiMonitorBrightnessEvent"));
         BrightnessWatcher.EventArrived += onWMIEvent;
 
         // check if we have control over brightness
@@ -83,7 +84,7 @@ public static class MultimediaManager
             }
 
             // do this even when no device found, to set to 0
-            VolumeNotification?.Invoke((float)GetVolume());
+            VolumeNotification?.Invoke(GetVolume());
         }
         catch (Exception)
         {
@@ -119,30 +120,39 @@ public static class MultimediaManager
         {
             case "increaseBrightness":
                 {
-                    int stepRoundDn = (int)Math.Floor(GetBrightness() / 5.0d);
-                    int brightness = stepRoundDn * 5 + 5;
-                    SetBrightness(brightness);
+                    var brightness = GetBrightness();
+                    int stepRoundDn = (int)Math.Floor(brightness / 5.0d);
+                    int adjust = Math.Min(100, Math.Max(0, stepRoundDn * 5 + 5));
+                    SetBrightness(adjust);
+                    ToastManager.SendToast($"{adjust}%", adjust > 50 ? ToastIcons.BrightnessUp : ToastIcons.BrightnessDown);
                 }
                 break;
             case "decreaseBrightness":
                 {
-                    int stepRoundUp = (int)Math.Ceiling(GetBrightness() / 5.0d);
-                    int brightness = stepRoundUp * 5 - 5;
-                    SetBrightness(brightness);
+                    var brightness = GetBrightness();
+                    int stepRoundUp = (int)Math.Ceiling(brightness / 5.0d);
+                    int adjust = Math.Min(100, Math.Max(0, stepRoundUp * 5 - 5));
+                    SetBrightness(adjust);
+                    ToastManager.SendToast($"{adjust}%",
+                        adjust > 50 ? ToastIcons.BrightnessUp : ToastIcons.BrightnessDown);
                 }
                 break;
             case "increaseVolume":
                 {
-                    int stepRoundDn = (int)Math.Floor(Math.Round(GetVolume() / 5.0d, 2));
-                    int volume = stepRoundDn * 5 + 5;
-                    SetVolume(volume);
+                    var volume = GetVolume();
+                    int stepRoundDn = (int)Math.Floor(Math.Round(volume / 5.0f, 2));
+                    int adjust = Math.Min(100, Math.Max(0, stepRoundDn * 5 + 5));
+                    SetVolume(adjust);
+                    ToastManager.SendToast($"{adjust}%", adjust > 50 ? ToastIcons.VolumeUp : ToastIcons.VolumeDown);
                 }
                 break;
             case "decreaseVolume":
                 {
-                    int stepRoundUp = (int)Math.Ceiling(Math.Round(GetVolume() / 5.0d, 2));
-                    int volume = stepRoundUp * 5 - 5;
-                    SetVolume(volume);
+                    var volume = GetVolume();
+                    int stepRoundUp = (int)Math.Ceiling(Math.Round(volume / 5.0d, 2));
+                    int adjust = Math.Min(100, Math.Max(0, stepRoundUp * 5 - 5));
+                    SetVolume(adjust);
+                    ToastManager.SendToast($"{adjust}%", adjust > 50 ? ToastIcons.VolumeUp : ToastIcons.VolumeDown);
                 }
                 break;
         }
@@ -193,7 +203,7 @@ public static class MultimediaManager
         // temporary array to store all current screens
         Dictionary<string, DesktopScreen> desktopScreens = new();
 
-        foreach(Screen screen in Screen.AllScreens)
+        foreach (Screen screen in Screen.AllScreens)
         {
             DesktopScreen desktopScreen = new(screen);
 
@@ -235,7 +245,7 @@ public static class MultimediaManager
         PrimaryDesktop = newPrimary;
 
         // raise event (New screen detected)
-        foreach(DesktopScreen desktop in desktopScreens.Values.Where(a => !AllScreens.ContainsKey(a.FriendlyName)))
+        foreach (DesktopScreen desktop in desktopScreens.Values.Where(a => !AllScreens.ContainsKey(a.FriendlyName)))
             ScreenConnected?.Invoke(desktop);
 
         // raise event (New screen detected)
@@ -248,9 +258,12 @@ public static class MultimediaManager
             AllScreens.Add(desktop.FriendlyName, desktop);
 
         // raise event (Display settings were updated)
-        ScreenResolution screenResolution = PrimaryDesktop.GetResolution();
-        if (screenResolution is not null)
-            DisplaySettingsChanged?.Invoke(PrimaryDesktop, screenResolution);
+        if (PrimaryDesktop is not null)
+        {
+            ScreenResolution screenResolution = PrimaryDesktop.GetResolution();
+            if (screenResolution is not null)
+                DisplaySettingsChanged?.Invoke(PrimaryDesktop, screenResolution);
+        }
 
         /*
         ScreenRotation.Rotations oldOrientation = screenOrientation.rotation;
@@ -308,7 +321,7 @@ public static class MultimediaManager
         IsInitialized = true;
         Initialized?.Invoke();
 
-        LogManager.LogInformation("{0} has started", "SystemManager");
+        LogManager.LogInformation("{0} has started", nameof(MultimediaManager));
     }
 
     public static void Stop()
@@ -410,21 +423,20 @@ public static class MultimediaManager
 
     public static void SetVolume(double volume)
     {
-        if (!VolumeSupport)
-            return;
+        if (!VolumeSupport) return;
 
         multimediaDevice.AudioEndpointVolume.MasterVolumeLevelScalar = (float)(volume / 100.0d);
     }
 
-    public static double GetVolume()
+    public static float GetVolume()
     {
         if (!VolumeSupport)
-            return double.NaN;
+            return 0;
 
-        return multimediaDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100.0d;
+        return multimediaDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100.0f;
     }
 
-    public static bool ToggleMute()
+    public static bool ToggleAudioMute()
     {
         if (!VolumeSupport)
             return false;

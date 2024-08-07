@@ -5,13 +5,10 @@ using HandheldCompanion.Utils;
 using PowerManagerAPI;
 using RTSSSharedMemoryNET;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using static HandheldCompanion.Platforms.HWiNFO;
 using PowerSchemeAPI = PowerManagerAPI.PowerManager;
 using Timer = System.Timers.Timer;
 
@@ -524,7 +521,7 @@ public static class PerformanceManager
         {
             // todo: Store fps for data gathering from multiple points (OSD, Performance)
             double processValueFPS = PlatformManager.RTSS.GetFramerate(true);
-            var processOsdID = PlatformManager.RTSS.GetFrameId();
+            var processOsdID = PlatformManager.RTSS.GetFrameId(true);
             if (double.IsNaN(processValueFPS) || processValueFPS <= 0 || AutoTDPOSDFrameId == processOsdID)
                 goto Exit;
 
@@ -552,12 +549,12 @@ public static class PerformanceManager
 
     private static void AutoPerf(double processValueFPS)
     {
-            //if (PlatformManager.HWiNFO.GetAutoPerformanceSensors(
-            //    out var cpuFrequency, out var cpuEffective,
-            //    out var gpuFrequency, out var gpuEffective))
+        //if (PlatformManager.HWiNFO.GetAutoPerformanceSensors(
+        //    out var cpuFrequency, out var cpuEffective,
+        //    out var gpuFrequency, out var gpuEffective))
 
-            AutoCPUClock = (double)PlatformManager.LibreHardwareMonitor.CPUClock;
-        AutoGPUClock = (double)PlatformManager.LibreHardwareMonitor.GPUClock;
+        AutoCPUClock = Math.Clamp((double)PlatformManager.LibreHardwareMonitor.CPUClock, 500, IDevice.GetCurrent().CpuClock);
+        AutoGPUClock = Math.Clamp((double)PlatformManager.LibreHardwareMonitor.GPUClock, IDevice.GetCurrent().GfxClock[0], IDevice.GetCurrent().GfxClock[1]);
 
 
         var processFPSTarget = AutoTDPTargetFPS;//Math.Min(fpsHistory.Max(), AutoTDPTargetFPS);
@@ -566,13 +563,14 @@ public static class PerformanceManager
         var fpsDipper = AutoTDPDipper(processValueFPS, fpsTarget);
 
         //var processValueCPUUse = Math.Clamp(cpuEffective * 100 / cpuFrequency, .1d, 100.0d);
-        var processValueCPUUse = (double)PlatformManager.LibreHardwareMonitor.CPULoad;
+        var processValueCPUUse = Math.Clamp((double)PlatformManager.LibreHardwareMonitor.CPULoad, .1d, 100d);
         var fpsCPU = Math.Max(processValueFPS * 2 - fpsTarget, Math.Max(fpsTarget / 2, 1));
         AutoCpu(fpsTarget / fpsCPU, processValueCPUUse, AutoTargetCPU);
 
         //var processValueGPUUse = Math.Clamp(gpuEffective * 100 / gpuFrequency, .1d, 100.0d);
-        //var fpsGPU = Math.Max(processValueFPS, Math.Max(fpsTarget * .8, 1));
-        //AutoGpu(fpsDipper > 0 ? 1d : fpsTarget / fpsGPU, processValueGPUUse, AutoTargetGPU);
+        var processValueGPUUse = Math.Clamp((double)PlatformManager.LibreHardwareMonitor.GPULoad, .1d, 100d);
+        var fpsGPU = Math.Max(processValueFPS, Math.Max(fpsTarget * .8, 1));
+        AutoGpu(fpsDipper > 0 ? 1d : fpsTarget / fpsGPU, processValueGPUUse, AutoTargetGPU);
 
         //AutoTdp(fpsDipper, processValueFPS, processFPSTarget);
 

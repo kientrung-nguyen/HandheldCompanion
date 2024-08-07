@@ -234,7 +234,7 @@ namespace HandheldCompanion.Managers
 
                 // send toast
                 // todo: localize me
-                ToastManager.SendToast($"Power Profile {profile.FileName} deleted");
+                ToastManager.SendToast("Power Profile", $"{profile.FileName} deleted");
 
                 LogManager.LogInformation("Deleted power profile {0}", profilePath);
             }

@@ -1,9 +1,11 @@
 ﻿using HandheldCompanion.Views;
-using HandheldCompanion.Views.Classes;
+using HandheldCompanion.Views.Windows;
 using Microsoft.Toolkit.Uwp.Notifications;
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
@@ -21,6 +23,19 @@ public static class ToastManager
     static ToastManager()
     {
     }
+
+    public static void SendToast(string title, ToastIcons? icon = null)
+    {
+        if (!IsEnabled)
+            return;
+        Task.Run(async () =>
+        {
+            MainWindow.overlayToast.RunToast(title, icon);
+            await Task.Delay(100);
+        });
+    }
+
+    
     public static void SendToast(string title, string content = "", string img = "Toast")
     {
         if (!IsEnabled)
@@ -74,8 +89,9 @@ public static class ToastManager
         });
 
         ToastThread.Start();
-    }
 
+    }
+    
     public static void Start()
     {
         IsInitialized = true;

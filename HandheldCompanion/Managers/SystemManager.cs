@@ -1,10 +1,7 @@
-﻿using Microsoft.Win32;
-using Microsoft.WindowsAPICodePack.ApplicationServices;
+﻿using HandheldCompanion.Views.Windows;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Management;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using SystemPowerManager = Windows.System.Power.PowerManager;
@@ -32,6 +29,9 @@ public static class SystemManager
 
     private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
     private static SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
+
+
+    private static PowerLineStatus isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
 
     private static bool isInitialized;
 
@@ -71,7 +71,19 @@ public static class SystemManager
         { "BatterySaver7", "\uE86A" },
         { "BatterySaver8", "\uE86B" },
         { "BatterySaver9", "\uEA94" },
-        { "BatterySaver10", "\uEA95" }
+        { "BatterySaver10", "\uEA95" },
+
+        { "VerticalBattery0", "\uf5f2" },
+        { "VerticalBattery1", "\uf5f3" },
+        { "VerticalBattery2", "\uf5f4" },
+        { "VerticalBattery3", "\uf5f5" },
+        { "VerticalBattery4", "\uf5f6" },
+        { "VerticalBattery5", "\uf5f7" },
+        { "VerticalBattery6", "\uf5f8" },
+        { "VerticalBattery7", "\uf5f9" },
+        { "VerticalBattery8", "\uf5fa" },
+        { "VerticalBattery9", "\uf5fb" },
+        { "VerticalBattery10", "\uEA9c" }
     };
 
     static SystemManager()
@@ -95,128 +107,15 @@ public static class SystemManager
     #endregion
 
 
-    public static decimal? batteryRate = 0;
-    public static decimal batteryHealth = -1;
-    public static decimal batteryCapacity = -1;
-
-    public static decimal? designCapacity;
-    public static decimal? fullCapacity;
-    public static decimal? chargeCapacity;
-
-    public static void ReadBatterySensors()
-    {
-        ReadFullChargeCapacity();
-        GetBatteryStatus();
-
-        if (fullCapacity > 0 && chargeCapacity > 0)
-        {
-            batteryCapacity = Math.Min(100, ((decimal)chargeCapacity / (decimal)fullCapacity) * 100);
-        }
-    }
-
-    public static void GetBatteryStatus()
-    {
-        batteryRate = 0;
-        chargeCapacity = 0;
-
-        try
-        {
-            ManagementScope scope = new ManagementScope("root\\WMI");
-            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryStatus");
-
-            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
-            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
-            {
-                chargeCapacity = Convert.ToDecimal(obj["RemainingCapacity"]);
-                decimal chargeRate = Convert.ToDecimal(obj["ChargeRate"]);
-                decimal dischargeRate = Convert.ToDecimal(obj["DischargeRate"]);
-
-                if (chargeRate > 0)
-                    batteryRate = chargeRate / 1000;
-                else
-                    batteryRate = -dischargeRate / 1000;
-            }
-
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Discharge Reading: " + ex.Message);
-        }
-
-    }
-    public static void ReadFullChargeCapacity()
-    {
-        if (fullCapacity > 0) return;
-
-        try
-        {
-            ManagementScope scope = new ManagementScope("root\\WMI");
-            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryFullChargedCapacity");
-
-            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
-            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
-            {
-                fullCapacity = Convert.ToDecimal(obj["FullChargedCapacity"]);
-            }
-
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Full Charge Reading: " + ex.Message);
-        }
-
-    }
-
-    public static void ReadDesignCapacity()
-    {
-        if (designCapacity > 0) return;
-
-        try
-        {
-            ManagementScope scope = new ManagementScope("root\\WMI");
-            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryStaticData");
-
-            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
-            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
-            {
-                designCapacity = Convert.ToDecimal(obj["DesignedCapacity"]);
-            }
-
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Design Capacity Reading: " + ex.Message);
-        }
-    }
-
-    public static void RefreshBatteryHealth()
-    {
-        batteryHealth = GetBatteryHealth() * 100;
-    }
-
-
-    public static decimal GetBatteryHealth()
-    {
-        if (designCapacity is null)
-        {
-            ReadDesignCapacity();
-        }
-        ReadFullChargeCapacity();
-
-        if (designCapacity is null || fullCapacity is null || designCapacity == 0 || fullCapacity == 0)
-        {
-            return -1;
-        }
-
-        decimal health = (decimal)fullCapacity / (decimal)designCapacity;
-        LogManager.LogInformation("Design Capacity: " + designCapacity + "mWh, Full Charge Capacity: " + fullCapacity + "mWh, Health: " + health + "%");
-
-        return health;
-    }
-
     private static void BatteryStatusChanged(object sender, object e)
     {
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
+        if (isPlugged != SystemInformation.PowerStatus.PowerLineStatus)
+        {
+            var currentProfile = ProfileManager.GetCurrent();
+            ToastManager.SendToast($"{currentProfile.Name}", SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online ? ToastIcons.Charger : ToastIcons.Battery);
+            isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
+        }
     }
 
     public static void Start()
@@ -269,7 +168,50 @@ public static class SystemManager
                 return;
         }
 
-        LogManager.LogDebug("Device power mode set to {0}", e.Mode);
+        string cpuTemp = "";
+        string gpuTemp = "";
+        string battery = "";
+
+        if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
+            cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
+
+        if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
+            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
+
+        if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
+            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value)}%";
+
+        if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null)
+            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryUsage.Value / 1024, 1)}GB";
+
+        if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
+            gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
+
+        if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
+            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
+
+        if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
+            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value)}%";
+
+        if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null)
+            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
+            battery = $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity)}%";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
+            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+        else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
+            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
+            battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+
+        string trayTip = $"CPU{cpuTemp}";
+        if (gpuTemp.Length > 0) trayTip += "; GPU" + gpuTemp;
+        if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"; FAN: {PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
+        if (battery.Length > 0) trayTip += "; BAT" + battery;
+        LogManager.LogDebug("Device power mode set to {0} {1}", e.Mode, trayTip);
 
         SystemRoutine();
     }
@@ -287,8 +229,50 @@ public static class SystemManager
             default:
                 return;
         }
+        string cpuTemp = "";
+        string gpuTemp = "";
+        string battery = "";
 
-        LogManager.LogDebug("Session switched to {0}", e.Reason);
+        if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
+            cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
+
+        if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
+            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
+
+        if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
+            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value)}%";
+
+        if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null)
+            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryUsage.Value / 1024, 1)}GB";
+
+        if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
+            gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
+
+        if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
+            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
+
+        if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
+            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value)}%";
+
+        if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null)
+            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
+            battery = $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity)}%";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
+            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+        else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
+            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
+            battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+
+        string trayTip = $"CPU{cpuTemp}";
+        if (gpuTemp.Length > 0) trayTip += "; GPU" + gpuTemp;
+        if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"; FAN: {PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
+        if (battery.Length > 0) trayTip += "; BAT" + battery;
+        LogManager.LogDebug("Session switched to {0} {1}", e.Reason, trayTip);
 
         SystemRoutine();
     }

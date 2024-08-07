@@ -5153,6 +5153,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Muted.
+        /// </summary>
+        public static string Muted {
+            get {
+                return ResourceManager.GetString("Muted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to No notifications yet.
         /// </summary>
         public static string NotificationsPage_NothingToSee {
@@ -9507,6 +9516,15 @@ namespace HandheldCompanion.Properties {
         public static string TriggersPage_Trigger_Right_Button {
             get {
                 return ResourceManager.GetString("TriggersPage_Trigger_Right_Button", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unmuted.
+        /// </summary>
+        public static string Unmuted {
+            get {
+                return ResourceManager.GetString("Unmuted", resourceCulture);
             }
         }
         

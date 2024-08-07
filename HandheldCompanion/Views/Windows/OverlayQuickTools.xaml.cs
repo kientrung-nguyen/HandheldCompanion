@@ -1,11 +1,10 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
 using iNKORE.UI.WPF.Modern.Controls;
-using SharpDX.Direct3D9;
-using SharpDX.Multimedia;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,7 +21,6 @@ using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
 using Application = System.Windows.Application;
-using Button = System.Windows.Controls.Button;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Page = System.Windows.Controls.Page;
 using PowerLineStatus = System.Windows.Forms.PowerLineStatus;
@@ -68,7 +66,14 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private bool autoHide;
     private bool isClosing;
-    private readonly DispatcherTimer clockUpdateTimer;
+    private readonly DispatcherTimer clockUpdateTimer = new(
+        DispatcherPriority.Normal,
+        Dispatcher.CurrentDispatcher
+        )
+    {
+        IsEnabled = false,
+        Interval = TimeSpan.FromMilliseconds(1000)
+    };
 
     public QuickHomePage homePage;
     public QuickDevicePage devicePage;
@@ -79,7 +84,6 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private static OverlayQuickTools currentWindow;
     private string preNavItemTag;
-
 
     private CrossThreadLock brightnessLock = new();
     private CrossThreadLock volumeLock = new();
@@ -94,10 +98,6 @@ public partial class OverlayQuickTools : GamepadWindow
 
         PreviewKeyDown += HandleEsc;
 
-        clockUpdateTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(2000)
-        };
         clockUpdateTimer.Tick += UpdateTime;
 
         WMPaintTimer.Elapsed += WMPaintTimer_Elapsed;
@@ -112,6 +112,9 @@ public partial class OverlayQuickTools : GamepadWindow
         MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
 
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        CPUName.Text = IDevice.GetCurrent().Processor.Split("w/").First();
+        GPUName.Text = IDevice.GetCurrent().GraphicName;
 
         // create pages
         homePage = new("quickhome");
@@ -184,18 +187,19 @@ public partial class OverlayQuickTools : GamepadWindow
         string FriendlyName = SettingsManager.GetString("QuickToolsScreen");
 
         // Attempt to find the screen with the specified friendly name
-        DesktopScreen friendlyScreen = MultimediaManager.AllScreens.Values.FirstOrDefault(a => a.FriendlyName.Equals(FriendlyName)) ?? MultimediaManager.PrimaryDesktop;
+        var friendlyScreen = MultimediaManager.AllScreens.Values.FirstOrDefault(a => a.FriendlyName.Equals(FriendlyName)) ?? MultimediaManager.PrimaryDesktop;
 
         // Find the corresponding Screen object
-        Screen targetScreen = Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName.Equals(friendlyScreen.screen.DeviceName, StringComparison.OrdinalIgnoreCase));
+        var targetScreen = Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName.Equals(friendlyScreen.screen.DeviceName, StringComparison.OrdinalIgnoreCase));
 
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
             // Common settings across cases 0 and 1
+
             MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfWorkingArea.Width);
             Width = (int)Math.Max(MinWidth, SettingsManager.GetDouble("QuickToolsWidth"));
-            MaxHeight = Math.Min(targetScreen.WpfWorkingArea.Height - (_Margin * 2), _MaxHeight);
+            MaxHeight = Math.Min(targetScreen.WpfWorkingArea.Height - (_Margin * 0), _MaxHeight);
             Height = MinHeight = MaxHeight;
             WindowStyle = _Style;
 
@@ -203,12 +207,12 @@ public partial class OverlayQuickTools : GamepadWindow
             {
                 case 0: // Left
                     this.SetWindowPosition(WindowPositions.BottomLeft, targetScreen);
-                    Left += _Margin;
+                    Left += _Margin * 0;
                     break;
 
                 case 1: // Right
                     this.SetWindowPosition(WindowPositions.BottomRight, targetScreen);
-                    Left -= _Margin;
+                    Left -= _Margin * 0;
                     break;
 
                 case 2: // Maximized
@@ -222,7 +226,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
             // Common operation for case 0 and 1 after switch
             //Top = targetScreen.WpfBounds.Bottom - Height - _Margin;
-            Top = _Margin;
+            Top = _Margin * 0;
         });
     }
 
@@ -252,13 +256,16 @@ public partial class OverlayQuickTools : GamepadWindow
             }
 
             // get battery key
-            var keyValue = (int)Math.Truncate(status.BatteryLifePercent * 10);
+            var keyValue = PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0
+                ? (int)PlatformManager.LibreHardwareMonitor.BatteryCapacity / 10
+                : (int)Math.Truncate(status.BatteryLifePercent * 10);
 
             // set key
             var key = $"Battery{keyStatus}{keyValue}";
 
             if (SystemManager.PowerStatusIcon.TryGetValue(key, out var glyph))
                 BatteryIndicatorIcon.Glyph = glyph;
+
         });
     }
 
@@ -503,7 +510,7 @@ public partial class OverlayQuickTools : GamepadWindow
         // Add handler for ContentFrame navigation.
         ContentFrame.Navigated += On_Navigated;
         // NavView doesn't load any page by default, so load home page.
-        navView.SelectedItem = navView.MenuItems[1];
+        navView.SelectedItem = navView.MenuItems[0];
 
         // If navigation occurs on SelectionChanged, this isn't needed.
         // Because we use ItemInvoked to navigate, we need to call Navigate
@@ -550,25 +557,21 @@ public partial class OverlayQuickTools : GamepadWindow
     }
 
     static long lastRefresh;
-    
+
     private void UpdateTime(object? sender, EventArgs e)
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
             Time.Text = $"{DateTime.Now.ToString(CultureInfo.InstalledUICulture.DateTimeFormat.ShortTimePattern).ToLowerInvariant()}";
-            ShowBatteryCharge();
-            ShowCPUText();
+            ShowBattery();
+            ShowOverlay();
         });
     }
 
-    private void ShowCPUText()
+    private void ShowOverlay()
     {
-        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 2000) return;
+        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 1000) return;
         lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-
-        string cpuTemp = "";
-        string gpuTemp = "";
-        string battery = "";
 
         if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
             CPUPower.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
@@ -578,8 +581,14 @@ public partial class OverlayQuickTools : GamepadWindow
 
         if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
         {
-            CPULoad.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value, 1):0.0}%";
+            CPULoad.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value)}%";
             CPULoadRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value, 1);
+        }
+
+        if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null && PlatformManager.LibreHardwareMonitor.MemoryLoad != null)
+        {
+            CPUMemory.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryUsage.Value / 1024, 1)}GB";
+            CPUMemoryRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryLoad.Value, 1);
         }
 
         if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
@@ -590,65 +599,69 @@ public partial class OverlayQuickTools : GamepadWindow
 
         if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
         {
-            GPULoad.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value, 1):0.0}%";
+            GPULoad.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value)}%";
             GPULoadRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value, 1);
         }
 
-        //if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
-        //    battery = $":\t{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity, 1)}%";
+        if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null && PlatformManager.LibreHardwareMonitor.GPUMemoryLoad != null)
+        {
+            GPUMemory.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
+            GPUMemoryRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryLoad.Value, 1);
+        }
 
-        //if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
-        //    battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
-        //else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
-        //    battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
-
-        //if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
-        //    battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
-
-        //string trayTip = $"CPU{cpuTemp}";
-        //if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"\nFAN:\t{PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
-        //if (battery.Length > 0) trayTip += "\nBAT" + battery;
 
     }
 
-    private void ShowBatteryCharge()
+    private void ShowBattery()
     {
-        BatteryIndicatorPercentage.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity, 1)}%";
+        if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
+            BatteryIndicatorPercentage.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity, 1)}%";
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryHealth != -1 && PlatformManager.LibreHardwareMonitor.BatteryFullCapacity > 0)
+        {
+            if (SystemManager.PowerStatusIcon.TryGetValue($"VerticalBattery{(int)(PlatformManager.LibreHardwareMonitor.BatteryHealth / 10)}", out var glyphBatteryHealth))
+                BatteryHealthIndicatorIcon.Glyph = glyphBatteryHealth;
+            BatteryFullCapacity.Text = $"{PlatformManager.LibreHardwareMonitor.BatteryFullCapacity}mWh";
+            BatteryHealth.Text = $"Health: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+        }
 
         if (PlatformManager.LibreHardwareMonitor.BatteryPower == 0)
         {
             BatteryIndicatorLifeRemaining.Visibility = Visibility.Collapsed;
+            BatteryLifePanel.Visibility = Visibility.Collapsed;
+            BatteryPowerRatePanel.Visibility = Visibility.Collapsed;
         }
         else
         {
-
+            BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
+            BatteryLifePanel.Visibility = Visibility.Visible;
+            BatteryPowerRatePanel.Visibility = Visibility.Visible;
             if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
             {
-                var batteryLifeFullCharge = (double)(((PlatformManager.LibreHardwareMonitor.BatteryFullCapacity / 1000) - (PlatformManager.LibreHardwareMonitor.BatteryRemainingCapacity / 1000)) / PlatformManager.LibreHardwareMonitor.BatteryPower) * 60d * 60d;
-                var time = TimeSpan.FromSeconds(batteryLifeFullCharge);
+                var batteryLifeFullCharge = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan * 60d;
+                var time = TimeSpan.FromSeconds(batteryLifeFullCharge ?? 0d);
                 string remaining;
                 if (batteryLifeFullCharge >= 3600)
                     remaining = $"{time.Hours}h {time.Minutes}min";
                 else
                     remaining = $"{time.Minutes}min";
-
-                BatteryIndicatorLifeRemaining.Text = $"({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W"}) {remaining} to fully charge";
-                BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
-
+                BatteryPowerRate.Text = Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W";
+                BatteryIndicatorLife.Text = $"{remaining}";
+                BatteryIndicatorLifeRemaining.Text = " utill full";
             }
             else
             {
-                var batteryLifeRemaining = Math.Abs((double)((decimal)PlatformManager.LibreHardwareMonitor.BatteryRemainingCapacity / 1000 / (decimal)PlatformManager.LibreHardwareMonitor.BatteryPower) * 60d * 60d);
-                var time = TimeSpan.FromSeconds(batteryLifeRemaining);
+                var batteryLifeRemaining = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan * 60d;
+                var time = TimeSpan.FromSeconds(batteryLifeRemaining ?? 0d);
 
                 string remaining;
                 if (batteryLifeRemaining >= 3600)
                     remaining = $"{time.Hours}h {time.Minutes}min";
                 else
                     remaining = $"{time.Minutes}min";
-
-                BatteryIndicatorLifeRemaining.Text = $"({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W"}) {remaining} remaining";
-                BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
+                BatteryPowerRate.Text = Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W";
+                BatteryIndicatorLife.Text = $"{remaining}";
+                BatteryIndicatorLifeRemaining.Text = " remaining";
             }
         }
     }
@@ -767,10 +780,13 @@ public partial class OverlayQuickTools : GamepadWindow
             try
             {
                 // UI thread
-                var isMute = MultimediaManager.ToggleMute();
+                var isMute = MultimediaManager.ToggleAudioMute();
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     UpdateVolumeIcon(float.NaN, isMute);
+                    ToastManager.SendToast(
+                        isMute ? Properties.Resources.Muted : Properties.Resources.Unmuted,
+                        isMute ? ToastIcons.VolumeMute : ToastIcons.Volume);
                 });
             }
             finally

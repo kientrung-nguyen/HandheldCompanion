@@ -62,7 +62,7 @@ public class InputsHotkey
         },
         {
             14,
-            new InputsHotkey(InputsHotkeyType.Quicktools, "\uEDA4", "touchscreenToggle", "Segoe Fluent Icons", 20,
+            new InputsHotkey(InputsHotkeyType.Quicktools, "\uE815", "touchscreenToggle", "Segoe Fluent Icons", 20,
                 false, true, null, string.Empty)
         },
 

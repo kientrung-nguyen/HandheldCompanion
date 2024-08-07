@@ -472,7 +472,7 @@ public static class HotkeysManager
                 case "touchscreenToggle":
                     var touchscreenStatus = DeviceManager.ToggleTouchscreen();
                     if (touchscreenStatus is not null)
-                        ToastManager.SendToast(Resources.InputsHotkey_touchscreenToggle + " " + ((bool)touchscreenStatus ? Resources.On : Resources.Off));
+                        ToastManager.SendToast($"{Resources.InputsHotkey_touchscreenToggle} {((bool)touchscreenStatus ? Resources.On : Resources.Off)}", Views.Windows.ToastIcons.Touchscreen);
                     break;
                 case "shortcutKillApp":
                     fProcess?.Process.Kill();
@@ -501,6 +501,7 @@ public static class HotkeysManager
                                 break;
                         }
 
+                        ToastManager.SendToast($"On-Screen Display {currentProfile.OverlayLevel}", Views.Windows.ToastIcons.Game);
                         ProfileManager.UpdateOrCreateProfile(currentProfile, UpdateSource.Background);
                     }
                     break;

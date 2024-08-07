@@ -2,7 +2,6 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
-using HandheldCompanion.Properties;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
@@ -10,10 +9,8 @@ using HandheldCompanion.Views.Pages;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using iNKORE.UI.WPF.TrayIcons;
-using LiveCharts.Wpf.Charts.Base;
-using Microsoft.Diagnostics.Tracing.Parsers.IIS_Trace;
+using iNKORE.UI.WPF.TrayIcons.Interop;
 using Nefarius.Utilities.DeviceManagement.PnP;
-using Sentry;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -24,7 +21,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -33,7 +29,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Navigation;
 using System.Windows.Threading;
-using Windows.Devices.Power;
 using Windows.UI.ViewManagement;
 using static HandheldCompanion.Managers.InputsHotkey;
 using Application = System.Windows.Application;
@@ -69,6 +64,7 @@ public partial class MainWindow : GamepadWindow
     // overlay(s) vars
     public static OverlayModel overlayModel;
     public static OverlayTrackpad overlayTrackpad;
+    public static OverlayToast overlayToast;
     public static OverlayQuickTools overlayquickTools;
 
     public static string CurrentExe, CurrentPath;
@@ -117,13 +113,13 @@ public partial class MainWindow : GamepadWindow
     {
         notifyIconWaitTimer.Stop();
         overlayquickTools.ToggleVisibility();
+        notifyIcon.TrayToolTipResolved.IsOpen = false;
     }
 
     public MainWindow(FileVersionInfo _fileVersionInfo, Assembly CurrentAssembly)
     {
         // initialize splash screen
         SplashScreen = new SplashScreen();
-
         // get first start
         bool FirstStart = SettingsManager.GetBoolean("FirstStart");
 
@@ -164,6 +160,7 @@ public partial class MainWindow : GamepadWindow
 
         notifyIcon = new TrayIcon
         {
+            ToolTipText = Title,
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
             Visibility = Visibility.Collapsed,
             ContextMenu = new ContextMenu
@@ -171,6 +168,7 @@ public partial class MainWindow : GamepadWindow
                 StaysOpen = true
             }
         };
+
         // initialize notifyIcon
         notifyIcon.TrayMouseDoubleClick += (sender, e) =>
         {
@@ -184,24 +182,40 @@ public partial class MainWindow : GamepadWindow
         notifyIcon.TrayLeftMouseDown += (sender, e) =>
         {
             notifyIconWaitTimer.Start();
+            notifyIcon.TrayToolTipResolved.IsOpen = false;
+            sensorTimer.Stop();
+        };
+
+        notifyIcon.TrayRightMouseUp += (sender, e) =>
+        {
+            notifyIcon.ContextMenu.IsOpen = true;
+            notifyIcon.TrayToolTipResolved.IsOpen = false;
+            sensorTimer.Stop();
         };
 
         notifyIcon.TrayMouseMove += (sender, e) =>
         {
-            RefreshSensors();
+            Task.Run(async () =>
+            {
+                RefreshSensors();
+                await Task.Delay(100);
+            });
+
+            if (!sensorTimer.IsEnabled)
+                sensorTimer.Start();
         };
 
         notifyIcon.TrayToolTipOpen += (sender, e) =>
         {
-            sensorTimer.Start();
+            RefreshSensors(true);
+            if (!sensorTimer.IsEnabled)
+                sensorTimer.Start();
         };
 
         notifyIcon.TrayToolTipClose += (sender, e) =>
         {
             sensorTimer.Stop();
         };
-
-
 
         AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow, "MainWindow");
         AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools, "QuickTools");
@@ -322,52 +336,68 @@ public partial class MainWindow : GamepadWindow
     }
 
     static long lastRefresh;
-    static long lastBatteryRefresh;
 
     private static void RefreshSensors(bool force = false)
     {
-        if (!force && Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 2000) return;
-        lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+        if (!notifyIcon.IsTrayIconCreated)
+            return;
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (!force && Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 2000) return;
+            lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
-        string cpuTemp = "";
-        string gpuTemp = "";
-        string battery = "";
+            string cpuTemp = "";
+            string gpuTemp = "";
+            string battery = "";
 
-        if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
-            cpuTemp += $":\t{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
+            if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
+                cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
 
-        if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
-            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
+            if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
+                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
 
-        if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
-            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value, 1):0.0}%";
+            if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
+                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value)}%";
 
-        if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
-            gpuTemp += $":\t{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
+            if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null)
+                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryUsage.Value / 1024, 1)}GB";
 
-        if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
-            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
+            if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
+                gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
 
-        if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
-            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value, 1):0.0}%";
+            if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
+                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
 
-        if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
-            battery = $":\t{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity, 1)}%";
+            if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
+                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value)}%";
 
-        if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
-            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
-        else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
-            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+            if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null)
+                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
 
-        if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
-            battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+            if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
+                battery = $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity)}%";
 
-        string trayTip = $"CPU{cpuTemp}";
-        if (gpuTemp.Length > 0) trayTip += "\nGPU" + gpuTemp;
-        if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"\nFAN:\t{PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
-        if (battery.Length > 0) trayTip += "\nBAT" + battery;
+            if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
+                battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+            else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
+                battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
 
-        notifyIcon.ToolTipText = trayTip;
+            if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
+                battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+
+            string trayTip = $"CPU{cpuTemp}";
+            if (gpuTemp.Length > 0) trayTip += "\nGPU" + gpuTemp;
+            if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"\nFAN: {PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
+            if (battery.Length > 0) trayTip += "\nBAT" + battery;
+
+            notifyIcon.ToolTipText = trayTip;
+
+            var point = TrayInfo.GetTrayLocation(10);
+            notifyIcon.TrayToolTipResolved.Placement = PlacementMode.AbsolutePoint;
+            notifyIcon.TrayToolTipResolved.HorizontalOffset = point.X - 110;
+            notifyIcon.TrayToolTipResolved.VerticalOffset = point.Y - 1;
+
+        });
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -506,6 +536,7 @@ public partial class MainWindow : GamepadWindow
     {
         notifyIcon.Visibility = Visibility.Collapsed;
         notifyIcon.Dispose();
+        notifyIcon = null;
     }
 
     private void AddNotifyIconSeparator()
@@ -614,6 +645,7 @@ public partial class MainWindow : GamepadWindow
         overlayModel = new OverlayModel();
         overlayTrackpad = new OverlayTrackpad();
         overlayquickTools = new OverlayQuickTools();
+        overlayToast = new OverlayToast();
     }
 
     private void GenericDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
@@ -665,14 +697,14 @@ public partial class MainWindow : GamepadWindow
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         // hide splashscreen
-        if (SplashScreen is not null)
-            SplashScreen.Close();
+        SplashScreen?.Close();
 
         // load gamepad navigation maanger
         gamepadFocusManager = new(this, ContentFrame);
 
-        HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
-        source.AddHook(WndProc); // Hook into the window's message loop
+        //HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
+        if (PresentationSource.FromVisual(this) is HwndSource source)
+            source.AddHook(WndProc); // Hook into the window's message loop
 
         // restore window state
         WindowState = SettingsManager.GetBoolean("StartMinimized") ? WindowState.Minimized : (WindowState)SettingsManager.GetInt("MainWindowState");
@@ -903,6 +935,7 @@ public partial class MainWindow : GamepadWindow
 
     private void Window_StateChanged(object sender, EventArgs e)
     {
+        notifyIcon.TrayToolTipResolved.IsOpen = false;
         switch (WindowState)
         {
             case WindowState.Minimized:
@@ -920,6 +953,7 @@ public partial class MainWindow : GamepadWindow
             case WindowState.Maximized:
                 notifyIcon.Visibility = Visibility.Collapsed;
                 ShowInTaskbar = true;
+
 
                 Activate();
                 Topmost = true;  // important

@@ -198,6 +198,7 @@ public abstract class IDevice
     public string SystemModel = string.Empty;
     public string Version = string.Empty;
     public string Processor = string.Empty;
+    public string GraphicName = string.Empty;
     public string ProcessorManufacturer = string.Empty;
     public int NumberOfCores = 0;
     public int NumberOfLogicalProcessors = 0;
@@ -575,6 +576,7 @@ public abstract class IDevice
         device.SystemModel = SystemModel;
         device.Version = Version;
         device.Processor = Processor;
+        device.GraphicName = GraphicName;
         device.ProcessorManufacturer = ProcessorManufacturer;
         device.NumberOfCores = NumberOfCores;
         device.NumberOfLogicalProcessors = NumberOfLogicalProcessors;

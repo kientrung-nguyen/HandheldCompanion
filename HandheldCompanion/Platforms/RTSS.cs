@@ -275,6 +275,7 @@ public class RTSS : IPlatform
         int processId = appEntry is not null ? appEntry.ProcessId : 0;
         appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == processId);
     }
+
     public double GetFramerate(bool refresh = false)
     {
         try
@@ -300,12 +301,12 @@ public class RTSS : IPlatform
         {
             if (refresh)
                 RefreshAppEntry();
-            if (appEntry is null) return uint.MinValue;
+            if (appEntry is null) return 0;
             return appEntry.OSDFrameId;
         }
         catch (InvalidDataException) { }
         catch (FileNotFoundException) { }
-        return uint.MinValue;
+        return 0;
     }
 
     public double GetFrametime(bool refresh = false)
