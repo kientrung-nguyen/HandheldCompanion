@@ -195,12 +195,7 @@ public partial class MainWindow : GamepadWindow
 
         notifyIcon.TrayMouseMove += (sender, e) =>
         {
-            Task.Run(async () =>
-            {
-                RefreshSensors();
-                await Task.Delay(100);
-            });
-
+            RefreshSensors();
             if (!sensorTimer.IsEnabled)
                 sensorTimer.Start();
         };
@@ -215,6 +210,7 @@ public partial class MainWindow : GamepadWindow
         notifyIcon.TrayToolTipClose += (sender, e) =>
         {
             sensorTimer.Stop();
+            notifyIcon.TrayToolTipResolved.IsOpen = false;
         };
 
         AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow, "MainWindow");
@@ -339,8 +335,7 @@ public partial class MainWindow : GamepadWindow
 
     private static void RefreshSensors(bool force = false)
     {
-        if (!notifyIcon.IsTrayIconCreated)
-            return;
+        if (!notifyIcon.IsTrayIconCreated) return;
         Application.Current.Dispatcher.Invoke(() =>
         {
             if (!force && Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 2000) return;
@@ -349,6 +344,7 @@ public partial class MainWindow : GamepadWindow
             string cpuTemp = "";
             string gpuTemp = "";
             string battery = "";
+            string charge = "";
 
             if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
                 cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
@@ -378,23 +374,24 @@ public partial class MainWindow : GamepadWindow
                 battery = $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity)}%";
 
             if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
-                battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+                charge = $"{Properties.Resources.Discharging}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W";
             else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
-                battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
+                charge = $"{Properties.Resources.Charging}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W";
 
             if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
-                battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+                battery += $"\nBattery Health: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
 
             string trayTip = $"CPU{cpuTemp}";
             if (gpuTemp.Length > 0) trayTip += "\nGPU" + gpuTemp;
-            if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"\nFAN: {PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
-            if (battery.Length > 0) trayTip += "\nBAT" + battery;
+            //if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"\nFan {PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
+            if (battery.Length > 0) trayTip += "\nBattery Remaining" + battery;
+            if (charge.Length > 0) trayTip += "\n" + charge;
 
             notifyIcon.ToolTipText = trayTip;
 
             var point = TrayInfo.GetTrayLocation(10);
             notifyIcon.TrayToolTipResolved.Placement = PlacementMode.AbsolutePoint;
-            notifyIcon.TrayToolTipResolved.HorizontalOffset = point.X - 110;
+            notifyIcon.TrayToolTipResolved.HorizontalOffset = point.X - (notifyIcon.TrayToolTipResolved.RenderSize.Width / 3);
             notifyIcon.TrayToolTipResolved.VerticalOffset = point.Y - 1;
 
         });
@@ -935,7 +932,6 @@ public partial class MainWindow : GamepadWindow
 
     private void Window_StateChanged(object sender, EventArgs e)
     {
-        notifyIcon.TrayToolTipResolved.IsOpen = false;
         switch (WindowState)
         {
             case WindowState.Minimized:

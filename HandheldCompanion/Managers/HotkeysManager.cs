@@ -19,6 +19,7 @@ using System.Xml.Linq;
 using Windows.System;
 using static HandheldCompanion.Managers.InputsHotkey;
 using static HandheldCompanion.Managers.InputsManager;
+using static HandheldCompanion.Managers.OSDManager;
 
 namespace HandheldCompanion.Managers;
 
@@ -470,9 +471,18 @@ public static class HotkeysManager
                     }
                     break;
                 case "touchscreenToggle":
-                    var touchscreenStatus = DeviceManager.ToggleTouchscreen();
-                    if (touchscreenStatus is not null)
-                        ToastManager.SendToast($"{Resources.InputsHotkey_touchscreenToggle} {((bool)touchscreenStatus ? Resources.On : Resources.Off)}", Views.Windows.ToastIcons.Touchscreen);
+                    {
+                        var touchscreenStatus = DeviceManager.ToggleTouchscreen();
+                        if (touchscreenStatus is not null)
+                            ToastManager.RunToast($"{Resources.InputsHotkey_touchscreenToggle} {((bool)touchscreenStatus ? Resources.On : Resources.Off)}", Views.Windows.ToastIcons.Touchscreen);
+                    }
+                    break;
+                case "touchpadToggle":
+                    {
+                        var touchpadStatus = DeviceManager.ToggleTouchpad();
+                        if (touchpadStatus is not null)
+                            ToastManager.RunToast($"{Resources.InputsHotkey_touchpadToggle} {((bool)touchpadStatus ? Resources.On : Resources.Off)}", Views.Windows.ToastIcons.Touchscreen);
+                    }
                     break;
                 case "shortcutKillApp":
                     fProcess?.Process.Kill();
@@ -484,7 +494,7 @@ public static class HotkeysManager
                         // .. else (enabled) -> set OSD level to 0
                         var currentProfile = ProfileManager.GetCurrent();
                         int currentOSDLevel = (int)currentProfile.OverlayLevel;
-                            //SettingsManager.GetInt("OnScreenDisplayLevel");
+                        //SettingsManager.GetInt("OnScreenDisplayLevel");
                         int lastOSDLevel = SettingsManager.GetInt("LastOnScreenDisplayLevel");
 
                         switch (currentOSDLevel)
@@ -501,7 +511,7 @@ public static class HotkeysManager
                                 break;
                         }
 
-                        ToastManager.SendToast($"On-Screen Display {currentProfile.OverlayLevel}", Views.Windows.ToastIcons.Game);
+                        ToastManager.RunToast($"On-Screen Display {currentProfile.OverlayLevel}", Views.Windows.ToastIcons.Game);
                         ProfileManager.UpdateOrCreateProfile(currentProfile, UpdateSource.Background);
                     }
                     break;

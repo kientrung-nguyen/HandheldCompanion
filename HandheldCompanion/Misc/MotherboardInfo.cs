@@ -1,15 +1,11 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Views;
 using Newtonsoft.Json;
-using Sentry;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Management;
-using System.Runtime.CompilerServices;
-using System.Security.Policy;
-using System.Windows.Forms.VisualStyles;
 
 namespace HandheldCompanion;
 

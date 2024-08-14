@@ -10,7 +10,7 @@
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickApplications"
     Title="{l:Static resx:Resources.QuickApplicationsPage_Title}"
-    Margin="15,0,0,6"
+    Margin="15,0,12,6"
     d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:QuickApplicationsPageViewModel}"
     d:DesignHeight="1200"

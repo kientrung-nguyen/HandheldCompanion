@@ -1223,11 +1223,11 @@
                                     </Border>
                                 </local:SplitView.Pane>
 
+                                        <!--Background="{DynamicResource NavigationViewContentBackground}"-->
                                 <local:SplitView.Content>
                                     <Border
                                         x:Name="ContentBorder"
                                         Margin="{DynamicResource NavigationViewContentMargin}"
-                                        Background="{DynamicResource NavigationViewContentBackground}"
                                         BorderBrush="{DynamicResource NavigationViewContentGridBorderBrush}"
                                         BorderThickness="{DynamicResource NavigationViewContentGridBorderThickness}"
                                         CornerRadius="{DynamicResource NavigationViewContentGridCornerRadius}">

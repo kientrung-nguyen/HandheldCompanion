@@ -33,7 +33,8 @@ namespace HandheldCompanion
             base.Initialize(ApplicationName, config);
 
             // Get the path from the config parameter, or use a default value
-            string SettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ApplicationName);
+            var SettingsPath = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion"), "config");
+            //string SettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ApplicationName);
             UserConfigPath = Path.Combine(SettingsPath, UserConfigFileName);
 
             if (!Directory.Exists(SettingsPath))

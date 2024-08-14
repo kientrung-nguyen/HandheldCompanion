@@ -18,6 +18,7 @@ public enum ToastIcons
     VolumeMute,
     BrightnessUp,
     BrightnessDown,
+    Nightlight,
     BacklightUp,
     BacklightDown,
     Game,
@@ -53,8 +54,8 @@ public partial class OverlayToast : OverlayWindow
         InitializeComponent();
         dispatcher.Tick += dispatcherElapsed;
         ShowInTaskbar = false;
-        Width = SystemParameters.MaximumWindowTrackWidth;
-        Height = SystemParameters.MaximumWindowTrackHeight;
+        VerticalAlignment = VerticalAlignment.Center;
+        HorizontalAlignment = HorizontalAlignment.Center;
     }
 
     public void RunToast(string text, ToastIcons? icon = null)
@@ -78,23 +79,25 @@ public partial class OverlayToast : OverlayWindow
                 ToastIcons.VolumeDown => "\ue994",
                 ToastIcons.VolumeMute => "\ue74f",
                 ToastIcons.Volume => "\ue767",
-                _ => null
+                ToastIcons.MicrophoneMute => "\uf781",
+                ToastIcons.Microphone => "\ue720",
+                ToastIcons.Nightlight => "\uf08c",
+                _ => "\ue713"
             };
-            ToastText.Visibility = Visibility.Visible;
+            ToastPanel.Visibility = Visibility.Visible;
+            Show();
             dispatcher.Start();
         });
-
-        Application.Current.Dispatcher.Invoke(Show);
     }
 
     private void dispatcherElapsed(object? sender, EventArgs e)
     {
-        Application.Current.Dispatcher.Invoke(() =>
+        Application.Current.Dispatcher.Invoke(async () =>
         {
             dispatcher.Stop();
-            ToastText.Visibility = Visibility.Hidden;
+            ToastPanel.Visibility = Visibility.Hidden;
+            await Task.Delay(150);
+            Hide();
         });
-
-        Application.Current.Dispatcher.Invoke(Hide);
     }
 }

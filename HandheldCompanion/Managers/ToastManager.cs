@@ -24,15 +24,11 @@ public static class ToastManager
     {
     }
 
-    public static void SendToast(string title, ToastIcons? icon = null)
+    public static void RunToast(string title, ToastIcons? icon = null)
     {
         if (!IsEnabled)
             return;
-        Task.Run(async () =>
-        {
-            MainWindow.overlayToast.RunToast(title, icon);
-            await Task.Delay(100);
-        });
+        Task.Run(() => MainWindow.overlayToast.RunToast(title, icon));
     }
 
     

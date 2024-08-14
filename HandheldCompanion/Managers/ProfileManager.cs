@@ -30,7 +30,7 @@ public static class ProfileManager
 
     private static readonly string profilesPath;
 
-    private static bool isInitialized;
+    private static bool IsInitialized;
 
     static ProfileManager()
     {
@@ -78,7 +78,7 @@ public static class ProfileManager
             UpdateOrCreateProfile(defaultProfile, UpdateSource.Creation);
         }
 
-        isInitialized = true;
+        IsInitialized = true;
         Initialized?.Invoke();
 
         // listen to external events when ready
@@ -93,10 +93,10 @@ public static class ProfileManager
 
     public static void Stop()
     {
-        if (!isInitialized)
+        if (!IsInitialized)
             return;
 
-        isInitialized = false;
+        IsInitialized = false;
 
         profileWatcher.Deleted -= ProfileDeleted;
         profileWatcher.Dispose();

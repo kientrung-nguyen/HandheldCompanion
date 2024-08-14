@@ -782,6 +782,25 @@ public static class DeviceManager
         }
     }
 
+    public static bool? ToggleTouchpad()
+    {
+        try
+        {
+            var devices = PnPUtil.GetDeviceDetails("HIDClass");
+            var status = !devices.Any(device => device.Status.Equals("Started", StringComparison.OrdinalIgnoreCase) && device.Description.Contains("touch pad", StringComparison.OrdinalIgnoreCase));
+            if (status)
+                PnPUtil.EnableDevice(devices.First(device => device.Description.Contains("touch pad", StringComparison.OrdinalIgnoreCase)).InstanceID);
+            else
+                PnPUtil.DisableDevice(devices.First(device => device.Description.Contains("touch pad", StringComparison.OrdinalIgnoreCase)).InstanceID);
+            return status;
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError(nameof(ToggleTouchpad) + ": " + ex.Message);
+            return null;
+        }
+    }
+
     public static IList<Tuple<UIntPtr, UIntPtr>>? GetDeviceMemResources(string PNPString)
     {
         int res = CM_Locate_DevNode(out var devInst, PNPString, 0);

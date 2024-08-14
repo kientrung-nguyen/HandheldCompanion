@@ -3,6 +3,8 @@ using HandheldCompanion.Platforms;
 using System;
 using System.Diagnostics;
 using System.Timers;
+using static HandheldCompanion.Managers.OSDManager;
+using LibreHwdMonitor = HandheldCompanion.Platforms.LibreHardwareMonitor;
 
 namespace HandheldCompanion.Managers;
 
@@ -17,8 +19,7 @@ public static class PlatformManager
 
     // misc platforms
     public static RTSS RTSS = new();
-    public static HWiNFO HWiNFO = new();
-    public static Platforms.LibreHardwareMonitor LibreHardwareMonitor = new();
+    public static LibreHwdMonitor LibreHardwareMonitor = new();
 
     private static Timer UpdateTimer;
 
@@ -219,13 +220,6 @@ public static class PlatformManager
 
         if (LibreHardwareMonitor.IsInstalled)
             LibreHardwareMonitor.Stop();
-
-        if (HWiNFO.IsInstalled)
-        {
-            var killHWiNFO = SettingsManager.GetBoolean("PlatformHWiNFOEnabled");
-            HWiNFO.Stop(killHWiNFO);
-            HWiNFO.Dispose();
-        }
 
         IsInitialized = false;
 

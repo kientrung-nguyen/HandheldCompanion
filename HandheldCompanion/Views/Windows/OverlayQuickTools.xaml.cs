@@ -1,15 +1,21 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
 using iNKORE.UI.WPF.Modern.Controls;
+using NAudio.CoreAudioApi;
+using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
@@ -17,6 +23,8 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Navigation;
 using System.Windows.Threading;
+using Windows.Devices.Radios;
+using Windows.Devices.WiFi;
 using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
@@ -87,6 +95,8 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private CrossThreadLock brightnessLock = new();
     private CrossThreadLock volumeLock = new();
+    private CrossThreadLock microphoneLock = new();
+    private CrossThreadLock nightlightLock = new();
 
     public OverlayQuickTools()
     {
@@ -105,9 +115,10 @@ public partial class OverlayQuickTools : GamepadWindow
         // create manager(s)
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
 
-        MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
-        MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
-        MultimediaManager.Initialized += SystemManager_Initialized;
+        MultimediaManager.VolumeNotification += MultimediaManager_VolumeNotification;
+        MultimediaManager.BrightnessNotification += MultimediaManager_BrightnessNotification;
+        MultimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
+        MultimediaManager.Initialized += MultimediaManager_Initialized;
 
         MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
 
@@ -115,6 +126,10 @@ public partial class OverlayQuickTools : GamepadWindow
 
         CPUName.Text = IDevice.GetCurrent().Processor.Split("w/").First();
         GPUName.Text = IDevice.GetCurrent().GraphicName;
+
+        VolumeSupport.IsEnabled = MultimediaManager.HasVolumeSupport();
+        BrightnessSupport.IsEnabled = MultimediaManager.HasBrightnessSupport();
+        NightLightSupport.IsEnabled = MultimediaManager.HasNightLightSupport();
 
         // create pages
         homePage = new("quickhome");
@@ -233,40 +248,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private void PowerManager_PowerStatusChanged(PowerStatus status)
     {
         // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            // get status key
-            var keyStatus = string.Empty;
-            switch (status.PowerLineStatus)
-            {
-                case PowerLineStatus.Online:
-                    keyStatus = "Charging";
-                    break;
-                default:
-                    {
-                        var energy = SystemPowerManager.EnergySaverStatus;
-                        switch (energy)
-                        {
-                            case EnergySaverStatus.On:
-                                keyStatus = "Saver";
-                                break;
-                        }
-                    }
-                    break;
-            }
-
-            // get battery key
-            var keyValue = PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0
-                ? (int)PlatformManager.LibreHardwareMonitor.BatteryCapacity / 10
-                : (int)Math.Truncate(status.BatteryLifePercent * 10);
-
-            // set key
-            var key = $"Battery{keyStatus}{keyValue}";
-
-            if (SystemManager.PowerStatusIcon.TryGetValue(key, out var glyph))
-                BatteryIndicatorIcon.Glyph = glyph;
-
-        });
+        lastBatteryRefresh = 0;
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -413,6 +395,9 @@ public partial class OverlayQuickTools : GamepadWindow
             {
                 case Visibility.Collapsed:
                 case Visibility.Hidden:
+
+                    UpdateTime(this, EventArgs.Empty);
+
                     Show();
                     Focus();
 
@@ -420,7 +405,6 @@ public partial class OverlayQuickTools : GamepadWindow
                         WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
 
                     InvokeGotGamepadWindowFocus();
-
                     clockUpdateTimer.Start();
                     break;
                 case Visibility.Visible:
@@ -557,6 +541,8 @@ public partial class OverlayQuickTools : GamepadWindow
     }
 
     static long lastRefresh;
+    static long lastBatteryRefresh;
+    static long lastRadioRefresh;
 
     private void UpdateTime(object? sender, EventArgs e)
     {
@@ -564,13 +550,14 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             Time.Text = $"{DateTime.Now.ToString(CultureInfo.InstalledUICulture.DateTimeFormat.ShortTimePattern).ToLowerInvariant()}";
             ShowBattery();
-            ShowOverlay();
+            ShowPerformance();
+            ShowRadios();
         });
     }
 
-    private void ShowOverlay()
+    private void ShowPerformance()
     {
-        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 1000) return;
+        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 2000) return;
         lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
         if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
@@ -608,34 +595,143 @@ public partial class OverlayQuickTools : GamepadWindow
             GPUMemory.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
             GPUMemoryRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryLoad.Value, 1);
         }
+    }
 
 
+    private IReadOnlyList<Radio> radios;
+
+    private void ShowRadios()
+    {
+        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRadioRefresh) < 20_000) return;
+        lastRadioRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+        Task.Run(async () =>
+        {
+            // Get the Bluetooth radio
+            radios = await Radio.GetRadiosAsync();
+            // UI thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (radios is null)
+                {
+                    return;
+                }
+
+                Radio? wifiRadio = radios.FirstOrDefault(radio => radio.Kind == RadioKind.WiFi);
+                Radio? bluetoothRadio = radios.FirstOrDefault(radio => radio.Kind == RadioKind.Bluetooth);
+                if (bluetoothRadio is not null)
+                {
+                    BluetoothIcon.Visibility = Visibility.Visible;
+                    BluetoothIcon.Glyph = "\uec41";
+                }
+                else
+                    BluetoothIcon.Visibility = Visibility.Hidden;
+                if (wifiRadio is not null && wifiRadio.State == RadioState.On)
+                {
+                    var wifiAdapters = WiFiAdapter.FindAllAdaptersAsync().GetAwaiter().GetResult();
+                    foreach (var adapter in wifiAdapters)
+                    {
+                        foreach (var network in adapter.NetworkReport.AvailableNetworks)
+                        {
+                            WifiIcon.Glyph = network.SignalBars switch
+                            {
+                                1 => "\uec3c",
+                                2 => "\uec3d",
+                                3 => "\uec3e",
+                                4 or 5 => "\uec3f",
+                                _ => "\uf384"
+                            };
+                            break;
+                        }
+
+                    }
+                }
+                else
+                {
+                    var isEthernet = false;
+                    var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+                    foreach (NetworkInterface networkInterface in networkInterfaces)
+                    {
+                        if (networkInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet &&
+                            networkInterface.OperationalStatus == OperationalStatus.Up)
+                        {
+                            WifiIcon.Glyph = "\ue839";
+                            isEthernet = true;
+                            break;
+                        }
+                    }
+
+                    if (!isEthernet)
+                    {
+                        WifiIcon.Glyph = "\uf384";
+                    }
+
+
+                }
+            });
+        });
     }
 
     private void ShowBattery()
     {
+        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastBatteryRefresh) < 5_000) return;
+        lastBatteryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
         if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
+        {
             BatteryIndicatorPercentage.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity, 1)}%";
+            // get status key
+            var keyStatus = string.Empty;
+            var powerStatus = System.Windows.Forms.SystemInformation.PowerStatus;
+            switch (powerStatus.PowerLineStatus)
+            {
+                case PowerLineStatus.Online:
+                    keyStatus = "Charging";
+                    break;
+                default:
+                    {
+                        var energy = SystemPowerManager.EnergySaverStatus;
+                        switch (energy)
+                        {
+                            case EnergySaverStatus.On:
+                                keyStatus = "Saver";
+                                break;
+                        }
+                    }
+                    break;
+            }
 
-        if (PlatformManager.LibreHardwareMonitor.BatteryHealth != -1 && PlatformManager.LibreHardwareMonitor.BatteryFullCapacity > 0)
+            // get battery key
+            var keyValue = (int)PlatformManager.LibreHardwareMonitor.BatteryCapacity / 10;
+
+            // set key
+            var key = $"Battery{keyStatus}{keyValue}";
+
+            if (SystemManager.PowerStatusIcon.TryGetValue(key, out var glyph))
+                BatteryIndicatorIcon.Glyph = glyph;
+        }
+
+        if (PlatformManager.LibreHardwareMonitor.BatteryPower != null &&
+            PlatformManager.LibreHardwareMonitor.BatteryHealth != null &&
+            PlatformManager.LibreHardwareMonitor.BatteryHealth != -1 &&
+            PlatformManager.LibreHardwareMonitor.BatteryFullCapacity > 0)
         {
             if (SystemManager.PowerStatusIcon.TryGetValue($"VerticalBattery{(int)(PlatformManager.LibreHardwareMonitor.BatteryHealth / 10)}", out var glyphBatteryHealth))
                 BatteryHealthIndicatorIcon.Glyph = glyphBatteryHealth;
-            BatteryFullCapacity.Text = $"{PlatformManager.LibreHardwareMonitor.BatteryFullCapacity}mWh";
-            BatteryHealth.Text = $"Health: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+            BatteryDesignCapacity.Text = $"{PlatformManager.LibreHardwareMonitor.BatteryFullCapacity}mWh";
+            BatteryHealth.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+            BatteryHealthRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1);
+            BatteryPower.Text = Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W";
         }
 
         if (PlatformManager.LibreHardwareMonitor.BatteryPower == 0)
         {
             BatteryIndicatorLifeRemaining.Visibility = Visibility.Collapsed;
             BatteryLifePanel.Visibility = Visibility.Collapsed;
-            BatteryPowerRatePanel.Visibility = Visibility.Collapsed;
         }
         else
         {
             BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
             BatteryLifePanel.Visibility = Visibility.Visible;
-            BatteryPowerRatePanel.Visibility = Visibility.Visible;
             if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
             {
                 var batteryLifeFullCharge = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan * 60d;
@@ -645,7 +741,6 @@ public partial class OverlayQuickTools : GamepadWindow
                     remaining = $"{time.Hours}h {time.Minutes}min";
                 else
                     remaining = $"{time.Minutes}min";
-                BatteryPowerRate.Text = Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W";
                 BatteryIndicatorLife.Text = $"{remaining}";
                 BatteryIndicatorLifeRemaining.Text = " utill full";
             }
@@ -659,7 +754,6 @@ public partial class OverlayQuickTools : GamepadWindow
                     remaining = $"{time.Hours}h {time.Minutes}min";
                 else
                     remaining = $"{time.Minutes}min";
-                BatteryPowerRate.Text = Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W";
                 BatteryIndicatorLife.Text = $"{remaining}";
                 BatteryIndicatorLifeRemaining.Text = " remaining";
             }
@@ -668,7 +762,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
     #endregion
 
-    private void SystemManager_Initialized()
+    private void MultimediaManager_Initialized()
     {
         if (MultimediaManager.HasBrightnessSupport())
         {
@@ -678,7 +772,19 @@ public partial class OverlayQuickTools : GamepadWindow
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     SliderBrightness.IsEnabled = true;
-                    SliderBrightness.Value = MultimediaManager.GetBrightness();
+                    SliderBrightness.Value = ScreenBrightness.Get();
+                });
+            }
+        }
+
+        if (MultimediaManager.HasNightLightSupport())
+        {
+            lock (brightnessLock)
+            {
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    LightIcon.Glyph = NightLight.Get() == 0 ? "\uE706" : "\uf08c";
                 });
             }
         }
@@ -690,14 +796,42 @@ public partial class OverlayQuickTools : GamepadWindow
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     SliderVolume.IsEnabled = true;
-                    SliderVolume.Value = Math.Round(MultimediaManager.GetVolume());
-                    UpdateVolumeIcon((float)SliderVolume.Value, MultimediaManager.GetMute());
+                    SliderVolume.Value = SoundControl.AudioGet();
+                    UpdateVolumeIcon((float)SliderVolume.Value, SoundControl.AudioMuted() ?? true);
+
+                    MicIcon.Glyph = SoundControl.MicrophoneMuted() ?? true ? "\uf781" : "\ue720";
+                });
+            }
+
+            lock (microphoneLock)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MicIcon.Glyph = SoundControl.MicrophoneMuted() ?? true ? "\uf781" : "\ue720";
                 });
             }
         }
     }
 
-    private void SystemManager_BrightnessNotification(int brightness)
+    private void MultimediaManager_NightLightNotification(bool enabled)
+    {
+        if (nightlightLock.TryEnter())
+        {
+            try
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    LightIcon.Glyph = !enabled ? "\uE706" : "\uf08c";
+                });
+            }
+            finally
+            {
+                nightlightLock.Exit();
+            }
+        }
+    }
+
+    private void MultimediaManager_BrightnessNotification(int brightness)
     {
         if (brightnessLock.TryEnter())
         {
@@ -716,25 +850,47 @@ public partial class OverlayQuickTools : GamepadWindow
         }
     }
 
-    private void SystemManager_VolumeNotification(float volume)
+    private void MultimediaManager_VolumeNotification(DataFlow flow, float volume, bool isMute)
     {
-        if (volumeLock.TryEnter())
+        switch (flow)
         {
-            try
-            {
-                // UI thread
-                var isMute = MultimediaManager.GetMute();
-                Application.Current.Dispatcher.Invoke(() =>
+            case DataFlow.Render:
+                if (volumeLock.TryEnter())
                 {
-                    UpdateVolumeIcon(volume, isMute);
-                    SliderVolume.Value = Math.Round(volume);
-                });
-            }
-            finally
-            {
-                volumeLock.Exit();
-            }
+                    try
+                    {
+                        // UI thread
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            UpdateVolumeIcon(volume, isMute);
+                            SliderVolume.Value = Math.Round(volume);
+                        });
+                    }
+                    finally
+                    {
+                        volumeLock.Exit();
+                    }
+                }
+                break;
+            case DataFlow.Capture:
+                if (microphoneLock.TryEnter())
+                {
+                    try
+                    {
+                        // UI thread
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MicIcon.Glyph = isMute ? "\uf781" : "\ue720";
+                        });
+                    }
+                    finally
+                    {
+                        microphoneLock.Exit();
+                    }
+                }
+                break;
         }
+
     }
 
     private void SliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -780,13 +936,14 @@ public partial class OverlayQuickTools : GamepadWindow
             try
             {
                 // UI thread
-                var isMute = MultimediaManager.ToggleAudioMute();
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    UpdateVolumeIcon(float.NaN, isMute);
-                    ToastManager.SendToast(
-                        isMute ? Properties.Resources.Muted : Properties.Resources.Unmuted,
-                        isMute ? ToastIcons.VolumeMute : ToastIcons.Volume);
+                    var isMute = SoundControl.ToggleAudio();
+                    UpdateVolumeIcon(SoundControl.AudioGet(), isMute ?? true);
+                    if (isMute is not null)
+                        ToastManager.RunToast(
+                            isMute.Value ? Properties.Resources.Muted : Properties.Resources.Unmuted,
+                            isMute.Value ? ToastIcons.VolumeMute : ToastIcons.Volume);
                 });
             }
             finally
@@ -816,6 +973,51 @@ public partial class OverlayQuickTools : GamepadWindow
             hwndSource.AddHook(WndProc);
             hwndSource.CompositionTarget.RenderMode = RenderMode.Default;
             WinAPI.SetWindowPos(hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+        }
+    }
+
+    private void MicButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (microphoneLock.TryEnter())
+        {
+            try
+            {
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var isMute = SoundControl.ToggleMicrophone();
+                    MicIcon.Glyph = (isMute ?? true) ? "\uf781" : "\ue720";
+                    if (isMute is not null)
+                        ToastManager.RunToast(
+                            isMute.Value ? Properties.Resources.Muted : Properties.Resources.Unmuted,
+                            isMute.Value ? ToastIcons.MicrophoneMute : ToastIcons.Microphone);
+                });
+            }
+            finally
+            {
+                microphoneLock.Exit();
+            }
+        }
+    }
+
+    private void BrightnessButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (nightlightLock.TryEnter())
+        {
+            try
+            {
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var isEnabled = NightLight.Toggle();
+                    if (isEnabled is not null)
+                        LightIcon.Glyph = !isEnabled.Value ? "\uE706" : "\uf08c";
+                });
+            }
+            finally
+            {
+                nightlightLock.Exit();
+            }
         }
     }
 }

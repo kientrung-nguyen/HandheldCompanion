@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using static HandheldCompanion.Managers.OSDManager;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Platforms;

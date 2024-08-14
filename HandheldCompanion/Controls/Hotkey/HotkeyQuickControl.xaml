@@ -11,14 +11,19 @@
 
     <ui:SimpleStackPanel Name="MainPanel" Spacing="6">
         <Button Name="QuickButton" HorizontalAlignment="Stretch">
-            <ui:FontIcon Name="QuickIcon" Height="40" />
+            <StackPanel>
+                <ui:FontIcon Name="QuickIcon" Height="36"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+                <TextBlock
+                    Name="QuickName"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    TextAlignment="Center"
+                    TextWrapping="NoWrap" />
+            </StackPanel>
         </Button>
 
-        <TextBlock
-            Name="QuickName"
-            HorizontalAlignment="Center"
-            Style="{StaticResource CaptionTextBlockStyle}"
-            TextAlignment="Center"
-            TextWrapping="Wrap" />
     </ui:SimpleStackPanel>
 </UserControl>

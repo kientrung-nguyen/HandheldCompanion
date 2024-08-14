@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
-using Windows.Devices.Bluetooth;
 using Windows.Devices.Radios;
 using Page = System.Windows.Controls.Page;
 
@@ -30,23 +29,47 @@ public partial class QuickDevicePage : Page
 
         MultimediaManager.PrimaryScreenChanged += DesktopManager_PrimaryScreenChanged;
         MultimediaManager.DisplaySettingsChanged += DesktopManager_DisplaySettingsChanged;
+        MultimediaManager.Initialized += MultimediaManager_Initialized;
+        MultimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         ProfileManager.Applied += ProfileManager_Applied;
         ProfileManager.Discarded += ProfileManager_Discarded;
 
         LegionGoPanel.Visibility = IDevice.GetCurrent() is LegionGo ? Visibility.Visible : Visibility.Collapsed;
-        DynamicLightingPanel.IsEnabled = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting);
+        DynamicLightingPanel.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting) ? Visibility.Visible : Visibility.Collapsed;
 
-        NightLightToggle.IsEnabled = NightLight.Supported;
-        NightLightToggle.IsOn = NightLight.Enabled;
+        NightLightSchedule.IsEnabled =
+            NightLightToggle.IsEnabled = MultimediaManager.HasBrightnessSupport();
 
-        // manage events
-        NightLight.Toggled += NightLight_Toggled;
 
         // why is that part of a timer ?
         radioTimer = new(1000);
         radioTimer.Elapsed += RadioTimer_Elapsed;
         radioTimer.Start();
+    }
+
+    private void MultimediaManager_NightLightNotification(bool enabled)
+    {
+        if (MultimediaManager.HasNightLightSupport())
+        {
+            // UI thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                NightLightToggle.IsOn = enabled;
+            });
+        }
+    }
+
+    private void MultimediaManager_Initialized()
+    {
+        if (MultimediaManager.HasNightLightSupport())
+        {
+            // UI thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                NightLightToggle.IsOn = NightLight.Get() == 1;
+            });
+        }
     }
 
     public QuickDevicePage(string Tag) : this()
@@ -82,7 +105,6 @@ public partial class QuickDevicePage : Page
             var canChangeDisplay = !profile.IntegerScalingEnabled;
             DisplayStack.IsEnabled = canChangeDisplay;
             ResolutionOverrideStack.Visibility = canChangeDisplay ? Visibility.Collapsed : Visibility.Visible;
-
         });
     }
 
@@ -98,15 +120,6 @@ public partial class QuickDevicePage : Page
                 DisplayStack.IsEnabled = true;
                 ResolutionOverrideStack.Visibility = Visibility.Collapsed;
             }
-        });
-    }
-
-    private void NightLight_Toggled(bool enabled)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            NightLightToggle.IsOn = enabled;
         });
     }
 
@@ -129,7 +142,7 @@ public partial class QuickDevicePage : Page
         new Task(async () =>
         {
             // Get the Bluetooth adapter
-            BluetoothAdapter adapter = await BluetoothAdapter.GetDefaultAsync();
+            //BluetoothAdapter adapter = await BluetoothAdapter.GetDefaultAsync();
 
             // Get the Bluetooth radio
             radios = await Radio.GetRadiosAsync();
@@ -177,13 +190,10 @@ public partial class QuickDevicePage : Page
         int screenFrequency = MultimediaManager.PrimaryDesktop.GetCurrentFrequency();
         foreach (ComboBoxItem comboBoxItem in ComboBoxFrequency.Items)
         {
-            if (comboBoxItem.Tag is int frequency)
+            if (comboBoxItem.Tag is int frequency && frequency == screenFrequency)
             {
-                if (frequency == screenFrequency)
-                {
-                    ComboBoxFrequency.SelectedItem = comboBoxItem;
-                    break;
-                }
+                ComboBoxFrequency.SelectedItem = comboBoxItem;
+                break;
             }
         }
     }
@@ -287,6 +297,13 @@ public partial class QuickDevicePage : Page
 
     private void NightLightToggle_Toggled(object sender, RoutedEventArgs e)
     {
-        NightLight.Enabled = NightLightToggle.IsOn;
+        var isEnabled = NightLight.Set(NightLightToggle.IsOn);
+        if (isEnabled is not null)
+            ToastManager.RunToast($"Night light {(isEnabled.Value ? Properties.Resources.On : Properties.Resources.Off)}", Windows.ToastIcons.Nightlight);
+    }
+
+    private void NightLightSchedule_Toggled(object sender, RoutedEventArgs e)
+    {
+        PanelNightLightTime.IsEnabled = NightLightSchedule.IsOn;
     }
 }

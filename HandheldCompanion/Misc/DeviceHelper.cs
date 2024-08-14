@@ -186,17 +186,22 @@ namespace HandheldCompanion
 
         [DllImport(setupapi, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool SetupDiCallClassInstaller(DiFunction installFunction, SafeDeviceInfoSetHandle deviceInfoSet, [In()]
-ref DeviceInfoData deviceInfoData);
+        public static extern bool SetupDiCallClassInstaller(
+            DiFunction installFunction,
+            SafeDeviceInfoSetHandle deviceInfoSet,
+            [In()] ref DeviceInfoData deviceInfoData);
 
         [DllImport(setupapi, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetupDiEnumDeviceInfo(SafeDeviceInfoSetHandle deviceInfoSet, int memberIndex, ref DeviceInfoData deviceInfoData);
 
         [DllImport(setupapi, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern SafeDeviceInfoSetHandle SetupDiGetClassDevs([In()]
-ref Guid classGuid, [MarshalAs(UnmanagedType.LPWStr)]
-string enumerator, IntPtr hwndParent, SetupDiGetClassDevsFlags flags);
+        public static extern SafeDeviceInfoSetHandle SetupDiGetClassDevs(
+            [In()] ref Guid classGuid,
+            [MarshalAs(UnmanagedType.LPWStr)] string enumerator,
+            IntPtr hwndParent,
+            SetupDiGetClassDevsFlags flags);
+
 
         /*
         [DllImport(setupapi, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Unicode, SetLastError = true)]

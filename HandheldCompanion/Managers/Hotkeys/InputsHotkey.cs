@@ -60,11 +60,6 @@ public class InputsHotkey
             new InputsHotkey(InputsHotkeyType.Quicktools, "\uE769", "suspendResumeTask", "Segoe Fluent Icons", 20,
                 false, true, null, string.Empty)
         },
-        {
-            14,
-            new InputsHotkey(InputsHotkeyType.Quicktools, "\uE815", "touchscreenToggle", "Segoe Fluent Icons", 20,
-                false, true, null, string.Empty)
-        },
 
         // Microsoft Windows hotkeys
         {
@@ -142,8 +137,6 @@ public class InputsHotkey
                 true, null, string.Empty, false, false)
         },
 
-
-
         // Device specific hotkeys
         {
             41,
@@ -164,6 +157,16 @@ public class InputsHotkey
             44,
             new InputsHotkey(InputsHotkeyType.Device, "\uE993", "decreaseVolume", "Segoe Fluent Icons", 20, true, false,
                 null, "HasVolumeSupport")
+        },
+        {
+            45,
+            new InputsHotkey(InputsHotkeyType.Device, "\uebfc", "touchscreenToggle", "Segoe Fluent Icons", 20,
+                false, true, null, string.Empty)
+        },
+        {
+            46,
+            new InputsHotkey(InputsHotkeyType.Device, "\uEFA5", "touchpadToggle", "Segoe Fluent Icons", 20,
+                false, true, null, string.Empty)
         },
 
         // User customizable hotkeys

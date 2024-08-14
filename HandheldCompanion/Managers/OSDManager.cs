@@ -1,33 +1,26 @@
-﻿using HandheldCompanion.Managers.Desktop;
-using HandheldCompanion.Utils;
-using Hwinfo.SharedMemory;
+﻿using Hwinfo.SharedMemory;
 using PrecisionTiming;
 using RTSSSharedMemoryNET;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Formats.Tar;
-using Windows.Devices.Power;
-using static HandheldCompanion.Platforms.HWiNFO;
 
 namespace HandheldCompanion.Managers;
-public enum OverlayDisplayLevel : short
-{
-    Disabled,
-    Minimal,
-    Extended,
-    Full,
-    Custom,
-    External
-}
-public enum OverlayEntryLevel
-{
-    Disabled, Minimal, Full
-}
-
 public static class OSDManager
 {
-
+    public enum OverlayDisplayLevel : short
+    {
+        Disabled,
+        Minimal,
+        Extended,
+        Full,
+        Custom,
+        External
+    }
+    public enum OverlayEntryLevel
+    {
+        Disabled, Minimal, Full
+    }
 
     public delegate void InitializedEventHandler();
 
@@ -65,10 +58,10 @@ public static class OSDManager
     private static AppEntry OnScreenAppEntry;
     private static List<string> Content;
 
-
     static OSDManager()
     {
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
         PlatformManager.RTSS.Hooked += RTSS_Hooked;
         PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
         ProfileManager.Applied += ProfileManager_Applied;
@@ -189,14 +182,16 @@ public static class OSDManager
 
                 if (OnScreenAppEntry is not null)
                 {
+
                     if (OnScreenAppEntry.ProcessId == processId)
                     {
-                        var osdFrameId = PlatformManager.RTSS.GetFrameId();
+                        var osdFrameId = PlatformManager.RTSS.GetFrameId(true);
                         processOSD.Update(Draw(osdFrameId));
                         OnScreenAppEntryOSDFrameId = osdFrameId;
                     }
                     else
                     {
+                        LogManager.LogDebug($"Draw empty {OnScreenAppEntry.Name} {OnScreenAppEntry.ProcessId} {processId}");
                         processOSD.Update(string.Empty);
                     }
                 }
@@ -211,7 +206,10 @@ public static class OSDManager
     private static string Draw(uint osdFrameId)
     {
         if (OnScreenAppEntryOSDFrameId - osdFrameId == 0)
+        {
+            LogManager.LogDebug("Draw empty");
             return string.Empty;
+        }
 
         Content = [];
         switch (OverlayLevel)
@@ -245,27 +243,20 @@ public static class OSDManager
                     using OverlayRow row1 = new();
 
                     using OverlayEntry GPUentry = new("GPU", "C1");
-                    //AddElementIfFound(GPUentry, SensorElementType.GPUUsage);
-                    //AddElementIfFound(GPUentry, SensorElementType.GPUPower);
                     AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPULoad, "%");
                     AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPUPower, "W");
                     row1.entries.Add(GPUentry);
 
                     using OverlayEntry CPUentry = new("CPU", "C2");
-                    //AddElementIfFound(CPUentry, SensorElementType.CPUUsage);
-                    //AddElementIfFound(CPUentry, SensorElementType.CPUPower);
                     AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPULoad, "%");
                     AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPUPower, "W");
                     row1.entries.Add(CPUentry);
 
                     using OverlayEntry RAMentry = new("RAM", "C3");
-                    //AddElementIfFound(RAMentry, SensorElementType.PhysicalMemoryUsage);
                     AddElementIfNotNull(RAMentry, PlatformManager.LibreHardwareMonitor.MemoryUsage / 1024, "GB", "{0:0.0}");
                     row1.entries.Add(RAMentry);
 
                     using OverlayEntry BATTentry = new("BATT", "C5");
-                    //AddElementIfFound(BATTentry, SensorElementType.BatteryChargeLevel);
-                    //AddElementIfFound(BATTentry, SensorElementType.BatteryRemainingTime);
 
                     AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryCapacity, "%");
                     AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryTimeSpan, "mins");
@@ -294,17 +285,17 @@ public static class OSDManager
                     using OverlayRow rowFps = new();
 
                     using OverlayEntry GPUentry = new("GPU", "C1");
-                    AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPUClock / 1000, "GHz", "{0:0.0}");
+                    AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPUClock, "MHz");
                     AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPULoad, "%");
                     AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPUTemp, "°C");
-                    AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPUPower, "W");
+                    AddElementIfNotNull(GPUentry, PlatformManager.LibreHardwareMonitor.GPUPower, "W", "{0:0.0}");
                     rowGpu.entries.Add(GPUentry);
 
                     using OverlayEntry CPUentry = new("CPU", "C2");
                     AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPUClock / 1000, "GHz", "{0:0.0}");
                     AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPULoad, "%");
-                    AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPUTemp, "°C");
-                    AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPUPower, "W");
+                    AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPUTemp, "°C", "{0:0.0}");
+                    AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPUPower, "W", "{0:0.0}");
                     rowCpu.entries.Add(CPUentry);
 
                     using OverlayEntry FANentry = new("FAN", "C2");
@@ -313,41 +304,37 @@ public static class OSDManager
                     rowFan.entries.Add(FANentry);
 
                     using OverlayEntry RAMentry = new("RAM", "C3");
-                    AddElementIfNotNull(RAMentry, PlatformManager.LibreHardwareMonitor.MemoryUsage / 1024, "GB");
+                    AddElementIfNotNull(RAMentry, PlatformManager.LibreHardwareMonitor.MemoryUsage / 1024, "GB", "{0:0.0}");
                     rowRam.entries.Add(RAMentry);
 
 
                     using OverlayEntry VRAMentry = new("VRAM", "C4");
-                    AddElementIfNotNull(VRAMentry, PlatformManager.LibreHardwareMonitor.GPUMemoryUsage / 1024, "GB");
+                    AddElementIfNotNull(VRAMentry, PlatformManager.LibreHardwareMonitor.GPUMemoryUsage / 1024, "GB", "{0:0.0}");
                     rowVram.entries.Add(VRAMentry);
 
                     using OverlayEntry BATTentry = new("BATT", "C5");
-                    //AddElementIfFound(BATTentry, SensorElementType.BatteryChargeLevel);
-                    //AddElementIfFound(BATTentry, SensorElementType.BatteryChargeRate);
                     //BATTentry.elements.Add(new OverlayEntryElement("<TIME=%X>", ""));
-                    //AddElementIfFound(BATTentry, SensorElementType.BatteryRemainingTime);
-                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryCapacity, "%");
-                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryPower, "W");
-
+                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryCapacity, "%", "{0:0.0}");
+                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryPower, "W", "{0:0.0}");
+                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryTimeSpan, "mins", "{0:0.0}");
                     rowBatt.entries.Add(BATTentry);
 
                     using OverlayEntry TIMEentry = new("", "C0");
-                    TIMEentry.elements.Add(new OverlayEntryElement("<TIME=%a %d/%m/%Y>", ""));
-                    TIMEentry.elements.Add(new OverlayEntryElement("<TIME=%I:%M:%S>", "<TIME=%p>"));
+                    //TIMEentry.elements.Add(new OverlayEntryElement("<TIME=%a %d/%m/%Y>", ""));
+                    //TIMEentry.elements.Add(new OverlayEntryElement("<TIME=%I:%M:%S>", "<TIME=%p>"));
+                    TIMEentry.elements.Add(new OverlayEntryElement("<TIME=%I:%M>", "<TIME=%p>"));
                     rowClock.entries.Add(TIMEentry);
 
                     using OverlayEntry FPSentry = new("<APP>", "C6");
                     FPSentry.elements.Add(new OverlayEntryElement("<FR>", "FPS"));
-                    FPSentry.elements.Add(new OverlayEntryElement("<FT>", "ms"));
+                    //FPSentry.elements.Add(new OverlayEntryElement("<FT>", "ms"));
                     rowFps.entries.Add(FPSentry);
 
 
                     Content.Add(Header + Footer + string.Join("<C0> | <C>", [
                             rowFps.ToString(),
-                            rowGpu.ToString(),
-                            rowVram.ToString(),
-                            rowCpu.ToString(),
-                            rowRam.ToString(),
+                            rowGpu.ToString() + " " + rowVram.ToString(),
+                            rowCpu.ToString() + " " + rowRam.ToString(),
                             rowFan.ToString(),
                             rowBatt.ToString(),
                             rowClock.ToString()
@@ -485,7 +472,7 @@ public static class OSDManager
                         break;
                     case OverlayEntryLevel.Minimal:
                         AddElementIfNotNull(entry, PlatformManager.LibreHardwareMonitor.BatteryCapacity, "%");
-                        
+
                         break;
                 }
                 break;
@@ -520,65 +507,6 @@ public static class OSDManager
     {
         if (value is float fl && !float.IsNaN(fl))
             entry.elements.Add(new OverlayEntryElement(fl, unit, format));
-    }
-
-    private static void AddElementIfFound(OverlayEntry entry, SensorElementType elementType)
-    {
-        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(elementType, out var sensor) && sensor.Type != SensorType.SensorTypeNone)
-        {
-            switch (elementType)
-            {
-                case SensorElementType.PL1:
-                case SensorElementType.PL2:
-                    if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUPower, out var cpuPower) && cpuPower.Type != SensorType.SensorTypeNone)
-                        entry.elements.Add(new OverlayEntryElement()
-                        {
-                            Value = string.Format("{0:00}", (int)Math.Floor(cpuPower.Value / sensor.Value * 100.0d)),
-                            SzUnit = "W"
-                        });
-                    break;
-                case SensorElementType.PL3:
-                    if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.APUStapmPower, out var apuStapmPower) && apuStapmPower.Type != SensorType.SensorTypeNone)
-                        entry.elements.Add(new OverlayEntryElement()
-                        {
-                            Value = string.Format("{0:00}", (int)Math.Floor(apuStapmPower.Value / sensor.Value * 100.0d)),
-                            SzUnit = "W"
-                        });
-                    break;
-                case SensorElementType.CPUPower:
-                case SensorElementType.GPUPower: entry.elements.Add(new OverlayEntryElement(sensor, "{0:0.0}")); break;
-                case SensorElementType.GPUMemoryUsage:
-                case SensorElementType.PhysicalMemoryUsage:
-                    entry.elements.Add(new OverlayEntryElement
-                    {
-                        Value = string.Format("{0:0.0}", sensor.Value / 1024d),
-                        SzUnit = "GB"
-                    });
-                    break;
-
-                case SensorElementType.GPUFrequencyEffective:
-                    {
-                        var gpuElement = new OverlayEntryElement(sensor);
-                        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.GPUFrequency, out var gpuFrequency) && gpuFrequency.Type != SensorType.SensorTypeNone)
-                            gpuElement.Value += "/" + string.Format("{0:000}", gpuFrequency.Value);
-                        entry.elements.Add(gpuElement);
-                    }
-                    break;
-                case SensorElementType.CPUFrequencyEffective:
-                    {
-                        var cpuElement = new OverlayEntryElement(sensor);
-                        if (PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUCoreRatio, out var coreRatio) && coreRatio.Type != SensorType.SensorTypeNone &&
-                            PlatformManager.HWiNFO.MonitoredSensors.TryGetValue(SensorElementType.CPUBusClock, out var busClock) && busClock.Type != SensorType.SensorTypeNone)
-                        {
-                            cpuElement.Value = string.Format("{0:0.0}", sensor.Value / 1000) + "/" + string.Format("{0:0.0}", coreRatio.Value * busClock.Value / 1000);
-                            cpuElement.SzUnit = "GHz";
-                        }
-                        entry.elements.Add(cpuElement);
-                    }
-                    break;
-                default: entry.elements.Add(new OverlayEntryElement(sensor)); break;
-            }
-        }
     }
 
     private static void SettingsManager_SettingValueChanged(string name, object value)

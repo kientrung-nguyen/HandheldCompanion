@@ -4,9 +4,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
-    d:Background="White"
+    xmlns:resx="clr-namespace:HandheldCompanion.Properties"
+    d:Background="Transparent"
+    ui:TitleBar.ExtendViewIntoTitleBar="True"
+    ui:ThemeManager.IsThemeAware="True"
     HorizontalAlignment="Center"
     VerticalAlignment="Center"
     WindowStartupLocation="CenterScreen"
@@ -15,34 +19,52 @@
         HorizontalAlignment="Center" 
         VerticalAlignment="Center">
         <Border
+            Name="ToastPanel"
             d:Height="100"
-            Margin="24,48,24,0"
-            Background="#99000000"
-            CornerRadius="5"
-            Padding="20"
+            Margin="24,96,24,0"
+            d:Visibility="Visible"
+            Visibility="Hidden"
             HorizontalAlignment="Center"
             VerticalAlignment="Center">
-            <ui:SimpleStackPanel 
-                Orientation="Horizontal"
-                Spacing="20">
-                <ui:FontIcon
-                    Name="ToastIcon"
-                    Width="64"
-                    Height="64"
-                    FontSize="60"
-                    Foreground="White"
-                    FontFamily="{DynamicResource SymbolThemeFontFamily}" 
-                    VerticalAlignment="Center" />
-                <TextBlock
-                    Name="ToastText"
-                    FontWeight="Bold"
-                    FontSize="36"
-                    Text="Balanced"
-                    TextWrapping="Wrap"
-                    Visibility="Hidden"
-                    d:Visibility="Visible"
-                    Foreground="White" VerticalAlignment="Center" />
-            </ui:SimpleStackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="100*" />
+                </Grid.RowDefinitions>
+                <Border
+                    CornerRadius="{DynamicResource ControlCornerRadius}"
+                    Background="{DynamicResource ToastOverlayBackgroundBrush}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Opacity="0.6">
+                </Border>
+                <Border Padding="20">
+                    <ui:SimpleStackPanel
+                        Orientation="Horizontal"
+                        Spacing="20" Panel.ZIndex="1">
+                        <ui:FontIcon
+                            Name="ToastIcon"
+                            Width="64"
+                            Height="64"
+                            FontSize="60"
+                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                            FontFamily="{DynamicResource SymbolThemeFontFamily}" 
+                            VerticalAlignment="Center" />
+                        <TextBlock
+                            Name="ToastText"
+                            FontWeight="Bold"
+                            FontSize="36"
+                            Text="Balanced"
+                            TextWrapping="Wrap"
+                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            VerticalAlignment="Center" />
+                    </ui:SimpleStackPanel>
+                </Border>
+            </Grid>
+
         </Border>
 
     </Grid>

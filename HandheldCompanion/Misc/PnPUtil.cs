@@ -128,7 +128,6 @@ namespace HandheldCompanion
                 });
 
             }
-            LogManager.LogInformation(nameof(GetDeviceDetails) + ": " + devices.Count);
             return devices;
         }
 

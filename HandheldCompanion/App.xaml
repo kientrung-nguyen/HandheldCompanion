@@ -19,6 +19,7 @@
                                 <presets:ShapePresetResources />
                             </ResourceDictionary.MergedDictionaries>
                             <Thickness x:Key="SearchBoxBorderThickness">0</Thickness>
+                            <SolidColorBrush x:Key="ToastOverlayBackgroundBrush" Color="White" />
                             <SolidColorBrush x:Key="CustomThemeBrush" Color="Red" />
                             <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFF1F1F1" />
                             <SolidColorBrush x:Key="PageHeaderForegroundBrush" Color="Black" />
@@ -36,6 +37,7 @@
                                 <presets:ShapePresetResources />
                             </ResourceDictionary.MergedDictionaries>
                             <Thickness x:Key="SearchBoxBorderThickness">0</Thickness>
+                            <SolidColorBrush x:Key="ToastOverlayBackgroundBrush" Color="Black" />
                             <SolidColorBrush x:Key="CustomThemeBrush" Color="Yellow" />
                             <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FF232323" />
                             <SolidColorBrush x:Key="PageHeaderForegroundBrush" Color="White" />
@@ -87,6 +89,18 @@
                 </Style.Triggers>
             </Style>
 
+            <Style TargetType="ui:TimePicker">
+                <Style.Triggers>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Opacity" Value="0.20" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <!--  https://github.com/microsoft/fluentui-system-icons  -->
+            <FontFamily x:Key="FluentSystemIcons">pack://application:,,,/HandheldCompanion;component/Resources/Fonts/#FluentSystemIcons-Regular</FontFamily>
+
+            <!--  https://github.com/microsoft/fluentui-system-icons  -->
+            <FontFamily x:Key="FluentSystemIconsFilled">pack://application:,,,/HandheldCompanion;component/Resources/Fonts/#FluentSystemIcons-Filled</FontFamily>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

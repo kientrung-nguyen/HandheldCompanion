@@ -53,12 +53,10 @@ public partial class SettingsPage : Page
         MultimediaManager.Initialized += MultimediaManager_Initialized;
 
         PlatformManager.RTSS.Updated += RTSS_Updated;
-        PlatformManager.HWiNFO.Updated += HWiNFO_Updated;
 
         // force call
         // todo: make PlatformManager static
         RTSS_Updated(PlatformManager.RTSS.Status);
-        HWiNFO_Updated(PlatformManager.HWiNFO.Status);
     }
 
     private void MultimediaManager_ScreenConnected(DesktopScreen screen)
@@ -119,22 +117,6 @@ public partial class SettingsPage : Page
         this.Tag = Tag;
     }
 
-    private void HWiNFO_Updated(PlatformStatus status)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            switch (status)
-            {
-                case PlatformStatus.Ready:
-                    Toggle_HWiNFO.IsEnabled = true;
-                    break;
-                case PlatformStatus.Stalled:
-                    Toggle_HWiNFO.IsOn = false;
-                    break;
-            }
-        });
-    }
     private void RTSS_Updated(PlatformStatus status)
     {
         // UI thread (async)
@@ -470,10 +452,12 @@ public partial class SettingsPage : Page
         MainWindow mainWindow = MainWindow.GetCurrent();
         ThemeManager.SetRequestedTheme(mainWindow, theme);
         ThemeManager.SetRequestedTheme(MainWindow.overlayquickTools, theme);
+        ThemeManager.SetRequestedTheme(MainWindow.overlayToast, theme);
 
         // update default style
         MainWindow.GetCurrent().UpdateDefaultStyle();
         MainWindow.overlayquickTools.UpdateDefaultStyle();
+        MainWindow.overlayToast.UpdateDefaultStyle();
 
         if (!IsLoaded)
             return;
@@ -551,14 +535,6 @@ public partial class SettingsPage : Page
             return;
 
         SettingsManager.SetProperty("PlatformRTSSEnabled", Toggle_RTSS.IsOn);
-    }
-
-    private void Toggle_HWiNFO_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded)
-            return;
-
-        SettingsManager.SetProperty("PlatformHWiNFOEnabled", Toggle_HWiNFO.IsOn);
     }
 
     private void cB_QuicktoolsPosition_SelectionChanged(object sender, SelectionChangedEventArgs e)

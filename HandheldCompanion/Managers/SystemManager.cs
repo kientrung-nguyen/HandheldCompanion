@@ -10,9 +10,17 @@ namespace HandheldCompanion.Managers;
 
 public static class SystemManager
 {
+
+    #region import
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
     // Import SetThreadExecutionState Win32 API and define flags
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     public static extern uint SetThreadExecutionState(uint esFlags);
+
+    #endregion
+
 
     public const uint ES_CONTINUOUS = 0x80000000;
     public const uint ES_SYSTEM_REQUIRED = 0x00000001;
@@ -30,10 +38,9 @@ public static class SystemManager
     private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
     private static SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
 
-
     private static PowerLineStatus isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
 
-    private static bool isInitialized;
+    private static bool IsInitialized;
 
     public static readonly SortedDictionary<string, string> PowerStatusIcon = new()
     {
@@ -99,13 +106,6 @@ public static class SystemManager
         SystemPowerManager.RemainingDischargeTimeChanged += BatteryStatusChanged;
     }
 
-    #region import
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
-
-    #endregion
-
 
     private static void BatteryStatusChanged(object sender, object e)
     {
@@ -113,7 +113,7 @@ public static class SystemManager
         if (isPlugged != SystemInformation.PowerStatus.PowerLineStatus)
         {
             var currentProfile = ProfileManager.GetCurrent();
-            ToastManager.SendToast($"{currentProfile.Name}", SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online ? ToastIcons.Charger : ToastIcons.Battery);
+            ToastManager.RunToast($"{currentProfile.Name}", SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online ? ToastIcons.Charger : ToastIcons.Battery);
             isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
         }
     }
@@ -126,7 +126,7 @@ public static class SystemManager
 
         SystemRoutine();
 
-        isInitialized = true;
+        IsInitialized = true;
         Initialized?.Invoke();
 
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
@@ -136,10 +136,10 @@ public static class SystemManager
 
     public static void Stop()
     {
-        if (!isInitialized)
+        if (!IsInitialized)
             return;
 
-        isInitialized = false;
+        IsInitialized = false;
 
         // stop listening to system events
         SystemEvents.PowerModeChanged -= OnPowerChange;

@@ -20,7 +20,6 @@ public enum PlatformType
     UbisoftConnect = 3,
     GOG = 4,
     RTSS = 5,
-    HWiNFO = 6,
     LibreHardwareMonitor,
 }
 

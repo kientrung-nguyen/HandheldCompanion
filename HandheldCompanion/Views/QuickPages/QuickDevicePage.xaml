@@ -20,7 +20,6 @@
 
         <!--  Device settings  -->
         <ui:SimpleStackPanel
-            Grid.Row="1"
             Margin="0,6,0,6"
             Spacing="6">
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Device settings" />
@@ -45,8 +44,9 @@
                         <DockPanel>
                             <ui:FontIcon
                                 Height="40"
+                                FontSize="20"
                                 HorizontalAlignment="Center"
-                                FontFamily="Segoe Fluent Icons"
+                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xE799;" />
 
                             <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
@@ -90,46 +90,94 @@
                 </Border>
 
                 <Border
-                    Padding="15,12,12,12"
+                    Padding="15,6,12,6"
                     Background="{DynamicResource ExpanderHeaderBackground}"
                     CornerRadius="{DynamicResource ControlCornerRadius}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="6*" />
-                            <ColumnDefinition Width="4*" />
+                            <ColumnDefinition />
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <Border Padding="0,6,0,6">
+                            <Grid>
 
-                        <DockPanel>
-                            <ui:FontIcon
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="6*" />
+                                    <ColumnDefinition Width="4*" />
+                                </Grid.ColumnDefinitions>
+                                <DockPanel>
+                                    <ui:FontIcon
                                 Height="40"
+                                FontSize="20"
                                 HorizontalAlignment="Center"
-                                FontFamily="Segoe UI Symbol"
-                                Glyph="&#xE2CB;" />
+                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                Glyph="&#xe7f8;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.QuickSettingsPage_DisplayFrequency}" />
-                                <TextBlock
+                                    <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.QuickSettingsPage_DisplayFrequency}" />
+                                        <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.QuickSettingsPage_DisplayFrequencyDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
-                        </DockPanel>
-
-                        <ComboBox
+                                    </ui:SimpleStackPanel>
+                                </DockPanel>
+                                <ComboBox
                             Name="ComboBoxFrequency"
                             Grid.Column="1"
                             Margin="6,0,0,0"
                             HorizontalAlignment="Stretch"
                             IsReadOnly="True"
                             SelectionChanged="ComboBoxFrequency_SelectionChanged" />
+                            </Grid>
+                        </Border>
+                        <Separator Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+
+                        <Grid Grid.Row="1">
+                            <Border Padding="0,6,0,6">
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6*" />
+                                        <ColumnDefinition Width="4*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <DockPanel>
+                                        <ui:FontIcon
+                                    Height="40"
+                                    FontSize="20"
+                                    HorizontalAlignment="Center"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xe713;" />
+                                        <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Auto manage refresh rate" />
+                                            <TextBlock
+                                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                         Style="{StaticResource CaptionTextBlockStyle}"
+                                         Text="{l:Static resx:Resources.QuickSettingsPage_DisplayFrequencyDesc}"
+                                         TextWrapping="Wrap" />
+                                        </ui:SimpleStackPanel>
+                                    </DockPanel>
+
+                                    <ui:ToggleSwitch
+                                Name="AutoScreenToggle"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsEnabled="False"
+                                Style="{DynamicResource InvertedToggleSwitchStyle}" />
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </Grid>
                 </Border>
             </ui:SimpleStackPanel>
 
             <Border
-                Padding="15,12,12,12"
+                Padding="15,8,12,8"
                 Background="{DynamicResource ExpanderHeaderBackground}"
                 CornerRadius="{DynamicResource ControlCornerRadius}">
 
@@ -142,6 +190,7 @@
                     <DockPanel>
                         <ui:FontIcon
                             Height="40"
+                            FontSize="20"
                             HorizontalAlignment="Center"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
                             Glyph="&#xE701;" />
@@ -165,7 +214,7 @@
             </Border>
 
             <Border
-                Padding="15,12,12,12"
+                Padding="15,8,12,8"
                 Background="{DynamicResource ExpanderHeaderBackground}"
                 CornerRadius="{DynamicResource ControlCornerRadius}">
 
@@ -178,6 +227,7 @@
                     <DockPanel>
                         <ui:FontIcon
                             Height="40"
+                            FontSize="20"
                             HorizontalAlignment="Center"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
                             Glyph="&#xE702;" />
@@ -201,7 +251,7 @@
             </Border>
 
             <Border
-                Padding="15,12,12,12"
+                Padding="15,8,12,8"
                 Background="{DynamicResource ExpanderHeaderBackground}"
                 CornerRadius="{DynamicResource ControlCornerRadius}">
 
@@ -210,10 +260,14 @@
                         <ColumnDefinition />
                         <ColumnDefinition Width="0.2*" MinWidth="80" />
                     </Grid.ColumnDefinitions>
-
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
                     <DockPanel>
                         <ui:FontIcon
                             Height="40"
+                            FontSize="20"
                             HorizontalAlignment="Center"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
                             Glyph="&#xf08c;" />
@@ -233,7 +287,114 @@
                         IsEnabled="False"
                         Style="{DynamicResource InvertedToggleSwitchStyle}"
                         Toggled="NightLightToggle_Toggled" />
+                    <Grid 
+                        Grid.Row="1" 
+                        Grid.Column="0"
+                        Grid.ColumnSpan="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="0.2*" MinWidth="200" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+
+                        <DockPanel 
+                            Grid.Row="0"
+                            Grid.Column="0">
+                            <ui:FontIcon
+                                Height="40"
+                                FontSize="20"
+                                HorizontalAlignment="Center"
+                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                Glyph="&#xf182;" />
+
+                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource BodyTextBlockStyle}"
+                                    Text="Schedule night light" />
+                            </ui:SimpleStackPanel>
+                        </DockPanel>
+
+                        <ui:ToggleSwitch
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Name="NightLightSchedule"
+                            HorizontalAlignment="Right"
+                            IsEnabled="False"
+                            Style="{DynamicResource InvertedToggleSwitchStyle}"
+                            Toggled="NightLightSchedule_Toggled" />
+                        <Grid
+                            Name="PanelNightLightTime"
+                            Grid.Row="1" 
+                            Grid.Column="0" 
+                            Grid.ColumnSpan="2"
+                            IsEnabled="{Binding ElementName=NightLightSchedule, Path=IsOn}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="2*" MinWidth="200" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <DockPanel 
+                                Grid.Row="0"
+                                Grid.Column="0">
+                                <ui:FontIcon
+                                    Height="40"
+                                    FontSize="20"
+                                    HorizontalAlignment="Center"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xe823;" />
+
+                                <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="Turn on" />
+                                </ui:SimpleStackPanel>
+                            </DockPanel>
+
+                            <ui:TimePicker
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                PickerVisibility="HourMinute"
+                                SelectedTimeFormat="Short"
+                                Name="NightlightTurnOn"
+                                HorizontalAlignment="Right" />
+
+                            <DockPanel 
+                                Grid.Row="1"
+                                Grid.Column="0">
+                                <ui:FontIcon
+                                    Height="40"
+                                    FontSize="20"
+                                    HorizontalAlignment="Center"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xe823;" />
+
+                                <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="Turn off" />
+                                </ui:SimpleStackPanel>
+                            </DockPanel>
+
+                            <ui:TimePicker
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                PickerVisibility="HourMinute"
+                                SelectedTimeFormat="Short"
+                                Name="NightlightTurnOff"
+                                HorizontalAlignment="Right" />
+                        </Grid>
+                    </Grid>
                 </Grid>
+
             </Border>
         </ui:SimpleStackPanel>
 
@@ -243,7 +404,7 @@
 
             <!--  Use Dynamic lighting  -->
             <Border
-                Padding="15,12,12,12"
+                Padding="15,8,12,8"
                 Background="{DynamicResource ExpanderHeaderBackground}"
                 CornerRadius="{DynamicResource ControlCornerRadius}">
 
@@ -256,6 +417,7 @@
                     <DockPanel>
                         <ui:FontIcon
                             Height="40"
+                            FontSize="20"
                             HorizontalAlignment="Center"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
                             Glyph="&#xE781;" />
@@ -285,7 +447,7 @@
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Lenovo Legion Go settings" />
 
             <Border
-                Padding="15,12,12,12"
+                Padding="15,8,12,8"
                 Background="{DynamicResource ExpanderHeaderBackground}"
                 CornerRadius="{DynamicResource ControlCornerRadius}">
 

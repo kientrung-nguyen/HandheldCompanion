@@ -4591,6 +4591,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Touchpad.
+        /// </summary>
+        public static string InputsHotkey_touchpadToggle {
+            get {
+                return ResourceManager.GetString("InputsHotkey_touchpadToggle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toggle Touchpad.
+        /// </summary>
+        public static string InputsHotkey_touchpadToggleDesc {
+            get {
+                return ResourceManager.GetString("InputsHotkey_touchpadToggleDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Touchscreen.
         /// </summary>
         public static string InputsHotkey_touchscreenToggle {

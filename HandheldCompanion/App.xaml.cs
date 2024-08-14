@@ -11,6 +11,7 @@ using System.Windows.Threading;
 using Sentry;
 using Sentry.Profiling;
 using static HandheldCompanion.WinAPI;
+using System.IO;
 
 namespace HandheldCompanion;
 
@@ -43,10 +44,12 @@ public partial class App : Application
         var fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
 
         // set environment variables
-        Environment.SetEnvironmentVariable("APP_BASE_DIRECTORY", AppContext.BaseDirectory);
+        Environment.SetEnvironmentVariable("APP_BASE_DIRECTORY",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion"));
 
         // initialize log
         LogManager.Initialize("HandheldCompanion");
+        LogManager.LogInformation("----------------");
         LogManager.LogInformation("{0} ({1})", CurrentAssembly.GetName(), fileVersionInfo.FileVersion);
 
         using (var process = Process.GetCurrentProcess())

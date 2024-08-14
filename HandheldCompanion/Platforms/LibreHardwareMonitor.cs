@@ -1,8 +1,8 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using LibreHardwareMonitor.Hardware;
-using Microsoft.WindowsAPICodePack.ApplicationServices;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Timers;
@@ -170,7 +170,6 @@ public class LibreHardwareMonitor : IPlatform
         {
             LogManager.LogError("Discharge Reading: " + ex.Message);
         }
-
     }
 
     private void ReadFullChargeCapacity()
@@ -248,7 +247,7 @@ public class LibreHardwareMonitor : IPlatform
         lock (updateLock)
         {
             //Refresh again only after 15 Minutes since the last refresh
-            if (lastBatteryRefresh == 0 || Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastBatteryRefresh) > 15 * 60_000)
+            if (lastBatteryRefresh == 0 || Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastBatteryRefresh) > 5 * 60_000)
             {
                 lastBatteryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 RefreshBatteryHealth();
@@ -332,7 +331,16 @@ public class LibreHardwareMonitor : IPlatform
                     HandleCPU_Power(sensor);
                     break;
                 case SensorType.Temperature:
-                    HandleCPU_Temp(sensor);
+                    if (HandleCPU_Temp(sensor) == 0)
+                        try
+                        {
+                            using var ct = new PerformanceCounter("Thermal Zone Information", "Temperature", @"\_TZ.TZ01", true);
+                            CPUTemp = ct.NextValue() - 273f;
+                        }
+                        catch
+                        {
+                            //Debug.WriteLine("Failed reading CPU temp :" + ex.Message);
+                        }
                     break;
             }
         }
@@ -378,8 +386,9 @@ public class LibreHardwareMonitor : IPlatform
         }
     }
 
-    private void HandleCPU_Temp(ISensor sensor)
+    private float HandleCPU_Temp(ISensor sensor)
     {
+        var prevTemp = CPUTemp ?? 0;
         switch (sensor.Name)
         {
             case "CPU Package":
@@ -395,6 +404,8 @@ public class LibreHardwareMonitor : IPlatform
                 CPUTemperatureChanged?.Invoke(CPUTemp);
                 break;
         }
+
+        return (CPUTemp ?? 0f) - prevTemp;
     }
 
     #endregion
