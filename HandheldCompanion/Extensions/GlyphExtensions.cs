@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Windows;
 
 namespace HandheldCompanion.Extensions
 {
@@ -41,5 +42,29 @@ namespace HandheldCompanion.Extensions
                     return "\uEC8F";
             }
         }
+
+        public static string ToGlyph(this ToastIcons? icon)
+        {
+            return icon switch
+            {
+                ToastIcons.Game => "\ue7fc",
+                ToastIcons.Touchscreen => "\ueda4",
+                ToastIcons.Touchpad => "\uefa5",
+                ToastIcons.BrightnessUp => "\ue706",
+                ToastIcons.BrightnessDown => "\uec8a",
+                ToastIcons.Charger => "\ue83e",
+                ToastIcons.Battery => "\ue859",
+                ToastIcons.BatteryFull => "\uebb5",
+                ToastIcons.VolumeUp => "\ue995",
+                ToastIcons.VolumeDown => "\ue994",
+                ToastIcons.VolumeMute => "\ue74f",
+                ToastIcons.Volume => "\ue767",
+                ToastIcons.MicrophoneMute => "\uf781",
+                ToastIcons.Microphone => "\ue720",
+                ToastIcons.Nightlight => "\uf08c",
+                ToastIcons.NightlightOff => "\uE706",
+                _ => "\ue713"
+            };
+    }
     }
 }

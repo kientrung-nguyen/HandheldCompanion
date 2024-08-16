@@ -6,6 +6,13 @@ using System;
 using System.Threading;
 
 namespace HandheldCompanion.Misc;
+
+public enum SoundDirections
+{
+    Input,
+    Output
+}
+
 public static class SoundControl
 {
     private static MMDeviceEnumerator enumerator = new();
@@ -211,9 +218,4 @@ public static class SoundControl
         }
     }
 
-    public enum SoundDirections
-    {
-        Input,
-        Output
-    }
 }

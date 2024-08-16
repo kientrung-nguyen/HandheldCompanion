@@ -21,7 +21,7 @@
         <Border
             Name="ToastPanel"
             d:Height="100"
-            Margin="24,230,24,0"
+            Margin="24,254,24,0"
             d:Visibility="Visible"
             Visibility="Hidden"
             HorizontalAlignment="Center"
@@ -38,7 +38,7 @@
                     Background="{DynamicResource ToastOverlayBackgroundBrush}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
-                    Opacity="0.6">
+                    Opacity="0.6" BorderThickness="1,1,1,1">
                 </Border>
                 <Border Padding="10">
                     <ui:SimpleStackPanel

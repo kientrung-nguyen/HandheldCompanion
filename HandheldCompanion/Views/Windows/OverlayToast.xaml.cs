@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Views.Classes;
+﻿using HandheldCompanion.Extensions;
+using HandheldCompanion.Views.Classes;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -25,7 +26,7 @@ public enum ToastIcons
     MicrophoneMute,
     FnLock,
     Battery,
-    BatteryFullyCharged,
+    BatteryFull,
     Charger,
     Controller
 }
@@ -63,26 +64,7 @@ public partial class OverlayToast : OverlayWindow
             toastText = text;
             toastIcon = icon;
             ToastText.Text = toastText;
-            ToastIcon.Glyph = toastIcon switch
-            {
-                ToastIcons.Game => "\ue7fc",
-                ToastIcons.Touchscreen => "\ueda4",
-                ToastIcons.Touchpad => "\uefa5",
-                ToastIcons.BrightnessUp => "\ue706",
-                ToastIcons.BrightnessDown => "\uec8a",
-                ToastIcons.Charger => "\ue83e",
-                ToastIcons.Battery => "\ue859",
-                ToastIcons.BatteryFullyCharged => "\uebb5",
-                ToastIcons.VolumeUp => "\ue995",
-                ToastIcons.VolumeDown => "\ue994",
-                ToastIcons.VolumeMute => "\ue74f",
-                ToastIcons.Volume => "\ue767",
-                ToastIcons.MicrophoneMute => "\uf781",
-                ToastIcons.Microphone => "\ue720",
-                ToastIcons.Nightlight => "\uf08c",
-                ToastIcons.NightlightOff => "\uE706",
-                _ => "\ue713"
-            };
+            ToastIcon.Glyph = toastIcon.ToGlyph();
             ToastPanel.Visibility = Visibility.Visible;
             Show();
             dispatcher.Start();

@@ -14,23 +14,24 @@ using System.Windows;
 
 namespace HandheldCompanion.Managers;
 
+public enum UpdateStatus
+{
+    Initialized,
+    Updated,
+    Checking,
+    Changelog,
+    Ready,
+    Download,
+    Downloading,
+    Downloaded,
+    Failed
+}
+
 public static class UpdateManager
 {
     public static event UpdatedEventHandler Updated;
     public delegate void UpdatedEventHandler(UpdateStatus status, UpdateFile? update, object? value);
 
-    public enum UpdateStatus
-    {
-        Initialized,
-        Updated,
-        Checking,
-        Changelog,
-        Ready,
-        Download,
-        Downloading,
-        Downloaded,
-        Failed
-    }
 
     private static readonly Assembly assembly;
 

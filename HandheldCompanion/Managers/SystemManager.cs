@@ -1,11 +1,11 @@
 ﻿using HandheldCompanion.Misc;
+using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using SystemPowerManager = Windows.System.Power.PowerManager;
 
 namespace HandheldCompanion.Managers;
@@ -23,7 +23,7 @@ public static class SystemManager
 
     #endregion
 
-
+    private static CrossThreadLock nightlightLock = new();
     public const uint ES_CONTINUOUS = 0x80000000;
     public const uint ES_SYSTEM_REQUIRED = 0x00000001;
     static long lastAuto;
@@ -233,7 +233,21 @@ public static class SystemManager
     {
         if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastAuto) < 3000) return;
         lastAuto = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-        NightLight.Auto();
+        if (nightlightLock.TryEnter())
+        {
+            try
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    NightLight.Auto();
+                });
+            }
+            finally
+            {
+                nightlightLock.Exit();
+            }
+        }
+
     }
 
     #region events

@@ -1,13 +1,8 @@
 ﻿using HandheldCompanion.Managers;
 using System;
-using System.Data;
 using System.Drawing;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Windows;
 using System.Windows.Forms;
-using System.Windows.Interop;
 using WpfScreenHelper.Enum;
 using static PInvoke.Kernel32;
 using HANDLE = System.IntPtr;
@@ -134,7 +129,7 @@ public static class WinAPI
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-    
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 

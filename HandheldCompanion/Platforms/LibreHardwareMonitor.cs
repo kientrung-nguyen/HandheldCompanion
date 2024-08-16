@@ -130,7 +130,7 @@ public class LibreHardwareMonitor : IPlatform
 
             if (BatteryCapacity != -1f && BatteryCapacity != 100f && currentBatteryCapacity == 100f)
                 ToastManager.RunToast(
-                    Properties.Resources.BatteryFullyCharged, ToastIcons.BatteryFullyCharged
+                    Properties.Resources.BatteryFullyCharged, ToastIcons.BatteryFull
                     );
 
             BatteryCapacity = currentBatteryCapacity;

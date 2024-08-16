@@ -1,14 +1,9 @@
-using HandheldCompanion.Controllers;
-using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
-using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using iNKORE.UI.WPF.Modern;
-using iNKORE.UI.WPF.Modern.Controls;
 using iNKORE.UI.WPF.Modern.Controls.Helpers;
 using iNKORE.UI.WPF.Modern.Helpers.Styles;
-using Microsoft.Win32;
 using Sentry;
 using System;
 using System.Collections.Generic;
@@ -17,8 +12,6 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
-using static HandheldCompanion.Managers.UpdateManager;
 using Application = System.Windows.Application;
 using Page = System.Windows.Controls.Page;
 
@@ -67,7 +60,7 @@ public partial class SettingsPage : Page
             int idx = -1;
             foreach (DesktopScreen desktopScreen in cB_QuickToolsScreen.Items.OfType<DesktopScreen>())
             {
-                if (desktopScreen.FriendlyName.Equals(screen.FriendlyName))                    
+                if (desktopScreen.FriendlyName.Equals(screen.FriendlyName))
                     idx = cB_QuickToolsScreen.Items.IndexOf(desktopScreen);
             }
 
@@ -430,7 +423,7 @@ public partial class SettingsPage : Page
         SettingsManager.Set("CurrentCulture", culture.Name);
 
         Localization.TranslationSource.Instance.CurrentCulture = CultureInfo.GetCultureInfo(culture.Name);
-        
+
         NavigationService?.Refresh();
     }
 
@@ -567,7 +560,7 @@ public partial class SettingsPage : Page
 
         SettingsManager.Set("TelemetryEnabled", Toggle_Telemetry.IsOn);
     }
-    
+
     private void cB_QuickToolsScreen_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded)

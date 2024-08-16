@@ -1,10 +1,8 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
-using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Win32;
 using System;
-using System.Management;
 
 namespace HandheldCompanion.Misc;
 

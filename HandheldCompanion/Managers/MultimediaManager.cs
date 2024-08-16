@@ -13,7 +13,6 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using WindowsDisplayAPI;
 using WindowsDisplayAPI.DisplayConfig;
-using static HandheldCompanion.Misc.SoundControl;
 
 namespace HandheldCompanion.Managers;
 

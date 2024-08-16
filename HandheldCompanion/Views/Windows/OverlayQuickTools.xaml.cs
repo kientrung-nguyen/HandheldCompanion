@@ -25,7 +25,6 @@ using Windows.Devices.WiFi;
 using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
-using static HandheldCompanion.Misc.SoundControl;
 using Application = System.Windows.Application;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Page = System.Windows.Controls.Page;
