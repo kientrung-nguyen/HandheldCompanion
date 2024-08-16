@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Windows;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Win32;
 using System;
@@ -94,6 +95,31 @@ public static class NightLight
     public static bool Supported
     {
         get => registryKey != null;
+    }
+
+    public static void Auto()
+    {
+        if (!SettingsManager.IsInitialized) return;
+        if (!SettingsManager.Get<bool>("NightLightSchedule")) return;
+
+        var now = DateTime.Now.TimeOfDay;
+        var turnOn = SettingsManager.Get<DateTime>("NightLightTurnOn").TimeOfDay;
+        var turnOff = SettingsManager.Get<DateTime>("NightLightTurnOff").TimeOfDay;
+        var isNightlight = false;
+
+        if (turnOff < turnOn && (now > turnOn || (now < turnOn && turnOff > now)))
+            isNightlight = true;
+
+        if (turnOff > turnOn && now > turnOn && now < turnOff)
+            isNightlight = true;
+
+        LogManager.LogInformation($"Night light auto {now} {isNightlight}");
+
+        var isEnabled = Set(isNightlight);
+        if (isEnabled is not null)
+            ToastManager.RunToast(
+                $"Night light {(isEnabled.Value ? Properties.Resources.On : Properties.Resources.Off)}",
+                isEnabled.Value ? ToastIcons.Nightlight : ToastIcons.NightlightOff);
     }
 
     public static void SubscribeToEvents(Action<object?, RegistryChangedEventArgs> EventHandler)

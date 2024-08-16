@@ -198,7 +198,7 @@ internal static class LayoutManager
             profileLayout = null;
 
         // only update current layout if we're not into desktop layout mode
-        if (!SettingsManager.GetBoolean("DesktopLayoutEnabled", true))
+        if (!SettingsManager.Get<bool>("DesktopLayoutEnabled"))
             SetActiveLayout(profileLayout);
     }
 

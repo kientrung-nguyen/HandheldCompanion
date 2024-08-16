@@ -67,7 +67,7 @@ public static class OSDManager
         ProfileManager.Applied += ProfileManager_Applied;
 
         // timer used to monitor foreground application framerate
-        RefreshInterval = SettingsManager.GetInt("OnScreenDisplayRefreshRate");
+        RefreshInterval = SettingsManager.Get<int>("OnScreenDisplayRefreshRate");
 
         RefreshTimer = new PrecisionTimer();
         RefreshTimer.SetInterval(new Action(UpdateOSD), RefreshInterval, false, 0, TimerMode.Periodic, true);
@@ -207,7 +207,6 @@ public static class OSDManager
     {
         if (OnScreenAppEntryOSDFrameId - osdFrameId == 0)
         {
-            LogManager.LogDebug("Draw empty");
             return string.Empty;
         }
 
@@ -538,7 +537,7 @@ public static class OSDManager
                 {
 
                     // set OSD toggle hotkey state
-                    SettingsManager.SetProperty("OnScreenDisplayToggle", Convert.ToBoolean(value));
+                    SettingsManager.Set("OnScreenDisplayToggle", Convert.ToBoolean(value));
                 }
                 break;
                 /*
@@ -547,12 +546,12 @@ public static class OSDManager
                             OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(value));
 
                             // set OSD toggle hotkey state
-                            SettingsManager.SetProperty("OnScreenDisplayToggle", Convert.ToBoolean(value));
+                            SettingsManager.Set("OnScreenDisplayToggle", Convert.ToBoolean(value));
 
                             if (OverlayLevel != OverlayDisplayLevel.Disabled)
                             {
                                 // set lastOSDLevel to be used in OSD toggle hotkey
-                                SettingsManager.SetProperty("LastOnScreenDisplayLevel", value);
+                                SettingsManager.Set("LastOnScreenDisplayLevel", value);
 
                                 if (OverlayLevel == OverlayDisplayLevel.External)
                                 {

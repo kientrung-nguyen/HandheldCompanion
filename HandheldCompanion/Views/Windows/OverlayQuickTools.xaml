@@ -31,16 +31,14 @@
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="81*"/>
-            <ColumnDefinition Width="78*"/>
             <ColumnDefinition Width="331*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="36" />
-            <RowDefinition Height="80" />
+            <RowDefinition Height="100" />
             <RowDefinition Height="320*" />
         </Grid.RowDefinitions>
         <DockPanel
-            Background="{DynamicResource NavigationViewContentBackground}"
             Grid.Row="0"
             Grid.ColumnSpan="3"
             VerticalAlignment="Stretch">
@@ -127,361 +125,371 @@
             Grid.Column="0"
             Grid.ColumnSpan="3"
             VerticalAlignment="Stretch">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition />
-                    <ColumnDefinition Width="2*" />
-                    <ColumnDefinition Width="2*"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel 
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    Orientation="Horizontal">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height=".8*" />
-                            <RowDefinition Height="2*" />
-                        </Grid.RowDefinitions>
-                        <Grid
-                            Grid.Row="0"
-                            Grid.Column="0">
-                            <Border
-                                Padding="0,4,0,4"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                CornerRadius="{StaticResource ControlCornerRadius}">
-                                <TextBlock
+            <Border
+                Margin="4"
+                Background="{DynamicResource NavigationViewContentBackground}"
+                CornerRadius="{DynamicResource ControlCornerRadius}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel 
+                        Grid.Column="0"
+                        VerticalAlignment="Stretch"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height=".8*" />
+                                <RowDefinition Height="2*" />
+                            </Grid.RowDefinitions>
+                            <Grid
+                                Grid.Row="0"
+                                Grid.Column="0">
+                                <Border
+                                    Padding="0,4,0,4"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
-                                    FontSize="12"
-                                    Name="BatteryDesignCapacity"
-                                    Text="Battery"
-                                    FontStretch="SemiCondensed" />
-                            </Border>
-                        </Grid>
-                        <ui:SimpleStackPanel
-                            Grid.Row="1"
-                            Grid.Column="0"
-                            Margin="0,0,0,0"
-                            Spacing="12"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            Orientation="Horizontal">
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="18"
-                                        Name="BatteryHealthIndicatorIcon"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xf5fc;" />
-                                    <ui:ProgressRing
-                                        Width="28"
-                                        Height="28"
-                                        Name="BatteryHealthRing"
-                                        d:Value="50"
-                                        IsIndeterminate="False" />
-                                </Grid>
-                                <StackPanel MinWidth="32" HorizontalAlignment="Center" Orientation="Vertical">
+                                    CornerRadius="{StaticResource ControlCornerRadius}">
                                     <TextBlock
+                                        HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Name="BatteryHealth"
-                                        Text="98%"
                                         FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
+                                        Name="BatteryDesignCapacity"
+                                        Text="Battery"
+                                        FontStretch="SemiCondensed" />
+                                </Border>
+                            </Grid>
+                            <ui:SimpleStackPanel
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Margin="0,0,0,0"
+                                Spacing="12"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                Orientation="Horizontal">
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="16"
+                                            Name="BatteryHealthIndicatorIcon"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xf5fc;" />
+                                        <ui:ProgressRing
+                                            Width="30"
+                                            Height="30"
+                                            StrokeThickness="2"
+                                            Name="BatteryHealthRing"
+                                            d:Value="50"
+                                            IsIndeterminate="False" />
+                                    </Grid>
+                                    <StackPanel MinWidth="32" HorizontalAlignment="Center" Orientation="Vertical">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="BatteryHealth"
+                                            Text="98%"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="18"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe945;" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Name="BatteryPower"
-                                        Text="5W"
-                                        FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                        </ui:SimpleStackPanel>
-                    </Grid>
-                </StackPanel>
-                <StackPanel
-                    Grid.Column="1"                   
-                    VerticalAlignment="Stretch"
-                    HorizontalAlignment="Center"
-                    Orientation="Horizontal">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height=".8*" />
-                            <RowDefinition Height="2*" />
-                        </Grid.RowDefinitions>
-                        <Grid
-                            Grid.Row="0"
-                            Grid.Column="0">
-                            <Border
-                                Padding="0,4,0,4"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                CornerRadius="{StaticResource ControlCornerRadius}">
-                                <TextBlock
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="20"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe945;" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="BatteryPower"
+                                            Text="5W"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </ui:SimpleStackPanel>
+                        </Grid>
+                    </StackPanel>
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Stretch"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height=".8*" />
+                                <RowDefinition Height="2*" />
+                            </Grid.RowDefinitions>
+                            <Grid
+                                Grid.Row="0"
+                                Grid.Column="0">
+                                <Border
+                                    Padding="0,4,0,4"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
-                                    FontSize="12"
-                                    Name="CPUName"
-                                    Text="CPU"
-                                    FontStretch="SemiCondensed" />
-                            </Border>
-                        </Grid>
-                        <ui:SimpleStackPanel
-                            Grid.Row="1"
-                            Grid.Column="0"
-                            Margin="0,0,0,0"
-                            Spacing="12"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            Orientation="Horizontal">
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="18"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe945;" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                    CornerRadius="{StaticResource ControlCornerRadius}">
                                     <TextBlock
+                                        HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Name="CPUPower"
-                                        Text="5W"
                                         FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="24"
-                                        FontFamily="{DynamicResource FluentSystemIcons}"
-                                        Glyph="&#xF059;" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Name="CPUTemp"
-                                        Text="5°C"
-                                        FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="18"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe9d9;" />
-                                    <ui:ProgressRing
-                                        Width="28"
-                                        Height="28"
-                                        Name="CPULoadRing"
-                                        d:Value="50"
-                                        IsIndeterminate="False" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Name="CPULoad"
-                                        Text="10%"
-                                        FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="18"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe950;" />
-                                    <ui:ProgressRing
-                                        Width="28"
-                                        Height="28"
-                                        Name="CPUMemoryRing"
-                                        d:Value="50"
-                                        IsIndeterminate="False" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Name="CPUMemory"
-                                        Text="5GB"
-                                        FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                        </ui:SimpleStackPanel>
-                    </Grid>
-                </StackPanel>
-                <StackPanel
-                    Grid.Column="2"
-                    Margin="0,0,0,0"                    
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    Orientation="Horizontal">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height=".8*" />
-                            <RowDefinition Height="2*" />
-                        </Grid.RowDefinitions>
-                        <Grid
-                            Grid.Row="0"
-                            Grid.Column="0">
-                            <Border
-                                Padding="0,4,0,4"
-                                HorizontalAlignment="Center"
+                                        Name="CPUName"
+                                        Text="CPU"
+                                        FontStretch="SemiCondensed" />
+                                </Border>
+                            </Grid>
+                            <ui:SimpleStackPanel
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Margin="0,0,0,0"
+                                Spacing="12"
                                 VerticalAlignment="Center"
-                                CornerRadius="{DynamicResource ControlCornerRadius}">
-                                <TextBlock
-                                    Name="GPUName"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    FontSize="12"
-                                    Text="GPU" FontStretch="SemiCondensed" />
-                            </Border>
-                            <!--<ui:FontIcon
-                                Width="32"
-                                Height="32"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xe967;" />-->
+                                HorizontalAlignment="Center"
+                                Orientation="Horizontal">
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="20"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe945;" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="CPUPower"
+                                            Text="5W"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="26"
+                                            FontFamily="{DynamicResource FluentSystemIcons}"
+                                            Glyph="&#xF059;" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="CPUTemp"
+                                            Text="5°C"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="16"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe9d9;" />
+                                        <ui:ProgressRing
+                                            Width="30"
+                                            Height="30"
+                                            StrokeThickness="2"
+                                            Name="CPULoadRing"
+                                            d:Value="50"
+                                            IsIndeterminate="False" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="CPULoad"
+                                            Text="10%"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="16"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe950;" />
+                                        <ui:ProgressRing
+                                            Width="30"
+                                            Height="30"
+                                            StrokeThickness="2"
+                                            Name="CPUMemoryRing"
+                                            d:Value="50"
+                                            IsIndeterminate="False" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="CPUMemory"
+                                            Text="5GB"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </ui:SimpleStackPanel>
                         </Grid>
-                        <ui:SimpleStackPanel
-                            Grid.Row="1"
-                            Grid.Column="0"
-                            Margin="0,0,0,0"
-                            Spacing="12"
-                            VerticalAlignment="Center"
-                            Orientation="Horizontal">
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="18"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe945;" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                    </StackPanel>
+                    <StackPanel
+                        Grid.Column="2"
+                        Margin="0,0,0,0"                    
+                        VerticalAlignment="Stretch"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height=".8*" />
+                                <RowDefinition Height="2*" />
+                            </Grid.RowDefinitions>
+                            <Grid
+                                Grid.Row="0"
+                                Grid.Column="0">
+                                <Border
+                                    Padding="0,4,0,4"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    CornerRadius="{DynamicResource ControlCornerRadius}">
                                     <TextBlock
-                                        VerticalAlignment="Center"
+                                        Name="GPUName"
                                         HorizontalAlignment="Center"
-                                        Name="GPUPower"
-                                        Text="10W"
-                                        FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="24"
-                                        FontFamily="{DynamicResource FluentSystemIcons}"
-                                        Glyph="&#xF059;" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
-                                    <TextBlock
                                         VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Name="GPUTemp"
-                                        Text="5°C"
                                         FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="18"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe9d9;" />
-                                    <ui:ProgressRing
-                                        Width="28"
-                                        Height="28"
-                                        Name="GPULoadRing"
-                                        d:Value="50"
-                                        IsIndeterminate="False" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Text="10%"
-                                        Name="GPULoad"
-                                        FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
-                                <Grid Margin="0,0,0,0">
-                                    <ui:FontIcon
-                                        Width="26"
-                                        Height="30"
-                                        FontSize="18"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe950;" />
-                                    <ui:ProgressRing
-                                        Width="28"
-                                        Height="28"
-                                        Name="GPUMemoryRing"
-                                        d:Value="50"
-                                        IsIndeterminate="False" />
-                                </Grid>
-                                <DockPanel MinWidth="32" HorizontalAlignment="Center">
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Name="GPUMemory"
-                                        Text="5GB"
-                                        FontSize="12"
-                                        MinWidth="20" Padding="0,4,0,4" />
-                                </DockPanel>
-                            </StackPanel>
-                        </ui:SimpleStackPanel>
-                    </Grid>
-                </StackPanel>
-            </Grid>
+                                        Text="GPU" FontStretch="SemiCondensed" />
+                                </Border>
+                                <!--<ui:FontIcon
+                                    Width="32"
+                                    Height="32"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xe967;" />-->
+                            </Grid>
+                            <ui:SimpleStackPanel
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Margin="0,0,0,0"
+                                Spacing="10"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="20"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe945;" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="GPUPower"
+                                            Text="10W"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="26"
+                                            FontFamily="{DynamicResource FluentSystemIcons}"
+                                            Glyph="&#xF059;" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="GPUTemp"
+                                            Text="5°C"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="16"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe9d9;" />
+                                        <ui:ProgressRing
+                                            Width="30"
+                                            Height="30"
+                                            StrokeThickness="2"
+                                            Name="GPULoadRing"
+                                            d:Value="50"
+                                            IsIndeterminate="False" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Text="10%"
+                                            Name="GPULoad"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Margin="0,0,0,0">
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="16"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe950;" />
+                                        <ui:ProgressRing
+                                            Width="30"
+                                            Height="30"
+                                            StrokeThickness="2"
+                                            Name="GPUMemoryRing"
+                                            d:Value="50"
+                                            IsIndeterminate="False" />
+                                    </Grid>
+                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Name="GPUMemory"
+                                            Text="5GB"
+                                            FontSize="12"
+                                            MinWidth="20" Padding="0,4,0,4" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </ui:SimpleStackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </DockPanel>
         <Grid
             Grid.Row="2"
@@ -494,12 +502,15 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="50" />
             </Grid.RowDefinitions>
             <Border
                 Grid.Row="0"
                 Grid.Column="0"
-                Padding="4,4,4,4"
-                Margin="0,24,0,4">
+                Padding="4,12,4,4"
+                Margin="4,0,4,4"
+                Background="{DynamicResource NavigationViewContentBackground}"
+                CornerRadius="{DynamicResource ControlCornerRadius}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
@@ -556,12 +567,14 @@
                 Name="VolumeSupport"
                 Grid.Row="1"
                 Grid.Column="0"
-                Padding="4,4,4,4"
-                Margin="0,4,0,4">
+                Padding="4,8,4,8"
+                Margin="4,0,4,0"
+                Background="{DynamicResource NavigationViewContentBackground}"
+                CornerRadius="{DynamicResource ControlCornerRadius}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
-                        <RowDefinition Height="88" />
+                        <RowDefinition Height="40" />
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="1" Margin="0,4,0,0">
                         <ui:SimpleStackPanel 
@@ -581,30 +594,11 @@
                                     Name="VolumeIcon"
                                     Width="30"
                                     Height="30"
-                                    FontSize="18"
+                                    FontSize="20"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center" 
                                     FontFamily="{StaticResource SymbolThemeFontFamily}"
                                     Glyph="&#xE767;" />
-                            </Button>
-                            <Button 
-                                Name="MicButton"
-                                Click="MicButton_Click"
-                                Height="36" Width="36"
-                                HorizontalAlignment="Center" 
-                                VerticalAlignment="Center" 
-                                BorderBrush="{x:Null}" 
-                                Background="{x:Null}" 
-                                Padding="0,0,0,0">
-                                <ui:FontIcon
-                                    Name="MicIcon"
-                                    Width="30"
-                                    Height="30"
-                                    FontSize="18"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center" 
-                                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                    Glyph="&#xe720;" />
                             </Button>
                         </ui:SimpleStackPanel>
                     </Grid>
@@ -627,10 +621,30 @@
                     </Grid>
                 </Grid>
             </Border>
-
+            <Border
+                Grid.Row="2"
+                Grid.Column="0">
+                <Button 
+                    Name="MicButton"
+                    Click="MicButton_Click"
+                    Height="36" Width="36"
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center" 
+                    Padding="0,0,0,0">
+                    <ui:FontIcon
+                        Name="MicIcon"
+                        Width="30"
+                        Height="30"
+                        FontSize="18"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" 
+                        FontFamily="{StaticResource SymbolThemeFontFamily}"
+                        Glyph="&#xe720;" />
+                </Button>
+            </Border>
             <ui:NavigationView
                 Name="navView"
-                Margin="0,0,0,4"
+                Margin="0,0,0,2"
                 BackRequested="navView_BackRequested"
                 IsBackButtonVisible="Collapsed"
                 IsBackEnabled="False"
@@ -642,7 +656,7 @@
                 SelectionFollowsFocus="Enabled"
 	            Style="{StaticResource NavigationViewStyle1}"
                 Grid.Row="0"
-                Grid.RowSpan="2"
+                Grid.RowSpan="3"
                 Grid.Column="1">
                 <ui:NavigationView.MenuItems>
                     <ui:NavigationViewItem 
@@ -720,19 +734,22 @@
                     </ui:NavigationViewItem>
                 </ui:NavigationView.MenuItems>
                 <ui:NavigationView.Content>
-                    <Grid>
-                        <ui:ContentDialog
-                            Name="ContentDialog" 
-                            Background="{x:Null}" />
-                        <!--<common:TouchScrollViewer-->
-                        <ui:ScrollViewerEx
-                            x:Name="scrollViewer"
-                            Margin="0,12,0,12"
-                            PanningMode="VerticalOnly">
-                            <ui:Frame Name="ContentFrame" />
-                        </ui:ScrollViewerEx>
-                        <!--</common:TouchScrollViewer>-->
-                    </Grid>
+                    <Border
+                        Margin="0,0,4,0"
+                        CornerRadius="{DynamicResource ControlCornerRadius}"
+                        Background="{DynamicResource NavigationViewContentBackground}">
+                        <Grid>
+                            <ui:ContentDialog
+                                Name="ContentDialog" 
+                                Background="{x:Null}" />
+                            <common:TouchScrollViewer
+                                x:Name="scrollViewer"
+                                Margin="0,0,0,12"
+                                PanningMode="VerticalOnly">
+                                <ui:Frame Name="ContentFrame" />
+                            </common:TouchScrollViewer>
+                        </Grid>
+                    </Border>
                 </ui:NavigationView.Content>
             </ui:NavigationView>
         </Grid>

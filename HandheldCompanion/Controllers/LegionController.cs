@@ -144,8 +144,8 @@ namespace HandheldCompanion.Controllers
 
         protected override void UpdateSettings()
         {
-            SetPassthrough(SettingsManager.GetBoolean("LegionControllerPassthrough"));
-            SetGyroIndex(SettingsManager.GetInt("LegionControllerGyroIndex"));
+            SetPassthrough(SettingsManager.Get<bool>("LegionControllerPassthrough"));
+            SetGyroIndex(SettingsManager.Get<int>("LegionControllerGyroIndex"));
         }
 
         private void SettingsManager_SettingValueChanged(string name, object value)

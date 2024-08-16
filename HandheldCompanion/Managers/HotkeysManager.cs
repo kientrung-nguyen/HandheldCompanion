@@ -6,7 +6,7 @@ using HandheldCompanion.Properties;
 using HandheldCompanion.Simulators;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
-using HandheldCompanion.Views.Classes;
+using HandheldCompanion.Views.Windows;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
@@ -15,7 +15,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Xml.Linq;
 using Windows.System;
 using static HandheldCompanion.Managers.InputsHotkey;
 using static HandheldCompanion.Managers.InputsManager;
@@ -79,7 +78,7 @@ public static class HotkeysManager
     {
         // when the target emulated controller is Dualshock
         // only enable HIDmode switch hotkey when controller is plugged (last stage of HIDmode change in this case)
-        HIDmode targetHIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true);
+        HIDmode targetHIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode");
         if (targetHIDmode == HIDmode.DualShock4Controller)
         {
             List<Hotkey> hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode")).ToList();
@@ -95,7 +94,7 @@ public static class HotkeysManager
     {
         // when the target emulated controller is Xbox Controller
         // only enable HIDmode switch hotkey when controller is unplugged (last stage of HIDmode change in this case)
-        HIDmode targetHIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true);
+        HIDmode targetHIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode");
         if (targetHIDmode == HIDmode.Xbox360Controller)
         {
             List<Hotkey> hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode")).ToList();
@@ -124,14 +123,14 @@ public static class HotkeysManager
 
             default: // Default
                 {
-                    HIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true); // Applies default HID from settings
+                    HIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode"); // Applies default HID from settings
                     hasProfileHID = false;
                     break;
                 }
         }
 
         // set lastOSDLevel to be used in OSD toggle hotkey
-        SettingsManager.SetProperty("LastOnScreenDisplayLevel", (int)profile.OverlayLevel);
+        SettingsManager.Set("LastOnScreenDisplayLevel", (int)profile.OverlayLevel);
 
         // manage toggle type hotkeys
         foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("OnScreenDisplayToggle")).ToList())
@@ -193,7 +192,7 @@ public static class HotkeysManager
             var Id = pair.Key;
             var inputsHotkey = pair.Value;
 
-            Hotkey hotkey = null;
+            Hotkey? hotkey = null;
 
             var fileName = Path.Combine(InstallPath, $"{inputsHotkey.Listener}.json");
 
@@ -202,11 +201,10 @@ public static class HotkeysManager
                 hotkey = ProcessHotkey(fileName);
 
             // no hotkey found or failed parsing
-            if (hotkey is null)
+            hotkey ??= new Hotkey(Id)
             {
-                hotkey = new Hotkey(Id);
-                hotkey.IsPinned = inputsHotkey.DefaultPinned;
-            }
+                IsPinned = inputsHotkey.DefaultPinned
+            };
 
             // hotkey is outdated and using an unknown inputs hotkey
             if (!InputsHotkeys.TryGetValue(hotkey.hotkeyId, out var foundHotkey))
@@ -228,7 +226,7 @@ public static class HotkeysManager
             hotkey.Updated += hotkey => SerializeHotkey(hotkey, true);
 
             if (!string.IsNullOrEmpty(hotkey.inputsHotkey.Settings))
-                hotkey.IsEnabled = SettingsManager.GetBoolean(hotkey.inputsHotkey.Settings);
+                hotkey.IsEnabled = SettingsManager.Get<bool>(hotkey.inputsHotkey.Settings);
 
             HotkeyCreated?.Invoke(hotkey);
         }
@@ -269,7 +267,7 @@ public static class HotkeysManager
         // manage settings type hotkeys
         foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Settings.Contains(name)))
         {
-            var enabled = SettingsManager.GetBoolean(hotkey.inputsHotkey.Settings);
+            var enabled = SettingsManager.Get<bool>(hotkey.inputsHotkey.Settings);
             hotkey.IsEnabled = enabled;
         }
     }
@@ -495,53 +493,52 @@ public static class HotkeysManager
                         var currentProfile = ProfileManager.GetCurrent();
                         int currentOSDLevel = (int)currentProfile.OverlayLevel;
                         //SettingsManager.GetInt("OnScreenDisplayLevel");
-                        int lastOSDLevel = SettingsManager.GetInt("LastOnScreenDisplayLevel");
+                        int lastOSDLevel = SettingsManager.Get<int>("LastOnScreenDisplayLevel");
 
                         switch (currentOSDLevel)
                         {
                             case 0:
                                 if (lastOSDLevel == 0)
                                     lastOSDLevel = (int)OverlayDisplayLevel.Full;
-                                SettingsManager.SetProperty("OnScreenDisplayLevel", lastOSDLevel);
+                                SettingsManager.Set("OnScreenDisplayLevel", lastOSDLevel);
                                 currentProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(lastOSDLevel);
                                 break;
                             default:
-                                SettingsManager.SetProperty("OnScreenDisplayLevel", 0);
+                                SettingsManager.Set("OnScreenDisplayLevel", 0);
                                 currentProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(0);
                                 break;
                         }
 
-                        ToastManager.RunToast($"On-Screen Display {currentProfile.OverlayLevel}", Views.Windows.ToastIcons.Game);
+                        ToastManager.RunToast($"On-Screen Display {currentProfile.OverlayLevel}", ToastIcons.Game);
                         ProfileManager.UpdateOrCreateProfile(currentProfile, UpdateSource.Background);
                     }
                     break;
                 case "OnScreenDisplayLevel":
                     {
-                        var value = !SettingsManager.GetBoolean(listener);
-                        SettingsManager.SetProperty(listener, value);
+                        var value = !SettingsManager.Get<bool>(listener);
+                        SettingsManager.Set(listener, value);
                     }
                     break;
 
                 // temporary settings
                 case "DesktopLayoutEnabled":
                     {
-                        var value = !SettingsManager.GetBoolean(listener, true);
-                        SettingsManager.SetProperty(listener, value, false, true);
-
+                        var value = !SettingsManager.Get<bool>(listener);
+                        SettingsManager.Set("DesktopLayoutEnabled", value, false);
                         ToastManager.SendToast("Desktop layout", $"is now {(value ? "enabled" : "disabled")}");
                     }
                     break;
 
                 case "shortcutChangeHIDMode":
                     {
-                        var currentHIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true);
+                        var currentHIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode");
                         switch (currentHIDmode)
                         {
                             case HIDmode.Xbox360Controller:
-                                SettingsManager.SetProperty("HIDmode", (int)HIDmode.DualShock4Controller);
+                                SettingsManager.Set("HIDmode", (int)HIDmode.DualShock4Controller);
                                 break;
                             case HIDmode.DualShock4Controller:
-                                SettingsManager.SetProperty("HIDmode", (int)HIDmode.Xbox360Controller);
+                                SettingsManager.Set("HIDmode", (int)HIDmode.Xbox360Controller);
                                 break;
                             default:
                                 break;

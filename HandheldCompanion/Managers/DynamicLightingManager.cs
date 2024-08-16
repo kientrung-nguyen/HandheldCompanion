@@ -94,7 +94,7 @@ public static class DynamicLightingManager
 
         squareSize = (int)Math.Floor((decimal)screenWidth / 10);
 
-        LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.GetInt("LEDSettingsLevel");
+        LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.Get<int>("LEDSettingsLevel");
         bool ambilightOn = LEDSettingsLevel == LEDLevel.Ambilight;
 
         // stop ambilight if running
@@ -178,25 +178,25 @@ public static class DynamicLightingManager
 
     private static void UpdateLED()
     {
-        bool LEDSettingsEnabled = SettingsManager.GetBoolean("LEDSettingsEnabled");
+        bool LEDSettingsEnabled = SettingsManager.Get<bool>("LEDSettingsEnabled");
         IDevice.GetCurrent().SetLedStatus(LEDSettingsEnabled);
 
         if (LEDSettingsEnabled)
         {
-            LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.GetInt("LEDSettingsLevel");
-            int LEDBrightness = SettingsManager.GetInt("LEDBrightness");
-            int LEDSpeed = SettingsManager.GetInt("LEDSpeed");
+            LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.Get<int>("LEDSettingsLevel");
+            int LEDBrightness = SettingsManager.Get<int>("LEDBrightness");
+            int LEDSpeed = SettingsManager.Get<int>("LEDSpeed");
 
             // Set brightness and color based on settings
             IDevice.GetCurrent().SetLedBrightness(LEDBrightness);
 
             // Get colors
-            Color LEDMainColor = SettingsManager.GetColor("LEDMainColor");
-            Color LEDSecondColor = SettingsManager.GetColor("LEDSecondColor");
-            bool useSecondColor = SettingsManager.GetBoolean("LEDUseSecondColor");
+            Color LEDMainColor = SettingsManager.Get<Color>("LEDMainColor");
+            Color LEDSecondColor = SettingsManager.Get<Color>("LEDSecondColor");
+            bool useSecondColor = SettingsManager.Get<bool>("LEDUseSecondColor");
             
             // Get Preset
-            int LEDPresetIndex = SettingsManager.GetInt("LEDPresetIndex");
+            int LEDPresetIndex = SettingsManager.Get<int>("LEDPresetIndex");
             List<LEDPreset> presets = IDevice.GetCurrent().LEDPresets;
             LEDPreset? selectedPreset = LEDPresetIndex < presets.Count ? presets[LEDPresetIndex] : null;
 

@@ -3,7 +3,6 @@ using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using Microsoft.Win32;
-using NAudio.CoreAudioApi;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using WindowsDisplayAPI;
 using WindowsDisplayAPI.DisplayConfig;
+using static HandheldCompanion.Misc.SoundControl;
 
 namespace HandheldCompanion.Managers;
 
@@ -100,7 +100,7 @@ public static class MultimediaManager
         NightLightNotification?.Invoke(NightLight.Get() == 1);
     }
 
-    private static void VolumeNotificationEventArrived(DataFlow flow, float volume, bool muted)
+    private static void VolumeNotificationEventArrived(SoundDirections flow, float volume, bool muted)
     {
         VolumeNotification?.Invoke(flow, volume, muted);
     }
@@ -155,7 +155,7 @@ public static class MultimediaManager
             DesktopScreen desktopScreen = new(screen);
 
             // pull resolutions details
-            List<DisplayDevice> resolutions = GetResolutions(desktopScreen.screen.DeviceName);
+            List<DisplayDevice> resolutions = GetResolutions(desktopScreen.Screen.DeviceName);
             foreach (DisplayDevice mode in resolutions)
             {
                 ScreenResolution res = new ScreenResolution(mode.dmPelsWidth, mode.dmPelsHeight, mode.dmBitsPerPel);
@@ -322,7 +322,7 @@ public static class MultimediaManager
         long RetVal = ChangeDisplaySettings(ref dm, CDS_TEST);
         if (RetVal == 0)
         {
-            RetVal = ChangeDisplaySettings(ref dm, 0);
+            _ = ChangeDisplaySettings(ref dm, 0);
             ret = true;
         }
 
@@ -354,7 +354,7 @@ public static class MultimediaManager
 
     public static void PlayWindowsMedia(string file)
     {
-        bool Enabled = SettingsManager.GetBoolean("UISounds");
+        bool Enabled = SettingsManager.Get<bool>("UISounds");
         if (!Enabled)
             return;
 
@@ -490,6 +490,7 @@ public static class MultimediaManager
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern bool EnumDisplaySettings(string lpszDeviceName, int iModeNum, ref DisplayDevice lpDevMode);
+
     #endregion
 
     #region events
@@ -510,7 +511,7 @@ public static class MultimediaManager
     public delegate void DisplayOrientationChangedEventHandler(ScreenRotation rotation);
 
     public static event VolumeNotificationEventHandler VolumeNotification;
-    public delegate void VolumeNotificationEventHandler(DataFlow flow, float volume, bool isMute);
+    public delegate void VolumeNotificationEventHandler(SoundDirections flow, float volume, bool isMute);
 
     public static event BrightnessNotificationEventHandler BrightnessNotification;
     public delegate void BrightnessNotificationEventHandler(int brightness);

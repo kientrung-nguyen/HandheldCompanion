@@ -232,7 +232,7 @@ public static class PerformanceManager
             if (!profile.AutoTDPEnabled)
             {
                 StartTDPWatchdog();
-                AutoTDPMax = SettingsManager.GetInt("ConfigurableTDPOverrideUp");
+                AutoTDPMax = SettingsManager.Get<int>("ConfigurableTDPOverrideUp");
             }
             else
             {
@@ -256,7 +256,7 @@ public static class PerformanceManager
             else
             {
                 // AutoTDP is enabled but manual override is not, use the settings max limit
-                AutoTDPMax = SettingsManager.GetInt("ConfigurableTDPOverrideUp");
+                AutoTDPMax = SettingsManager.Get<int>("ConfigurableTDPOverrideUp");
             }
         }
 

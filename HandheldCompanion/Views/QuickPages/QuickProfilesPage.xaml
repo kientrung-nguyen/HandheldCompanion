@@ -18,12 +18,12 @@
     <ui:SimpleStackPanel Margin="0,6,0,6" Spacing="10">
         <Grid>
             <!--  Header  -->
-            <Border Padding="4,12,12,12" CornerRadius="{StaticResource ControlCornerRadius}">
+            <Border Padding="4,6,12,6" CornerRadius="{StaticResource ControlCornerRadius}">
                 <DockPanel>
                     <Image
                         Name="ProfileIcon"
-                        Width="24"
-                        Height="24"
+                        Width="30"
+                        Height="30"
                         HorizontalAlignment="Center" />
                     <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock

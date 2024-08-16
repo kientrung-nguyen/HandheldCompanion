@@ -102,8 +102,7 @@ public partial class SettingsPage : Page
 
     private void MultimediaManager_Initialized()
     {
-        string QuickToolsScreen = SettingsManager.GetString("QuickToolsScreen");
-
+        var QuickToolsScreen = SettingsManager.Get<string>("QuickToolsScreen");
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
@@ -271,7 +270,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("RunAtStartup", Toggle_AutoStart.IsOn);
+        SettingsManager.Set("RunAtStartup", Toggle_AutoStart.IsOn);
     }
 
     private void Toggle_Background_Toggled(object? sender, RoutedEventArgs? e)
@@ -279,7 +278,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("StartMinimized", Toggle_Background.IsOn);
+        SettingsManager.Set("StartMinimized", Toggle_Background.IsOn);
     }
 
     private void Toggle_CloseMinimizes_Toggled(object? sender, RoutedEventArgs? e)
@@ -287,7 +286,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("CloseMinimises", Toggle_CloseMinimizes.IsOn);
+        SettingsManager.Set("CloseMinimises", Toggle_CloseMinimizes.IsOn);
     }
 
     private void Toggle_DesktopProfileOnStart_Toggled(object? sender, RoutedEventArgs? e)
@@ -295,7 +294,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("DesktopProfileOnStart", Toggle_DesktopProfileOnStart.IsOn);
+        SettingsManager.Set("DesktopProfileOnStart", Toggle_DesktopProfileOnStart.IsOn);
     }
 
     private void Button_DetectNativeDisplayOrientation_Click(object sender, RoutedEventArgs? e)
@@ -305,7 +304,7 @@ public partial class SettingsPage : Page
 
         var rotation = MultimediaManager.GetScreenOrientation();
         rotation = new ScreenRotation(rotation.rotationUnnormalized, ScreenRotation.Rotations.UNSET);
-        SettingsManager.SetProperty("NativeDisplayOrientation", (int)rotation.rotationNativeBase);
+        SettingsManager.Set("NativeDisplayOrientation", (int)rotation.rotationNativeBase);
     }
 
     private void UpdateManager_Updated(UpdateStatus status, UpdateFile updateFile, object value)
@@ -428,7 +427,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("CurrentCulture", culture.Name);
+        SettingsManager.Set("CurrentCulture", culture.Name);
 
         Localization.TranslationSource.Instance.CurrentCulture = CultureInfo.GetCultureInfo(culture.Name);
         
@@ -440,7 +439,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("ToastEnable", Toggle_Notification.IsOn);
+        SettingsManager.Set("ToastEnable", Toggle_Notification.IsOn);
     }
 
     private void cB_Theme_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -462,7 +461,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("MainWindowTheme", cB_Theme.SelectedIndex);
+        SettingsManager.Set("MainWindowTheme", cB_Theme.SelectedIndex);
     }
 
     private void cB_QuickToolsBackdrop_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -476,7 +475,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("QuicktoolsBackdrop", cB_QuickToolsBackdrop.SelectedIndex);
+        SettingsManager.Set("QuicktoolsBackdrop", cB_QuickToolsBackdrop.SelectedIndex);
     }
 
     private void cB_Backdrop_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -490,7 +489,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("MainWindowBackdrop", cB_Backdrop.SelectedIndex);
+        SettingsManager.Set("MainWindowBackdrop", cB_Backdrop.SelectedIndex);
     }
 
     private void SwitchBackdrop(Window targetWindow, int idx)
@@ -534,7 +533,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("PlatformRTSSEnabled", Toggle_RTSS.IsOn);
+        SettingsManager.Set("PlatformRTSSEnabled", Toggle_RTSS.IsOn);
     }
 
     private void cB_QuicktoolsPosition_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -542,7 +541,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("QuickToolsLocation", cB_QuicktoolsPosition.SelectedIndex);
+        SettingsManager.Set("QuickToolsLocation", cB_QuicktoolsPosition.SelectedIndex);
     }
 
     private void Toggle_QuicktoolsAutoHide_Toggled(object sender, RoutedEventArgs e)
@@ -550,7 +549,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("QuickToolsAutoHide", Toggle_QuicktoolsAutoHide.IsOn);
+        SettingsManager.Set("QuickToolsAutoHide", Toggle_QuicktoolsAutoHide.IsOn);
     }
 
     private void Toggle_UISounds_Toggled(object sender, RoutedEventArgs e)
@@ -558,7 +557,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("UISounds", Toggle_UISounds.IsOn);
+        SettingsManager.Set("UISounds", Toggle_UISounds.IsOn);
     }
 
     private void Toggle_Telemetry_Toggled(object sender, RoutedEventArgs e)
@@ -566,7 +565,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("TelemetryEnabled", Toggle_Telemetry.IsOn);
+        SettingsManager.Set("TelemetryEnabled", Toggle_Telemetry.IsOn);
     }
     
     private void cB_QuickToolsScreen_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -575,6 +574,6 @@ public partial class SettingsPage : Page
             return;
 
         if (cB_QuickToolsScreen.SelectedItem is DesktopScreen desktopScreen)
-            SettingsManager.SetProperty("QuickToolsScreen", desktopScreen.FriendlyName);
+            SettingsManager.Set("QuickToolsScreen", desktopScreen.FriendlyName);
     }
 }

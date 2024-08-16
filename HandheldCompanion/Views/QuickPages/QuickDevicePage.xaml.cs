@@ -2,6 +2,7 @@
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
@@ -37,10 +38,8 @@ public partial class QuickDevicePage : Page
 
         LegionGoPanel.Visibility = IDevice.GetCurrent() is LegionGo ? Visibility.Visible : Visibility.Collapsed;
         DynamicLightingPanel.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting) ? Visibility.Visible : Visibility.Collapsed;
-
-        NightLightSchedule.IsEnabled =
-            NightLightToggle.IsEnabled = MultimediaManager.HasBrightnessSupport();
-
+        panelNightlight.Visibility = MultimediaManager.HasNightLightSupport() ? Visibility.Visible : Visibility.Collapsed;
+        NightLightSchedule.IsEnabled = NightLightToggle.IsEnabled = MultimediaManager.HasNightLightSupport();
 
         // why is that part of a timer ?
         radioTimer = new(1000);
@@ -130,6 +129,18 @@ public partial class QuickDevicePage : Page
         {
             switch (name)
             {
+                case "ScreenFrequencyAuto":
+                    AutoScreenToggle.IsOn = SettingsManager.Get<bool>(name);
+                    break;
+                case "NightLightSchedule":
+                    NightLightSchedule.IsOn = SettingsManager.Get<bool>(name); 
+                    break;
+                case "NightLightTurnOn":
+                    NightlightTurnOn.SelectedDateTime = SettingsManager.Get<DateTime?>(name);
+                    break;
+                case "NightLightTurnOff":
+                    NightlightTurnOff.SelectedDateTime = SettingsManager.Get<DateTime?>(name);
+                    break;
                 case "LEDSettingsEnabled":
                     UseDynamicLightingToggle.IsOn = Convert.ToBoolean(value);
                     break;
@@ -278,7 +289,7 @@ public partial class QuickDevicePage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("LEDSettingsEnabled", UseDynamicLightingToggle.IsOn);
+        SettingsManager.Set("LEDSettingsEnabled", UseDynamicLightingToggle.IsOn);
     }
 
     internal void Close()
@@ -299,11 +310,38 @@ public partial class QuickDevicePage : Page
     {
         var isEnabled = NightLight.Set(NightLightToggle.IsOn);
         if (isEnabled is not null)
-            ToastManager.RunToast($"Night light {(isEnabled.Value ? Properties.Resources.On : Properties.Resources.Off)}", Windows.ToastIcons.Nightlight);
+            ToastManager.RunToast(
+                $"Night light {(isEnabled.Value ? Properties.Resources.On : Properties.Resources.Off)}",
+                isEnabled.Value ? ToastIcons.Nightlight : ToastIcons.NightlightOff);
     }
 
     private void NightLightSchedule_Toggled(object sender, RoutedEventArgs e)
     {
-        PanelNightLightTime.IsEnabled = NightLightSchedule.IsOn;
+        SettingsManager.Set("NightLightSchedule", NightLightSchedule.IsOn);
+    }
+
+    private void NightlightTurnOn_SelectedDateTimeChanged(object sender, RoutedPropertyChangedEventArgs<DateTime?> e)
+    {
+
+        if (NightlightTurnOn.SelectedDateTime != null)
+        {
+            SettingsManager.Set("NightLightTurnOn", NightlightTurnOn.SelectedDateTime);
+            NightLight.Auto();
+        }
+    }
+
+    private void NightlightTurnOff_SelectedDateTimeChanged(object sender, RoutedPropertyChangedEventArgs<DateTime?> e)
+    {
+        if (NightlightTurnOff.SelectedDateTime != null)
+        {
+            SettingsManager.Set("NightLightTurnOff", NightlightTurnOff.SelectedDateTime);
+            NightLight.Auto();
+        }
+    }
+
+    private void AutoScreenToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        SettingsManager.Set("ScreenFrequencyAuto", AutoScreenToggle.IsOn);
+
     }
 }

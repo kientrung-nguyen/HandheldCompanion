@@ -131,7 +131,7 @@ public static class ControllerManager
         SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
 
         // uncloak on close, if requested
-        if (SettingsManager.GetBoolean("HIDuncloakonclose"))
+        if (SettingsManager.Get<bool>("HIDuncloakonclose"))
             foreach (var controller in GetPhysicalControllers())
                 controller.Unhide(false);
 
@@ -292,7 +292,7 @@ public static class ControllerManager
         return;
 
         // search for last known controller and connect
-        string path = SettingsManager.GetString("HIDInstancePath");
+        string path = SettingsManager.Get<string>("HIDInstancePath");
 
         if (Controllers.ContainsKey(path))
         {
@@ -661,14 +661,14 @@ public static class ControllerManager
                         if (ControllerManagementAttempts == ControllerManagementMaxAttempts)
                         {
                             // resume all physical controllers
-                            StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedControllers");
+                            var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
                             if (deviceInstanceIds is not null && deviceInstanceIds.Count != 0)
                                 ResumeControllers();
 
                             UpdateStatus(ControllerManagerStatus.Failed);
                             ControllerManagementAttempts = 0;
 
-                            SettingsManager.SetProperty("ControllerManagement", false);
+                            SettingsManager.Set("ControllerManagement", false);
                         }
                         else
                         {
@@ -704,7 +704,7 @@ public static class ControllerManager
                             VirtualManager.Resume(false);
 
                             // resume all physical controllers
-                            StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedControllers");
+                            var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
                             if (deviceInstanceIds is not null && deviceInstanceIds.Count != 0)
                                 ResumeControllers();
 
@@ -721,7 +721,7 @@ public static class ControllerManager
                     else
                     {
                         // resume all physical controllers
-                        StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedControllers");
+                        var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
                         if (deviceInstanceIds is not null && deviceInstanceIds.Count != 0)
                             ResumeControllers();
 
@@ -889,7 +889,7 @@ public static class ControllerManager
                 targetController = null;
 
                 // update HIDInstancePath
-                SettingsManager.SetProperty("HIDInstancePath", string.Empty);
+                SettingsManager.Set("HIDInstancePath", string.Empty);
             }
         }
     }
@@ -918,11 +918,11 @@ public static class ControllerManager
             targetController.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
 
             // update HIDInstancePath
-            SettingsManager.SetProperty("HIDInstancePath", baseContainerDeviceInstanceId);
+            SettingsManager.Set("HIDInstancePath", baseContainerDeviceInstanceId);
 
             if (!IsPowerCycling)
             {
-                if (SettingsManager.GetBoolean("HIDcloakonconnect"))
+                if (SettingsManager.Get<bool>("HIDcloakonconnect"))
                 {
                     bool powerCycle = true;
 
@@ -946,7 +946,7 @@ public static class ControllerManager
 
             if (!IsPowerCycling)
             {
-                if (SettingsManager.GetBoolean("HIDvibrateonconnect"))
+                if (SettingsManager.Get<bool>("HIDvibrateonconnect"))
                     targetController.Rumble();
             }
 
@@ -957,10 +957,9 @@ public static class ControllerManager
     public static bool SuspendController(string baseContainerDeviceInstanceId)
     {
         // PnPUtil.StartPnPUtil(@"/delete-driver C:\Windows\INF\xusb22.inf /uninstall /force");
-        StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedControllers");
+        var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
 
-        if (deviceInstanceIds is null)
-            deviceInstanceIds = new();
+        deviceInstanceIds ??= new();
 
         try
         {
@@ -987,7 +986,7 @@ public static class ControllerManager
                     if (!deviceInstanceIds.Contains(baseContainerDeviceInstanceId))
                         deviceInstanceIds.Add(baseContainerDeviceInstanceId);
 
-                    SettingsManager.SetProperty("SuspendedControllers", deviceInstanceIds);
+                    SettingsManager.Set("SuspendedControllers", deviceInstanceIds);
                     PowerCyclers[baseContainerDeviceInstanceId] = true;
                     return true;
             }
@@ -1000,7 +999,7 @@ public static class ControllerManager
     public static bool ResumeControllers()
     {
         // PnPUtil.StartPnPUtil(@"/add-driver C:\Windows\INF\xusb22.inf /install");
-        StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedControllers");
+        var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
 
         if (deviceInstanceIds is null || deviceInstanceIds.Count == 0)
             return true;
@@ -1032,7 +1031,7 @@ public static class ControllerManager
                         if (deviceInstanceIds.Contains(baseContainerDeviceInstanceId))
                             deviceInstanceIds.Remove(baseContainerDeviceInstanceId);
 
-                        SettingsManager.SetProperty("SuspendedControllers", deviceInstanceIds);
+                        SettingsManager.Set("SuspendedControllers", deviceInstanceIds);
                         PowerCyclers.TryRemove(baseContainerDeviceInstanceId, out _);
                         return true;
                 }
@@ -1128,7 +1127,7 @@ public static class ControllerManager
 
         // if profile HID is NotSelected, use HIDmode from settings
         if (HIDmode == HIDmode.NotSelected)
-            HIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true);
+            HIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode");
 
         switch (HIDmode)
         {

@@ -151,22 +151,22 @@ public class InputsHotkey
         {
             43,
             new InputsHotkey(InputsHotkeyType.Device, "\uE995", "increaseVolume", "Segoe Fluent Icons", 20, true, false,
-                null, "HasVolumeSupport")
+                deviceType: null, "HasVolumeSupport")
         },
         {
             44,
             new InputsHotkey(InputsHotkeyType.Device, "\uE993", "decreaseVolume", "Segoe Fluent Icons", 20, true, false,
-                null, "HasVolumeSupport")
+                deviceType: null, settings: "HasVolumeSupport")
         },
         {
             45,
-            new InputsHotkey(InputsHotkeyType.Device, "\uebfc", "touchscreenToggle", "Segoe Fluent Icons", 20,
-                false, true, null, string.Empty)
+            new InputsHotkey(InputsHotkeyType.Device, "\uebfc", "touchscreenToggle", "Segoe Fluent Icons", 20, false, true,
+                deviceType: null, settings : "")
         },
         {
             46,
-            new InputsHotkey(InputsHotkeyType.Device, "\uEFA5", "touchpadToggle", "Segoe Fluent Icons", 20,
-                false, true, null, string.Empty)
+            new InputsHotkey(InputsHotkeyType.Device, "\uEFA5", "touchpadToggle", "Segoe Fluent Icons", 20, false, true,
+                deviceType: null, settings: "")
         },
 
         // User customizable hotkeys
@@ -240,7 +240,7 @@ public class InputsHotkey
     };
 
     public InputsHotkey(InputsHotkeyType hotkeyType, string glyph, string listener, string fontFamily, double fontSize,
-        bool onKeyDown, bool onKeyUp, Type deviceType = null, string settings = "", bool defaultPinned = false,
+        bool onKeyDown, bool onKeyUp, Type? deviceType = null, string settings = "", bool defaultPinned = false,
         bool isToggle = false)
     {
         this.hotkeyType = hotkeyType;

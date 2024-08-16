@@ -282,7 +282,7 @@ public partial class ControllerPage : Page
         bool hasPhysical = ControllerManager.HasPhysicalController();
         bool hasVirtual = ControllerManager.HasVirtualController();
         bool hasTarget = targetController != null;
-        bool isMuted = SettingsManager.GetBoolean("SteamControllerMute");
+        bool isMuted = SettingsManager.Get<bool>("SteamControllerMute");
 
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
@@ -330,7 +330,7 @@ public partial class ControllerPage : Page
         var currentProfile = ProfileManager.GetCurrent();
         if (currentProfile.Default || (HIDmode)currentProfile.HID == HIDmode.NotSelected)
         {
-            SettingsManager.SetProperty("HIDmode", cB_HidMode.SelectedIndex);
+            SettingsManager.Set("HIDmode", cB_HidMode.SelectedIndex);
         }
     }
 
@@ -341,7 +341,7 @@ public partial class ControllerPage : Page
 
         controllerStatus = (HIDstatus)cB_ServiceSwitch.SelectedIndex;
 
-        SettingsManager.SetProperty("HIDstatus", cB_ServiceSwitch.SelectedIndex);
+        SettingsManager.Set("HIDstatus", cB_ServiceSwitch.SelectedIndex);
     }
 
     private void Toggle_Cloaked_Toggled(object sender, RoutedEventArgs e)
@@ -349,7 +349,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("HIDcloakonconnect", Toggle_Cloaked.IsOn);
+        SettingsManager.Set("HIDcloakonconnect", Toggle_Cloaked.IsOn);
     }
 
     private void Toggle_Uncloak_Toggled(object sender, RoutedEventArgs e)
@@ -357,7 +357,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("HIDuncloakonclose", Toggle_Uncloak.IsOn);
+        SettingsManager.Set("HIDuncloakonclose", Toggle_Uncloak.IsOn);
     }
 
     private void SliderStrength_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -371,7 +371,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("VibrationStrength", value);
+        SettingsManager.Set("VibrationStrength", value);
     }
 
     private void Toggle_SCMuteController_Toggled(object sender, RoutedEventArgs e)
@@ -379,7 +379,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("SteamControllerMute", Toggle_SCMuteController.IsOn);
+        SettingsManager.Set("SteamControllerMute", Toggle_SCMuteController.IsOn);
     }
 
     private void Toggle_Vibrate_Toggled(object sender, RoutedEventArgs e)
@@ -387,7 +387,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("HIDvibrateonconnect", Toggle_Vibrate.IsOn);
+        SettingsManager.Set("HIDvibrateonconnect", Toggle_Vibrate.IsOn);
     }
 
     private void Toggle_ControllerManagement_Toggled(object sender, RoutedEventArgs e)
@@ -395,7 +395,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("ControllerManagement", Toggle_ControllerManagement.IsOn);
+        SettingsManager.Set("ControllerManagement", Toggle_ControllerManagement.IsOn);
     }
 
     private void Button_Layout_Click(object sender, RoutedEventArgs e)
@@ -419,7 +419,7 @@ public partial class ControllerPage : Page
             return;
 
         // temporary settings
-        SettingsManager.SetProperty("DesktopLayoutEnabled", Toggle_DesktopLayout.IsOn, false, true);
+        SettingsManager.Set("DesktopLayoutEnabled", Toggle_DesktopLayout.IsOn, false);
     }
 
     private void Expander_Expanded(object sender, RoutedEventArgs e)

@@ -1,11 +1,7 @@
-﻿using HandheldCompanion.Managers;
-using HandheldCompanion.Views.Classes;
-using Microsoft.Toolkit.Uwp.Notifications;
+﻿using HandheldCompanion.Views.Classes;
 using System;
-using System.Data;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Threading;
 
 namespace HandheldCompanion.Views.Windows;
@@ -19,6 +15,7 @@ public enum ToastIcons
     BrightnessUp,
     BrightnessDown,
     Nightlight,
+    NightlightOff,
     BacklightUp,
     BacklightDown,
     Game,
@@ -28,6 +25,7 @@ public enum ToastIcons
     MicrophoneMute,
     FnLock,
     Battery,
+    BatteryFullyCharged,
     Charger,
     Controller
 }
@@ -41,13 +39,12 @@ public partial class OverlayToast : OverlayWindow
     protected static string toastTitle = "Balanced";
     protected static string toastText = "Toast text";
     protected static ToastIcons? toastIcon = null;
-
     private readonly DispatcherTimer dispatcher = new(
         DispatcherPriority.Normal,
         Dispatcher.CurrentDispatcher)
     {
         IsEnabled = false,
-        Interval = TimeSpan.FromMilliseconds(2000)
+        Interval = TimeSpan.FromMilliseconds(2850)
     };
     public OverlayToast()
     {
@@ -75,6 +72,7 @@ public partial class OverlayToast : OverlayWindow
                 ToastIcons.BrightnessDown => "\uec8a",
                 ToastIcons.Charger => "\ue83e",
                 ToastIcons.Battery => "\ue859",
+                ToastIcons.BatteryFullyCharged => "\uebb5",
                 ToastIcons.VolumeUp => "\ue995",
                 ToastIcons.VolumeDown => "\ue994",
                 ToastIcons.VolumeMute => "\ue74f",
@@ -82,6 +80,7 @@ public partial class OverlayToast : OverlayWindow
                 ToastIcons.MicrophoneMute => "\uf781",
                 ToastIcons.Microphone => "\ue720",
                 ToastIcons.Nightlight => "\uf08c",
+                ToastIcons.NightlightOff => "\uE706",
                 _ => "\ue713"
             };
             ToastPanel.Visibility = Visibility.Visible;

@@ -127,10 +127,10 @@ public struct ScreenRotation
 public class DesktopScreen
 {
     public DisplayDevice devMode;
-    public Screen screen;
+    public Screen Screen;
     public string DevicePath;
     public string FriendlyName;
-    public bool IsPrimary => screen.Primary;
+    public bool IsPrimary => Screen.Primary;
 
     public List<ScreenResolution> screenResolutions = new();
     public List<ScreenDivider> screenDividers = new();
@@ -139,7 +139,7 @@ public class DesktopScreen
 
     public DesktopScreen(Screen screen)
     {
-        this.screen = screen;
+        this.Screen = screen;
 
         devMode = GetDisplay(screen.DeviceName);
         FriendlyName = GetDisplayFriendlyName(screen.DeviceName);
@@ -148,7 +148,7 @@ public class DesktopScreen
 
     public override string ToString()
     {
-        return FriendlyName;
+        return FriendlyName; 
     }
 
     public bool HasResolution(ScreenResolution resolution)

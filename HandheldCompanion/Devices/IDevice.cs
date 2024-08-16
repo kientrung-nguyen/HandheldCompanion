@@ -937,9 +937,9 @@ public abstract class IDevice
     {
         List<string> successes = new();
 
-        StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedDevices");
+        var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedDevices");
 
-        deviceInstanceIds ??= new();
+        deviceInstanceIds ??= new List<string>();
 
         foreach (string InstanceId in deviceInstanceIds)
         {
@@ -950,7 +950,7 @@ public abstract class IDevice
         foreach (string InstanceId in successes)
             deviceInstanceIds.Remove(InstanceId);
 
-        SettingsManager.SetProperty("SuspendedDevices", deviceInstanceIds);
+        SettingsManager.Set("SuspendedDevices", deviceInstanceIds);
     }
 
     protected bool SuspendDevice(string InterfaceId)
@@ -959,14 +959,14 @@ public abstract class IDevice
 
         if (pnPDevice is not null)
         {
-            StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedDevices");
+            var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedDevices");
 
             deviceInstanceIds ??= new();
 
             if (!deviceInstanceIds.Contains(pnPDevice.InstanceId))
                 deviceInstanceIds.Add(pnPDevice.InstanceId);
 
-            SettingsManager.SetProperty("SuspendedDevices", deviceInstanceIds);
+            SettingsManager.Set("SuspendedDevices", deviceInstanceIds);
 
             return PnPUtil.DisableDevice(pnPDevice.InstanceId);
         }

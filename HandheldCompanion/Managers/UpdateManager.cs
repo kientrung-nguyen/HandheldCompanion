@@ -265,7 +265,7 @@ public static class UpdateManager
 
     public static void Start()
     {
-        var dateTime = SettingsManager.GetDateTime("UpdateLastChecked");
+        var dateTime = SettingsManager.Get<DateTime>("UpdateLastChecked");
 
         lastchecked = dateTime;
 
@@ -298,7 +298,7 @@ public static class UpdateManager
     private static void UpdateTime()
     {
         lastchecked = DateTime.Now;
-        SettingsManager.SetProperty("UpdateLastChecked", lastchecked);
+        SettingsManager.Set("UpdateLastChecked", lastchecked);
     }
 
     public static void StartProcess()

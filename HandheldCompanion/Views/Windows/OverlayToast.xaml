@@ -21,17 +21,17 @@
         <Border
             Name="ToastPanel"
             d:Height="100"
-            Margin="24,96,24,0"
+            Margin="24,230,24,0"
             d:Visibility="Visible"
             Visibility="Hidden"
             HorizontalAlignment="Center"
             VerticalAlignment="Center">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="100*" />
+                    <ColumnDefinition />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="100*" />
+                    <RowDefinition />
                 </Grid.RowDefinitions>
                 <Border
                     CornerRadius="{DynamicResource ControlCornerRadius}"
@@ -40,23 +40,23 @@
                     VerticalAlignment="Stretch"
                     Opacity="0.6">
                 </Border>
-                <Border Padding="20">
+                <Border Padding="10">
                     <ui:SimpleStackPanel
                         Orientation="Horizontal"
                         Spacing="20" Panel.ZIndex="1">
                         <ui:FontIcon
                             Name="ToastIcon"
-                            Width="64"
-                            Height="64"
-                            FontSize="60"
+                            Width="54"
+                            Height="54"
+                            FontSize="48"
                             Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}" 
                             VerticalAlignment="Center" />
                         <TextBlock
                             Name="ToastText"
                             FontWeight="Bold"
-                            FontSize="36"
-                            Text="Balanced"
+                            FontSize="32"
+                            Text="Toast text here"
                             TextWrapping="Wrap"
                             Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}"

@@ -213,7 +213,7 @@ public partial class LayoutPage : Page
     private void RefreshLayoutList()
     {
         // Get filter settings
-        var FilterOnDevice = SettingsManager.GetBoolean("LayoutFilterOnDevice");
+        var FilterOnDevice = SettingsManager.Get<bool>("LayoutFilterOnDevice");
 
         // Get current controller
         var controller = ControllerManager.GetTargetController();
@@ -364,7 +364,7 @@ public partial class LayoutPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("LayoutFilterOnDevice", CheckBoxDeviceLayouts.IsChecked);
+        SettingsManager.Set("LayoutFilterOnDevice", CheckBoxDeviceLayouts.IsChecked);
     }
 
     private void LayoutExportButton_Click(object sender, RoutedEventArgs e)

@@ -72,7 +72,7 @@ namespace HandheldCompanion.Managers
             SteeringAxis steeringAxis = current.SteeringAxis;
             if (steeringAxis == SteeringAxis.Auto)
             {
-                SensorFamily sensorSelection = (SensorFamily)SettingsManager.GetInt("SensorSelection");
+                SensorFamily sensorSelection = (SensorFamily)SettingsManager.Get<int>("SensorSelection");
                 switch (sensorSelection)
                 {
                     case SensorFamily.Windows:

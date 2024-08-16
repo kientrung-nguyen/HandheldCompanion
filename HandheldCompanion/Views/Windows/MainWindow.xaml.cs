@@ -101,7 +101,7 @@ public partial class MainWindow : GamepadWindow
 
     //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime)
     private static readonly DispatcherTimer notifyIconWaitTimer = new(
-        TimeSpan.FromMilliseconds(300),
+        TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime),
         DispatcherPriority.Normal,
         notifyIconWaitTimerTicked,
         Dispatcher.CurrentDispatcher)
@@ -121,7 +121,7 @@ public partial class MainWindow : GamepadWindow
         // initialize splash screen
         SplashScreen = new SplashScreen();
         // get first start
-        bool FirstStart = SettingsManager.GetBoolean("FirstStart");
+        bool FirstStart = SettingsManager.Get<bool>("FirstStart");
 
         if (FirstStart)
         {
@@ -246,12 +246,12 @@ public partial class MainWindow : GamepadWindow
                     {
                         // prevent Steam Deck controller from being hidden by default
                         if (FirstStart)
-                            SettingsManager.SetProperty("HIDcloakonconnect", false);
+                            SettingsManager.Set("HIDcloakonconnect", false);
                     }
                     break;
             }
 
-            SettingsManager.SetProperty("FirstStart", false);
+            SettingsManager.Set("FirstStart", false);
         }
 
         // initialize UI sounds board
@@ -279,7 +279,7 @@ public partial class MainWindow : GamepadWindow
         ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
 
         ToastManager.Start();
-        ToastManager.IsEnabled = SettingsManager.GetBoolean("ToastEnable");
+        ToastManager.IsEnabled = SettingsManager.Get<bool>("ToastEnable");
 
         // start static managers in sequence
         SplashScreen.LoadingSequence.Text = "Initializing managers...";
@@ -315,16 +315,15 @@ public partial class MainWindow : GamepadWindow
         LoadPages_MVVM();
 
         // update Position and Size
-        Height = (int)Math.Max(MinHeight, SettingsManager.GetDouble("MainWindowHeight"));
-        Width = (int)Math.Max(MinWidth, SettingsManager.GetDouble("MainWindowWidth"));
-        Left = Math.Min(SystemParameters.PrimaryScreenWidth - MinWidth, SettingsManager.GetDouble("MainWindowLeft"));
-        Top = Math.Min(SystemParameters.PrimaryScreenHeight - MinHeight, SettingsManager.GetDouble("MainWindowTop"));
-        navView.IsPaneOpen = SettingsManager.GetBoolean("MainWindowIsPaneOpen");
+        Height = (int)Math.Max(MinHeight, SettingsManager.Get<double>("MainWindowHeight"));
+        Width = (int)Math.Max(MinWidth, SettingsManager.Get<double>("MainWindowWidth"));
+        Left = Math.Min(SystemParameters.PrimaryScreenWidth - MinWidth, SettingsManager.Get<double>("MainWindowLeft"));
+        Top = Math.Min(SystemParameters.PrimaryScreenHeight - MinHeight, SettingsManager.Get<double>("MainWindowTop"));
+        navView.IsPaneOpen = SettingsManager.Get<bool>("MainWindowIsPaneOpen");
 
         SetPreferredAppMode(2);
         FlushMenuThemes();
     }
-
 
     private static void sensorTimer_Elapsed(object? sender, EventArgs e)
     {
@@ -557,7 +556,7 @@ public partial class MainWindow : GamepadWindow
                     break;
 
                 var DesktopLayout = Convert.ToBoolean(value);
-                SettingsManager.SetProperty("DesktopLayoutEnabled", DesktopLayout, false, true);
+                SettingsManager.Set("DesktopLayoutEnabled", DesktopLayout, false);
                 break;
             case "TelemetryApproved":
 
@@ -704,8 +703,8 @@ public partial class MainWindow : GamepadWindow
             source.AddHook(WndProc); // Hook into the window's message loop
 
         // restore window state
-        WindowState = SettingsManager.GetBoolean("StartMinimized") ? WindowState.Minimized : (WindowState)SettingsManager.GetInt("MainWindowState");
-        prevWindowState = (WindowState)SettingsManager.GetInt("MainWindowPrevState");
+        WindowState = SettingsManager.Get<bool>("StartMinimized") ? WindowState.Minimized : (WindowState)SettingsManager.Get<int>("MainWindowState");
+        prevWindowState = (WindowState)SettingsManager.Get<int>("MainWindowPrevState");
     }
 
     private void ControllerPage_Loaded(object sender, RoutedEventArgs e)
@@ -713,15 +712,15 @@ public partial class MainWindow : GamepadWindow
         // home page is ready, display main window
         this.Visibility = Visibility.Visible;
 
-        string TelemetryApproved = SettingsManager.GetString("TelemetryApproved");
+        string TelemetryApproved = SettingsManager.Get<string>("TelemetryApproved");
         if (string.IsNullOrEmpty(TelemetryApproved))
         {
             string Title = Properties.Resources.MainWindow_TelemetryTitle;
             string Content = Properties.Resources.MainWindow_TelemetryText;
 
             MessageBoxResult result = MessageBox.Show(Content, Title, MessageBoxButton.YesNo);
-            SettingsManager.SetProperty("TelemetryApproved", result == MessageBoxResult.Yes ? "True" : "False");
-            SettingsManager.SetProperty("TelemetryEnabled", result == MessageBoxResult.Yes ? true : false);
+            SettingsManager.Set("TelemetryApproved", result == MessageBoxResult.Yes ? "True" : "False");
+            SettingsManager.Set("TelemetryEnabled", result == MessageBoxResult.Yes ? true : false);
         }
     }
 
@@ -903,26 +902,26 @@ public partial class MainWindow : GamepadWindow
         switch (WindowState)
         {
             case WindowState.Normal:
-                SettingsManager.SetProperty("MainWindowLeft", Left);
-                SettingsManager.SetProperty("MainWindowTop", Top);
-                SettingsManager.SetProperty("MainWindowWidth", ActualWidth);
-                SettingsManager.SetProperty("MainWindowHeight", ActualHeight);
+                SettingsManager.Set("MainWindowLeft", Left);
+                SettingsManager.Set("MainWindowTop", Top);
+                SettingsManager.Set("MainWindowWidth", ActualWidth);
+                SettingsManager.Set("MainWindowHeight", ActualHeight);
                 break;
             case WindowState.Maximized:
-                SettingsManager.SetProperty("MainWindowLeft", 0);
-                SettingsManager.SetProperty("MainWindowTop", 0);
-                SettingsManager.SetProperty("MainWindowWidth", SystemParameters.MaximizedPrimaryScreenWidth);
-                SettingsManager.SetProperty("MainWindowHeight", SystemParameters.MaximizedPrimaryScreenHeight);
+                SettingsManager.Set("MainWindowLeft", 0);
+                SettingsManager.Set("MainWindowTop", 0);
+                SettingsManager.Set("MainWindowWidth", SystemParameters.MaximizedPrimaryScreenWidth);
+                SettingsManager.Set("MainWindowHeight", SystemParameters.MaximizedPrimaryScreenHeight);
 
                 break;
         }
 
-        SettingsManager.SetProperty("MainWindowState", (int)WindowState);
-        SettingsManager.SetProperty("MainWindowPrevState", (int)prevWindowState);
+        SettingsManager.Set("MainWindowState", (int)WindowState);
+        SettingsManager.Set("MainWindowPrevState", (int)prevWindowState);
 
-        SettingsManager.SetProperty("MainWindowIsPaneOpen", navView.IsPaneOpen);
+        SettingsManager.Set("MainWindowIsPaneOpen", navView.IsPaneOpen);
 
-        if (SettingsManager.GetBoolean("CloseMinimises") && !appClosing)
+        if (SettingsManager.Get<bool>("CloseMinimises") && !appClosing)
         {
             e.Cancel = true;
             WindowState = WindowState.Minimized;

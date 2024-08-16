@@ -6,15 +6,12 @@ using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
 using iNKORE.UI.WPF.Modern.Controls;
-using NAudio.CoreAudioApi;
-using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
@@ -28,6 +25,7 @@ using Windows.Devices.WiFi;
 using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
+using static HandheldCompanion.Misc.SoundControl;
 using Application = System.Windows.Application;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Page = System.Windows.Controls.Page;
@@ -184,8 +182,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private void SystemManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
     {
         // ignore if we're not ready yet
-        if (!MultimediaManager.IsInitialized)
-            return;
+        if (!MultimediaManager.IsInitialized) return;
 
         UpdateLocation();
     }
@@ -198,14 +195,14 @@ public partial class OverlayQuickTools : GamepadWindow
     private void UpdateLocation()
     {
         // pull quicktools settings
-        int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
-        string FriendlyName = SettingsManager.GetString("QuickToolsScreen");
+        int QuickToolsLocation = SettingsManager.Get<int>("QuickToolsLocation");
+        string FriendlyName = SettingsManager.Get<string>("QuickToolsScreen");
 
         // Attempt to find the screen with the specified friendly name
         var friendlyScreen = MultimediaManager.AllScreens.Values.FirstOrDefault(a => a.FriendlyName.Equals(FriendlyName)) ?? MultimediaManager.PrimaryDesktop;
 
         // Find the corresponding Screen object
-        var targetScreen = Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName.Equals(friendlyScreen.screen.DeviceName, StringComparison.OrdinalIgnoreCase));
+        var targetScreen = Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName.Equals(friendlyScreen.Screen.DeviceName, StringComparison.OrdinalIgnoreCase));
 
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
@@ -213,7 +210,7 @@ public partial class OverlayQuickTools : GamepadWindow
             // Common settings across cases 0 and 1
 
             MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfWorkingArea.Width);
-            Width = (int)Math.Max(MinWidth, SettingsManager.GetDouble("QuickToolsWidth"));
+            Width = (int)Math.Max(MinWidth, SettingsManager.Get<double>("QuickToolsWidth"));
             MaxHeight = Math.Min(targetScreen.WpfWorkingArea.Height - (_Margin * 0), _MaxHeight);
             Height = MinHeight = MaxHeight;
             WindowStyle = _Style;
@@ -423,7 +420,7 @@ public partial class OverlayQuickTools : GamepadWindow
         switch (WindowStyle)
         {
             case WindowStyle.ToolWindow:
-                SettingsManager.SetProperty("QuickToolsWidth", ActualWidth);
+                SettingsManager.Set("QuickToolsWidth", ActualWidth);
                 break;
         }
 
@@ -713,11 +710,11 @@ public partial class OverlayQuickTools : GamepadWindow
         if (PlatformManager.LibreHardwareMonitor.BatteryPower != null &&
             PlatformManager.LibreHardwareMonitor.BatteryHealth != null &&
             PlatformManager.LibreHardwareMonitor.BatteryHealth != -1 &&
-            PlatformManager.LibreHardwareMonitor.BatteryFullCapacity > 0)
+            PlatformManager.LibreHardwareMonitor.BatteryRemainingCapacity > 0)
         {
             if (SystemManager.PowerStatusIcon.TryGetValue($"VerticalBattery{(int)(PlatformManager.LibreHardwareMonitor.BatteryHealth / 10)}", out var glyphBatteryHealth))
                 BatteryHealthIndicatorIcon.Glyph = glyphBatteryHealth;
-            BatteryDesignCapacity.Text = $"{PlatformManager.LibreHardwareMonitor.BatteryFullCapacity}mWh";
+            BatteryDesignCapacity.Text = $"{PlatformManager.LibreHardwareMonitor.BatteryRemainingCapacity}mWh";
             BatteryHealth.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
             BatteryHealthRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1);
             BatteryPower.Text = Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1).ToString() + "W";
@@ -850,11 +847,11 @@ public partial class OverlayQuickTools : GamepadWindow
         }
     }
 
-    private void MultimediaManager_VolumeNotification(DataFlow flow, float volume, bool isMute)
+    private void MultimediaManager_VolumeNotification(SoundDirections flow, float volume, bool isMute)
     {
         switch (flow)
         {
-            case DataFlow.Render:
+            case SoundDirections.Output:
                 if (volumeLock.TryEnter())
                 {
                     try
@@ -872,7 +869,7 @@ public partial class OverlayQuickTools : GamepadWindow
                     }
                 }
                 break;
-            case DataFlow.Capture:
+            case SoundDirections.Input:
                 if (microphoneLock.TryEnter())
                 {
                     try
@@ -1011,7 +1008,12 @@ public partial class OverlayQuickTools : GamepadWindow
                 {
                     var isEnabled = NightLight.Toggle();
                     if (isEnabled is not null)
+                    {
                         LightIcon.Glyph = !isEnabled.Value ? "\uE706" : "\uf08c";
+                        ToastManager.RunToast(
+                            $"Night light {(isEnabled.Value ? Properties.Resources.On : Properties.Resources.Off)}",
+                            isEnabled.Value ? ToastIcons.Nightlight : ToastIcons.NightlightOff);
+                    }
                 });
             }
             finally

@@ -211,7 +211,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayControllerSize", SliderControllerSize.Value);
+        SettingsManager.Set("OverlayControllerSize", SliderControllerSize.Value);
     }
 
     private void SliderTrackpadsSize_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -219,7 +219,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayTrackpadsSize", SliderTrackpadsSize.Value);
+        SettingsManager.Set("OverlayTrackpadsSize", SliderTrackpadsSize.Value);
     }
 
     private void OverlayModel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -230,7 +230,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayModel", OverlayModel.SelectedIndex);
+        SettingsManager.Set("OverlayModel", OverlayModel.SelectedIndex);
     }
 
     private void ControllerAlignment_Click(object sender, RoutedEventArgs e)
@@ -241,7 +241,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayControllerAlignment", Tag);
+        SettingsManager.Set("OverlayControllerAlignment", Tag);
     }
 
     private void TrackpadsAlignment_Click(object sender, RoutedEventArgs e)
@@ -252,7 +252,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayTrackpadsAlignment", Tag);
+        SettingsManager.Set("OverlayTrackpadsAlignment", Tag);
     }
 
     private void SliderTrackpadsOpacity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -260,7 +260,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayTrackpadsOpacity", SliderTrackpadsOpacity.Value);
+        SettingsManager.Set("OverlayTrackpadsOpacity", SliderTrackpadsOpacity.Value);
     }
 
     private void Expander_Expanded(object sender, RoutedEventArgs e)
@@ -276,7 +276,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayControllerMotion", Toggle_MotionActivated.IsOn);
+        SettingsManager.Set("OverlayControllerMotion", Toggle_MotionActivated.IsOn);
     }
 
     private void Toggle_FaceCamera_Toggled(object sender, RoutedEventArgs e)
@@ -286,7 +286,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayFaceCamera", Toggle_FaceCamera.IsOn);
+        SettingsManager.Set("OverlayFaceCamera", Toggle_FaceCamera.IsOn);
     }
 
     private void Slider_RestingPitch_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -296,7 +296,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayControllerRestingPitch", Slider_RestingPitch.Value);
+        SettingsManager.Set("OverlayControllerRestingPitch", Slider_RestingPitch.Value);
     }
 
     private void Toggle_RenderAA_Toggled(object sender, RoutedEventArgs e)
@@ -307,7 +307,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayRenderAntialiasing", Toggle_RenderAA.IsOn);
+        SettingsManager.Set("OverlayRenderAntialiasing", Toggle_RenderAA.IsOn);
     }
 
     private void Slider_Framerate_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -317,7 +317,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayRenderInterval", Slider_Framerate.Value);
+        SettingsManager.Set("OverlayRenderInterval", Slider_Framerate.Value);
     }
 
     private void SliderControllerOpacity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -327,7 +327,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayControllerOpacity", SliderControllerOpacity.Value);
+        SettingsManager.Set("OverlayControllerOpacity", SliderControllerOpacity.Value);
     }
 
     private Color prevSelectedColor = new();
@@ -347,7 +347,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayControllerBackgroundColor", ColorPicker.SelectedColor);
+        SettingsManager.Set("OverlayControllerBackgroundColor", ColorPicker.SelectedColor);
     }
 
     private void Toggle_AlwaysOnTop_Toggled(object sender, RoutedEventArgs e)
@@ -357,7 +357,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OverlayControllerAlwaysOnTop", Toggle_AlwaysOnTop.IsOn);
+        SettingsManager.Set("OverlayControllerAlwaysOnTop", Toggle_AlwaysOnTop.IsOn);
     }
 
     private void SliderOnScreenUpdateRate_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -365,7 +365,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayRefreshRate", SliderOnScreenUpdateRate.Value);
+        SettingsManager.Set("OnScreenDisplayRefreshRate", SliderOnScreenUpdateRate.Value);
     }
 
     private void OnScreenDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -373,7 +373,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayLevel", ((ComboBox)sender).SelectedIndex);
+        SettingsManager.Set("OnScreenDisplayLevel", ((ComboBox)sender).SelectedIndex);
     }
 
     private void ComboBoxOnScreenDisplayTimeLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -381,7 +381,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayTimeLevel", ((ComboBox)sender).SelectedIndex);
+        SettingsManager.Set("OnScreenDisplayTimeLevel", ((ComboBox)sender).SelectedIndex);
     }
 
 
@@ -390,7 +390,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayFPSLevel", ((ComboBox)sender).SelectedIndex);
+        SettingsManager.Set("OnScreenDisplayFPSLevel", ((ComboBox)sender).SelectedIndex);
     }
 
     private void ComboBoxOnScreenDisplayCPULevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -398,7 +398,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayCPULevel", ((ComboBox)sender).SelectedIndex);
+        SettingsManager.Set("OnScreenDisplayCPULevel", ((ComboBox)sender).SelectedIndex);
     }
 
     private void ComboBoxOnScreenDisplayRAMLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -406,7 +406,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayRAMLevel", ((ComboBox)sender).SelectedIndex);
+        SettingsManager.Set("OnScreenDisplayRAMLevel", ((ComboBox)sender).SelectedIndex);
     }
 
     private void ComboBoxOnScreenDisplayGPULevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -414,7 +414,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayGPULevel", ((ComboBox)sender).SelectedIndex);
+        SettingsManager.Set("OnScreenDisplayGPULevel", ((ComboBox)sender).SelectedIndex);
     }
 
     private void ComboBoxOnScreenDisplayVRAMLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -422,7 +422,7 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayVRAMLevel", ((ComboBox)sender).SelectedIndex);
+        SettingsManager.Set("OnScreenDisplayVRAMLevel", ((ComboBox)sender).SelectedIndex);
     }
 
     private void ComboBoxOnScreenDisplayBATTLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -430,6 +430,6 @@ public partial class OverlayPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("OnScreenDisplayBATTLevel", ((ComboBox)sender).SelectedIndex);
+        SettingsManager.Set("OnScreenDisplayBATTLevel", ((ComboBox)sender).SelectedIndex);
     }
 }

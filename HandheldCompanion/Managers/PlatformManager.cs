@@ -213,7 +213,7 @@ public static class PlatformManager
 
         if (RTSS.IsInstalled)
         {
-            var killRTSS = SettingsManager.GetBoolean("PlatformRTSSEnabled");
+            var killRTSS = SettingsManager.Get<bool>("PlatformRTSSEnabled");
             RTSS.Stop(killRTSS);
             RTSS.Dispose();
         }

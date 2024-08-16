@@ -1,5 +1,6 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Views.Windows;
 using LibreHardwareMonitor.Hardware;
 using System;
 using System.Diagnostics;
@@ -125,7 +126,14 @@ public class LibreHardwareMonitor : IPlatform
 
         if (BatteryFullCapacity > 0 && BatteryRemainingCapacity > 0)
         {
-            BatteryCapacity = (float)Math.Min(100, (decimal)BatteryRemainingCapacity / (decimal)BatteryFullCapacity * 100);
+            var currentBatteryCapacity = (float)Math.Min(100, (decimal)BatteryRemainingCapacity / (decimal)BatteryFullCapacity * 100);
+
+            if (BatteryCapacity != -1f && BatteryCapacity != 100f && currentBatteryCapacity == 100f)
+                ToastManager.RunToast(
+                    Properties.Resources.BatteryFullyCharged, ToastIcons.BatteryFullyCharged
+                    );
+
+            BatteryCapacity = currentBatteryCapacity;
             BatteryLevelChanged?.Invoke(BatteryCapacity);
 
             if (BatteryPower != 0)
@@ -237,7 +245,7 @@ public class LibreHardwareMonitor : IPlatform
         }
 
         var health = (float)BatteryFullCapacity / (float)BatteryDesignCapacity;
-        LogManager.LogInformation("Design Capacity: " + BatteryDesignCapacity + "mWh, Full Charge Capacity: " + BatteryFullCapacity + "mWh, Health: " + health + "%");
+        LogManager.LogInformation($"Design Capacity: {BatteryDesignCapacity}mWh,  Remaining Capacity: {BatteryRemainingCapacity}mWh,  Full Charge Capacity: {BatteryFullCapacity}mWh,  Health: {health}%");
 
         return health;
     }
@@ -247,7 +255,7 @@ public class LibreHardwareMonitor : IPlatform
         lock (updateLock)
         {
             //Refresh again only after 15 Minutes since the last refresh
-            if (lastBatteryRefresh == 0 || Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastBatteryRefresh) > 5 * 60_000)
+            if (lastBatteryRefresh == 0 || Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastBatteryRefresh) > 10 * 60_000)
             {
                 lastBatteryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 RefreshBatteryHealth();

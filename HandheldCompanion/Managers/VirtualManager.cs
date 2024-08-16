@@ -109,7 +109,7 @@ namespace HandheldCompanion.Managers
                         vClient = new ViGEmClient();
 
                     // update DSU status
-                    SetDSUStatus(SettingsManager.GetBoolean("DSUEnabled"));
+                    SetDSUStatus(SettingsManager.Get<bool>("DSUEnabled"));
                 }
 
                 // set controller mode

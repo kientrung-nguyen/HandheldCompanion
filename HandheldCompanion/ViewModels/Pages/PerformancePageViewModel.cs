@@ -135,12 +135,16 @@ namespace HandheldCompanion.ViewModels
 
         public double TDPMinimum
         {
-            get => SettingsManager.GetDouble(Settings.ConfigurableTDPOverrideDown);
+            get
+            {
+                return SettingsManager.Get<double>(Settings.ConfigurableTDPOverrideDown);
+            }
+
             set
             {
                 if (value != TDPMinimum)
                 {
-                    SettingsManager.SetProperty(Settings.ConfigurableTDPOverrideDown, value);
+                    SettingsManager.Set(Settings.ConfigurableTDPOverrideDown, value);
                     OnPropertyChanged(nameof(TDPMinimum));
                 }
             }
@@ -148,12 +152,16 @@ namespace HandheldCompanion.ViewModels
 
         public double TDPMaximum
         {
-            get => SettingsManager.GetDouble(Settings.ConfigurableTDPOverrideUp);
+            get
+            {
+                return SettingsManager.Get<double>(Settings.ConfigurableTDPOverrideUp);
+            }
+
             set
             {
                 if (value != TDPMaximum)
                 {
-                    SettingsManager.SetProperty(Settings.ConfigurableTDPOverrideUp, value);
+                    SettingsManager.Set(Settings.ConfigurableTDPOverrideUp, value);
                     OnPropertyChanged(nameof(TDPMaximum));
                 }
             }
@@ -584,7 +592,7 @@ namespace HandheldCompanion.ViewModels
                     var index = ProfilePickerItems.IndexOf(preset.IsDefault() ? _devicePresetsPickerVM : _userPresetsPickerVM) + 1;
                     ProfilePickerItems.Insert(index, new ProfilesPickerViewModel { Text = preset.Name, LinkedPresetId = preset.Guid });
                 }
-                
+
                 // Reset Index to Default, 1 item before _userPresetsPickerVM
                 _selectedPresetIndex = ProfilePickerItems.IndexOf(_userPresetsPickerVM) - 1;
 

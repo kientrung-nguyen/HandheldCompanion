@@ -358,6 +358,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Battery fully charged.
+        /// </summary>
+        public static string BatteryFullyCharged {
+            get {
+                return ResourceManager.GetString("BatteryFullyCharged", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Battery Health.
         /// </summary>
         public static string BatteryHealth {
@@ -3830,33 +3839,6 @@ namespace HandheldCompanion.Properties {
         public static string Hint_CoreIsolationCheckReadme {
             get {
                 return ResourceManager.GetString("Hint_CoreIsolationCheckReadme", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to HWiNFO Shared Memory limit was reached.
-        /// </summary>
-        public static string Hint_HWiNFO12hLimitPassed {
-            get {
-                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to HWiNFO has reached its shared memory time limit and disabled the shared memory support. This may result in missing or outdated sensor readings.
-        /// </summary>
-        public static string Hint_HWiNFO12hLimitPassedDesc {
-            get {
-                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassedDesc", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to You should manually re-activate the shared memory time limit in the HWiNFO settings.
-        /// </summary>
-        public static string Hint_HWiNFO12hLimitPassedReadme {
-            get {
-                return ResourceManager.GetString("Hint_HWiNFO12hLimitPassedReadme", resourceCulture);
             }
         }
         
@@ -8832,24 +8814,6 @@ namespace HandheldCompanion.Properties {
         public static string SettingsPage_HideWhenLoseFocusDesc {
             get {
                 return ResourceManager.GetString("SettingsPage_HideWhenLoseFocusDesc", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to HWiNFO.
-        /// </summary>
-        public static string SettingsPage_HwInfo {
-            get {
-                return ResourceManager.GetString("SettingsPage_HwInfo", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Automatically turn HWiNFO off when companion is closed.
-        /// </summary>
-        public static string SettingsPage_HwInfoDesc {
-            get {
-                return ResourceManager.GetString("SettingsPage_HwInfoDesc", resourceCulture);
             }
         }
         

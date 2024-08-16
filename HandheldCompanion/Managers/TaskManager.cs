@@ -63,7 +63,7 @@ public static class TaskManager
             taskDefinition.Actions.Add(new ExecAction(TaskExecutable));
 
             task = TaskService.Instance.RootFolder.RegisterTaskDefinition(TaskName, taskDefinition);
-            task.Enabled = SettingsManager.GetBoolean("RunAtStartup");
+            task.Enabled = SettingsManager.Get<bool>("RunAtStartup");
         }
         catch { }
 

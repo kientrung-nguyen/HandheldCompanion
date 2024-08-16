@@ -40,7 +40,7 @@ namespace HandheldCompanion.Managers
         {
             // select controller as current sensor if current sensor selection is none
             if (Controller.Capabilities.HasFlag(ControllerCapabilities.MotionSensor))
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.Controller);
+                SettingsManager.Set("SensorSelection", (int)SensorFamily.Controller);
             else
                 PickNextSensor();
         }
@@ -76,13 +76,13 @@ namespace HandheldCompanion.Managers
             IController controller = ControllerManager.GetTargetController();
 
             if (controller is not null && controller.HasMotionSensor())
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.Controller);
+                SettingsManager.Set("SensorSelection", (int)SensorFamily.Controller);
             else if (IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.InternalSensor))
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.Windows);
+                SettingsManager.Set("SensorSelection", (int)SensorFamily.Windows);
             else if (IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.ExternalSensor))
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.SerialUSBIMU);
+                SettingsManager.Set("SensorSelection", (int)SensorFamily.SerialUSBIMU);
             else
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.None);
+                SettingsManager.Set("SensorSelection", (int)SensorFamily.None);
         }
 
         private static void DeviceManager_UsbDeviceArrived(PnPDevice device, DeviceEventArgs obj)
@@ -92,7 +92,7 @@ namespace HandheldCompanion.Managers
 
             // select serial usb as current sensor if current sensor selection is none
             if (sensorFamily == SensorFamily.None)
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.SerialUSBIMU);
+                SettingsManager.Set("SensorSelection", (int)SensorFamily.SerialUSBIMU);
         }
 
         private static void SettingsManager_SettingValueChanged(string name, object value)
@@ -145,8 +145,8 @@ namespace HandheldCompanion.Managers
                                         break;
                                     }
 
-                                    SerialPlacement placement = (SerialPlacement)SettingsManager.GetInt("SensorPlacement");
-                                    bool upsidedown = SettingsManager.GetBoolean("SensorPlacementUpsideDown");
+                                    SerialPlacement placement = (SerialPlacement)SettingsManager.Get<int>("SensorPlacement");
+                                    bool upsidedown = SettingsManager.Get<bool>("SensorPlacementUpsideDown");
 
                                     USBSensor.Open();
                                     USBSensor.SetSensorPlacement(placement);

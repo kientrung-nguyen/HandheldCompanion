@@ -25,7 +25,7 @@ namespace HandheldCompanion.Controllers
 
         protected override void UpdateSettings()
         {
-            SetVirtualMuted(SettingsManager.GetBoolean("SteamControllerMute"));
+            SetVirtualMuted(SettingsManager.Get<bool>("SteamControllerMute"));
         }
 
         private void SettingsManager_SettingValueChanged(string name, object value)

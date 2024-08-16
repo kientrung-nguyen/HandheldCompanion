@@ -1,11 +1,12 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Processors;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Configuration;
-using System.Linq;
-using System.Windows.Media;
+using System.Collections.Immutable;
+using System.IO;
+using System.Timers;
 
 namespace HandheldCompanion.Managers;
 
@@ -25,14 +26,46 @@ public static class Settings
 
 public static class SettingsManager
 {
+    static string configFileName = "user.json";
+    static string configFilePath;
+    static string configSettingPath;
+
     public delegate void InitializedEventHandler();
 
     public delegate void SettingValueChangedEventHandler(string name, object value);
 
     private static readonly Dictionary<string, object> Settings = new();
 
+    private static ConcurrentDictionary<string, object> config = new();
+    private static ConcurrentDictionary<string, object> setting = new();
+    private static Timer timer = new(1000)
+    {
+        Enabled = false,
+        AutoReset = false
+    };
+
     static SettingsManager()
     {
+
+        configSettingPath = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion"), "config");
+        configFilePath = Path.Combine(configSettingPath, configFileName);
+        if (!Directory.Exists(configSettingPath))
+            Directory.CreateDirectory(configSettingPath);
+
+        if (!File.Exists(configFilePath))
+            File.WriteAllText(configFilePath, "");
+
+        var jsonString = File.ReadAllText(configFilePath);
+        if (jsonString == null || jsonString.Length == 0 || !jsonString.Contains('}'))
+            config = new ConcurrentDictionary<string, object>
+            {
+                ["FirstStart"] = true
+            };
+        else
+            config = JsonConvert.DeserializeObject<ConcurrentDictionary<string, object>>(jsonString) ?? new ConcurrentDictionary<string, object>
+            {
+                ["FirstStart"] = true
+            };
     }
 
     public static bool IsInitialized { get; internal set; }
@@ -43,22 +76,50 @@ public static class SettingsManager
 
     public static void Start()
     {
-        var properties = Properties.Settings
-            .Default
-            .Properties
-            .Cast<SettingsProperty>()
-            .OrderBy(s => s.Name);
 
-        foreach (var property in properties)
-            SettingValueChanged(property.Name, GetProperty(property.Name));
+        //var properties = Properties.Settings
+        //    .Default
+        //    .Properties
+        //    .Cast<SettingsProperty>()
+        //    .OrderBy(s => s.Name);
 
-        if (GetBoolean("FirstStart"))
-            SetProperty("FirstStart", false);
+        //foreach (var property in properties)
+        //{
+        //    config[property.Name] = GetProperty(property.Name);
+        //    //SettingValueChanged(property.Name, GetProperty(property.Name));
+        //}
+
+        foreach (var property in config.ToImmutableSortedDictionary())
+        {
+            SettingValueChanged?.Invoke(property.Key, GetInternal(property.Key));
+        }
+
+        if (Get<bool>("FirstStart"))
+            Set("FirstStart", false);
+
+        timer.Elapsed += Timer_Elapsed;
+        timer.Start();
 
         IsInitialized = true;
         Initialized?.Invoke();
 
         LogManager.LogInformation("{0} has started", "SettingsManager");
+    }
+
+    private static void Timer_Elapsed(object? sender, ElapsedEventArgs e)
+    {
+        try
+        {
+            timer.Stop();
+            File.WriteAllText(configFilePath,
+                JsonConvert.SerializeObject(config.ToImmutableSortedDictionary(),
+                Formatting.Indented));
+
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError($"{nameof(SettingsManager)} config write error {ex.Message} {ex.StackTrace}");
+        }
     }
 
     public static void Stop()
@@ -71,194 +132,118 @@ public static class SettingsManager
         LogManager.LogInformation("{0} has stopped", "SettingsManager");
     }
 
-    public static void SetProperty(string name, object value, bool force = false, bool temporary = false)
+    public static bool Is(string name)
     {
-        var prevValue = GetProperty(name, temporary);
+        return config.ContainsKey(name);
+    }
 
-        if (prevValue is not null)
-        {
-            switch (prevValue.GetType().Name)
-            {
-                case "StringCollection":
-                    if (prevValue.Equals(value) && !force)
-                        return;
-                    break;
-                default:
-                    if (prevValue.ToString() == value.ToString() && !force)
-                        return;
-                    break;
-            }
-        }
-
-        // specific cases
-        switch (name)
-        {
-            case "OverlayControllerBackgroundColor":
-            case "LEDMainColor":
-            case "LEDSecondColor":
-                value = Convert.ToString(value);
-                break;
-        }
-
+    public static void Set(string name, object value, bool save = true)
+    {
         try
         {
-            if (!temporary)
+            var valueBefore = GetInternal(name);
+            if (value.Equals(valueBefore) || (valueBefore != null && value.ToString() == valueBefore.ToString()))
+                return;
+
+            setting[name] = value;
+            if (save)
             {
-                Properties.Settings.Default[name] = value;
-                Properties.Settings.Default.Save();
+                config[name] = value;
+                timer.Start();
             }
-
-            // update internal settings dictionary (used for temporary settings)
-            Settings[name] = value;
-
             // raise event
             SettingValueChanged?.Invoke(name, value);
-
-            LogManager.LogDebug("Settings {0} set to {1}", name, value);
         }
-        catch
+        catch (Exception ex)
         {
+            LogManager.LogError($"Error setting config value {name}: {value} {ex.Message} {ex.StackTrace}");
         }
     }
 
-    private static bool PropertyExists(string name)
+
+    public static T Get<T>(string name, T defaultValue = default)
     {
-        return Properties.Settings.Default.Properties.Cast<SettingsProperty>().Any(prop => prop.Name == name);
+        try
+        {
+            var returnValue = GetInternal(name);
+            if (returnValue is not null)
+            {
+                if (returnValue is T)
+                    return (T)returnValue;
+
+                if (typeof(IConvertible).IsAssignableFrom(typeof(T)))
+                    return (T)Convert.ChangeType(returnValue, typeof(T));
+            }
+            return defaultValue;
+
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError($"Error getting config value {name} {ex.Message} {ex.StackTrace}");
+            return defaultValue;
+        }
     }
 
-    public static SortedDictionary<string, object> GetProperties()
-    {
-        SortedDictionary<string, object> result = new();
-
-        foreach (SettingsProperty property in Properties.Settings.Default.Properties)
-            result.Add(property.Name, GetProperty(property.Name));
-
-        return result;
-    }
-
-    private static object GetProperty(string name, bool temporary = false)
+    private static object? GetInternal(string name)
     {
         // used to handle cases
         switch (name)
         {
             case "ConfigurableTDPOverrideDown":
                 {
-                    var TDPoverride = GetBoolean("ConfigurableTDPOverride");
-
-                    var TDPvalue = Convert.ToDouble(Properties.Settings.Default["ConfigurableTDPOverrideDown"]);
+                    var TDPoverride = Get<bool>("ConfigurableTDPOverride");
                     return TDPoverride
-                        ? Properties.Settings.Default["ConfigurableTDPOverrideDown"]
+                        ? config.TryGetValue("ConfigurableTDPOverrideDown", out var TDPvalue)
+                            ? TDPvalue
+                            : IDevice.GetCurrent().cTDP[0]
                         : IDevice.GetCurrent().cTDP[0];
                 }
 
             case "ConfigurableTDPOverrideUp":
                 {
-                    var TDPoverride = GetBoolean("ConfigurableTDPOverride");
-
-                    var TDPvalue = Convert.ToDouble(Properties.Settings.Default["ConfigurableTDPOverrideUp"]);
+                    var TDPoverride = Get<bool>("ConfigurableTDPOverride");
                     return TDPoverride
-                        ? Properties.Settings.Default["ConfigurableTDPOverrideUp"]
+                        ? config.TryGetValue("ConfigurableTDPOverrideUp", out var TDPvalue)
+                            ? TDPvalue
+                            : IDevice.GetCurrent().cTDP[1]
                         : IDevice.GetCurrent().cTDP[1];
                 }
 
             case "QuickToolsPerformanceTDPValue":
                 {
-                    var TDPoverride = GetBoolean("QuickToolsPerformanceTDPEnabled");
-
-                    var TDPvalue = Convert.ToDouble(Properties.Settings.Default["QuickToolsPerformanceTDPValue"]);
-                    return TDPvalue != 0
-                        ? Properties.Settings.Default["QuickToolsPerformanceTDPValue"]
+                    var TDPoverride = Get<bool>("QuickToolsPerformanceTDPEnabled");
+                    return TDPoverride
+                        ? config.TryGetValue("QuickToolsPerformanceTDPValue", out var TDPvalue)
+                            ? TDPvalue
+                            : IDevice.GetCurrent().nTDP[(int)PowerType.Slow]
                         : IDevice.GetCurrent().nTDP[(int)PowerType.Slow];
                 }
 
             case "QuickToolsPerformanceTDPBoostValue":
                 {
-                    var TDPoverride = GetBoolean("QuickToolsPerformanceTDPEnabled");
-
-                    var TDPvalue = Convert.ToDouble(Properties.Settings.Default["QuickToolsPerformanceTDPBoostValue"]);
-                    return TDPvalue != 0
-                        ? Properties.Settings.Default["QuickToolsPerformanceTDPBoostValue"]
+                    var TDPoverride = Get<bool>("QuickToolsPerformanceTDPEnabled");
+                    return TDPoverride
+                        ? config.TryGetValue("QuickToolsPerformanceTDPBoostValue", out var TDPvalue)
+                            ? TDPvalue
+                            : IDevice.GetCurrent().nTDP[(int)PowerType.Slow]
                         : IDevice.GetCurrent().nTDP[(int)PowerType.Fast];
                 }
-
-            case "QuickToolsPerformanceGPUValue":
-                {
-                    var GPUoverride = GetBoolean("QuickToolsPerformanceGPUEnabled");
-
-                    var GPUvalue = Convert.ToDouble(Properties.Settings.Default["QuickToolsPerformanceGPUValue"]);
-                    return GPUvalue;
-                }
-
             case "HasBrightnessSupport":
                 return MultimediaManager.HasBrightnessSupport();
 
             case "HasVolumeSupport":
                 return MultimediaManager.HasVolumeSupport();
-
             default:
                 {
-                    if (temporary && Settings.TryGetValue(name, out var property))
-                        return property;
-                    if (PropertyExists(name))
-                        return Properties.Settings.Default[name];
+                    if (setting.TryGetValue(name, out var returnValue))
+                        return returnValue;
 
-                    return false;
+                    if (Is(name))
+                        return config[name];
+
+                    return default;
                 }
         }
     }
 
-    public static string GetString(string name, bool temporary = false)
-    {
-        return Convert.ToString(GetProperty(name, temporary));
-    }
-
-    public static bool GetBoolean(string name, bool temporary = false)
-    {
-        return Convert.ToBoolean(GetProperty(name, temporary));
-    }
-
-    public static Color GetColor(string name, bool temporary = false)
-    {
-        // Conver color, which is stored as a HEX string to a color datatype
-        string hexColor = Convert.ToString(GetProperty(name, temporary));
-
-        // Remove the '#' character and convert the remaining string to a 32-bit integer
-        var argbValue = int.Parse(hexColor.Substring(1), System.Globalization.NumberStyles.HexNumber);
-
-        // Extract alpha, red, green, and blue components
-        byte alpha = (byte)((argbValue >> 24) & 0xFF);
-        byte red = (byte)((argbValue >> 16) & 0xFF);
-        byte green = (byte)((argbValue >> 8) & 0xFF);
-        byte blue = (byte)(argbValue & 0xFF);
-
-        // Create a Color object from the extracted components
-        Color color = Color.FromArgb(alpha, red, green, blue);
-
-        return color;
-    }
-
-    public static int GetInt(string name, bool temporary = false)
-    {
-        return Convert.ToInt32(GetProperty(name, temporary));
-    }
-
-    public static uint GetUInt(string name, bool temporary = false)
-    {
-        return Convert.ToUInt32(GetProperty(name, temporary));
-    }
-
-    public static DateTime GetDateTime(string name, bool temporary = false)
-    {
-        return Convert.ToDateTime(GetProperty(name, temporary));
-    }
-
-    public static double GetDouble(string name, bool temporary = false)
-    {
-        return Convert.ToDouble(GetProperty(name, temporary));
-    }
-
-    public static StringCollection GetStringCollection(string name, bool temporary = false)
-    {
-        return (StringCollection)GetProperty(name, temporary);
-    }
 }

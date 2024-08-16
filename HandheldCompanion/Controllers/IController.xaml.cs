@@ -454,7 +454,7 @@ namespace HandheldCompanion.Controllers
         // this function cannot be called twice
         public virtual void Plug()
         {
-            SetVibrationStrength(SettingsManager.GetUInt("VibrationStrength"));
+            SetVibrationStrength(SettingsManager.Get<uint>("VibrationStrength"));
 
             InjectedButtons.Clear();
 

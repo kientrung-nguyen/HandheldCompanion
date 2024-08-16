@@ -100,13 +100,13 @@ public class OneXPlayerX1 : IDevice
             false, ButtonFlags.OEM1
             ));
         
-        LEDEnabled = SettingsManager.GetBoolean("LEDSettingsEnabled");
-        LEDBrightness = SettingsManager.GetInt("LEDBrightness");
-        LEDCurrentLevel = (LEDLevel)SettingsManager.GetInt("LEDSettingsLevel");
-        LEDControllerColor = SettingsManager.GetColor("LEDMainColor");
-        LEDBackColor = SettingsManager.GetColor("LEDSecondColor");
+        LEDEnabled = SettingsManager.Get<bool>("LEDSettingsEnabled");
+        LEDBrightness = SettingsManager.Get<int>("LEDBrightness");
+        LEDCurrentLevel = (LEDLevel)SettingsManager.Get<int>("LEDSettingsLevel");
+        LEDControllerColor = SettingsManager.Get<Color>("LEDMainColor");
+        LEDBackColor = SettingsManager.Get<Color>("LEDSecondColor");
 
-        int selectedIndex = SettingsManager.GetInt("LEDPresetIndex");
+        int selectedIndex = SettingsManager.Get<int>("LEDPresetIndex");
         LEDPreset = selectedIndex < LEDPresets.Count ? LEDPresets[selectedIndex] : null;
     }
 

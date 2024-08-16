@@ -1,9 +1,11 @@
-﻿using HandheldCompanion.Views.Windows;
+﻿using HandheldCompanion.Misc;
+using HandheldCompanion.Views.Windows;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using SystemPowerManager = Windows.System.Power.PowerManager;
 
 namespace HandheldCompanion.Managers;
@@ -24,6 +26,7 @@ public static class SystemManager
 
     public const uint ES_CONTINUOUS = 0x80000000;
     public const uint ES_SYSTEM_REQUIRED = 0x00000001;
+    static long lastAuto;
 
     public enum SystemStatus
     {
@@ -96,8 +99,10 @@ public static class SystemManager
     static SystemManager()
     {
         // listen to system events
-        SystemEvents.PowerModeChanged += OnPowerChange;
-        SystemEvents.SessionSwitch += OnSessionSwitch;
+        SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
+        SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
+        SystemEvents.SessionEnding += SystemEvents_SessionEnding;
+        SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
 
         SystemPowerManager.BatteryStatusChanged += BatteryStatusChanged;
         SystemPowerManager.EnergySaverStatusChanged += BatteryStatusChanged;
@@ -107,15 +112,15 @@ public static class SystemManager
     }
 
 
-    private static void BatteryStatusChanged(object sender, object e)
+    private static void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        LogManager.LogInformation($"SystemEvents_UserPreferenceChanged {e.Category}");
+    }
+
+    private static void BatteryStatusChanged(object? sender, object e)
     {
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
-        if (isPlugged != SystemInformation.PowerStatus.PowerLineStatus)
-        {
-            var currentProfile = ProfileManager.GetCurrent();
-            ToastManager.RunToast($"{currentProfile.Name}", SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online ? ToastIcons.Charger : ToastIcons.Battery);
-            isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
-        }
+        AutoRoutine();
     }
 
     public static void Start()
@@ -123,7 +128,7 @@ public static class SystemManager
         // check if current session is locked
         var handle = OpenInputDesktop(0, false, 0);
         IsSessionLocked = handle == IntPtr.Zero;
-
+        isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
         SystemRoutine();
 
         IsInitialized = true;
@@ -142,22 +147,23 @@ public static class SystemManager
         IsInitialized = false;
 
         // stop listening to system events
-        SystemEvents.PowerModeChanged -= OnPowerChange;
-        SystemEvents.SessionSwitch -= OnSessionSwitch;
+        SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
+        SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
+        SystemEvents.SessionEnding -= SystemEvents_SessionEnding;
 
         LogManager.LogInformation("{0} has stopped", "PowerManager");
     }
 
-    private static void OnPowerChange(object s, PowerModeChangedEventArgs e)
+    private static void SystemEvents_PowerModeChanged(object s, PowerModeChangedEventArgs e)
     {
         switch (e.Mode)
         {
             case PowerModes.Resume:
                 IsPowerSuspended = false;
+                LogManager.LogDebug("System is trying to resume. Performing tasks...");
                 break;
             case PowerModes.Suspend:
                 IsPowerSuspended = true;
-
                 // Prevent system sleep
                 SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
                 LogManager.LogDebug("System is trying to suspend. Performing tasks...");
@@ -165,62 +171,28 @@ public static class SystemManager
             default:
             case PowerModes.StatusChange:
                 PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
+                if (isPlugged == SystemInformation.PowerStatus.PowerLineStatus)
+                    return;
+
+                var currentProfile = ProfileManager.GetCurrent();
+                ToastManager.RunToast($"{currentProfile.Name}",
+                    SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online
+                    ? ToastIcons.Charger
+                    : ToastIcons.Battery);
+                isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
                 return;
         }
 
-        string cpuTemp = "";
-        string gpuTemp = "";
-        string battery = "";
-
-        if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
-            cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
-
-        if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
-            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
-
-        if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
-            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value)}%";
-
-        if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null)
-            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryUsage.Value / 1024, 1)}GB";
-
-        if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
-            gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
-
-        if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
-            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
-
-        if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
-            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value)}%";
-
-        if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null)
-            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
-
-        if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
-            battery = $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity)}%";
-
-        if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
-            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
-        else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
-            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
-
-        if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
-            battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
-
-        string trayTip = $"CPU{cpuTemp}";
-        if (gpuTemp.Length > 0) trayTip += "; GPU" + gpuTemp;
-        if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"; FAN: {PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
-        if (battery.Length > 0) trayTip += "; BAT" + battery;
-        LogManager.LogDebug("Device power mode set to {0} {1}", e.Mode, trayTip);
-
+        LogManager.LogDebug("Device power mode set to {0}", e.Mode);
         SystemRoutine();
     }
 
-    private static void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+    private static void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
     {
         switch (e.Reason)
         {
             case SessionSwitchReason.SessionUnlock:
+            case SessionSwitchReason.SessionLogon:
                 IsSessionLocked = false;
                 break;
             case SessionSwitchReason.SessionLock:
@@ -229,69 +201,39 @@ public static class SystemManager
             default:
                 return;
         }
-        string cpuTemp = "";
-        string gpuTemp = "";
-        string battery = "";
-
-        if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
-            cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
-
-        if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
-            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
-
-        if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
-            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value)}%";
-
-        if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null)
-            cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryUsage.Value / 1024, 1)}GB";
-
-        if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
-            gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
-
-        if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
-            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
-
-        if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
-            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value)}%";
-
-        if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null)
-            gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
-
-        if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
-            battery = $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity)}%";
-
-        if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
-            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
-        else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
-            battery += $" ({Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W)";
-
-        if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
-            battery += $" {Properties.Resources.BatteryHealth}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
-
-        string trayTip = $"CPU{cpuTemp}";
-        if (gpuTemp.Length > 0) trayTip += "; GPU" + gpuTemp;
-        if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"; FAN: {PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
-        if (battery.Length > 0) trayTip += "; BAT" + battery;
-        LogManager.LogDebug("Session switched to {0} {1}", e.Reason, trayTip);
+        LogManager.LogDebug("Session switched to {0}", e.Reason);
 
         SystemRoutine();
+    }
+
+    private static void SystemEvents_SessionEnding(object sender, SessionEndingEventArgs e)
+    {
     }
 
     private static void SystemRoutine()
     {
         if (!IsPowerSuspended && !IsSessionLocked)
+        {
             currentSystemStatus = SystemStatus.SystemReady;
+            AutoRoutine();
+        }
         else
             currentSystemStatus = SystemStatus.SystemPending;
 
-        // only raise event is system status has changed
-        if (previousSystemStatus != currentSystemStatus)
-        {
-            LogManager.LogInformation("System status set to {0}", currentSystemStatus);
-            SystemStatusChanged?.Invoke(currentSystemStatus, previousSystemStatus);
+        if (previousSystemStatus == currentSystemStatus)
+            return;
 
-            previousSystemStatus = currentSystemStatus;
-        }
+        // only raise event is system status has changed
+        LogManager.LogInformation("System status set to {0}", currentSystemStatus);
+        SystemStatusChanged?.Invoke(currentSystemStatus, previousSystemStatus);
+        previousSystemStatus = currentSystemStatus;
+    }
+
+    static void AutoRoutine()
+    {
+        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastAuto) < 3000) return;
+        lastAuto = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+        NightLight.Auto();
     }
 
     #region events

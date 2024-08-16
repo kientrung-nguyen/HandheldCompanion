@@ -29,7 +29,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != OnScreenDisplayLevel)
                 {
                     _onScreenDisplayLevel = value;
-                    SettingsManager.SetProperty(Settings.OnScreenDisplayLevel, value);
+                    SettingsManager.Set(Settings.OnScreenDisplayLevel, value);
                     OnPropertyChanged(nameof(OnScreenDisplayLevel));
                 }
             }
@@ -44,7 +44,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != OnScreenDisplayTimeLevel)
                 {
                     _onScreenDisplayTimeLevel = value;
-                    SettingsManager.SetProperty(Settings.OnScreenDisplayTimeLevel, value);
+                    SettingsManager.Set(Settings.OnScreenDisplayTimeLevel, value);
                     OnPropertyChanged(nameof(OnScreenDisplayTimeLevel));
                 }
             }
@@ -59,7 +59,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != OnScreenDisplayFPSLevel)
                 {
                     _onScreenDisplayFPSLevel = value;
-                    SettingsManager.SetProperty(Settings.OnScreenDisplayFPSLevel, value);
+                    SettingsManager.Set(Settings.OnScreenDisplayFPSLevel, value);
                     OnPropertyChanged(nameof(OnScreenDisplayFPSLevel));
                 }
             }
@@ -74,7 +74,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != OnScreenDisplayCPULevel)
                 {
                     _onScreenDisplayCPULevel = value;
-                    SettingsManager.SetProperty(Settings.OnScreenDisplayCPULevel, value);
+                    SettingsManager.Set(Settings.OnScreenDisplayCPULevel, value);
                     OnPropertyChanged(nameof(OnScreenDisplayCPULevel));
                 }
             }
@@ -89,7 +89,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != OnScreenDisplayGPULevel)
                 {
                     _onScreenDisplayGPULevel = value;
-                    SettingsManager.SetProperty(Settings.OnScreenDisplayGPULevel, value);
+                    SettingsManager.Set(Settings.OnScreenDisplayGPULevel, value);
                     OnPropertyChanged(nameof(OnScreenDisplayGPULevel));
                 }
             }
@@ -104,7 +104,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != OnScreenDisplayRAMLevel)
                 {
                     _onScreenDisplayRAMLevel = value;
-                    SettingsManager.SetProperty(Settings.OnScreenDisplayRAMLevel, value);
+                    SettingsManager.Set(Settings.OnScreenDisplayRAMLevel, value);
                     OnPropertyChanged(nameof(OnScreenDisplayRAMLevel));
                 }
             }
@@ -119,7 +119,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != OnScreenDisplayVRAMLevel)
                 {
                     _onScreenDisplayVRAMLevel = value;
-                    SettingsManager.SetProperty(Settings.OnScreenDisplayVRAMLevel, value);
+                    SettingsManager.Set(Settings.OnScreenDisplayVRAMLevel, value);
                     OnPropertyChanged(nameof(OnScreenDisplayVRAMLevel));
                 }
             }
@@ -134,7 +134,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != OnScreenDisplayBATTLevel)
                 {
                     _onScreenDisplayBATTLevel = value;
-                    SettingsManager.SetProperty(Settings.OnScreenDisplayBATTLevel, value);
+                    SettingsManager.Set(Settings.OnScreenDisplayBATTLevel, value);
                     OnPropertyChanged(nameof(OnScreenDisplayBATTLevel));
                 }
             }
@@ -391,14 +391,14 @@ namespace HandheldCompanion.ViewModels
             framerateTimer = new Timer(framerateInterval) { Enabled = true };
             framerateTimer.Elapsed += FramerateTimer_Elapsed;
 
-            _onScreenDisplayLevel = SettingsManager.GetInt(Settings.OnScreenDisplayLevel);
-            _onScreenDisplayTimeLevel = SettingsManager.GetInt(Settings.OnScreenDisplayTimeLevel);
-            _onScreenDisplayFPSLevel = SettingsManager.GetInt(Settings.OnScreenDisplayFPSLevel);
-            _onScreenDisplayCPULevel = SettingsManager.GetInt(Settings.OnScreenDisplayCPULevel);
-            _onScreenDisplayGPULevel = SettingsManager.GetInt(Settings.OnScreenDisplayGPULevel);
-            _onScreenDisplayRAMLevel = SettingsManager.GetInt(Settings.OnScreenDisplayRAMLevel);
-            _onScreenDisplayVRAMLevel = SettingsManager.GetInt(Settings.OnScreenDisplayVRAMLevel);
-            _onScreenDisplayBATTLevel = SettingsManager.GetInt(Settings.OnScreenDisplayBATTLevel);
+            _onScreenDisplayLevel = SettingsManager.Get<int>(Settings.OnScreenDisplayLevel);
+            _onScreenDisplayTimeLevel = SettingsManager.Get<int>(Settings.OnScreenDisplayTimeLevel);
+            _onScreenDisplayFPSLevel = SettingsManager.Get<int>(Settings.OnScreenDisplayFPSLevel);
+            _onScreenDisplayCPULevel = SettingsManager.Get<int>(Settings.OnScreenDisplayCPULevel);
+            _onScreenDisplayGPULevel = SettingsManager.Get<int>(Settings.OnScreenDisplayGPULevel);
+            _onScreenDisplayRAMLevel = SettingsManager.Get<int>(Settings.OnScreenDisplayRAMLevel);
+            _onScreenDisplayVRAMLevel = SettingsManager.Get<int>(Settings.OnScreenDisplayVRAMLevel);
+            _onScreenDisplayBATTLevel = SettingsManager.Get<int>(Settings.OnScreenDisplayBATTLevel);
 
             CPUName = IDevice.GetCurrent().Processor;
 

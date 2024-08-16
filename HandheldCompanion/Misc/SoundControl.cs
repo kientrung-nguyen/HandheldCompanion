@@ -3,7 +3,7 @@ using HandheldCompanion.Views.Windows;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
 using System;
-using System.Numerics;
+using System.Threading;
 
 namespace HandheldCompanion.Misc;
 public static class SoundControl
@@ -12,20 +12,20 @@ public static class SoundControl
     private static MMDevice mmDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
     private static MMDevice commDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
 
-    private static Action<DataFlow, float, bool>? mmAudioEventHandler;
+    private static Action<SoundDirections, float, bool> mmAudioEventHandler;
     private static AudioNotificationClient mmAudioNotificationClient = new();
     public static int AudioGet()
     {
         if (mmDevice is null || mmDevice.AudioEndpointVolume is null)
             return -1;
-        return (int)(mmDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100.0f);
+        return (int)Math.Round(mmDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100f);
     }
 
     public static void AudioSet(int volume)
     {
         if (mmDevice is null || mmDevice.AudioEndpointVolume is null)
             return;
-        mmDevice.AudioEndpointVolume.MasterVolumeLevelScalar = (float)(volume / 100.0f);
+        mmDevice.AudioEndpointVolume.MasterVolumeLevelScalar = (float)(volume / 100f);
 
     }
 
@@ -61,14 +61,14 @@ public static class SoundControl
     {
         if (commDevice is null || commDevice.AudioEndpointVolume is null)
             return -1;
-        return (int)(commDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100.0f);
+        return (int)(commDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100f);
     }
 
     public static void MicrophoneSet(int volume)
     {
         if (commDevice is null || commDevice.AudioEndpointVolume is null)
             return;
-        commDevice.AudioEndpointVolume.MasterVolumeLevelScalar = (float)(volume / 100.0f);
+        commDevice.AudioEndpointVolume.MasterVolumeLevelScalar = (float)(volume / 100f);
 
     }
 
@@ -89,7 +89,7 @@ public static class SoundControl
         return commDevice.AudioEndpointVolume.Mute;
     }
 
-    public static void SubscribeToEvents(Action<DataFlow, float, bool> EventHandler)
+    public static void SubscribeToEvents(Action<SoundDirections, float, bool> EventHandler)
     {
         try
         {
@@ -100,8 +100,8 @@ public static class SoundControl
                 mmDevice.AudioEndpointVolume.OnVolumeNotification += (data) =>
                 {
                     EventHandler(
-                        mmDevice.DataFlow,
-                        data.MasterVolume * 100f,
+                        SoundDirections.Output,
+                        (float)Math.Round(data.MasterVolume * 100f),
                         data.Muted);
                 };
             }
@@ -111,8 +111,8 @@ public static class SoundControl
                 commDevice.AudioEndpointVolume.OnVolumeNotification += (data) =>
                 {
                     EventHandler(
-                        commDevice.DataFlow,
-                        data.MasterVolume * 100f,
+                        SoundDirections.Input,
+                        (float)Math.Round(data.MasterVolume * 100f),
                         data.Muted);
                 };
             }
@@ -148,18 +148,19 @@ public static class SoundControl
                             mmDevice.AudioEndpointVolume.OnVolumeNotification += (data) =>
                             {
                                 mmAudioEventHandler(
-                                    mmDevice.DataFlow,
-                                    data.MasterVolume * 100f,
+                                    SoundDirections.Output,
+                                    (float)Math.Round(data.MasterVolume * 100f),
                                     data.Muted);
                             };
                             mmAudioEventHandler(
-                                mmDevice.DataFlow,
-                                mmDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100f,
+                                SoundDirections.Output,
+                                (float)Math.Round(mmDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100f),
                                 mmDevice.AudioEndpointVolume.Mute);
                             if (wasMuted != mmDevice.AudioEndpointVolume.Mute)
                                 ToastManager.RunToast(
                                     mmDevice.AudioEndpointVolume.Mute ? Properties.Resources.Muted : Properties.Resources.Unmuted,
                                     mmDevice.AudioEndpointVolume.Mute ? ToastIcons.VolumeMute : ToastIcons.Volume);
+                            Thread.Sleep(1000);
                         }
                     }
                     break;
@@ -173,18 +174,19 @@ public static class SoundControl
                             commDevice.AudioEndpointVolume.OnVolumeNotification += (data) =>
                             {
                                 mmAudioEventHandler(
-                                    commDevice.DataFlow,
-                                    data.MasterVolume * 100f,
+                                    SoundDirections.Input,
+                                    (float)Math.Round(data.MasterVolume * 100f),
                                     data.Muted);
                             };
                             mmAudioEventHandler(
-                                commDevice.DataFlow,
-                                commDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100f,
+                                SoundDirections.Input,
+                                (float)Math.Round(commDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100f),
                                 commDevice.AudioEndpointVolume.Mute);
-                            if (wasMuted != mmDevice.AudioEndpointVolume.Mute)
+                            if (wasMuted != commDevice.AudioEndpointVolume.Mute)
                                 ToastManager.RunToast(
-                                    mmDevice.AudioEndpointVolume.Mute ? Properties.Resources.Muted : Properties.Resources.Unmuted,
-                                    mmDevice.AudioEndpointVolume.Mute ? ToastIcons.MicrophoneMute : ToastIcons.Microphone);
+                                    commDevice.AudioEndpointVolume.Mute ? Properties.Resources.Muted : Properties.Resources.Unmuted,
+                                    commDevice.AudioEndpointVolume.Mute ? ToastIcons.MicrophoneMute : ToastIcons.Microphone);
+                            Thread.Sleep(1000);
                         }
                     }
                     break;
@@ -207,5 +209,11 @@ public static class SoundControl
         public void OnPropertyValueChanged(string deviceId, PropertyKey key)
         {
         }
+    }
+
+    public enum SoundDirections
+    {
+        Input,
+        Output
     }
 }

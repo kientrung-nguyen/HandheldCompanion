@@ -79,10 +79,10 @@ public partial class App : Application
         }
 
         // define culture settings
-        var CurrentCulture = SettingsManager.GetString("CurrentCulture");
+        var currentCulture = SettingsManager.Get<string>("CurrentCulture");
         var culture = CultureInfo.CurrentCulture;
 
-        switch (CurrentCulture)
+        switch (currentCulture)
         {
             default:
                 culture = new CultureInfo("en-US");
@@ -97,12 +97,12 @@ public partial class App : Application
             case "es-ES":
             case "ja-JP":
             case "ru-RU":
-                culture = new CultureInfo(CurrentCulture);
+                culture = new CultureInfo(currentCulture);
                 break;
             case "zh-CN": // fallback change locale name from zh-CN to zh-Hans
-                SettingsManager.SetProperty("CurrentCulture", "zh-Hans", true);
-                CurrentCulture = "zh-Hans";
-                culture = new CultureInfo(CurrentCulture);
+                SettingsManager.Set("CurrentCulture", "zh-Hans");
+                currentCulture = "zh-Hans";
+                culture = new CultureInfo(currentCulture);
                 break;
         }
 
@@ -127,7 +127,7 @@ public partial class App : Application
         Exception ex = (Exception)e.Exception;
 
         // send to sentry
-        bool IsSentryEnabled = SettingsManager.GetBoolean("TelemetryEnabled");
+        bool IsSentryEnabled = SettingsManager.Get<bool>("TelemetryEnabled");
         if (SentrySdk.IsEnabled && IsSentryEnabled)
             SentrySdk.CaptureException(ex);
 
@@ -142,7 +142,7 @@ public partial class App : Application
         Exception ex = (Exception)e.ExceptionObject;
 
         // send to sentry
-        bool IsSentryEnabled = SettingsManager.GetBoolean("TelemetryEnabled");
+        bool IsSentryEnabled = SettingsManager.Get<bool>("TelemetryEnabled");
         if (SentrySdk.IsEnabled && IsSentryEnabled)
             SentrySdk.CaptureException(ex);
 
@@ -157,7 +157,7 @@ public partial class App : Application
         Exception ex = (Exception)e.Exception;
 
         // send to sentry
-        bool IsSentryEnabled = SettingsManager.GetBoolean("TelemetryEnabled");
+        bool IsSentryEnabled = SettingsManager.Get<bool>("TelemetryEnabled");
         if (SentrySdk.IsEnabled && IsSentryEnabled)
             SentrySdk.CaptureException(ex);
 
