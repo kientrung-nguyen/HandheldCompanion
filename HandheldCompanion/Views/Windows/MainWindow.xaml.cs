@@ -163,6 +163,19 @@ public partial class MainWindow : GamepadWindow
             Visible = false
         };
 
+        notifyContextMenu = new ContextMenu
+        {
+            StaysOpen = true,
+            IsOpen = false,
+            Visibility = Visibility.Collapsed
+        };
+        AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow, "MainWindow");
+        AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools, "QuickTools");
+
+        AddNotifyIconSeparator();
+
+        AddNotifyIconItem(Properties.Resources.MainWindow_Exit, "Quit");
+
         // initialize notifyIcon
         notifyIcon.DoubleClick += (sender, e) =>
         {
@@ -186,21 +199,21 @@ public partial class MainWindow : GamepadWindow
                     case MouseButtons.Right:
                         if (overlayquickTools.Visibility == Visibility.Visible)
                             overlayquickTools.ToggleVisibility();
-                        notifyContextMenu = new ContextMenu
+
+                        Application.Current.Dispatcher.Invoke(async () =>
                         {
-                            StaysOpen = true,
-                            IsOpen = true
-                        };
-                        AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow, "MainWindow");
-                        AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools, "QuickTools");
+                            for (int i = 0; i < 2; i++)
+                            {
+                                await Task.Delay(100);
+                                notifyContextMenu.IsOpen = true;
+                                notifyContextMenu.Visibility = Visibility.Visible;
+                                // Get context menu handle and bring it to the foreground
+                                if (PresentationSource.FromVisual(notifyContextMenu) is HwndSource hwndSource)
+                                    WinAPI.SetForegroundWindow(hwndSource.Handle);
+                            }
+                        });
 
-                        AddNotifyIconSeparator();
 
-                        AddNotifyIconItem(Properties.Resources.MainWindow_Exit, "Quit");
-
-                        // Get context menu handle and bring it to the foreground
-                        if (PresentationSource.FromVisual(notifyContextMenu) is HwndSource hwndSource)
-                            WinAPI.SetForegroundWindow(hwndSource.Handle);
                         break;
                 }
         };
@@ -208,6 +221,11 @@ public partial class MainWindow : GamepadWindow
         notifyIcon.MouseMove += (sender, e) =>
         {
             RefreshSensors();
+
+            // Get context menu handle and bring it to the foreground
+            if (PresentationSource.FromVisual(notifyContextMenu) is HwndSource hwndSource)
+                WinAPI.SetForegroundWindow(hwndSource.Handle);
+
             if (!sensorTimer.IsEnabled)
                 sensorTimer.Start();
         };
@@ -496,21 +514,25 @@ public partial class MainWindow : GamepadWindow
         };
         menuItemMainWindow.Click += (sender, e) =>
         {
-            if (sender is MenuItem menuItem)
-                switch (menuItem.Tag)
-                {
-                    case "MainWindow":
-                        SwapWindowState();
-                        break;
-                    case "QuickTools":
-                        overlayquickTools.ToggleVisibility();
-                        break;
-                    case "Quit":
-                        appClosing = true;
-                        notifyContextMenu.IsOpen = false;
-                        Close();
-                        break;
-                }
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (sender is MenuItem menuItem)
+                    switch (menuItem.Tag)
+                    {
+                        case "MainWindow":
+                            SwapWindowState();
+                            break;
+                        case "QuickTools":
+                            overlayquickTools.ToggleVisibility();
+                            break;
+                        case "Quit":
+                            appClosing = true;
+                            notifyContextMenu.IsOpen = false;
+                            Close();
+                            break;
+                    }
+            });
         };
         notifyContextMenu.Items.Add(menuItemMainWindow);
         //notifyIcon.ContextMenuStrip.Items.Add(menuItemMainWindow);
@@ -777,7 +799,7 @@ public partial class MainWindow : GamepadWindow
                     InputsManager.Stop();
                     GPUManager.Stop();
                     OSDManager.Stop();
-                    PerformanceManager.Stop(true);
+                    PerformanceManager.Stop();
 
                     // suspend platform(s)
                     PlatformManager.LibreHardwareMonitor.Stop();

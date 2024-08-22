@@ -12,6 +12,8 @@ using System.Windows.Media;
 using HandheldCompanion.Models;
 using static HandheldCompanion.Utils.DeviceUtils;
 using Timer = System.Timers.Timer;
+using WindowsDisplayAPI;
+using Device = SharpDX.Direct3D9.Device;
 
 namespace HandheldCompanion.Managers;
 
@@ -85,12 +87,15 @@ public static class DynamicLightingManager
         LogManager.LogInformation("{0} has stopped", "DynamicLightingManager");
     }
 
-    private static void MultimediaManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
+    private static void MultimediaManager_DisplaySettingsChanged(Display? desktopScreen)
     {
+        if (desktopScreen == null)
+            return;
+
         // Update the screen width and height values when display changes
         // Get the primary screen dimensions
-        screenWidth = resolution.Width;
-        screenHeight = resolution.Height;
+        screenWidth = desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width;
+        screenHeight = desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height;
 
         squareSize = (int)Math.Floor((decimal)screenWidth / 10);
 

@@ -7,7 +7,7 @@ using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.GraphicsProcessingUnit
 {
-    public class IntelGPU : GPU
+    public class IntelGpu : GPU
     {
         #region events
         #endregion
@@ -162,7 +162,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             return (float)TelemetryData.GpuCurrentTemperatureValue;
         }
 
-        public IntelGPU(AdapterInformation adapterInformation) : base(adapterInformation)
+        public IntelGpu(AdapterInformation adapterInformation) : base(adapterInformation)
         {
             deviceIdx = GetDeviceIdx(adapterInformation.Details.Description);
             if (deviceIdx == -1)

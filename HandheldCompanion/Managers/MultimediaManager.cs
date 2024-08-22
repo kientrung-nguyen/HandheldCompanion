@@ -18,10 +18,6 @@ namespace HandheldCompanion.Managers;
 
 public static class MultimediaManager
 {
-
-    public static Dictionary<string, DesktopScreen> AllScreens = new();
-    public static DesktopScreen PrimaryDesktop;
-
     private static ScreenRotation screenOrientation;
 
     private static bool VolumeSupport;
@@ -35,19 +31,11 @@ public static class MultimediaManager
 
     static MultimediaManager()
     {
-        // setup the multimedia device and get current volume value
-        SoundControl.SubscribeToEvents(VolumeNotificationEventArrived);
         VolumeSupport = SoundControl.AudioGet() != -1;
         MicrophoneSupport = SoundControl.MicrophoneGet() != -1;
-
-        // check if we have control over brightness
-        ScreenBrightness.SubscribeToEvents(BrightnessWatcherEventArrived);
         BrightnessSupport = ScreenBrightness.Get() != -1;
-
-        NightLight.SubscribeToEvents(NightLightNotificationEventArrived);
         NightLightSupport = NightLight.Get() != -1;
 
-        // manage events
         SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         HotkeysManager.CommandExecuted += HotkeysManager_CommandExecuted;
@@ -147,49 +135,52 @@ public static class MultimediaManager
     private static void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
     {
         // temporary array to store all current screens
-        Dictionary<string, DesktopScreen> desktopScreens = new();
+        //Dictionary<string, DesktopScreen> desktopScreens = new();
 
-        foreach (Screen screen in Screen.AllScreens)
-        {
-            DesktopScreen desktopScreen = new(screen);
+        //foreach (Screen screen in Screen.AllScreens)
+        //{
+        //    DesktopScreen desktopScreen = new(screen);
 
-            // pull resolutions details
-            List<DisplayDevice> resolutions = GetResolutions(desktopScreen.Screen.DeviceName);
-            foreach (DisplayDevice mode in resolutions)
-            {
-                ScreenResolution res = new ScreenResolution(mode.dmPelsWidth, mode.dmPelsHeight, mode.dmBitsPerPel);
+        //    // pull resolutions details
+        //    List<DisplayDevice> resolutions = GetResolutions(desktopScreen.Screen.DeviceName);
+        //    foreach (DisplayDevice mode in resolutions)
+        //    {
+        //        ScreenResolution res = new ScreenResolution(mode.dmPelsWidth, mode.dmPelsHeight, mode.dmBitsPerPel);
 
-                List<int> frequencies = resolutions
-                    .Where(a => a.dmPelsWidth == mode.dmPelsWidth && a.dmPelsHeight == mode.dmPelsHeight)
-                    .Select(b => b.dmDisplayFrequency).Distinct().ToList();
+        //        List<int> frequencies = resolutions
+        //            .Where(a => a.dmPelsWidth == mode.dmPelsWidth && a.dmPelsHeight == mode.dmPelsHeight)
+        //            .Select(b => b.dmDisplayFrequency).Distinct().ToList();
 
-                foreach (int frequency in frequencies)
-                    res.Frequencies.Add(frequency, frequency);
+        //        foreach (int frequency in frequencies)
+        //            res.Frequencies.Add(frequency, frequency);
 
-                if (!desktopScreen.HasResolution(res))
-                    desktopScreen.screenResolutions.Add(res);
-            }
+        //        if (!desktopScreen.HasResolution(res))
+        //            desktopScreen.screenResolutions.Add(res);
+        //    }
 
-            // sort resolutions
-            desktopScreen.SortResolutions();
+        //    // sort resolutions
+        //    desktopScreen.SortResolutions();
 
-            // add to temporary array
-            desktopScreens.Add(desktopScreen.FriendlyName, desktopScreen);
-        }
+        //    // add to temporary array
+        //    desktopScreens.Add(desktopScreen.FriendlyName, desktopScreen);
+        //}
 
         // get refreshed primary screen (can't be null)
-        DesktopScreen newPrimary = desktopScreens.Values.Where(a => a.IsPrimary).FirstOrDefault();
+        //DesktopScreen newPrimary = desktopScreens.Values.Where(a => a.IsPrimary).FirstOrDefault();
 
+        /*
         // looks like we have a new primary screen
         if (PrimaryDesktop is null || !PrimaryDesktop.FriendlyName.Equals(newPrimary.FriendlyName))
         {
             // raise event (New primary display)
             PrimaryScreenChanged?.Invoke(newPrimary);
         }
+        */
 
         // set or update current primary
-        PrimaryDesktop = newPrimary;
+        //PrimaryDesktop = newPrimary;
 
+        /*
         // raise event (New screen detected)
         foreach (DesktopScreen desktop in desktopScreens.Values.Where(a => !AllScreens.ContainsKey(a.FriendlyName)))
             ScreenConnected?.Invoke(desktop);
@@ -197,12 +188,14 @@ public static class MultimediaManager
         // raise event (New screen detected)
         foreach (DesktopScreen desktop in AllScreens.Values.Where(a => !desktopScreens.ContainsKey(a.FriendlyName)))
             ScreenDisconnected?.Invoke(desktop);
-
+        */
+        /*
         // clear array and transfer screens
         AllScreens.Clear();
         foreach (DesktopScreen desktop in desktopScreens.Values)
             AllScreens.Add(desktop.FriendlyName, desktop);
-
+        */
+        /*
         // raise event (Display settings were updated)
         if (PrimaryDesktop is not null)
         {
@@ -210,6 +203,7 @@ public static class MultimediaManager
             if (screenResolution is not null)
                 DisplaySettingsChanged?.Invoke(PrimaryDesktop, screenResolution);
         }
+        */
 
         /*
         ScreenRotation.Rotations oldOrientation = screenOrientation.rotation;
@@ -244,6 +238,20 @@ public static class MultimediaManager
         // force trigger events
         SystemEvents_DisplaySettingsChanged(null, EventArgs.Empty);
 
+        // manage events
+        ScreenControl.SubscribeToEvents(new Dictionary<string, Action<Display>>
+        {
+            ["PrimaryScreenChanged"] = (display) => PrimaryScreenChanged?.Invoke(display),
+            ["DisplaySettingsChanged"] = (display) => DisplaySettingsChanged?.Invoke(display),
+            ["ScreenConnected"] = (display) => ScreenConnected?.Invoke(display),
+            ["ScreenDisconnected"] = (display) => ScreenDisconnected?.Invoke(display)
+        });
+
+        // setup the multimedia device and get current volume value
+        SoundControl.SubscribeToEvents(VolumeNotificationEventArrived);
+        NightLight.SubscribeToEvents(NightLightNotificationEventArrived);
+        ScreenBrightness.SubscribeToEvents(BrightnessWatcherEventArrived);
+        /*
         // get native resolution
         ScreenResolution nativeResolution = PrimaryDesktop.screenResolutions.First();
 
@@ -260,7 +268,7 @@ public static class MultimediaManager
             PrimaryDesktop.screenDividers.Add(new(idx, dividedRes));
             idx++;
         }
-
+        */
         IsInitialized = true;
         Initialized?.Invoke();
 
@@ -275,6 +283,7 @@ public static class MultimediaManager
         ScreenBrightness.Unsubscribe();
         SoundControl.Unsubscribe();
         NightLight.Unsubscribe();
+        ScreenControl.Unsubscribe();
 
         IsInitialized = false;
 
@@ -495,16 +504,16 @@ public static class MultimediaManager
     #region events
 
     public static event DisplaySettingsChangedEventHandler DisplaySettingsChanged;
-    public delegate void DisplaySettingsChangedEventHandler(DesktopScreen screen, ScreenResolution resolution);
+    public delegate void DisplaySettingsChangedEventHandler(Display screen);
 
     public static event PrimaryScreenChangedEventHandler PrimaryScreenChanged;
-    public delegate void PrimaryScreenChangedEventHandler(DesktopScreen screen);
+    public delegate void PrimaryScreenChangedEventHandler(Display screen);
 
     public static event ScreenConnectedEventHandler ScreenConnected;
-    public delegate void ScreenConnectedEventHandler(DesktopScreen screen);
+    public delegate void ScreenConnectedEventHandler(Display screen);
 
     public static event ScreenDisconnectedEventHandler ScreenDisconnected;
-    public delegate void ScreenDisconnectedEventHandler(DesktopScreen screen);
+    public delegate void ScreenDisconnectedEventHandler(Display screen);
 
     public static event DisplayOrientationChangedEventHandler DisplayOrientationChanged;
     public delegate void DisplayOrientationChangedEventHandler(ScreenRotation rotation);

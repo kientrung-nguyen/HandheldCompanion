@@ -10,7 +10,6 @@
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickApplications"
     Title="{l:Static resx:Resources.QuickApplicationsPage_Title}"
-    Margin="15,0,12,6"
     d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:QuickApplicationsPageViewModel}"
     d:DesignHeight="1200"
@@ -164,7 +163,7 @@
 
         <ui:SimpleStackPanel Spacing="24">
             <ui:SimpleStackPanel Spacing="6">
-                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Quick start" />
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Visibility="Collapsed" Text="Quick start" />
 
                 <ui:ItemsRepeater ItemsSource="{Binding Profiles}">
                     <ui:ItemsRepeater.Layout>
@@ -226,7 +225,7 @@
             </ui:SimpleStackPanel>
 
             <ui:SimpleStackPanel Spacing="6">
-                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Processes" />
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Visibility="Collapsed" Text="Processes" />
 
                 <ui:ItemsRepeater ItemsSource="{Binding Processes}">
                     <ui:ItemsRepeater.ItemTemplate>

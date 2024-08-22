@@ -18,6 +18,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using WindowsDisplayAPI;
 using Resources = HandheldCompanion.Properties.Resources;
 
 namespace HandheldCompanion.ViewModels
@@ -167,7 +168,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public double AutoTDPMaximum => MultimediaManager.PrimaryDesktop.devMode.dmDisplayFrequency;
+        public double AutoTDPMaximum => ScreenControl.PrimaryDisplay.DisplayScreen.CurrentSetting.Frequency;
 
         public bool TDPOverrideEnabled
         {
@@ -699,7 +700,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private void MultimediaManager_PrimaryScreenChanged(DesktopScreen screen)
+        private void MultimediaManager_PrimaryScreenChanged(Display screen)
         {
             OnPropertyChanged(nameof(AutoTDPMaximum));
         }

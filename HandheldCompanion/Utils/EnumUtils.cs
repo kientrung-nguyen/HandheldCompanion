@@ -58,9 +58,9 @@ public static class EnumUtils
         try
         {
             attribute = value.GetType()
-                .GetField(value.ToString())
-                .GetCustomAttributes(typeof(DescriptionAttribute), false)
-                .SingleOrDefault() as DescriptionAttribute;
+                        .GetField(value.ToString())
+                        .GetCustomAttributes(typeof(DescriptionAttribute), false)
+                        .SingleOrDefault() as DescriptionAttribute;
         }
         catch { }
 

@@ -49,7 +49,7 @@ namespace HandheldCompanion.Extensions
             {
                 ToastIcons.Game => "\ue7fc",
                 ToastIcons.Touchscreen => "\ueda4",
-                ToastIcons.Touchpad => "\uefa5",
+                ToastIcons.Touchpad => "\uEFA5",
                 ToastIcons.BrightnessUp => "\ue706",
                 ToastIcons.BrightnessDown => "\uec8a",
                 ToastIcons.Charger => "\ue83e",
@@ -63,6 +63,7 @@ namespace HandheldCompanion.Extensions
                 ToastIcons.Microphone => "\ue720",
                 ToastIcons.Nightlight => "\uf08c",
                 ToastIcons.NightlightOff => "\uE706",
+                ToastIcons.Laptop => "\ue7f8",
                 _ => "\ue713"
             };
     }

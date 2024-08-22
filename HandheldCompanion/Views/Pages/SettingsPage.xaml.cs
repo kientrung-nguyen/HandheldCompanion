@@ -1,5 +1,6 @@
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using iNKORE.UI.WPF.Modern;
 using iNKORE.UI.WPF.Modern.Controls.Helpers;
@@ -12,6 +13,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using WindowsDisplayAPI;
 using Application = System.Windows.Application;
 using Page = System.Windows.Controls.Page;
 
@@ -52,44 +54,39 @@ public partial class SettingsPage : Page
         RTSS_Updated(PlatformManager.RTSS.Status);
     }
 
-    private void MultimediaManager_ScreenConnected(DesktopScreen screen)
+    private void MultimediaManager_ScreenConnected(Display? screen)
     {
+        if (screen is null) return;
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
-            int idx = -1;
-            foreach (DesktopScreen desktopScreen in cB_QuickToolsScreen.Items.OfType<DesktopScreen>())
+            cB_QuickToolsScreen.Items.Clear();
+            foreach (var display in Display.GetDisplays())
             {
-                if (desktopScreen.FriendlyName.Equals(screen.FriendlyName))
-                    idx = cB_QuickToolsScreen.Items.IndexOf(desktopScreen);
+                cB_QuickToolsScreen.Items.Add(new ComboBoxItem
+                {
+                    Tag = display,
+                    Content = display.ToPathDisplayTarget().FriendlyName
+                });
             }
-
-            if (idx != -1)
-                cB_QuickToolsScreen.Items[idx] = screen;
-            else
-                cB_QuickToolsScreen.Items.Add(screen);
         });
     }
 
-    private void MultimediaManager_ScreenDisconnected(DesktopScreen screen)
+    private void MultimediaManager_ScreenDisconnected(Display? screen)
     {
+        if (screen is null) return;
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
-            // check if current target was disconnected
-            if (cB_QuickToolsScreen.SelectedItem is DesktopScreen targetScreen)
-                if (targetScreen.FriendlyName.Equals(screen.FriendlyName))
-                    cB_QuickToolsScreen.SelectedIndex = 0;
-
-            int idx = -1;
-            foreach (DesktopScreen desktopScreen in cB_QuickToolsScreen.Items.OfType<DesktopScreen>())
+            cB_QuickToolsScreen.Items.Clear();
+            foreach (var display in Display.GetDisplays())
             {
-                if (desktopScreen.FriendlyName.Equals(screen.FriendlyName))
-                    idx = cB_QuickToolsScreen.Items.IndexOf(desktopScreen);
+                cB_QuickToolsScreen.Items.Add(new ComboBoxItem
+                {
+                    Tag = display,
+                    Content = display.ToPathDisplayTarget().FriendlyName
+                });
             }
-
-            if (idx != -1)
-                cB_QuickToolsScreen.Items.RemoveAt(idx);
         });
     }
 
@@ -566,7 +563,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        if (cB_QuickToolsScreen.SelectedItem is DesktopScreen desktopScreen)
-            SettingsManager.Set("QuickToolsScreen", desktopScreen.FriendlyName);
+        if (cB_QuickToolsScreen.SelectedItem is Display desktopScreen)
+            SettingsManager.Set("QuickToolsScreen", desktopScreen.ToPathDisplayTarget().FriendlyName);
     }
 }

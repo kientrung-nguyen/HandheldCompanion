@@ -7,8 +7,8 @@ namespace HandheldCompanion.Misc;
 
 public static class ScreenBrightness
 {
-    private static ManagementScope scope = new ManagementScope(@"\\.\root\WMI");
-    private static ManagementEventWatcher watcher = new ManagementEventWatcher(
+    private static ManagementScope scope = new(@"\\.\root\WMI");
+    private static ManagementEventWatcher watcher = new(
         scope,
         new EventQuery("SELECT * FROM WmiMonitorBrightnessEvent"));
 

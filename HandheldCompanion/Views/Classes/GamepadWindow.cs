@@ -52,6 +52,23 @@ namespace HandheldCompanion.Views.Classes
             return null;
         }
 
+        public ScrollViewer GetActualScrollViewer(DependencyObject dependencyObject)
+        {
+            if (dependencyObject is ScrollViewer scrollViewer && scrollViewer.Name.Equals("actualScrollViewer")) 
+                return scrollViewer;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(dependencyObject); i++)
+            {
+                var child = VisualTreeHelper.GetChild(dependencyObject, i);
+                var result = GetActualScrollViewer(child);
+                if (result is null)
+                    continue;
+                return result;
+            }
+            return null;
+            
+        }
+
         private void OnLayoutUpdated(object? sender, EventArgs e)
         {
             if (!IsActive || Visibility != Visibility.Visible)

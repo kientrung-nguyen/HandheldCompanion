@@ -94,6 +94,7 @@ public static class PerformanceManager
     // GPU limits
     private static double fallbackGfxClock;
     private static readonly double[] fpsHistory = new double[6];
+    private static readonly double[] tdpHistory = new double[6];
     private static readonly double[] cpuHistory = new double[6];
     private static readonly double[] gpuHistory = new double[6];
     private static bool gfxWatchdogPendingStop;
@@ -128,9 +129,6 @@ public static class PerformanceManager
         // manage events
         PowerProfileManager.Applied += PowerProfileManager_Applied;
         PowerProfileManager.Discarded += PowerProfileManager_Discarded;
-        //PlatformManager.LibreHardwareMonitor.GPUClockChanged += LibreHardwareMonitor_GPUClockChanged;
-        //PlatformManager.HWiNFO.GPUFrequencyChanged += HWiNFO_GPUFrequencyChanged;
-        //PlatformManager.HWiNFO.PowerLimitChanged += HWiNFO_PowerLimitChanged;
         PlatformManager.RTSS.Hooked += RTSS_Hooked;
         PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
         SettingsManager.SettingValueChanged += SettingsManagerOnSettingValueChanged;
@@ -139,35 +137,6 @@ public static class PerformanceManager
         currentCoreCount = MotherboardInfo.NumberOfCores;
     }
 
-    //private static void HWiNFO_GPUFrequencyChanged(double value)
-    //{
-    //    currentGfxClock = (uint)value;
-    //}
-
-    //private static void HWiNFO_PowerLimitChanged(PowerType type, int limit)
-    //{
-    //    var idx = (int)type;
-    //    currentTDP[idx] = limit;
-
-    //    // workaround, HWiNFO doesn't have the ability to report MSR
-    //    switch (type)
-    //    {
-    //        case PowerType.Stapm:
-    //            currentTDP[(int)PowerType.Stapm] = limit;
-    //            break;
-    //        case PowerType.Slow:
-    //            currentTDP[(int)PowerType.MsrSlow] = limit;
-    //            break;
-    //        case PowerType.Fast:
-    //            currentTDP[(int)PowerType.MsrFast] = limit;
-    //            break;
-    //    }
-
-    //    // raise event
-    //    PowerLimitChanged?.Invoke(type, limit);
-
-    //    //LogManager.LogDebug("PowerLimitChanged: {0}\t{1} W", type, limit);
-    //}
 
     private static void SettingsManagerOnSettingValueChanged(string name, object value)
     {
@@ -242,16 +211,14 @@ public static class PerformanceManager
                 StopTDPWatchdog(true);
             }
         }
-        else
+        else if (cpuWatchdog.Enabled)
         {
-            if (cpuWatchdog.Enabled)
-                StopTDPWatchdog(true);
+            StopTDPWatchdog(true);
 
-            // Neither manual TDP nor AutoTDP is enabled, restore default TDP
-            RestoreTDP(true);
             if (!profile.AutoTDPEnabled)
             {
-                // Do nothing
+                // Neither manual TDP nor AutoTDP is enabled, restore default TDP
+                RestoreTDP(true);
             }
             else
             {
@@ -431,7 +398,6 @@ public static class PerformanceManager
 
     private static void PowerProfileManager_Discarded(PowerProfile profile)
     {
-        /*
         // restore default TDP
         if (profile.TDPOverrideEnabled)
         {
@@ -481,7 +447,6 @@ public static class PerformanceManager
 
         // restore default Fan mode
         IDevice.GetCurrent().SetFanControl(false, profile.OEMPowerMode);
-        */
     }
 
     private static void RestoreTDP(bool immediate)
@@ -528,7 +493,7 @@ public static class PerformanceManager
             AutoTDPOSDFrameId = processOsdID;
 
             // Ensure realistic process values, prevent divide by 0
-            processValueFPS = Math.Clamp(processValueFPS, 1, 500);
+            processValueFPS = Math.Clamp(processValueFPS, 5, 500);
 
             if (AutoTDPFirstRun)
             {
@@ -549,30 +514,22 @@ public static class PerformanceManager
 
     private static void AutoPerf(double processValueFPS)
     {
-        //if (PlatformManager.HWiNFO.GetAutoPerformanceSensors(
-        //    out var cpuFrequency, out var cpuEffective,
-        //    out var gpuFrequency, out var gpuEffective))
+        var processFPSTarget = AutoTDPTargetFPS;
 
-        AutoCPUClock = Math.Clamp((double)PlatformManager.LibreHardwareMonitor.CPUClock, 500, IDevice.GetCurrent().CpuClock);
-        AutoGPUClock = Math.Clamp((double)PlatformManager.LibreHardwareMonitor.GPUClock, IDevice.GetCurrent().GfxClock[0], IDevice.GetCurrent().GfxClock[1]);
-
-
-        var processFPSTarget = AutoTDPTargetFPS;//Math.Min(fpsHistory.Max(), AutoTDPTargetFPS);
-
-        var fpsTarget = Math.Clamp(fpsHistory.Max(), 1, processFPSTarget + 1);
+        var fpsTarget = Math.Clamp(fpsHistory.Max(), 1, processFPSTarget);
         var fpsDipper = AutoTDPDipper(processValueFPS, fpsTarget);
 
-        //var processValueCPUUse = Math.Clamp(cpuEffective * 100 / cpuFrequency, .1d, 100.0d);
+        /*
         var processValueCPUUse = Math.Clamp((double)PlatformManager.LibreHardwareMonitor.CPULoad, .1d, 100d);
         var fpsCPU = Math.Max(processValueFPS * 2 - fpsTarget, Math.Max(fpsTarget / 2, 1));
         AutoCpu(fpsTarget / fpsCPU, processValueCPUUse, AutoTargetCPU);
 
-        //var processValueGPUUse = Math.Clamp(gpuEffective * 100 / gpuFrequency, .1d, 100.0d);
         var processValueGPUUse = Math.Clamp((double)PlatformManager.LibreHardwareMonitor.GPULoad, .1d, 100d);
         var fpsGPU = Math.Max(processValueFPS, Math.Max(fpsTarget * .8, 1));
         AutoGpu(fpsDipper > 0 ? 1d : fpsTarget / fpsGPU, processValueGPUUse, AutoTargetGPU);
+        */
 
-        //AutoTdp(fpsDipper, processValueFPS, processFPSTarget);
+        AutoTdp(fpsDipper, processValueFPS, fpsTarget);
 
     }
 
@@ -591,15 +548,11 @@ public static class PerformanceManager
 
         // Determine final setpoint
         if (!AutoTDPFirstRun)
-        {
-            var tdpDamper = AutoTDPDamper(processValueFPS);
-            AutoTDP += TDPAdjustment + tdpDamper;
-            LogManager.LogDebug($"AutoTDP - {AutoTDP} += {TDPAdjustment} + {tdpDamper}");
-        }
+            AutoTDP += TDPAdjustment + AutoTDPDamper(processValueFPS);
         else
             AutoTDPFirstRun = false;
 
-        AutoTDP = (uint)Math.Clamp(AutoTDP, TDPMin, AutoTDPMax);
+        AutoTDP = Math.Clamp(AutoTDP, TDPMin, AutoTDPMax);
 
         // Only update if we have a different TDP value to set
         if (AutoTDP != AutoTDPPrev)
@@ -965,24 +918,10 @@ public static class PerformanceManager
 
     private static async void RequestTDP(double[] values, bool immediate = false)
     {
-        if (processor is null || !processor.IsInitialized)
-            return;
-
         for (int idx = (int)PowerType.Slow; idx <= (int)PowerType.Fast; idx++)
         {
-            // make sure we're not trying to run below or above specs
-            values[idx] = Math.Min(TDPMax, Math.Max(TDPMin, values[idx]));
-
-            // update value read by timer
-            storedTDP[idx] = values[idx];
-
-            // immediately apply
-            if (immediate)
-            {
-                processor.SetTDPLimit((PowerType)idx, values[idx], immediate);
-                currentTDP[idx] = values[idx];
-                await Task.Delay(20);
-            }
+            RequestTDP((PowerType)idx, values[idx], immediate);
+            await Task.Delay(20);
         }
     }
 
@@ -1117,7 +1056,6 @@ public static class PerformanceManager
         currentClock = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX);
         if (currentClock.ACValue != (uint)cpuClock || currentClock.DCValue != (uint)cpuClock)
             LogManager.LogWarning("Failed to set requested PROCFREQMAX");
-        Task.Delay(120);
     }
 
     private static void RequestMaxPerformance(bool immediate = false)
@@ -1175,7 +1113,7 @@ public static class PerformanceManager
         LogManager.LogInformation("{0} has started", "PerformanceManager");
     }
 
-    public static void Stop(bool sleep = false)
+    public static void Stop()
     {
         if (!IsInitialized)
             return;
@@ -1187,20 +1125,6 @@ public static class PerformanceManager
         cpuWatchdog.Stop();
         gfxWatchdog.Stop();
         autoWatchdog.Stop();
-
-        if (sleep)
-        {
-            for (PowerType pType = PowerType.Slow; pType <= PowerType.Fast; pType++)
-                RequestTDP(pType, IDevice.GetCurrent().cTDP[0], true);
-        }
-
-        //currentEPP = 0x00000032;
-        //currentCoreCount = MotherboardInfo.NumberOfCores;
-        //currentGfxClock = 0x00000000;
-        //currentPerfBoostMode = null;
-        //currentPowerMode = new("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
-        //currentTDP = new double[5];
-
 
         IsInitialized = false;
 

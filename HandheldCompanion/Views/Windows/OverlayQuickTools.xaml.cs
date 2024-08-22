@@ -23,6 +23,7 @@ using System.Windows.Threading;
 using Windows.Devices.Radios;
 using Windows.Devices.WiFi;
 using Windows.System.Power;
+using WindowsDisplayAPI;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
 using Application = System.Windows.Application;
@@ -178,7 +179,7 @@ public partial class OverlayQuickTools : GamepadWindow
         });
     }
 
-    private void SystemManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
+    private void SystemManager_DisplaySettingsChanged(Display? desktopScreen)
     {
         // ignore if we're not ready yet
         if (!MultimediaManager.IsInitialized) return;
@@ -194,14 +195,15 @@ public partial class OverlayQuickTools : GamepadWindow
     private void UpdateLocation()
     {
         // pull quicktools settings
-        int QuickToolsLocation = SettingsManager.Get<int>("QuickToolsLocation");
-        string FriendlyName = SettingsManager.Get<string>("QuickToolsScreen");
+        var QuickToolsLocation = SettingsManager.Get<int>("QuickToolsLocation");
+        var FriendlyName = SettingsManager.Get<string>("QuickToolsScreen");
 
-        // Attempt to find the screen with the specified friendly name
-        var friendlyScreen = MultimediaManager.AllScreens.Values.FirstOrDefault(a => a.FriendlyName.Equals(FriendlyName)) ?? MultimediaManager.PrimaryDesktop;
+        var targetDisplay = ScreenControl.AllDisplays.FirstOrDefault(display => display.ToPathDisplayTarget().FriendlyName.Equals(FriendlyName)) ?? ScreenControl.PrimaryDisplay;
 
         // Find the corresponding Screen object
-        var targetScreen = Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName.Equals(friendlyScreen.Screen.DeviceName, StringComparison.OrdinalIgnoreCase));
+        var targetScreen = targetDisplay is null 
+            ? Screen.PrimaryScreen 
+            : Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName.Equals(targetDisplay.DeviceName, StringComparison.OrdinalIgnoreCase)) ?? Screen.PrimaryScreen;
 
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
@@ -252,11 +254,12 @@ public partial class OverlayQuickTools : GamepadWindow
         // load gamepad navigation maanger
         gamepadFocusManager = new(this, ContentFrame);
 
-        hwndSource = PresentationSource.FromVisual(this) as HwndSource;
-        hwndSource.AddHook(WndProc);
-
-        if (hwndSource != null)
-            WinAPI.SetWindowPos(hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+        if (PresentationSource.FromVisual(this) is HwndSource hwndSource)
+        {
+            this.hwndSource = hwndSource;
+            this.hwndSource.AddHook(WndProc);
+            WinAPI.SetWindowPos(this.hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+        }
     }
 
     private IntPtr prevWParam = new(0x0000000000000086);
@@ -557,7 +560,7 @@ public partial class OverlayQuickTools : GamepadWindow
         lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
         if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
-            CPUPower.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
+            CPUPower.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value)}W";
 
         if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
             CPUTemp.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
@@ -568,14 +571,13 @@ public partial class OverlayQuickTools : GamepadWindow
             CPULoadRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value, 1);
         }
 
-        if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null && PlatformManager.LibreHardwareMonitor.MemoryLoad != null)
+        if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null)
         {
             CPUMemory.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryUsage.Value / 1024, 1)}GB";
-            CPUMemoryRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryLoad.Value, 1);
         }
 
         if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
-            GPUPower.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
+            GPUPower.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value)}W";
 
         if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
             GPUTemp.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
@@ -586,10 +588,9 @@ public partial class OverlayQuickTools : GamepadWindow
             GPULoadRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value, 1);
         }
 
-        if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null && PlatformManager.LibreHardwareMonitor.GPUMemoryLoad != null)
+        if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null)
         {
             GPUMemory.Text = $"{Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
-            GPUMemoryRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryLoad.Value, 1);
         }
     }
 

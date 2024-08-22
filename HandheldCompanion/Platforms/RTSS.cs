@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using RTSSSharedMemoryNET;
 using System;
@@ -12,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using WindowsDisplayAPI;
 using static HandheldCompanion.Managers.OSDManager;
 using Timer = System.Timers.Timer;
 
@@ -146,14 +148,25 @@ public class RTSS : IPlatform
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
-        int frameLimit = 0;
+        var frameLimit = 0;
 
-        DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
-
-        if (desktopScreen is not null)
+        if (ScreenControl.PrimaryDisplay is not null)
         {
+            var frameLimits = ScreenControl.GetFramelimits(ScreenControl.PrimaryDisplay);
+            var fpsInLimits = frameLimits.FirstOrDefault(l => l == profile.FramerateValue);
+            if (fpsInLimits is null)
+            {
+                var diffs = frameLimits
+                    .Select(limit => (Math.Abs(profile.FramerateValue - limit ?? 0), limit))
+                    .OrderBy(g => g.Item1).ThenBy(g => g.limit).ToList();
+
+                var lowestDiff = diffs.First().Item1;
+                var lowestDiffs = diffs.Where(d => d.Item1 == lowestDiff);
+
+                fpsInLimits = lowestDiffs.Last().limit;
+            }
             // Determine most approriate frame rate limit based on screen frequency
-            frameLimit = desktopScreen.GetClosest(profile.FramerateValue).limit;
+            frameLimit = fpsInLimits ?? 0;
         }
 
         if (frameLimit > 0)

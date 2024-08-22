@@ -472,14 +472,16 @@ public static class HotkeysManager
                     {
                         var touchscreenStatus = DeviceManager.ToggleTouchscreen();
                         if (touchscreenStatus is not null)
-                            ToastManager.RunToast($"{Resources.InputsHotkey_touchscreenToggle} {((bool)touchscreenStatus ? Resources.On : Resources.Off)}", Views.Windows.ToastIcons.Touchscreen);
+                            ToastManager.RunToast($"{Resources.InputsHotkey_touchscreenToggle} {((bool)touchscreenStatus ? Resources.On : Resources.Off)}",
+                                ToastIcons.Touchscreen);
                     }
                     break;
                 case "touchpadToggle":
                     {
                         var touchpadStatus = DeviceManager.ToggleTouchpad();
                         if (touchpadStatus is not null)
-                            ToastManager.RunToast($"{Resources.InputsHotkey_touchpadToggle} {((bool)touchpadStatus ? Resources.On : Resources.Off)}", Views.Windows.ToastIcons.Touchscreen);
+                            ToastManager.RunToast($"{Resources.InputsHotkey_touchpadToggle} {((bool)touchpadStatus ? Resources.On : Resources.Off)}",
+                                ToastIcons.Touchpad);
                     }
                     break;
                 case "shortcutKillApp":

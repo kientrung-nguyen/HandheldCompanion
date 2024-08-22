@@ -2,11 +2,11 @@
 using HandheldCompanion.Controls;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.IGCL;
-using HandheldCompanion.Managers.Desktop;
 using SharpDX.Direct3D9;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
+using WindowsDisplayAPI;
 
 namespace HandheldCompanion.Managers
 {
@@ -39,11 +39,11 @@ namespace HandheldCompanion.Managers
             GPU.GPUScalingChanged += CurrentGPU_GPUScalingChanged;
             GPU.IntegerScalingChanged += CurrentGPU_IntegerScalingChanged;
 
-            if (GPU is AMDGPU)
+            if (GPU is AmdGpu amdGpu)
             {
-                ((AMDGPU)GPU).RSRStateChanged += CurrentGPU_RSRStateChanged;
+                amdGpu.RSRStateChanged += CurrentGPU_RSRStateChanged;
             }
-            else if (GPU is IntelGPU)
+            else if (GPU is IntelGpu)
             {
                 // do something
             }
@@ -64,11 +64,11 @@ namespace HandheldCompanion.Managers
             gpu.GPUScalingChanged -= CurrentGPU_GPUScalingChanged;
             gpu.IntegerScalingChanged -= CurrentGPU_IntegerScalingChanged;
 
-            if (gpu is AMDGPU)
+            if (gpu is AmdGpu amdGpu)
             {
-                ((AMDGPU)gpu).RSRStateChanged -= CurrentGPU_RSRStateChanged;
+                amdGpu.RSRStateChanged -= CurrentGPU_RSRStateChanged;
             }
-            else if (gpu is IntelGPU)
+            else if (gpu is IntelGpu)
             {
                 // do something
             }
@@ -76,15 +76,21 @@ namespace HandheldCompanion.Managers
             gpu.Stop();
         }
 
-        private static async void MultimediaManager_PrimaryScreenChanged(DesktopScreen screen)
+        private static async void MultimediaManager_PrimaryScreenChanged(Display screen)
         {
+            if (screen is null)
+                return;
+
             while (!DeviceManager.IsInitialized)
                 await Task.Delay(250);
 
             try
             {
-                AdapterInformation key = DisplayGPU.Keys.FirstOrDefault(GPU => GPU.Details.DeviceName == screen.Screen.DeviceName);
-                if (DisplayGPU.TryGetValue(key, out GPU gpu))
+                var key = DisplayGPU.Keys.FirstOrDefault(GPU => GPU.Details.DeviceName == screen.DisplayScreen.ToPathDisplaySource().DisplayName);
+                if (key is null)
+                    return;
+
+                if (DisplayGPU.TryGetValue(key, out var gpu))
                 {
                     // a new GPU was connected, disconnect from current gpu
                     if (currentGPU is not null && currentGPU != gpu)
@@ -105,15 +111,15 @@ namespace HandheldCompanion.Managers
             while (!IsInitialized)
                 await Task.Delay(250);
 
-            GPU newGPU = null;
+            GPU? newGPU = null;
 
             if (adapterInformation.Details.Description.Contains("Advanced Micro Devices") || adapterInformation.Details.Description.Contains("AMD"))
             {
-                newGPU = new AMDGPU(adapterInformation);
+                newGPU = new AmdGpu(adapterInformation);
             }
             else if (adapterInformation.Details.Description.Contains("Intel"))
             {
-                newGPU = new IntelGPU(adapterInformation);
+                newGPU = new IntelGpu(adapterInformation);
             }
 
             if (newGPU is null)
@@ -133,7 +139,7 @@ namespace HandheldCompanion.Managers
 
         private static void DeviceManager_DisplayAdapterRemoved(AdapterInformation adapterInformation)
         {
-            if (DisplayGPU.TryRemove(adapterInformation, out GPU gpu))
+            if (DisplayGPU.TryRemove(adapterInformation, out var gpu))
             {
                 GPUDisconnect(gpu);
                 gpu.Dispose();
@@ -152,12 +158,17 @@ namespace HandheldCompanion.Managers
 
             // todo: use ProfileMager events
             Profile profile = ProfileManager.GetCurrent();
-            AMDGPU amdGPU = (AMDGPU)currentGPU;
 
-            if (Enabled != profile.RSREnabled)
-                amdGPU.SetRSR(profile.RSREnabled);
-            if (Sharpness != profile.RSRSharpness)
-                amdGPU.SetRSRSharpness(profile.RSRSharpness);
+            if (currentGPU is AmdGpu amdGpu)
+            {
+
+                if (Enabled != profile.RSREnabled)
+                    profile.RSREnabled = Enabled;
+                if (Sharpness != profile.RSRSharpness)
+                    profile.RSRSharpness = Sharpness;
+                ProfileManager.UpdateOrCreateProfile(profile);
+            }
+
         }
 
         private static void CurrentGPU_IntegerScalingChanged(bool Supported, bool Enabled)
@@ -169,7 +180,9 @@ namespace HandheldCompanion.Managers
             Profile profile = ProfileManager.GetCurrent();
 
             if (Enabled != profile.IntegerScalingEnabled)
-                currentGPU.SetIntegerScaling(profile.IntegerScalingEnabled, profile.IntegerScalingType);
+                profile.IntegerScalingEnabled = Enabled;
+
+            ProfileManager.UpdateOrCreateProfile(profile);
         }
 
         private static void CurrentGPU_GPUScalingChanged(bool Supported, bool Enabled, int Mode)
@@ -181,9 +194,10 @@ namespace HandheldCompanion.Managers
             Profile profile = ProfileManager.GetCurrent();
 
             if (Enabled != profile.GPUScaling)
-                currentGPU.SetGPUScaling(profile.GPUScaling);
+                profile.GPUScaling = Enabled;
             if (Mode != profile.ScalingMode)
-                currentGPU.SetScalingMode(profile.ScalingMode);
+                profile.ScalingMode = Mode;
+            ProfileManager.UpdateOrCreateProfile(profile);
         }
 
         private static void CurrentGPU_ImageSharpeningChanged(bool Enabled, int Sharpness)
@@ -195,9 +209,10 @@ namespace HandheldCompanion.Managers
             Profile profile = ProfileManager.GetCurrent();
 
             if (Enabled != profile.RISEnabled)
-                currentGPU.SetImageSharpening(profile.RISEnabled);
+                profile.RISEnabled = Enabled;
             if (Sharpness != profile.RISSharpness)
-                currentGPU.SetImageSharpeningSharpness(Sharpness);
+                profile.RISSharpness = Sharpness;
+            ProfileManager.UpdateOrCreateProfile(profile);
         }
 
         public static void Start()
@@ -216,8 +231,7 @@ namespace HandheldCompanion.Managers
 
             // todo: check if usefull on resume
             // it could be DeviceManager_DisplayAdapterArrived is called already, making this redundant
-            if (currentGPU is not null)
-                currentGPU.Start();
+            currentGPU?.Start();
 
             IsInitialized = true;
             Initialized?.Invoke(IsLoaded_IGCL, IsLoaded_ADLX);
@@ -271,9 +285,8 @@ namespace HandheldCompanion.Managers
 
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
-            if (!IsInitialized || currentGPU is null)
+            if (!IsInitialized || currentGPU is null || source == UpdateSource.Background)
                 return;
-            /*
 
             try
             {
@@ -293,19 +306,19 @@ namespace HandheldCompanion.Managers
                 }
 
                 // apply profile RSR
-                if (currentGPU is AMDGPU amdGPU)
+                if (currentGPU is AmdGpu amdGpu)
                 {
                     if (profile.RSREnabled)
                     {
-                        if (!amdGPU.GetRSR())
-                            amdGPU.SetRSR(true);
+                        if (!amdGpu.GetRSR())
+                            amdGpu.SetRSR(true);
 
-                        if (amdGPU.GetRSRSharpness() != profile.RSRSharpness)
-                            amdGPU.SetRSRSharpness(profile.RSRSharpness);
+                        if (amdGpu.GetRSRSharpness() != profile.RSRSharpness)
+                            amdGpu.SetRSRSharpness(profile.RSRSharpness);
                     }
-                    else if (amdGPU.GetRSR())
+                    else if (amdGpu.GetRSR())
                     {
-                        amdGPU.SetRSR(false);
+                        amdGpu.SetRSR(false);
                     }
                 }
 
@@ -335,7 +348,6 @@ namespace HandheldCompanion.Managers
                 }
             }
             catch { }
-            */
         }
 
         private static void ProfileManager_Discarded(Profile profile)
@@ -350,23 +362,21 @@ namespace HandheldCompanion.Managers
                 if (profile.GPUScaling && currentGPU.GetGPUScaling())
                     currentGPU.SetGPUScaling(false);
                 */
-                /*
 
-                    // restore default RSR
-                    if (currentGPU is AMDGPU amdGPU)
-                    {
-                        if (profile.RSREnabled && amdGPU.GetRSR())
-                            amdGPU.SetRSR(false);
-                    }
+                // restore default RSR
+                if (currentGPU is AmdGpu amdGpu)
+                {
+                    if (profile.RSREnabled && amdGpu.GetRSR())
+                        amdGpu.SetRSR(false);
+                }
 
-                    // restore default integer scaling
-                    if (profile.IntegerScalingEnabled && currentGPU.GetIntegerScaling())
-                        currentGPU.SetIntegerScaling(false, 0);
+                // restore default integer scaling
+                if (profile.IntegerScalingEnabled && currentGPU.GetIntegerScaling())
+                    currentGPU.SetIntegerScaling(false, 0);
 
-                    // restore default image sharpening
-                    if (profile.RISEnabled && currentGPU.GetImageSharpening())
-                        currentGPU.SetImageSharpening(false);
-                */
+                // restore default image sharpening
+                if (profile.RISEnabled && currentGPU.GetImageSharpening())
+                    currentGPU.SetImageSharpening(false);
             }
             catch { }
         }
@@ -374,74 +384,8 @@ namespace HandheldCompanion.Managers
         // todo: moveme
         private static void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
         {
-            LogManager.LogInformation("GPUManager Profile {0} updated", profile.Name);
-            if (!IsInitialized || currentGPU is null)
-                return;
-            /*
-            try
-            {
-                // apply profile GPU Scaling
-                // apply profile scaling mode
-                if (profile.GPUScaling)
-                {
-                    if (!currentGPU.GetGPUScaling())
-                        currentGPU.SetGPUScaling(true);
-
-                    if (currentGPU.GetScalingMode() != profile.ScalingMode)
-                        currentGPU.SetScalingMode(profile.ScalingMode);
-                }
-                else if (currentGPU.GetGPUScaling())
-                {
-                    currentGPU.SetGPUScaling(false);
-                }
-
-                // apply profile RSR
-                if (currentGPU is AMDGPU amdGPU)
-                {
-                    if (profile.RSREnabled)
-                    {
-                        if (!amdGPU.GetRSR())
-                            amdGPU.SetRSR(true);
-
-                        if (amdGPU.GetRSRSharpness() != profile.RSRSharpness)
-                            amdGPU.SetRSRSharpness(profile.RSRSharpness);
-                    }
-                    else if (amdGPU.GetRSR())
-                    {
-                        amdGPU.SetRSR(false);
-                    }
-                }
-
-                // apply profile Integer Scaling
-                if (profile.IntegerScalingEnabled)
-                {
-                    if (!currentGPU.GetIntegerScaling())
-                        currentGPU.SetIntegerScaling(true, profile.IntegerScalingType);
-                }
-                else if (currentGPU.GetIntegerScaling())
-                {
-                    currentGPU.SetIntegerScaling(false, 0);
-                }
-
-                // apply profile image sharpening
-                if (profile.RISEnabled)
-                {
-                    if (!currentGPU.GetImageSharpening())
-                        currentGPU.SetImageSharpening(profile.RISEnabled);
-
-                    if (currentGPU.GetImageSharpeningSharpness() != profile.RISSharpness)
-                        currentGPU.SetImageSharpeningSharpness(profile.RISSharpness);
-                }
-                else if (currentGPU.GetImageSharpening())
-                {
-                    currentGPU.SetImageSharpening(false);
-                }
-            }
-            catch { }
-
             ProcessEx.SetAppCompatFlag(profile.Path, ProcessEx.DisabledMaximizedWindowedValue, !profile.FullScreenOptimization);
             ProcessEx.SetAppCompatFlag(profile.Path, ProcessEx.HighDPIAwareValue, !profile.HighDPIAware);
-            */
         }
     }
 }

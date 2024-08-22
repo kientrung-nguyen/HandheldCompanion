@@ -16,7 +16,9 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using WindowsDisplayAPI;
 using static HandheldCompanion.Managers.OSDManager;
+using static Microsoft.WindowsAPICodePack.Shell.PropertySystem.SystemProperties.System;
 using Page = System.Windows.Controls.Page;
 using Separator = System.Windows.Controls.Separator;
 using Timer = System.Timers.Timer;
@@ -127,8 +129,10 @@ public partial class QuickProfilesPage : Page
             cB_Input.Items.Add(comboBoxItem);
         }
 
-        UpdateTimer = new Timer(UpdateInterval);
-        UpdateTimer.AutoReset = false;
+        UpdateTimer = new Timer(UpdateInterval)
+        {
+            AutoReset = false
+        };
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         // force call
@@ -138,17 +142,17 @@ public partial class QuickProfilesPage : Page
     private void MultimediaManager_Initialized()
     {
         // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
-            desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));
-        });
+        //Application.Current.Dispatcher.Invoke(() =>
+        //{
+        //    DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
+        //    desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));
+        //});
     }
 
     private void GPUManager_Hooked(GPU GPU)
     {
         bool HasRSRSupport = false;
-        if (GPU is AMDGPU amdGPU)
+        if (GPU is AmdGpu amdGPU)
         {
             amdGPU.RSRStateChanged += OnRSRStateChanged;
             HasRSRSupport = amdGPU.HasRSRSupport();
@@ -166,9 +170,8 @@ public partial class QuickProfilesPage : Page
         Application.Current.Dispatcher.Invoke(() =>
         {
             // GPU-specific settings
-            //StackProfileRSR.Visibility = GPU is AMDGPU ? Visibility.Visible : Visibility.Collapsed;
-            StackProfileRSR.Visibility = Visibility.Collapsed;
-            IntegerScalingTypeGrid.Visibility = GPU is IntelGPU ? Visibility.Visible : Visibility.Collapsed;
+            StackProfileRSR.Visibility = GPU is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
+            IntegerScalingTypeGrid.Visibility = GPU is IntelGpu ? Visibility.Visible : Visibility.Collapsed;
 
             StackProfileRSR.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasRSRSupport;
             StackProfileIS.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasIntegerScalingSupport;
@@ -182,7 +185,7 @@ public partial class QuickProfilesPage : Page
 
     private void GPUManager_Unhooked(GPU GPU)
     {
-        if (GPU is AMDGPU amdGPU)
+        if (GPU is AmdGpu amdGPU)
             amdGPU.RSRStateChanged -= OnRSRStateChanged;
 
         GPU.IntegerScalingChanged -= OnIntegerScalingChanged;
@@ -247,23 +250,46 @@ public partial class QuickProfilesPage : Page
         });
     }
 
-    private void MultimediaManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
+    private void MultimediaManager_DisplaySettingsChanged(Display display)
     {
-        if (selectedProfile is null)
+        if (display is null || selectedProfile is null)
             return;
 
-        List<ScreenFramelimit> frameLimits = desktopScreen.GetFramelimits();
+        var frameLimits = ScreenControl.GetFramelimits(display);
 
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
             cB_Framerate.Items.Clear();
 
-            foreach (ScreenFramelimit frameLimit in frameLimits)
-                cB_Framerate.Items.Add(frameLimit);
+            var fpsInLimits = frameLimits.FirstOrDefault(l => l == selectedProfile.FramerateValue);
+            if (fpsInLimits is null)
+            {
+                var diffs = frameLimits
+                    .Select(limit => (Math.Abs(selectedProfile.FramerateValue - limit ?? 0), limit))
+                    .OrderBy(g => g.Item1).ThenBy(g => g.limit).ToList();
 
-            cB_Framerate.SelectedItem = desktopScreen.GetClosest(selectedProfile.FramerateValue);
+                var lowestDiff = diffs.First().Item1;
+                var lowestDiffs = diffs.Where(d => d.Item1 == lowestDiff);
+
+                fpsInLimits = lowestDiffs.Last().limit;
+            }
+
+            foreach (var frameLimit in frameLimits)
+            {
+                var item = new ComboBoxItem
+                {
+                    Tag = frameLimit,
+                    Content = frameLimit == 0 ? "Disabled" : $"{frameLimit} FPS"
+                };
+                cB_Framerate.Items.Add(item);
+
+                if (frameLimit == fpsInLimits)
+                    cB_Framerate.SelectedItem = item;
+            }
+
         });
+
     }
 
     public void SubmitProfile(UpdateSource source = UpdateSource.QuickProfilesPage)
@@ -511,9 +537,31 @@ public partial class QuickProfilesPage : Page
                     }
 
                     // Framerate limit
-                    DesktopScreen? desktopScreen = MultimediaManager.PrimaryDesktop;
-                    if (desktopScreen is not null)
-                        cB_Framerate.SelectedItem = desktopScreen.GetClosest(selectedProfile.FramerateValue);
+                    if (ScreenControl.PrimaryDisplay is not null)
+                    {
+                        var frameLimits = ScreenControl.GetFramelimits(ScreenControl.PrimaryDisplay);
+                        var fpsInLimits = frameLimits.FirstOrDefault(l => l == selectedProfile.FramerateValue);
+                        if (fpsInLimits is null)
+                        {
+                            var diffs = frameLimits
+                                .Select(limit => (Math.Abs(selectedProfile.FramerateValue - limit ?? 0), limit))
+                                .OrderBy(g => g.Item1).ThenBy(g => g.limit).ToList();
+
+                            var lowestDiff = diffs.First().Item1;
+                            var lowestDiffs = diffs.Where(d => d.Item1 == lowestDiff);
+
+                            fpsInLimits = lowestDiffs.Last().limit;
+                        }
+
+                        foreach (ComboBoxItem item in cB_Framerate.Items)
+                        {
+                            if ((int)item.Tag == fpsInLimits)
+                            {
+                                cB_Framerate.SelectedItem = item;
+                                break;
+                            }
+                        }
+                    }
 
                     // GPU Scaling
                     GPUScalingToggle.IsOn = selectedProfile.GPUScaling;
@@ -527,8 +575,8 @@ public partial class QuickProfilesPage : Page
                     IntegerScalingToggle.IsOn = selectedProfile.IntegerScalingEnabled;
                     IntegerScalingTypeComboBox.SelectedIndex = selectedProfile.IntegerScalingType;
 
-                    if (desktopScreen is not null)
-                        IntegerScalingComboBox.SelectedItem = desktopScreen.screenDividers.FirstOrDefault(d => d.divider == selectedProfile.IntegerScalingDivider);
+                    //if (desktopScreen is not null)
+                    //    IntegerScalingComboBox.SelectedItem = desktopScreen.screenDividers.FirstOrDefault(d => d.divider == selectedProfile.IntegerScalingDivider);
 
                     // RIS
                     RISToggle.IsOn = selectedProfile.RISEnabled;
@@ -1036,9 +1084,9 @@ public partial class QuickProfilesPage : Page
         if (cB_Framerate.SelectedIndex == -1)
             return;
 
-        if (cB_Framerate.SelectedItem is ScreenFramelimit screenFramelimit)
+        if (cB_Framerate.SelectedItem is ComboBoxItem item)
         {
-            selectedProfile.FramerateValue = screenFramelimit.limit;
+            selectedProfile.FramerateValue = (int)item.Tag;
             UpdateProfile();
         }
     }

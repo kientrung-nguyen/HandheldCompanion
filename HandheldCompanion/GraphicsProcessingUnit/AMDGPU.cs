@@ -1,16 +1,17 @@
 ﻿using HandheldCompanion.ADLX;
-using HandheldCompanion.Managers;
 using SharpDX.Direct3D9;
 using System;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Timers;
+using WindowsDisplayAPI;
 using static HandheldCompanion.ADLX.ADLXBackend;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.GraphicsProcessingUnit
 {
-    public class AMDGPU : GPU
+    public class AmdGpu : GPU
     {
         #region events
         public event RSRStateChangedEventHandler RSRStateChanged;
@@ -236,18 +237,24 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             return (float)TelemetryData.gpuTemperatureValue;
         }
 
+        public override bool HasVRAMUsage()
+        {
+            return TelemetryData.gpuVramSupported;
+        }
+
         public override float GetVRAMUsage()
         {
             return (float)TelemetryData.gpuVramValue;
         }
 
-        public AMDGPU(AdapterInformation adapterInformation) : base(adapterInformation)
+        public AmdGpu(AdapterInformation adapterInformation) : base(adapterInformation)
         {
             ADLX_RESULT result = ADLX_RESULT.ADLX_FAIL;
             int adapterCount = 0;
-            int UniqueId = 0;
-            string dispName = string.Empty;
-            string friendlyName = MultimediaManager.GetDisplayFriendlyName(adapterInformation.Details.DeviceName);
+            int uniqueId = 0;
+            var friendlyName = Display.GetDisplays()
+                .FirstOrDefault(v => v.DisplayScreen.ToPathDisplaySource().DisplayName.Equals(adapterInformation.Details.DeviceName))?
+                .ToPathDisplayTarget().FriendlyName ?? string.Empty;
 
             result = GetNumberOfDisplays(ref adapterCount);
             if (result != ADLX_RESULT.ADLX_OK)
@@ -255,7 +262,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
             for (int idx = 0; idx < adapterCount; idx++)
             {
-                StringBuilder displayName = new StringBuilder(256); // Assume display name won't exceed 255 characters
+                var displayName = new StringBuilder(256); // Assume display name won't exceed 255 characters
 
                 // skip if failed to retrieve display
                 result = GetDisplayName(idx, displayName, displayName.Capacity);
@@ -274,10 +281,10 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (displayIdx != -1)
             {
                 // get the associated GPU UniqueId
-                result = GetDisplayGPU(displayIdx, ref UniqueId);
+                result = GetDisplayGPU(displayIdx, ref uniqueId);
                 if (result == ADLX_RESULT.ADLX_OK)
                 {
-                    result = GetGPUIndex(UniqueId, ref deviceIdx);
+                    result = GetGPUIndex(uniqueId, ref deviceIdx);
                     if (result == ADLX_RESULT.ADLX_OK)
                         IsInitialized = true;
                 }
@@ -291,14 +298,12 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
             UpdateTimer = new Timer(UpdateInterval)
             {
-                Enabled = false,
                 AutoReset = true
             };
             UpdateTimer.Elapsed += UpdateTimer_Elapsed;
 
             TelemetryTimer = new Timer(TelemetryInterval)
             {
-                Enabled = false,
                 AutoReset = true
             };
             TelemetryTimer.Elapsed += TelemetryTimer_Elapsed;

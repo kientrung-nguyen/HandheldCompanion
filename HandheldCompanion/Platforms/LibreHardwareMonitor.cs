@@ -1,4 +1,5 @@
 using HandheldCompanion.Devices;
+using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Views.Windows;
 using LibreHardwareMonitor.Hardware;
@@ -34,11 +35,7 @@ public class LibreHardwareMonitor : IPlatform
     public float? GPUTemp;
 
     public float? MemoryUsage;
-    public float? MemoryAvailable;
-    public float? MemoryLoad;
     public float? GPUMemoryUsage;
-    public float? GPUMemoryAvailable;
-    public float? GPUMemoryLoad;
 
     public float? BatteryChargeLevel;
 
@@ -57,6 +54,7 @@ public class LibreHardwareMonitor : IPlatform
     static long lastBatteryRefresh;
     static long lastChargeRefresh;
 
+
     public LibreHardwareMonitor()
     {
         PlatformType = PlatformType.LibreHardwareMonitor;
@@ -73,9 +71,7 @@ public class LibreHardwareMonitor : IPlatform
         computer = new Computer
         {
             IsCpuEnabled = true,
-            IsMemoryEnabled = true,
-            //IsBatteryEnabled = true,
-            IsGpuEnabled = true
+            IsMemoryEnabled = true
         };
 
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
@@ -98,7 +94,6 @@ public class LibreHardwareMonitor : IPlatform
         computer?.Open();
 
         sensorTimer?.Start();
-
         return base.Start();
     }
 
@@ -114,152 +109,11 @@ public class LibreHardwareMonitor : IPlatform
 
         return base.Stop(kill);
     }
-
-    private void ReadBatterySensors()
-    {
-        BatteryPower = 0f;
-        BatteryTimeSpan = null;
-        BatteryFullCapacity = null;
-
-        ReadFullChargeCapacity();
-        GetBatteryStatus();
-
-        if (BatteryFullCapacity > 0 && BatteryRemainingCapacity > 0)
-        {
-            var currentBatteryCapacity = (float)Math.Min(100, (decimal)BatteryRemainingCapacity / (decimal)BatteryFullCapacity * 100);
-
-            if (BatteryCapacity != -1f && BatteryCapacity != 100f && currentBatteryCapacity == 100f)
-                ToastManager.RunToast(
-                    Properties.Resources.BatteryFullyCharged, ToastIcons.BatteryFull
-                    );
-
-            BatteryCapacity = currentBatteryCapacity;
-            BatteryLevelChanged?.Invoke(BatteryCapacity);
-
-            if (BatteryPower != 0)
-            {
-                if (BatteryPower > 0)
-                    BatteryTimeSpan = ((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower * 60f;
-                else
-                    BatteryTimeSpan = BatteryRemainingCapacity / 1000 / BatteryPower * 60f * -1;
-                BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
-            }
-        }
-    }
-
-    private void GetBatteryStatus()
-    {
-        BatteryPower = 0f;
-        BatteryRemainingCapacity = 0f;
-
-        try
-        {
-            ManagementScope scope = new ManagementScope("root\\WMI");
-            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryStatus");
-
-            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
-            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
-            {
-                BatteryRemainingCapacity = Convert.ToSingle(obj["RemainingCapacity"]);
-                var chargeRate = Convert.ToSingle(obj["ChargeRate"]);
-                var dischargeRate = Convert.ToSingle(obj["DischargeRate"]);
-
-                if (chargeRate > 0)
-                    BatteryPower = chargeRate / 1000;
-                else
-                    BatteryPower = -dischargeRate / 1000;
-
-                if (BatteryPower != 0)
-                    BatteryPowerChanged?.Invoke(BatteryPower);
-            }
-
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Discharge Reading: " + ex.Message);
-        }
-    }
-
-    private void ReadFullChargeCapacity()
-    {
-        if (BatteryFullCapacity > 0) return;
-
-        try
-        {
-            ManagementScope scope = new ManagementScope("root\\WMI");
-            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryFullChargedCapacity");
-
-            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
-            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
-            {
-                BatteryFullCapacity = Convert.ToSingle(obj["FullChargedCapacity"]);
-            }
-
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Full Charge Reading: " + ex.Message);
-        }
-
-    }
-
-    private void ReadDesignCapacity()
-    {
-        if (BatteryDesignCapacity > 0) return;
-
-        try
-        {
-            ManagementScope scope = new ManagementScope("root\\WMI");
-            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryStaticData");
-
-            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
-            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
-            {
-                BatteryDesignCapacity = Convert.ToSingle(obj["DesignedCapacity"]);
-            }
-
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Design Capacity Reading: " + ex.Message);
-        }
-    }
-
-    private void RefreshBatteryHealth()
-    {
-        BatteryFullCapacity = null;
-        BatteryHealth = GetBatteryHealth() * 100f;
-    }
-
-    private float GetBatteryHealth()
-    {
-        if (BatteryDesignCapacity is null)
-        {
-            ReadDesignCapacity();
-        }
-        ReadFullChargeCapacity();
-
-        if (BatteryDesignCapacity is null || BatteryFullCapacity is null || BatteryDesignCapacity == 0 || BatteryFullCapacity == 0)
-        {
-            return -1f;
-        }
-
-        var health = (float)BatteryFullCapacity / (float)BatteryDesignCapacity;
-        LogManager.LogInformation($"Design Capacity: {BatteryDesignCapacity}mWh,  Remaining Capacity: {BatteryRemainingCapacity}mWh,  Full Charge Capacity: {BatteryFullCapacity}mWh,  Health: {health}%");
-
-        return health;
-    }
-
     private void sensorTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
         lock (updateLock)
         {
             //Refresh again only after 15 Minutes since the last refresh
-            if (lastBatteryRefresh == 0 || Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastBatteryRefresh) > 10 * 60_000)
-            {
-                lastBatteryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                RefreshBatteryHealth();
-            }
 
             if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastChargeRefresh) > 7000)
             {
@@ -267,10 +121,23 @@ public class LibreHardwareMonitor : IPlatform
                 ReadBatterySensors();
             }
 
+            if (lastBatteryRefresh == 0 || Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastBatteryRefresh) > 10 * 60_000)
+            {
+                lastBatteryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                RefreshBatteryHealth();
+            }
+
             if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastFanRefresh) > 5000)
             {
                 lastFanRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 HandleFan();
+            }
+
+
+            if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) > 500)
+            {
+                lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                HandleGPU(GPUManager.GetCurrent());
             }
 
             // pull temperature sensor
@@ -286,12 +153,17 @@ public class LibreHardwareMonitor : IPlatform
                             hardware.Update();
                             HandleCPU(hardware);
                             break;
-                        case HardwareType.GpuAmd:
-                            if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) < 500) continue;
-                            lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                            hardware.Update();
-                            HandleGPU(hardware);
-                            break;
+                        /*
+                    case HardwareType.GpuAmd:
+                        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) < 500) continue;
+                        lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        hardware.Update();
+                        HandleGPU(hardware);
+                        LogManager.LogDebug($"{GPUTemp}°C {GPUClock}mHz {GPULoad}% {GPUPower}W");
+                        LogManager.LogDebug($"{amdControl.GetGpuTemperature()}°C {amdControl.GetGpuClock()}mHz {amdControl.GetGpuUse()}% {amdControl.GetGpuPower()}W {amdControl.GetFPS()}FPS");
+                        LogManager.LogDebug($"{GPUManager.GetCurrent().GetTemperature()}°C {GPUManager.GetCurrent().GetClock()}mHz {GPUManager.GetCurrent().GetLoad()}% {GPUManager.GetCurrent().GetPower()}W {GPUManager.GetCurrent().GetVRAMUsage()}");
+                        break;
+                        */
                         case HardwareType.Memory:
                             if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastMemoryRefresh) < 3000) continue;
                             lastMemoryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
@@ -420,6 +292,20 @@ public class LibreHardwareMonitor : IPlatform
 
     #region GPU updates
 
+    private void HandleGPU(GPU gpu)
+    {
+        if (gpu.HasLoad())
+            GPULoad = gpu.GetLoad();
+        if (gpu.HasClock())
+            GPUClock = gpu.GetClock();
+        if (gpu.HasPower())
+            GPUPower = gpu.GetPower();
+        if (gpu.HasTemperature())
+            GPUTemp = gpu.GetTemperature();
+        if (gpu.HasVRAMUsage())
+            GPUMemoryUsage = gpu.GetVRAMUsage();
+    }
+
     private void HandleGPU(IHardware gpu)
     {
         foreach (var sensor in gpu.Sensors)
@@ -443,9 +329,6 @@ public class LibreHardwareMonitor : IPlatform
                     break;
             }
         }
-
-        if (GPUMemoryUsage > 0 && GPUMemoryAvailable > 0)
-            GPUMemoryLoad = GPUMemoryUsage / (GPUMemoryUsage + GPUMemoryAvailable) * 100;
     }
 
     private void HandleGPU_Clock(ISensor sensor)
@@ -496,9 +379,6 @@ public class LibreHardwareMonitor : IPlatform
             case "D3D Dedicated Memory Used":
                 GPUMemoryUsage = sensor.Value;
                 break;
-            case "D3D Dedicated Memory Free":
-                GPUMemoryAvailable = sensor.Value;
-                break;
         }
     }
 
@@ -518,9 +398,6 @@ public class LibreHardwareMonitor : IPlatform
             }
         }
 
-        if (MemoryUsage > 0 && MemoryAvailable > 0)
-            MemoryLoad = MemoryUsage / (MemoryUsage + MemoryAvailable) * 100;
-
     }
 
     private void HandleMemory_Data(ISensor sensor)
@@ -531,15 +408,151 @@ public class LibreHardwareMonitor : IPlatform
                 MemoryUsage = sensor.Value * 1024;
                 MemoryUsageChanged?.Invoke(MemoryUsage);
                 break;
-            case "Memory Available":
-                MemoryAvailable = sensor.Value * 1024;
-                break;
         }
     }
 
     #endregion
 
     #region Battery updates
+
+
+    private void GetBatteryStatus()
+    {
+        BatteryPower = 0f;
+        BatteryRemainingCapacity = 0f;
+
+        try
+        {
+            ManagementScope scope = new ManagementScope("root\\WMI");
+            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryStatus");
+
+            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
+            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
+            {
+                BatteryRemainingCapacity = Convert.ToSingle(obj["RemainingCapacity"]);
+                var chargeRate = Convert.ToSingle(obj["ChargeRate"]);
+                var dischargeRate = Convert.ToSingle(obj["DischargeRate"]);
+
+                if (chargeRate > 0)
+                    BatteryPower = chargeRate / 1000;
+                else
+                    BatteryPower = -dischargeRate / 1000;
+
+                if (BatteryPower != 0)
+                    BatteryPowerChanged?.Invoke(BatteryPower);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Discharge Reading: " + ex.Message);
+        }
+    }
+
+    private void ReadFullChargeCapacity()
+    {
+        if (BatteryFullCapacity > 0) return;
+
+        try
+        {
+            ManagementScope scope = new ManagementScope("root\\WMI");
+            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryFullChargedCapacity");
+
+            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
+            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
+            {
+                BatteryFullCapacity = Convert.ToSingle(obj["FullChargedCapacity"]);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Full Charge Reading: " + ex.Message);
+        }
+
+    }
+
+    private void ReadDesignCapacity()
+    {
+        if (BatteryDesignCapacity > 0) return;
+
+        try
+        {
+            ManagementScope scope = new ManagementScope("root\\WMI");
+            ObjectQuery query = new ObjectQuery("SELECT * FROM BatteryStaticData");
+
+            using ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query);
+            foreach (ManagementObject obj in searcher.Get().Cast<ManagementObject>())
+            {
+                BatteryDesignCapacity = Convert.ToSingle(obj["DesignedCapacity"]);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Design Capacity Reading: " + ex.Message);
+        }
+    }
+
+    private void RefreshBatteryHealth()
+    {
+        BatteryFullCapacity = null;
+        BatteryHealth = GetBatteryHealth() * 100f;
+    }
+
+    private float GetBatteryHealth()
+    {
+        if (BatteryDesignCapacity is null)
+        {
+            ReadDesignCapacity();
+        }
+        ReadFullChargeCapacity();
+
+        if (BatteryDesignCapacity is null || BatteryFullCapacity is null || BatteryDesignCapacity == 0 || BatteryFullCapacity == 0)
+        {
+            return -1f;
+        }
+
+        var health = (float)BatteryFullCapacity / (float)BatteryDesignCapacity;
+        LogManager.LogInformation($"Design Capacity: {BatteryDesignCapacity}mWh,  Remaining Capacity: {BatteryRemainingCapacity}mWh,  Full Charge Capacity: {BatteryFullCapacity}mWh,  Health: {health}%");
+
+        return health;
+    }
+
+
+
+    private void ReadBatterySensors()
+    {
+        BatteryPower = 0f;
+        BatteryTimeSpan = null;
+        BatteryFullCapacity = null;
+
+        ReadFullChargeCapacity();
+        GetBatteryStatus();
+
+        if (BatteryFullCapacity > 0 && BatteryRemainingCapacity > 0)
+        {
+            var currentBatteryCapacity = (float)Math.Min(100, (decimal)BatteryRemainingCapacity / (decimal)BatteryFullCapacity * 100);
+
+            if (BatteryCapacity != -1f && BatteryCapacity != 100f && currentBatteryCapacity == 100f)
+                ToastManager.RunToast(
+                    Properties.Resources.BatteryFullyCharged, ToastIcons.BatteryFull
+                    );
+
+            BatteryCapacity = currentBatteryCapacity;
+            BatteryLevelChanged?.Invoke(BatteryCapacity);
+
+            if (BatteryPower != 0)
+            {
+                if (BatteryPower > 0)
+                    BatteryTimeSpan = ((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower * 60f;
+                else
+                    BatteryTimeSpan = BatteryRemainingCapacity / 1000 / BatteryPower * 60f * -1;
+                BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
+            }
+        }
+    }
+
 
     private void HandleBattery(IHardware cpu)
     {
@@ -564,14 +577,24 @@ public class LibreHardwareMonitor : IPlatform
 
         if (BatteryFullCapacity > 0 && BatteryRemainingCapacity > 0)
         {
-            BatteryCapacity = (float)Math.Min(100, (decimal)BatteryRemainingCapacity / (decimal)BatteryFullCapacity * 100);
-            if (BatteryPower == 0 || BatteryCapacity == 100)
-                BatteryTimeSpan = null;
-            if (BatteryPower > 0)
-                BatteryTimeSpan = ((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower * 60f;
+            var currentBatteryCapacity = (float)Math.Min(100, (decimal)BatteryRemainingCapacity / (decimal)BatteryFullCapacity * 100);
 
-            if (BatteryPower < 0 && BatteryTimeSpan == null)
-                BatteryTimeSpan = BatteryRemainingCapacity / 1000 / BatteryPower * 60f * -1;
+            if (BatteryCapacity != -1f && BatteryCapacity != 100f && currentBatteryCapacity == 100f)
+                ToastManager.RunToast(
+                    Properties.Resources.BatteryFullyCharged, ToastIcons.BatteryFull
+                    );
+
+            BatteryCapacity = currentBatteryCapacity;
+            BatteryLevelChanged?.Invoke(BatteryCapacity);
+
+            if (BatteryPower != 0)
+            {
+                if (BatteryPower > 0)
+                    BatteryTimeSpan = ((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower * 60f;
+                else
+                    BatteryTimeSpan = BatteryRemainingCapacity / 1000 / BatteryPower * 60f * -1;
+                BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
+            }
         }
 
         //LogManager.LogDebug($"Charge: {BatteryPower}W, RemainingCapacity: {BatteryRemainingCapacity}mWh, BatteryFullCapacity: {BatteryFullCapacity}mWh, BatterySpan: {BatteryTimeSpan}mins");

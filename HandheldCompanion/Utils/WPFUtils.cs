@@ -1,4 +1,5 @@
-﻿using iNKORE.UI.WPF.Modern.Controls;
+﻿using HandheldCompanion.Managers;
+using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -281,7 +282,6 @@ public static class WPFUtils
                     }
                     break;
             }
-
             foreach (var item in FindChildren(current))
             {
                 childs.Add(item);

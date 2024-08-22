@@ -30,7 +30,7 @@ public class OverlayWindow : Window
         ShowActivated = false;
         FocusManager.SetIsFocusScope(this, false);
 
-        SizeChanged += (o, e) => { UpdatePosition(); };
+        SizeChanged += (o, e) => UpdatePosition();
 
         Loaded += OverlayWindow_Loaded;
         IsVisibleChanged += OverlayWindow_IsVisibleChanged;

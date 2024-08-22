@@ -9,7 +9,6 @@
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     Name="QuickHome"
     Title="{l:Static resx:Resources.QuickHomePage_Title}"
-    Margin="15,0,12,6"
     d:Background="White"
     d:DesignHeight="1200"
     d:DesignWidth="640"
@@ -19,36 +18,25 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition />
-            <RowDefinition />
         </Grid.RowDefinitions>
 
         <ui:SimpleStackPanel
-            Margin="0,6,0,6"
+            Margin="0,0,0,0"
             VerticalAlignment="Top"
             Spacing="6">
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.QuickSettingsPage_Title}" />
+            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Visibility="Collapsed" Text="{l:Static resx:Resources.QuickSettingsPage_Title}" />
 
             <!--  Shortcuts  -->
             <UniformGrid
                 Name="QuickHotkeys"
                 VerticalAlignment="Top"
-                Columns="3">
+                Columns="4">
                 <UniformGrid.Resources>
                     <Style TargetType="{x:Type ui:SimpleStackPanel}">
                         <Setter Property="Margin" Value="0,0,6,6" />
                     </Style>
                 </UniformGrid.Resources>
             </UniformGrid>
-        </ui:SimpleStackPanel>
-
-        <ui:SimpleStackPanel
-            Grid.Row="1"
-            VerticalAlignment="Bottom"
-            Margin="4,0,4,0"
-            Spacing="6"
-            Visibility="Collapsed">
-
-            
         </ui:SimpleStackPanel>
     </Grid>
 </Page>

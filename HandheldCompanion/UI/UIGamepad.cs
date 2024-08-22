@@ -55,7 +55,7 @@ namespace HandheldCompanion.Managers
         {
             // set current window
             _currentWindow = gamepadWindow;
-            _currentScrollViewer = _currentWindow.GetScrollViewer(_currentWindow);
+            _currentScrollViewer = _currentWindow.GetActualScrollViewer(_currentWindow);
             _currentWindow.GotFocus += _currentWindow_GotFocus;
             _currentWindow.GotKeyboardFocus += _currentWindow_GotFocus;
             _currentWindow.LostFocus += _currentWindow_LostFocus;
@@ -232,14 +232,22 @@ namespace HandheldCompanion.Managers
                         // remove state
                         _goingBack = false;
                     }
-                    else if (_goingForward && control is not null)
+                    else if (_goingForward)
                     {
-                        Focus(control);
+                        if (control is not null)
+                            Focus(control);
+                        else
+                        {
+                            control = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements);
+                            Focus(control);
+                        }
+
                     }
-                    else if (_goingForward && control is null)
+                    else if (prevNavigation is null && _currentWindow.IsVisible && _currentWindow.WindowState != WindowState.Minimized)
                     {
-                        control = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements);
-                        Focus(control);
+                        NavigationViewItem currentNavigationViewItem = (NavigationViewItem)WPFUtils.GetTopLeftControl<NavigationViewItem>(_currentWindow.controlElements);
+                        prevNavigation = currentNavigationViewItem;
+                        Focus(currentNavigationViewItem);
                     }
                 }
 
@@ -290,8 +298,7 @@ namespace HandheldCompanion.Managers
                 if (Keyboard.FocusedElement.GetType().IsSubclassOf(typeof(Control)))
                     keyboardFocused = Keyboard.FocusedElement;
 
-            if (keyboardFocused is null)
-                keyboardFocused = _currentWindow;
+            keyboardFocused ??= _currentWindow;
 
             if (keyboardFocused.Focusable)
             {
@@ -305,10 +312,22 @@ namespace HandheldCompanion.Managers
                     case "OverlayQuickTools":
                     case "TouchScrollViewer":
                         {
+                            /*
                             if (prevNavigation is not null)
                             {
                                 // a new page opened
                                 controlFocused = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements);
+                            }
+                            else
+                            {
+                                // first start
+                                prevNavigation = controlFocused = WPFUtils.GetTopLeftControl<NavigationViewItem>(_currentWindow.controlElements);
+                            }
+                            */
+                            if (prevNavigation is not null)
+                            {
+                                // a new page opened
+                                controlFocused = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlScrollViewer);
                             }
                             else
                             {
@@ -334,6 +353,11 @@ namespace HandheldCompanion.Managers
                 {
                     // pick the last known Control
                     return controlFocused;
+                }
+                else if (_currentWindow is OverlayQuickTools)
+                {
+                    // pick the top left Control
+                    return WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlScrollViewer);
                 }
                 else
                 {
@@ -440,7 +464,6 @@ namespace HandheldCompanion.Managers
                         case "CheckBox":
                             ((CheckBox)focusedElement).IsChecked = !((CheckBox)focusedElement).IsChecked;
                             break;
-
                         case "NavigationViewItem":
                             {
                                 // play sound
@@ -454,7 +477,7 @@ namespace HandheldCompanion.Managers
                                 else
                                 {
                                     // get the nearest non-navigation control
-                                    focusedElement = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements);
+                                    focusedElement = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlScrollViewer);
                                     Focus(focusedElement);
                                 }
                             }
@@ -470,6 +493,9 @@ namespace HandheldCompanion.Managers
                         case "ComboBoxItem":
                             WPFUtils.SendKeyToControl(focusedElement, (int)VirtualKeyCode.RETURN);
                             return;
+                        case "Slider":
+                            WPFUtils.SendKeyToControl(focusedElement, (int)VirtualKeyCode.RIGHT);
+                            break;
                     }
                 }
                 else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.B2))
@@ -517,7 +543,6 @@ namespace HandheldCompanion.Managers
                                         return;
                                 }
                             }
-                            break;
 
                         case "ComboBox":
                             {
@@ -579,6 +604,9 @@ namespace HandheldCompanion.Managers
                 {
                     switch (elementType)
                     {
+                        case "Slider":
+                            WPFUtils.SendKeyToControl(focusedElement, (int)VirtualKeyCode.LEFT);
+                            break;
                         case "Button":
                             {
                                 // To get the first RadioButton in the list, if any
@@ -640,8 +668,10 @@ namespace HandheldCompanion.Managers
                     {
                         case "NavigationViewItem":
                             {
+                                //focusedElement = WPFUtils.GetClosestControl<NavigationViewItem>(focusedElement, _currentWindow.controlElements, direction);
                                 focusedElement = WPFUtils.GetClosestControl<NavigationViewItem>(focusedElement, _currentWindow.controlElements, direction);
                                 Focus(focusedElement);
+
                             }
                             return;
 
@@ -698,8 +728,8 @@ namespace HandheldCompanion.Managers
                             */
                     }
 
-                    // default
-                    focusedElement = WPFUtils.GetClosestControl<Control>(focusedElement, _currentWindow.controlElements, direction, new List<Type>() { typeof(NavigationViewItem) });
+                    // defaul
+                    focusedElement = WPFUtils.GetClosestControl<Control>(focusedElement, _currentWindow.controlScrollViewer, direction, new List<Type>() { typeof(NavigationViewItem) });
                     Focus(focusedElement);
                 }
             });

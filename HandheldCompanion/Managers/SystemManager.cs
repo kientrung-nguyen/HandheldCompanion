@@ -23,7 +23,7 @@ public static class SystemManager
 
     #endregion
 
-    private static CrossThreadLock nightlightLock = new();
+    private static CrossThreadLock autoLock = new();
     public const uint ES_CONTINUOUS = 0x80000000;
     public const uint ES_SYSTEM_REQUIRED = 0x00000001;
     static long lastAuto;
@@ -102,19 +102,12 @@ public static class SystemManager
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
         SystemEvents.SessionEnding += SystemEvents_SessionEnding;
-        SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
 
         SystemPowerManager.BatteryStatusChanged += BatteryStatusChanged;
         SystemPowerManager.EnergySaverStatusChanged += BatteryStatusChanged;
         SystemPowerManager.PowerSupplyStatusChanged += BatteryStatusChanged;
         SystemPowerManager.RemainingChargePercentChanged += BatteryStatusChanged;
         SystemPowerManager.RemainingDischargeTimeChanged += BatteryStatusChanged;
-    }
-
-
-    private static void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
-    {
-        LogManager.LogInformation($"SystemEvents_UserPreferenceChanged {e.Category}");
     }
 
     private static void BatteryStatusChanged(object? sender, object e)
@@ -129,12 +122,12 @@ public static class SystemManager
         var handle = OpenInputDesktop(0, false, 0);
         IsSessionLocked = handle == IntPtr.Zero;
         isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
-        SystemRoutine();
 
         IsInitialized = true;
         Initialized?.Invoke();
 
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
+        SystemRoutine();
 
         LogManager.LogInformation("{0} has started", "PowerManager");
     }
@@ -233,21 +226,22 @@ public static class SystemManager
     {
         if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastAuto) < 3000) return;
         lastAuto = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-        if (nightlightLock.TryEnter())
+
+        if (currentSystemStatus != SystemStatus.SystemReady)
+            return;
+
+        if (autoLock.TryEnter())
         {
             try
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    NightLight.Auto();
-                });
+                NightLight.Auto();
+                ScreenControl.Auto();
             }
             finally
             {
-                nightlightLock.Exit();
+                autoLock.Exit();
             }
         }
-
     }
 
     #region events

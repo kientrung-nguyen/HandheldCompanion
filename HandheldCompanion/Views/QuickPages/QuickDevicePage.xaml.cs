@@ -12,6 +12,7 @@ using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using Windows.Devices.Radios;
+using WindowsDisplayAPI;
 using Page = System.Windows.Controls.Page;
 
 namespace HandheldCompanion.Views.QuickPages;
@@ -81,12 +82,12 @@ public partial class QuickDevicePage : Page
         // Go to profile integer scaling resolution
         if (profile.IntegerScalingEnabled)
         {
-            DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
-            var profileResolution = desktopScreen?.screenDividers.FirstOrDefault(d => d.divider == profile.IntegerScalingDivider);
-            if (profileResolution is not null)
-            {
-                SetResolution(profileResolution.resolution);
-            }
+            //DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
+            //var profileResolution = desktopScreen?.screenDividers.FirstOrDefault(d => d.divider == profile.IntegerScalingDivider);
+            //if (profileResolution is not null)
+            //{
+            //    SetResolution(profileResolution.resolution);
+            //}
         }
         else
         {
@@ -133,7 +134,7 @@ public partial class QuickDevicePage : Page
                     AutoScreenToggle.IsOn = SettingsManager.Get<bool>(name);
                     break;
                 case "NightLightSchedule":
-                    NightLightSchedule.IsOn = SettingsManager.Get<bool>(name); 
+                    NightLightSchedule.IsOn = SettingsManager.Get<bool>(name);
                     break;
                 case "NightLightTurnOn":
                     NightlightTurnOn.SelectedDateTime = SettingsManager.Get<DateTime?>(name);
@@ -182,31 +183,62 @@ public partial class QuickDevicePage : Page
         }).Start();
     }
 
-    private void DesktopManager_PrimaryScreenChanged(DesktopScreen screen)
+    private void DesktopManager_PrimaryScreenChanged(Display? screen)
     {
         ComboBoxResolution.Items.Clear();
-        foreach (ScreenResolution resolution in screen.screenResolutions)
-            ComboBoxResolution.Items.Add(resolution);
+        if (screen is not null)
+        {
+            foreach (var setting in screen.DisplayScreen.GetPossibleSettings()
+                .DistinctBy(setting => new
+                {
+                    setting.Resolution.Width,
+                    setting.Resolution.Height
+                })
+                .OrderByDescending(setting => (ulong)setting.Resolution.Height * (ulong)setting.Resolution.Width))
+            {
+                ComboBoxResolution.Items.Add(new ComboBoxItem
+                {
+                    Tag = setting,
+                    Content = $"{setting.Resolution.Width} x {setting.Resolution.Height}"
+                });
+            }
+        }
     }
 
-    private void DesktopManager_DisplaySettingsChanged(DesktopScreen desktopScreen, ScreenResolution resolution)
+    private void DesktopManager_DisplaySettingsChanged(Display? desktopScreen)
     {
         // We don't want to change the combobox when it's changed from profile integer scaling
         var currentProfile = ProfileManager.GetCurrent();
         if (ComboBoxResolution.SelectedItem is not null && currentProfile is not null && currentProfile.IntegerScalingEnabled)
             return;
 
-        ComboBoxResolution.SelectedItem = resolution;
+        if (desktopScreen is null)
+            return;
 
-        int screenFrequency = MultimediaManager.PrimaryDesktop.GetCurrentFrequency();
-        foreach (ComboBoxItem comboBoxItem in ComboBoxFrequency.Items)
+        foreach (ComboBoxItem item in ComboBoxResolution.Items)
         {
-            if (comboBoxItem.Tag is int frequency && frequency == screenFrequency)
+            if (item.Tag is DisplayPossibleSetting resolution &&
+                resolution.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width &&
+                resolution.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height)
             {
-                ComboBoxFrequency.SelectedItem = comboBoxItem;
+                ComboBoxResolution.SelectedItem = item;
                 break;
             }
         }
+
+        foreach (ComboBoxItem item in ComboBoxFrequency.Items)
+        {
+            if (item.Tag is DisplayPossibleSetting frequency &&
+                frequency.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width &&
+                frequency.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height &&
+                frequency.Frequency == desktopScreen.DisplayScreen.CurrentSetting.Frequency
+                )
+            {
+                ComboBoxFrequency.SelectedItem = item;
+                break;
+            }
+        }
+
     }
 
     private void ComboBoxResolution_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -214,22 +246,33 @@ public partial class QuickDevicePage : Page
         if (ComboBoxResolution.SelectedItem is null)
             return;
 
-        ScreenResolution resolution = (ScreenResolution)ComboBoxResolution.SelectedItem;
-        int screenFrequency = MultimediaManager.PrimaryDesktop.GetCurrentFrequency();
+        if (ScreenControl.PrimaryDisplay is null)
+            return;
+
+        var selectedResolution = (ComboBoxItem)ComboBoxResolution.SelectedItem;
+        var resolution = (DisplayPossibleSetting)selectedResolution.Tag;
+        var frequencies = ScreenControl.PrimaryDisplay.DisplayScreen.GetPossibleSettings()
+            .Where(setting =>
+                setting.Resolution.Width == resolution.Resolution.Width &&
+                setting.Resolution.Height == resolution.Resolution.Height)
+            .DistinctBy(setting => setting.Frequency)
+            .OrderByDescending(setting => setting.Frequency);
+
+        var currFrequency = ScreenControl.PrimaryDisplay.DisplayScreen.CurrentSetting;
 
         ComboBoxFrequency.Items.Clear();
-        foreach (int frequency in resolution.Frequencies.Keys)
+        foreach (var frequency in frequencies)
         {
-            ComboBoxItem comboBoxItem = new()
+            var item = new ComboBoxItem
             {
-                Content = $"{frequency} Hz",
-                Tag = frequency,
+                Content = $"{frequency.Frequency} Hz",
+                Tag = frequency
             };
 
-            ComboBoxFrequency.Items.Add(comboBoxItem);
+            ComboBoxFrequency.Items.Add(item);
 
-            if (frequency == screenFrequency)
-                ComboBoxFrequency.SelectedItem = comboBoxItem;
+            if (frequency.Frequency == currFrequency.Frequency)
+                ComboBoxFrequency.SelectedItem = item;
         }
 
         SetResolution();
@@ -245,32 +288,37 @@ public partial class QuickDevicePage : Page
 
     private void SetResolution()
     {
-        if (ComboBoxResolution.SelectedItem is null)
+        if (ScreenControl.PrimaryDisplay is null) return;
+
+        if (ComboBoxResolution.SelectedItem is null || ComboBoxFrequency.SelectedItem is null) return;
+
+        var selectedResolution = (ComboBoxItem)ComboBoxResolution.SelectedItem;
+        var selectedFrequency = (ComboBoxItem)ComboBoxFrequency.SelectedItem;
+
+        var resolution = (DisplayPossibleSetting)selectedResolution.Tag;
+        var frequency = (DisplayPossibleSetting)selectedFrequency.Tag;
+
+        var currSetting = ScreenControl.PrimaryDisplay.DisplayScreen.CurrentSetting;
+
+        if (currSetting.Resolution.Width == resolution.Resolution.Width &&
+            currSetting.Resolution.Height == resolution.Resolution.Height &&
+            currSetting.Frequency == frequency.Frequency)
             return;
 
-        if (ComboBoxFrequency.SelectedItem is null)
-            return;
+        ScreenControl.Set(ScreenControl.PrimaryDisplay, ScreenControl.PrimaryDisplay.DisplayScreen.GetPossibleSettings().First(setting =>
+                setting.Resolution.Width == resolution.Resolution.Width &&
+                setting.Resolution.Height == resolution.Resolution.Height &&
+                setting.Frequency == frequency.Frequency &&
+                setting.ColorDepth == currSetting.ColorDepth
+            ));
 
-        ScreenResolution resolution = (ScreenResolution)ComboBoxResolution.SelectedItem;
-        int frequency = (int)((ComboBoxItem)ComboBoxFrequency.SelectedItem).Tag;
-
-        // update current screen resolution
-        DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
-
-        if (desktopScreen.devMode.dmPelsWidth == resolution.Width &&
-            desktopScreen.devMode.dmPelsHeight == resolution.Height &&
-            desktopScreen.devMode.dmDisplayFrequency == frequency &&
-            desktopScreen.devMode.dmBitsPerPel == resolution.BitsPerPel)
-            return;
-
-        MultimediaManager.SetResolution(resolution.Width, resolution.Height, frequency, resolution.BitsPerPel);
     }
 
-    public void SetResolution(ScreenResolution resolution)
-    {
-        // update current screen resolution
-        MultimediaManager.SetResolution(resolution.Width, resolution.Height, MultimediaManager.PrimaryDesktop.GetCurrentFrequency(), resolution.BitsPerPel);
-    }
+    //public void SetResolution(ScreenResolution resolution)
+    //{
+    //    // update current screen resolution
+    //    MultimediaManager.SetResolution(resolution.Width, resolution.Height, MultimediaManager.PrimaryDesktop.GetCurrentFrequency(), resolution.BitsPerPel);
+    //}
 
     private void WIFIToggle_Toggled(object sender, RoutedEventArgs e)
     {

@@ -20,6 +20,7 @@ public enum ToastIcons
     BacklightUp,
     BacklightDown,
     Game,
+    Laptop,
     Touchscreen,
     Touchpad,
     Microphone,

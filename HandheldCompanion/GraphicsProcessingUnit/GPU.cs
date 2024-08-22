@@ -2,7 +2,6 @@
 using SharpDX.Direct3D9;
 using System;
 using System.Management;
-using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 using Timer = System.Timers.Timer;
 
@@ -54,7 +53,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (!halting && GPUManager.IsInitialized)
                 try
                 {
-                    Task<T> task = Task.Run(() =>
+                    var task = Task.Run(() =>
                     {
                         lock (functionLock)
                         {
@@ -69,10 +68,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                     if (task.Wait(TimeSpan.FromSeconds(1)))
                         return task.Result;
                 }
-                catch (AccessViolationException)
-                { }
-                catch (Exception)
-                { }
+                catch (AccessViolationException) { }
+                catch (Exception) { }
 
             return defaultValue;
         }
@@ -86,28 +83,25 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         {
             // release halting flag
             halting = false;
-            /*
+
             if (UpdateTimer != null && !UpdateTimer.Enabled)
                 UpdateTimer.Start();
-            */
-            /*
+
             if (TelemetryTimer != null && !TelemetryTimer.Enabled)
                 TelemetryTimer.Start();
-            */
         }
 
         public virtual void Stop()
         {
             // set halting flag
             halting = true;
-            /*
+
             if (UpdateTimer != null && UpdateTimer.Enabled)
                 UpdateTimer.Stop();
-            */
-            /*
+
             if (TelemetryTimer != null && TelemetryTimer.Enabled)
                 TelemetryTimer.Stop();
-            */
+
         }
 
         protected virtual void OnIntegerScalingChanged(bool supported, bool enabled)
@@ -229,6 +223,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         {
             return 0.0f;
         }
+
+        public virtual bool HasVRAMUsage() => false;
 
         public virtual float GetVRAMUsage()
         {

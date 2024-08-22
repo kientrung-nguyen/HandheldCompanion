@@ -225,7 +225,6 @@
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
     <PackageReference Include="System.Text.Json" Version="8.0.4" />
     <PackageReference Include="WindowsAPICodePack" Version="8.0.4" />
-    <PackageReference Include="WindowsDisplayAPI" Version="1.3.0.13" />
     <PackageReference Include="WindowsInput" Version="6.4.1" />
     <PackageReference Include="WpfScreenHelper" Version="2.1.0" />
   </ItemGroup>
@@ -2369,6 +2368,9 @@
     <Reference Include="RTSSSharedMemoryNET">
       <HintPath>Resources\RTSSSharedMemoryNET.dll</HintPath>
     </Reference>
+    <Reference Include="WindowsDisplayAPI">
+      <HintPath>Resources\WindowsDisplayAPI\WindowsDisplayAPI.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -2387,6 +2389,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Resources\WindowsDisplayAPI\" />
     <Folder Include="Resources\Power\" />
   </ItemGroup>
 
