@@ -2,7 +2,6 @@
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Views.Windows;
 using Microsoft.Win32;
-using PInvoke;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +18,9 @@ public static class ScreenControl
     private static IEnumerable<Display> allDisplays = [];
     private static Display primaryDisplay;
     private static Display internalDisplay;
+
+
+    private static readonly Dictionary<int, IEnumerable<int?>> cachedFrameLimits = new();
 
     public static Display PrimaryDisplay => primaryDisplay;
     public static IEnumerable<Display> AllDisplays => allDisplays;
@@ -70,7 +72,7 @@ public static class ScreenControl
         int divider = 1;
         int dmDisplayFrequency = RoundToEven(display.DisplayScreen.CurrentSetting.Frequency);
 
-        //if (_cachedFrameLimits.ContainsKey(dmDisplayFrequency)) { return _cachedFrameLimits[dmDisplayFrequency]; }
+        if (cachedFrameLimits.TryGetValue(dmDisplayFrequency, out IEnumerable<int?>? value)) return value;
 
         int lowestFPS = dmDisplayFrequency;
 
@@ -95,7 +97,7 @@ public static class ScreenControl
             divider++;
         } while (true);
 
-        // loop to fill all possible fps limit options from lowest fps limit (e.g. getting 40FPS dor 60Hz)
+        // loop to fill all possible fps limit options from lowest fps limit (e.g. getting 40FPS or 60Hz)
         int nrOptions = dmDisplayFrequency / lowestFPS;
         for (int i = 1; i < nrOptions; i++)
         {
@@ -110,6 +112,9 @@ public static class ScreenControl
         {
             limits.Add(orderedFpsLimits.ElementAt(i));
         }
+
+        cachedFrameLimits.TryAdd(dmDisplayFrequency, limits);
+
         // Return the list of quotients
         return limits;
     }
@@ -128,7 +133,10 @@ public static class ScreenControl
                     setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
                     setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth)
                 .OrderByDescending(setting => setting.Frequency).First()))
-                ScreenBrightness.Set(100);
+            {
+                if (ScreenBrightness.Get() > 80)
+                    ScreenBrightness.Set(100);
+            }
 
         }
         else
@@ -143,8 +151,8 @@ public static class ScreenControl
             if (frenquencies.Count() > 1)
             {
                 if (Set(internalDisplay, frenquencies.Skip(1).First()))
-                    if (ScreenBrightness.Get() > 80)
-                        ScreenBrightness.Set(80);
+                    if (ScreenBrightness.Get() > 70)
+                        ScreenBrightness.Set(75);
 
             }
         }

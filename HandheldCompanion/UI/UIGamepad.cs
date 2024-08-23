@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Navigation;
 using Frame = iNKORE.UI.WPF.Modern.Controls.Frame;
@@ -31,10 +32,21 @@ namespace HandheldCompanion.Managers
         #endregion
 
         private GamepadWindow _currentWindow;
+        private string _currentName = string.Empty;
+
         private ScrollViewer _currentScrollViewer;
         private Frame _gamepadFrame;
         private Page _gamepadPage;
         private Timer _gamepadTimer;
+
+        // tooltip
+        private static Timer tooltipTimer;
+        private static ToolTip tooltip = new ToolTip
+        {
+            Content = "This is a tooltip!",
+            Placement = PlacementMode.Top,
+            IsOpen = false // Start with tooltip hidden
+        };
 
         private bool _goingBack;
         private bool _goingForward;
@@ -47,7 +59,7 @@ namespace HandheldCompanion.Managers
         // store the latest NavigationViewItem that had focus on this window
         private Control prevNavigation;
         // key: Page, store the latest control that had focus on this page
-        private Dictionary<object, Control> prevControl = new();
+        private Dictionary<object, Control> prevControl = [];
         // key: Window, store which window has focus
         private static ConcurrentDictionary<Window, bool> _focused = new();
 
@@ -55,6 +67,7 @@ namespace HandheldCompanion.Managers
         {
             // set current window
             _currentWindow = gamepadWindow;
+            _currentName = gamepadWindow.Tag.ToString();
             _currentScrollViewer = _currentWindow.GetActualScrollViewer(_currentWindow);
             _currentWindow.GotFocus += _currentWindow_GotFocus;
             _currentWindow.GotKeyboardFocus += _currentWindow_GotFocus;
@@ -74,6 +87,9 @@ namespace HandheldCompanion.Managers
 
             _gamepadTimer = new Timer(25) { AutoReset = false };
             _gamepadTimer.Elapsed += _gamepadFrame_PageRendered;
+
+            tooltipTimer = new Timer(2000) { AutoReset = false };
+            tooltipTimer.Elapsed += TooltipTimer_Elapsed;
 
             ControllerManager.InputsUpdated += InputsUpdated;
         }
@@ -257,6 +273,15 @@ namespace HandheldCompanion.Managers
 
                 // set rendering state
                 _rendered = true;
+            });
+        }
+		
+		private void TooltipTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        {
+            // UI thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                tooltip.IsOpen = false;
             });
         }
 

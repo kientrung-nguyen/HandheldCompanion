@@ -18,7 +18,7 @@ namespace HandheldCompanion.Utils
                     }
                 }
 
-                string dirPath = Path.GetDirectoryName(fileName);
+                var dirPath = Path.GetDirectoryName(fileName);
                 return IsDirectoryWritable(dirPath);
             }
             catch
@@ -29,6 +29,8 @@ namespace HandheldCompanion.Utils
 
         public static bool IsDirectoryWritable(string dirPath)
         {
+            if (dirPath is null)
+                return false;
             try
             {
                 using (var fs = File.Create(Path.Combine(dirPath, Path.GetRandomFileName()), 1, FileOptions.DeleteOnClose))

@@ -218,7 +218,7 @@ public static class ProcessManager
 
         try
         {
-            if (!Processes.TryGetValue(processId, out ProcessEx process))
+            if (!Processes.TryGetValue(processId, out var process))
             {
                 if (!CreateProcess(processId, (int)hWnd))
                     return;

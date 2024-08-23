@@ -44,7 +44,6 @@ public class Hotkey
         mainControl.HotkeyPin.Click += async (e, sender) =>
         {
             Pinning?.Invoke(this);
-            await Task.Delay(100);
         };
 
         quickControl.QuickButton.Click += async (e, sender) =>

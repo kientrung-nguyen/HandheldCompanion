@@ -5,7 +5,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Configuration;
 using System.IO;
+using System.Linq;
 using System.Timers;
 
 namespace HandheldCompanion.Managers;
@@ -76,18 +78,15 @@ public static class SettingsManager
 
     public static void Start()
     {
-
-        //var properties = Properties.Settings
-        //    .Default
-        //    .Properties
-        //    .Cast<SettingsProperty>()
-        //    .OrderBy(s => s.Name);
-
-        //foreach (var property in properties)
-        //{
-        //    config[property.Name] = GetProperty(property.Name);
-        //    //SettingValueChanged(property.Name, GetProperty(property.Name));
-        //}
+        foreach (var property in Properties.Settings
+            .Default
+            .Properties
+            .Cast<SettingsProperty>()
+            .OrderBy(s => s.Name))
+        {
+            if (!config.ContainsKey(property.Name))
+                config[property.Name] = Properties.Settings.Default[property.Name];
+        }
 
         foreach (var property in config.ToImmutableSortedDictionary())
         {
@@ -184,7 +183,7 @@ public static class SettingsManager
         }
     }
 
-    private static object? GetInternal(string name)
+    private static object GetInternal(string name)
     {
         // used to handle cases
         switch (name)

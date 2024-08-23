@@ -125,7 +125,7 @@ public static class ProfileManager
     public static Profile GetProfileFromPath(string path, bool ignoreStatus)
     {
         // check if favorite sub profile exists for path
-        Profile profile = subProfiles.FirstOrDefault(pr => pr.Path == path && pr.IsFavoriteSubProfile);
+        var profile = subProfiles.FirstOrDefault(pr => pr.Path == path && pr.IsFavoriteSubProfile);
 
         // get main profile from path instead
         profile ??= profiles.Values.FirstOrDefault(a => a.Path.Equals(path, StringComparison.InvariantCultureIgnoreCase));
@@ -279,7 +279,7 @@ public static class ProfileManager
         Profile profileToApply = null;
 
         // update main profiles
-        foreach (Profile profile in profiles.Values)
+        foreach (var profile in profiles.Values)
         {
             bool isCurrent = profile.PowerProfile == powerProfile.Guid;
             if (isCurrent)
@@ -296,7 +296,7 @@ public static class ProfileManager
         }
 
         // update sub profiles
-        foreach (Profile profile in subProfiles)
+        foreach (var profile in subProfiles)
         {
             bool isCurrent = profile.PowerProfile == powerProfile.Guid;
             if (isCurrent)
@@ -373,7 +373,7 @@ public static class ProfileManager
 
         try
         {
-            Profile profile = GetProfileFromPath(processEx.Path, false);
+            var profile = GetProfileFromPath(processEx.Path, false);
 
             if (!profile.Default)
             {
@@ -388,7 +388,7 @@ public static class ProfileManager
             // raise event
             if (backgroundEx is not null)
             {
-                Profile backProfile = GetProfileFromPath(backgroundEx.Path, false);
+                var backProfile = GetProfileFromPath(backgroundEx.Path, false);
 
                 if (!backProfile.Guid.Equals(profile.Guid))
                     Discarded?.Invoke(backProfile);
@@ -609,7 +609,7 @@ public static class ProfileManager
             // Remove XInputPlus (extended compatibility)
             XInputPlus.UnregisterApplication(profile);
 
-            _ = profiles.TryRemove(profile.Path, out Profile removedValue);
+            _ = profiles.TryRemove(profile.Path, out var removedValue);
 
             // warn owner
             bool isCurrent = false;
@@ -754,13 +754,13 @@ public static class ProfileManager
 
         // used to get and store a few previous values
         XInputPlusMethod prevWrapper = XInputPlusMethod.Disabled;
-        if (!profile.IsSubProfile && profiles.TryGetValue(profile.Path, out Profile prevProfile))
+        if (!profile.IsSubProfile && profiles.TryGetValue(profile.Path, out var prevProfile))
         {
             prevWrapper = prevProfile.XInputPlus;
         }
         else if (profile.IsSubProfile) // TODO check if necessary
         {
-            Profile prevSubProfile = subProfiles.FirstOrDefault(sub => sub.Guid == profile.Guid);
+            var prevSubProfile = subProfiles.FirstOrDefault(sub => sub.Guid == profile.Guid);
             if (prevSubProfile != null)
                 prevWrapper = prevSubProfile.XInputPlus;
         }

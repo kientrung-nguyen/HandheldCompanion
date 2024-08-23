@@ -75,7 +75,7 @@ public class DSUServer
     //private SocketAsyncEventArgs[] argsList;
     private byte[][] dataBuffers;
 
-    private readonly Dictionary<IPEndPoint, ClientRequestTimes> clients = new();
+    private readonly Dictionary<IPEndPoint, ClientRequestTimes> clients = [];
 
     private ControllerState Inputs = new();
 
@@ -112,7 +112,7 @@ public class DSUServer
             BatteryStatus = DsBattery.Full,
             ConnectionType = DsConnection.Usb,
             IsActive = true,
-            PadId = (byte)0,
+            PadId = 0,
             PadMacAddress = PadMacAddress,
             Model = DsModel.DS4,
             PadState = DsState.Connected
@@ -419,10 +419,18 @@ public class DSUServer
     /// </summary>
     private void ResetUDPConn()
     {
+        if (udpSock is null)
+            return;
+
         uint IOC_IN = 0x80000000;
         uint IOC_VENDOR = 0x18000000;
         uint SIO_UDP_CONNRESET = IOC_IN | IOC_VENDOR | 12;
-        udpSock?.IOControl((int)SIO_UDP_CONNRESET, new byte[] { Convert.ToByte(false) }, null);
+
+        try
+        {
+            udpSock.IOControl((int)SIO_UDP_CONNRESET, new byte[] { Convert.ToByte(false) }, null);
+        }
+        catch (ObjectDisposedException) { }
     }
 
     public bool Start()
@@ -769,7 +777,7 @@ public class DSUServer
             for (int i = 0; i < padIds.Length; i++)
                 padIds[i] = DateTime.MinValue;
 
-            padMacs = new Dictionary<PhysicalAddress, DateTime>();
+            padMacs = [];
         }
 
         public void RequestPadInfo(byte regFlags, byte idToReg, PhysicalAddress macToReg)

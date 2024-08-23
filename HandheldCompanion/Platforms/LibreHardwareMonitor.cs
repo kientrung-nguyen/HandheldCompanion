@@ -211,16 +211,15 @@ public class LibreHardwareMonitor : IPlatform
                     HandleCPU_Power(sensor);
                     break;
                 case SensorType.Temperature:
-                    if (HandleCPU_Temp(sensor) == 0)
-                        try
-                        {
-                            using var ct = new PerformanceCounter("Thermal Zone Information", "Temperature", @"\_TZ.TZ01", true);
-                            CPUTemp = ct.NextValue() - 273f;
-                        }
-                        catch
-                        {
-                            //Debug.WriteLine("Failed reading CPU temp :" + ex.Message);
-                        }
+                    try
+                    {
+                        using var ct = new PerformanceCounter("Thermal Zone Information", "Temperature", @"\_TZ.TZ01", true);
+                        CPUTemp = ct.NextValue() - 273.15f;
+                    }
+                    catch
+                    {
+                        HandleCPU_Temp(sensor);
+                    }
                     break;
             }
         }

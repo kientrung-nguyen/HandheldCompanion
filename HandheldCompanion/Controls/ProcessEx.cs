@@ -89,9 +89,9 @@ public class ProcessEx : IDisposable
         {
             try
             {
-                using (var key = Registry.CurrentUser.OpenSubKey(AppCompatRegistry))
+                using (var registryKey = Registry.CurrentUser.OpenSubKey(AppCompatRegistry))
                 {
-                    string valueStr = (string)key?.GetValue(Path);
+                    var valueStr = (string?)registryKey?.GetValue(Path);
                     return valueStr;
                 }
             }
@@ -111,25 +111,25 @@ public class ProcessEx : IDisposable
         {
             try
             {
-                using (var key = Registry.CurrentUser.CreateSubKey(AppCompatRegistry, RegistryKeyPermissionCheck.ReadWriteSubTree))
+                using (var registryKey = Registry.CurrentUser.CreateSubKey(AppCompatRegistry, RegistryKeyPermissionCheck.ReadWriteSubTree))
                 {
-                    if (key != null)
+                    if (registryKey != null)
                     {
-                        List<string> values = new List<string> { "~" }; ;
-                        string valueStr = (string)key.GetValue(Path);
+                        var values = new List<string> { "~" }; ;
+                        var valueStr = (string?)registryKey.GetValue(Path);
 
                         if (!string.IsNullOrEmpty(valueStr))
-                            values = valueStr.Split(' ').ToList();
+                            values = [.. valueStr.Split(' ')];
 
                         values.Remove(Flag);
 
                         if (value)
                             values.Add(Flag);
 
-                            if (values.Count == 1 && values[0] == "~" && !string.IsNullOrEmpty(valueStr))
-                                key.DeleteValue(Path);
-                            else
-                                key.SetValue(Path, string.Join(" ", values), RegistryValueKind.String);
+                        if (values.Count == 1 && values[0] == "~" && !string.IsNullOrEmpty(valueStr))
+                            registryKey.DeleteValue(Path);
+                        else
+                            registryKey.SetValue(Path, string.Join(" ", values), RegistryValueKind.String);
                     }
                 }
             }

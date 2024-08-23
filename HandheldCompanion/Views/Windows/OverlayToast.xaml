@@ -20,7 +20,6 @@
         VerticalAlignment="Center">
         <Border
             Name="ToastPanel"
-            d:Height="100"
             Margin="24,254,24,0"
             d:Visibility="Visible"
             Visibility="Hidden"
@@ -38,29 +37,51 @@
                     Background="{DynamicResource ToastOverlayBackgroundBrush}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
-                    Opacity="0.6" BorderThickness="1,1,1,1">
+                    Opacity="0.65" BorderThickness="1,1,1,1">
                 </Border>
                 <Border Padding="10">
                     <ui:SimpleStackPanel
-                        Orientation="Horizontal"
-                        Spacing="20" Panel.ZIndex="1">
-                        <ui:FontIcon
-                            Name="ToastIcon"
-                            Width="54"
-                            Height="54"
-                            FontSize="48"
-                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}" 
-                            VerticalAlignment="Center" />
-                        <TextBlock
-                            Name="ToastText"
-                            FontWeight="Bold"
-                            FontSize="32"
-                            Text="Toast text here"
-                            TextWrapping="Wrap"
-                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            VerticalAlignment="Center" />
+                        Orientation="Vertical"
+                        Spacing="10" Panel.ZIndex="1">
+                        <Grid>
+                            <Border
+                                CornerRadius="{DynamicResource ControlCornerRadius}"
+                                Background="{DynamicResource ToastOverlayBackgroundBrush}"
+                                HorizontalAlignment="Center"
+                                Width="74"
+                                Height="74"
+                                VerticalAlignment="Stretch"
+                                Opacity="0.0" BorderThickness="1,1,1,1">
+                            </Border>
+                            <ui:FontIcon
+                                Name="ToastIcon"
+                                Width="54"
+                                Height="54"
+                                FontSize="48"
+                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                FontFamily="{DynamicResource SymbolThemeFontFamily}" 
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center" />
+                        </Grid>
+                        <Grid>
+                            <Border
+                                CornerRadius="{DynamicResource ControlCornerRadius}"
+                                Background="{DynamicResource ToastOverlayBackgroundBrush}"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Opacity="0.0" BorderThickness="1,1,1,1">
+                            </Border>
+                            <TextBlock
+                                Name="ToastText"
+                                FontWeight="Bold"
+                                FontSize="32"
+                                Text="Toast text here"
+                                TextWrapping="Wrap"
+                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </Grid>
                     </ui:SimpleStackPanel>
                 </Border>
             </Grid>

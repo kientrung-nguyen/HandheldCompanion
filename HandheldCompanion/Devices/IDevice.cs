@@ -120,7 +120,7 @@ public abstract class IDevice
     public double Tjmax = 95;
 
     // power profile(s)
-    public List<PowerProfile> DevicePowerProfiles = new List<PowerProfile>();
+    public List<PowerProfile> DevicePowerProfiles = [];
 
     public List<double[]> fanPresets = new()
     {
@@ -935,7 +935,7 @@ public abstract class IDevice
 
     protected void ResumeDevices()
     {
-        List<string> successes = new();
+        List<string> successes = [];
 
         var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedDevices");
 

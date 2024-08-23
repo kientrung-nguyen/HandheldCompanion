@@ -29,9 +29,10 @@ public class RTSS : IPlatform
     private const uint RTSSHOOKSFLAG_LIMITER_DISABLED = 4;
     private const string GLOBAL_PROFILE = "";
 
-    private int HookedProcessId = 0;
+    private int hookedProcessId = 0;
+    private uint lastOsdFrameId = 0;
     private bool ProfileLoaded;
-    private AppEntry appEntry;
+    private AppEntry? appEntry;
 
     private int RequestedFramerate;
     private OverlayDisplayLevel OverlayLevel = OverlayDisplayLevel.Disabled;
@@ -210,7 +211,7 @@ public class RTSS : IPlatform
             if (halting)
                 return;
 
-            ProcessEx foreground = ProcessManager.GetForegroundProcess();
+            var foreground = ProcessManager.GetForegroundProcess();
             foregroundId = foreground is not null ? foreground.ProcessId : 0;
 
             try
@@ -226,27 +227,39 @@ public class RTSS : IPlatform
             await Task.Delay(1000);
         } while (appEntry is null && foregroundId == processId && KeepAlive);
 
+        OnHook();
+    }
+
+    private void OnHook()
+    {
         if (appEntry is null)
             return;
 
         // set HookedProcessId
-        HookedProcessId = appEntry.ProcessId;
+        hookedProcessId = appEntry.ProcessId;
+        lastOsdFrameId = appEntry.OSDFrameId;
 
         // raise event
         Hooked?.Invoke(appEntry);
     }
 
-    private void ProcessManager_ProcessStopped(ProcessEx processEx)
+    private void OnUnhook(ProcessEx processEx)
     {
         var processId = processEx.ProcessId;
-        if (processId != HookedProcessId)
+        if (processId != hookedProcessId)
             return;
 
         // clear HookedProcessId
-        HookedProcessId = 0;
+        hookedProcessId = 0;
 
         // raise event
         Unhooked?.Invoke(processId);
+    }
+
+
+    private void ProcessManager_ProcessStopped(ProcessEx processEx)
+    {
+        OnUnhook(processEx);
     }
 
     private void PlatformWatchdogElapsed()
@@ -280,14 +293,14 @@ public class RTSS : IPlatform
 
     public bool HasHook()
     {
-        return HookedProcessId != 0;
+        return hookedProcessId != 0 && lastOsdFrameId != 0;
     }
 
     public void RefreshAppEntry()
     {
         // refresh appEntry
-        int processId = appEntry is not null ? appEntry.ProcessId : 0;
-        appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == processId);
+        appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == (appEntry is not null ? appEntry.ProcessId : 0));
+        lastOsdFrameId = appEntry is null || appEntry.OSDFrameId == lastOsdFrameId ? 0 : appEntry.OSDFrameId;
     }
 
     public double GetFramerate(bool refresh = false)
@@ -296,27 +309,8 @@ public class RTSS : IPlatform
         {
             if (refresh)
                 RefreshAppEntry();
-
-            //var appEntry = OSD.GetAppEntries().FirstOrDefault(entry =>
-            //    (entry.Flags & AppFlags.MASK) != AppFlags.None &&
-            //    entry.ProcessId == processId
-            //);
-            if (appEntry is null) return double.NaN;
+            if (appEntry is null) return 0.0d;
             return appEntry.StatFrameTimeBufFramerate / 10.0d;
-        }
-        catch (InvalidDataException) { }
-        catch (FileNotFoundException) { }
-        return double.NaN;
-    }
-
-    public uint GetFrameId(bool refresh = false)
-    {
-        try
-        {
-            if (refresh)
-                RefreshAppEntry();
-            if (appEntry is null) return 0;
-            return appEntry.OSDFrameId;
         }
         catch (InvalidDataException) { }
         catch (FileNotFoundException) { }
