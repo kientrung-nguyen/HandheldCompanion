@@ -134,8 +134,7 @@ public static class ScreenControl
                     setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth)
                 .OrderByDescending(setting => setting.Frequency).First()))
             {
-                if (ScreenBrightness.Get() > 80)
-                    ScreenBrightness.Set(100);
+                ScreenBrightness.Set(100);
             }
 
         }

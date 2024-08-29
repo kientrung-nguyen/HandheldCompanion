@@ -27,7 +27,6 @@ using System.Windows.Interop;
 using System.Windows.Navigation;
 using System.Windows.Threading;
 using Windows.UI.ViewManagement;
-using static HandheldCompanion.Managers.InputsHotkey;
 using Application = System.Windows.Application;
 using Control = System.Windows.Controls.Control;
 using MessageBox = iNKORE.UI.WPF.Modern.Controls.MessageBox;
@@ -46,7 +45,7 @@ public partial class MainWindow : GamepadWindow
     private static IDevice currentDevice;
 
     // page vars
-    private static readonly Dictionary<string, Page> _pages = new();
+    private static readonly Dictionary<string, Page> _pages = [];
 
     public static ControllerPage controllerPage;
     public static DevicePage devicePage;
@@ -118,9 +117,10 @@ public partial class MainWindow : GamepadWindow
     {
         // initialize splash screen
         SplashScreen = new SplashScreen();
-        // get first start
-        bool FirstStart = SettingsManager.Get<bool>("FirstStart");
 
+        // get last version
+        Version LastVersion = Version.Parse(SettingsManager.Get<string>("LastVersion"));
+        bool FirstStart = LastVersion == Version.Parse("0.0.0.0");
         if (FirstStart)
         {
 #if !DEBUG
@@ -156,6 +156,7 @@ public partial class MainWindow : GamepadWindow
         // initialize XInputWrapper
         XInputPlus.ExtractXInputPlusLibraries();
 
+        // initialize notifyIcon
         notifyIcon = new NotifyIcon
         {
             Text = Title,
@@ -249,16 +250,15 @@ public partial class MainWindow : GamepadWindow
         Title += $" ({fileVersionInfo.FileVersion}) {currentDevice.ProductName}";
         if (FirstStart)
         {
-            string currentDeviceType = currentDevice.GetType().Name;
-            switch (currentDeviceType)
+            if (currentDevice is SteamDeck steamDeck)
             {
-                case "SteamDeck":
-                    {
-                        // prevent Steam Deck controller from being hidden by default
-                        if (FirstStart)
-                            SettingsManager.Set("HIDcloakonconnect", false);
-                    }
-                    break;
+                // do something
+            }
+            else if (currentDevice is AYANEOFlipDS flipDS)
+            {
+                // set Quicktools to Maximize on bottom screen
+                SettingsManager.Set("QuickToolsLocation", 2);
+                SettingsManager.Set("QuickToolsDeviceName", "AYANEOQHD");
             }
 
             SettingsManager.Set("FirstStart", false);
@@ -282,7 +282,6 @@ public partial class MainWindow : GamepadWindow
         }), DispatcherPriority.Background); // Lower priority
 
         // manage events
-        InputsManager.TriggerRaised += InputsManager_TriggerRaised;
         SystemManager.SystemStatusChanged += OnSystemStatusChanged;
         DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
@@ -331,8 +330,9 @@ public partial class MainWindow : GamepadWindow
         Top = Math.Min(SystemParameters.PrimaryScreenHeight - MinHeight, SettingsManager.Get<double>("MainWindowTop"));
         navView.IsPaneOpen = SettingsManager.Get<bool>("MainWindowIsPaneOpen");
 
-        SetPreferredAppMode(2);
-        FlushMenuThemes();
+        // update LastVersion
+        SettingsManager.Set("LastVersion", fileVersionInfo.FileVersion);
+
     }
 
     private static void sensorTimer_Elapsed(object? sender, EventArgs e)
@@ -563,13 +563,6 @@ public partial class MainWindow : GamepadWindow
             case "ToastEnable":
                 ToastManager.IsEnabled = Convert.ToBoolean(value);
                 break;
-            case "DesktopProfileOnStart":
-                if (SettingsManager.IsInitialized)
-                    break;
-
-                var DesktopLayout = Convert.ToBoolean(value);
-                SettingsManager.Set("DesktopLayoutEnabled", DesktopLayout, false);
-                break;
             case "TelemetryApproved":
 
                 // If the input is null or empty, return false or handle as needed
@@ -662,26 +655,6 @@ public partial class MainWindow : GamepadWindow
         currentDevice.PullSensors();
     }
 
-    private void InputsManager_TriggerRaised(string listener, InputsChord input, InputsHotkeyType type, bool IsKeyDown,
-        bool IsKeyUp)
-    {
-        switch (listener)
-        {
-            case "quickTools":
-                overlayquickTools.ToggleVisibility();
-                break;
-            case "overlayGamepad":
-                overlayModel.ToggleVisibility();
-                break;
-            case "overlayTrackpads":
-                overlayTrackpad.ToggleVisibility();
-                break;
-            case "shortcutMainwindow":
-                SwapWindowState();
-                break;
-        }
-    }
-
     private void MenuItem_Click(object? sender, EventArgs e)
     {
         if (sender is ToolStripMenuItem menuItem)
@@ -770,7 +743,7 @@ public partial class MainWindow : GamepadWindow
                         SensorsManager.Resume(true);
                         GPUManager.Start();
                         OSDManager.Start();
-                        PerformanceManager.Start();
+                        PerformanceManager.Resume(true);
 
                         // resume platform(s)
                         PlatformManager.LibreHardwareMonitor.Start();
@@ -961,7 +934,6 @@ public partial class MainWindow : GamepadWindow
                 notifyIcon.Visible = false;
                 ShowInTaskbar = true;
 
-
                 Activate();
                 Topmost = true;  // important
                 Topmost = false; // important
@@ -1015,6 +987,18 @@ public partial class MainWindow : GamepadWindow
         return true;
     }
 
+    private void navView_PaneOpened(NavigationView sender, object args)
+    {
+        // todo: localize me
+        PaneText.Text = "Close navigation";
+    }
+
+    private void navView_PaneClosed(NavigationView sender, object args)
+    {
+        // todo: localize me
+        PaneText.Text = "Open navigation";
+    }
+
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
         navView.IsBackEnabled = ContentFrame.CanGoBack;
@@ -1030,15 +1014,9 @@ public partial class MainWindow : GamepadWindow
             if (!(NavViewItem is null))
                 navView.SelectedItem = NavViewItem;
 
-            navView.Header = new TextBlock() { Text = (string)((Page)e.Content).Title };
+            navView.Header = new TextBlock() { Text = ((Page)e.Content).Title };
         }
     }
 
     #endregion
-
-    [LibraryImport("uxtheme.dll", EntryPoint = "#135", SetLastError = true)]
-    private static partial int SetPreferredAppMode(int preferredAppMode);
-
-    [LibraryImport("uxtheme.dll", EntryPoint = "#136", SetLastError = true)]
-    private static partial void FlushMenuThemes();
 }

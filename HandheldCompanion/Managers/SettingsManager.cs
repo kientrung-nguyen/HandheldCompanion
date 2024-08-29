@@ -24,6 +24,11 @@ public static class Settings
     public static readonly string OnScreenDisplayRAMLevel = "OnScreenDisplayRAMLevel";
     public static readonly string OnScreenDisplayVRAMLevel = "OnScreenDisplayVRAMLevel";
     public static readonly string OnScreenDisplayBATTLevel = "OnScreenDisplayBATTLevel";
+
+    /// <summary>
+    /// First version that implemented the new hotkey manager
+    /// </summary>
+    public static readonly string VersionHotkeyManager = "0.21.5.0";
 }
 
 public static class SettingsManager
@@ -39,7 +44,7 @@ public static class SettingsManager
     private static readonly Dictionary<string, object> Settings = new();
 
     private static ConcurrentDictionary<string, object> config = new();
-    private static ConcurrentDictionary<string, object> setting = new();
+    private static ConcurrentDictionary<string, object> current = new();
     private static Timer timer = new(1000)
     {
         Enabled = false,
@@ -131,9 +136,17 @@ public static class SettingsManager
         LogManager.LogInformation("{0} has stopped", "SettingsManager");
     }
 
-    public static bool Is(string name)
+    private static bool Is(string name)
     {
         return config.ContainsKey(name);
+    }
+
+    private static bool HasProperty(string name)
+    {
+        return Properties.Settings
+            .Default
+            .Properties
+            .Cast<SettingsProperty>().Any(v => v.Name == name);
     }
 
     public static void Set(string name, object value, bool save = true)
@@ -144,7 +157,7 @@ public static class SettingsManager
             if (value.Equals(valueBefore) || (valueBefore != null && value.ToString() == valueBefore.ToString()))
                 return;
 
-            setting[name] = value;
+            current[name] = value;
             if (save)
             {
                 config[name] = value;
@@ -234,11 +247,14 @@ public static class SettingsManager
                 return MultimediaManager.HasVolumeSupport();
             default:
                 {
-                    if (setting.TryGetValue(name, out var returnValue))
+                    if (current.TryGetValue(name, out var returnValue))
                         return returnValue;
 
                     if (Is(name))
                         return config[name];
+
+                    if (HasProperty(name))
+                        return Properties.Settings.Default[name];
 
                     return default;
                 }

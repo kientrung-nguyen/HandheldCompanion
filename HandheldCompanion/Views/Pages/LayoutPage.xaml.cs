@@ -2,13 +2,11 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
-using HandheldCompanion.Utils;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -106,7 +104,7 @@ public partial class LayoutPage : Page
             {
                 case UpdateSource.QuickProfilesPage:
                     {
-                        if (currentTemplate.Name.Equals(profile.LayoutTitle))
+                        if (ProfilesPage.selectedProfile.Name.Equals(profile.Name))
                             UpdateLayout(profile.Layout);
                     }
                     break;

@@ -12,16 +12,9 @@ namespace HandheldCompanion.Managers;
 
 public static class SystemManager
 {
-
-    #region import
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
     // Import SetThreadExecutionState Win32 API and define flags
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     public static extern uint SetThreadExecutionState(uint esFlags);
-
-    #endregion
 
     private static CrossThreadLock autoLock = new();
     public const uint ES_CONTINUOUS = 0x80000000;
@@ -110,6 +103,12 @@ public static class SystemManager
         SystemPowerManager.RemainingDischargeTimeChanged += BatteryStatusChanged;
     }
 
+    #region import
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
+
+    #endregion
     private static void BatteryStatusChanged(object? sender, object e)
     {
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
@@ -122,12 +121,12 @@ public static class SystemManager
         var handle = OpenInputDesktop(0, false, 0);
         IsSessionLocked = handle == IntPtr.Zero;
         isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
+        SystemRoutine();
 
         IsInitialized = true;
         Initialized?.Invoke();
 
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
-        SystemRoutine();
 
         LogManager.LogInformation("{0} has started", "PowerManager");
     }

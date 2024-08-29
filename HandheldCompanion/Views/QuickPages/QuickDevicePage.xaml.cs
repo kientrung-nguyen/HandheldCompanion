@@ -37,7 +37,9 @@ public partial class QuickDevicePage : Page
         ProfileManager.Applied += ProfileManager_Applied;
         ProfileManager.Discarded += ProfileManager_Discarded;
 
+        // Device specific
         LegionGoPanel.Visibility = IDevice.GetCurrent() is LegionGo ? Visibility.Visible : Visibility.Collapsed;
+		AYANEOFlipDSPanel.Visibility = IDevice.GetCurrent() is AYANEOFlipDS ? Visibility.Visible : Visibility.Collapsed;
         DynamicLightingPanel.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting) ? Visibility.Visible : Visibility.Collapsed;
         panelNightlight.Visibility = MultimediaManager.HasNightLightSupport() ? Visibility.Visible : Visibility.Collapsed;
         NightLightSchedule.IsEnabled = NightLightToggle.IsEnabled = MultimediaManager.HasNightLightSupport();
@@ -345,7 +347,7 @@ public partial class QuickDevicePage : Page
         radioTimer.Stop();
     }
 
-    private void Toggle_cFFanSpeed_Toggled(object sender, RoutedEventArgs e)
+    private void Toggle_LegionGoFanOverride_Toggled(object sender, RoutedEventArgs e)
     {
         if (IDevice.GetCurrent() is LegionGo device)
         {
@@ -391,5 +393,52 @@ public partial class QuickDevicePage : Page
     {
         SettingsManager.Set("ScreenFrequencyAuto", AutoScreenToggle.IsOn);
 
+    }
+	
+	private async void Toggle_AYANEOFlipScreen_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        bool enabled = Toggle_AYANEOFlipScreen.IsOn;
+        if (!enabled)
+        {
+            // todo: translate me
+            Task<ContentDialogResult> dialogTask = new Dialog(OverlayQuickTools.GetCurrent())
+            {
+                Title = "Warning",
+                Content = "To reactivate the lower screen, press the dual screen button on your device.",
+                CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+                PrimaryButtonText = Properties.Resources.ProfilesPage_OK
+            }.ShowAsync();
+
+            await dialogTask; // sync call
+
+            switch (dialogTask.Result)
+            {
+                case ContentDialogResult.Primary:
+                    break;
+
+                default:
+                case ContentDialogResult.None:
+                    // restore previous state
+                    Toggle_AYANEOFlipScreen.IsOn = true;
+                    return;
+            }
+
+            SettingsManager.Set("AYANEOFlipScreenEnabled", enabled);
+        }
+    }
+
+    private void Slider_AYANEOFlipScreenBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        var value = Slider_AYANEOFlipScreenBrightness.Value;
+        if (double.IsNaN(value))
+            return;
+
+        if (!IsLoaded)
+            return;
+
+        SettingsManager.Set("AYANEOFlipScreenBrightness", value);
     }
 }

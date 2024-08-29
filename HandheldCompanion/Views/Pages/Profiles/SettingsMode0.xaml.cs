@@ -1,16 +1,16 @@
+using HandheldCompanion.Actions;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
 
 namespace HandheldCompanion.Views.Pages.Profiles;
 
@@ -19,11 +19,14 @@ namespace HandheldCompanion.Views.Pages.Profiles;
 /// </summary>
 public partial class SettingsMode0 : Page
 {
-    private Hotkey ProfilesPageHotkey;
     private CrossThreadLock updateLock = new();
+
+    private const ButtonFlags gyroButtonFlags = ButtonFlags.HOTKEY_GYRO_AIMING;
+    private Hotkey GyroHotkey = new(gyroButtonFlags) { IsInternal = true };
 
     public SettingsMode0()
     {
+        DataContext = new SettingsMode0ViewModel();
         InitializeComponent();
     }
 
@@ -32,9 +35,10 @@ public partial class SettingsMode0 : Page
         this.Tag = Tag;
 
         MotionManager.SettingsMode0Update += MotionManager_SettingsMode0Update;
+        HotkeysManager.Updated += HotkeysManager_Updated;
 
-        HotkeysManager.HotkeyCreated += TriggerCreated;
-        InputsManager.TriggerUpdated += TriggerUpdated;
+        // store hotkey to manager
+        HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
     }
 
     public void SetProfile()
@@ -53,9 +57,8 @@ public partial class SettingsMode0 : Page
                     tb_ProfileFlickDuration.Value = ProfilesPage.selectedProfile.FlickstickDuration * 1000;
                     tb_ProfileStickSensitivity.Value = ProfilesPage.selectedProfile.FlickstickSensivity;
 
-                    // todo: improve me ?
-                    ProfilesPageHotkey.inputsChord.State = ProfilesPage.selectedProfile.AimingSightsTrigger.Clone() as ButtonState;
-                    ProfilesPageHotkey.DrawInput();
+                    GyroHotkey.inputsChord.ButtonState = ProfilesPage.selectedProfile.AimingSightsTrigger.Clone() as ButtonState;
+                    HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
 
                     // temp
                     StackCurve.Children.Clear();
@@ -73,11 +76,13 @@ public partial class SettingsMode0 : Page
                             MaxHeight = StackCurve.Height,
                             Height = height,
                             VerticalAlignment = VerticalAlignment.Bottom,
-                            Background = (Brush)Application.Current.Resources["SystemControlHighlightAltListAccentLowBrush"],
                             BorderThickness = new Thickness(0),
-                            BorderBrush = (Brush)Application.Current.Resources["SystemControlHighlightAltListAccentHighBrush"],
                             IsEnabled = false // prevent the control from being clickable
                         };
+
+                        // Bind the Stroke property to a dynamic resource
+                        thumb.SetResourceReference(Thumb.BackgroundProperty, "SystemControlHighlightAltListAccentLowBrush");
+                        thumb.SetResourceReference(Thumb.BorderBrushProperty, "SystemControlHighlightAltListAccentHighBrush");
 
                         StackCurve.Children.Add(thumb);
                     }
@@ -158,29 +163,31 @@ public partial class SettingsMode0 : Page
         if (ProfilesPage.selectedProfile is null)
             return;
 
-        Control Thumb = null;
+        Control thumb = null;
 
         foreach (Control control in StackCurve.Children)
         {
             var position = e.GetPosition(control);
             var dist_x = Math.Abs(position.X);
 
-            control.Background = (Brush)Application.Current.Resources["SystemControlHighlightAltListAccentLowBrush"];
+            // Bind the Stroke property to a dynamic resource
+            control.SetResourceReference(BackgroundProperty, "SystemControlHighlightAltListAccentLowBrush");
 
             if (dist_x <= control.Width)
-                Thumb = control;
+                thumb = control;
         }
 
-        if (Thumb is null)
+        if (thumb is null)
             return;
 
-        Thumb.Background = (Brush)Application.Current.Resources["SystemControlHighlightAltListAccentHighBrush"];
+        // Bind the Stroke property to a dynamic resource
+        thumb.SetResourceReference(Thumb.BackgroundProperty, "SystemControlHighlightAltListAccentHighBrush");
 
         if (e.LeftButton == MouseButtonState.Pressed)
         {
-            var x = (double)Thumb.Tag;
-            Thumb.Height = StackCurve.ActualHeight - e.GetPosition(StackCurve).Y;
-            ProfilesPage.selectedProfile.MotionSensivityArray[x] = Thumb.Height / StackCurve.Height;
+            var x = (double)thumb.Tag;
+            thumb.Height = StackCurve.ActualHeight - e.GetPosition(StackCurve).Y;
+            ProfilesPage.selectedProfile.MotionSensivityArray[x] = thumb.Height / StackCurve.Height;
             ProfilesPage.UpdateProfile();
         }
     }
@@ -284,35 +291,21 @@ public partial class SettingsMode0 : Page
         ProfilesPage.UpdateProfile();
     }
 
-    private void TriggerCreated(Hotkey hotkey)
+    private void HotkeysManager_Updated(Hotkey hotkey)
     {
-        switch (hotkey.inputsHotkey.Listener)
-        {
-            case "shortcutProfilesSettingsMode0":
-                {
-                    // pull hotkey
-                    ProfilesPageHotkey = hotkey;
+        if (ProfilesPage.selectedProfile is null)
+            return;
 
-                    // add to UI
-                    var hotkeyBorder = ProfilesPageHotkey.GetControl();
-                    if (hotkeyBorder is null || hotkeyBorder.Parent is not null)
-                        return;
+        if (!ProfilesPage.selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
+            return;
 
-                    if (UMC_Activator.Children.Count == 0)
-                        UMC_Activator.Children.Add(hotkeyBorder);
-                }
-                break;
-        }
-    }
+        if (hotkey.ButtonFlags != gyroButtonFlags)
+            return;
 
-    private void TriggerUpdated(string listener, InputsChord inputs, InputsManager.ListenerType type)
-    {
-        switch (listener)
-        {
-            case "shortcutProfilesSettingsMode0":
-                ProfilesPage.selectedProfile.AimingSightsTrigger = inputs.State.Clone() as ButtonState;
-                ProfilesPage.UpdateProfile();
-                break;
-        }
+        // update gyro hotkey
+        GyroHotkey = hotkey;
+
+        ProfilesPage.selectedProfile.AimingSightsTrigger = hotkey.inputsChord.ButtonState.Clone() as ButtonState;
+        ProfilesPage.UpdateProfile();
     }
 }

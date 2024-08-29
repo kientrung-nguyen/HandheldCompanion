@@ -1,43 +1,93 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Interop;
 using System.Windows.Media;
+using WpfScreenHelper;
 
 namespace HandheldCompanion.Views.Classes
 {
     public class GamepadWindow : Window
     {
-        public List<Control> controlElements = new();
+        public List<Control> controlElements = [];
         public List<Control> controlScrollViewer = new();
-        public List<FrameworkElement> frameworkElements = new();
+        public List<FrameworkElement> frameworkElements = [];
 
         public ContentDialog currentDialog;
         protected UIGamepad gamepadFocusManager;
+
+        public HwndSource hwndSource;
 
         public GamepadWindow()
         {
             LayoutUpdated += OnLayoutUpdated;
         }
 
-        /*
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            hwndSource = HwndSource.FromHwnd(hwnd);
+
+            base.OnSourceInitialized(e);
+        }
+
         protected override void OnVisualChildrenChanged(DependencyObject visualAdded, DependencyObject visualRemoved)
         {
             // Track when objects are added and removed
             if (visualAdded != null && visualAdded is Control)
                 controlElements.Add((Control)visualAdded);
-            
+
             if (visualRemoved != null && visualRemoved is Control)
                 controlElements.Remove((Control)visualRemoved);
 
             base.OnVisualChildrenChanged(visualAdded, visualRemoved);
         }
-        */
 
+        private AdornerLayer _adornerLayer;
+        private HighlightAdorner _highlightAdorner;
+
+        public void SetFocusedElement(Control focusedControl)
+        {
+            if (this is MainWindow)
+                // force display keyboard focus rectangle
+                WPFUtils.MakeFocusVisible(this);
+            else if (this is OverlayQuickTools)
+            {
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (_highlightAdorner != null)
+                    {
+                        _adornerLayer.Remove(_highlightAdorner);
+                        _highlightAdorner = null;
+                    }
+
+                    _adornerLayer = AdornerLayer.GetAdornerLayer(focusedControl);
+                    if (_adornerLayer != null)
+                    {
+                        _highlightAdorner = new HighlightAdorner(focusedControl);
+                        _adornerLayer.Add(_highlightAdorner);
+                    }
+                });
+            }
+        }
+
+        public Screen GetScreen()
+        {
+            return Screen.FromHandle(hwndSource.Handle);
+        }
+
+        public bool IsPrimary()
+        {
+            return GetScreen().Primary;
+        }
         public ScrollViewer GetScrollViewer(DependencyObject depObj)
         {
             if (depObj is ScrollViewer) return (ScrollViewer)depObj;
@@ -71,7 +121,7 @@ namespace HandheldCompanion.Views.Classes
 
         private void OnLayoutUpdated(object? sender, EventArgs e)
         {
-            if (!IsActive || Visibility != Visibility.Visible)
+            if (this.Visibility != Visibility.Visible)
                 return;
 
             // get all FrameworkElement(s)

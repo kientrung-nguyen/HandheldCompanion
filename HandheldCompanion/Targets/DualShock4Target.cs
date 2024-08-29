@@ -8,6 +8,7 @@ using Nefarius.ViGEm.Client.Exceptions;
 using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
 using System;
+using System.Threading;
 
 namespace HandheldCompanion.Targets
 {
@@ -41,8 +42,12 @@ namespace HandheldCompanion.Targets
             }
             catch(Exception ex)
             {
-                virtualController?.Disconnect();
                 LogManager.LogWarning("Failed to connect {0}. {1}", this.ToString(), ex.Message);
+
+                // give controller manager enough time to mount the controller
+                Thread.Sleep(2000);
+
+                virtualController?.Disconnect();
                 return false;
             }
         }
@@ -167,7 +172,9 @@ namespace HandheldCompanion.Targets
             }
 
             // pull calibration data
-            IMUCalibration calibration = gamepadMotion.GetCalibration();
+            IMUCalibration calibration;
+            if (gamepadMotion is not null)
+                calibration = gamepadMotion.GetCalibration();
 
             // Use gyro sensor data, map to proper range, invert where needed
             outDS4Report.wGyroX = (short)InputUtils.rangeMap(Inputs.GyroState.Gyroscope[GyroState.SensorState.Raw].X, -2000.0f, 2000.0f, short.MinValue, short.MaxValue);
@@ -182,7 +189,8 @@ namespace HandheldCompanion.Targets
             outDS4Report.bBatteryLvlSpecial = 11;
 
             // A common increment value between two reports is 188 (at full rate the report period is 1.25ms)
-            outDS4Report.wTimestamp += (ushort)(gamepadMotion.deltaTime * 100000.0f);
+            if (gamepadMotion is not null)
+                outDS4Report.wTimestamp += (ushort)(gamepadMotion.deltaTime * 100000.0f);
 
             DS4OutDeviceExtras.CopyBytes(ref outDS4Report, rawOutReportEx);
 

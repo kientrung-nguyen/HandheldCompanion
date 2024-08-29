@@ -1,9 +1,7 @@
-﻿using HandheldCompanion.Managers;
-using iNKORE.UI.WPF.Modern.Controls;
+﻿using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -34,21 +32,21 @@ public static class WPFUtils
     {
         IntPtr hWnd = GetControlHandle(c).Handle;
         // SendMessage(hWnd, WM_CHANGEUISTATE, (IntPtr)MakeLong((int)UIS_CLEAR, (int)UISF_HIDEFOCUS), IntPtr.Zero);
-        SendMessage(hWnd, 257, (IntPtr)0x0000000000000009, (IntPtr)0x00000000c00f0001);
+        SendMessage(hWnd, 257, 0x0000000000000009, (IntPtr)0x00000000c00f0001);
     }
 
     public static void MakeFocusInvisible(Control c)
     {
         IntPtr hWnd = GetControlHandle(c).Handle;
-        SendMessage(hWnd, WM_CHANGEUISTATE, (IntPtr)MakeLong((int)UIS_SET, (int)UISF_HIDEFOCUS), IntPtr.Zero);
+        SendMessage(hWnd, WM_CHANGEUISTATE, MakeLong(UIS_SET, UISF_HIDEFOCUS), IntPtr.Zero);
     }
 
     public static int MakeLong(int wLow, int wHigh)
     {
-        int low = (int)IntLoWord(wLow);
+        int low = IntLoWord(wLow);
         short high = IntLoWord(wHigh);
-        int product = 0x10000 * (int)high;
-        int mkLong = (int)(low | product);
+        int product = 0x10000 * high;
+        int mkLong = low | product;
         return mkLong;
     }
 
@@ -61,7 +59,7 @@ public static class WPFUtils
     public static Control GetTopLeftControl<T>(List<Control> controls) where T : Control
     {
         // filter list
-        controls = controls.Where(c => c is T).ToList();
+        controls = controls.Where(c => c is T && c.IsEnabled).ToList();
 
         // If no controls are found, return null
         if (controls == null || controls.Count == 0)
@@ -95,7 +93,7 @@ public static class WPFUtils
     public static Control GetClosestControl<T>(Control source, List<Control> controls, Direction direction, List<Type> typesToIgnore = null) where T : Control
     {
         // Filter list based on requested type
-        controls = controls.Where(c => c is T).ToList();
+        controls = controls.Where(c => c is T && c.IsEnabled).ToList();
 
         // Filter based on exclusion type list
         if (typesToIgnore is not null)
@@ -107,17 +105,44 @@ public static class WPFUtils
         // If no controls are found, return source
         if (controls.Count == 0) return source;
 
-        // Find the control with the same parent and the minimum distance to the source
-        // If no control has the same parent, find the control with the minimum distance to the source
-        controls = controls.OrderBy(c => GetDistanceV2(source, c, direction)).ToList();
+        // Group controls by their nearest common parent
+        var groupedControls = controls
+            .GroupBy(c => GetNearestCommonParent(source, c))
+            .OrderBy(g => g.Key == null ? double.MaxValue : GetDistanceV2(source, g.First(), direction))
+            .ToList();
 
-        return controls.First();
+        // Flatten the groups and sort controls by distance
+        var closestControls = groupedControls
+            .SelectMany(g => g.OrderBy(c => GetDistanceV2(source, c, direction)))
+            .ToList();
+
+        return closestControls.FirstOrDefault();
+    }
+
+    // Helper method to find the nearest common parent of two controls
+    private static DependencyObject GetNearestCommonParent(Control c1, Control c2)
+    {
+        // Get the visual tree parents of both controls
+        var parents1 = GetVisualParents(c1).ToList();
+        var parents2 = GetVisualParents(c2).ToList();
+
+        // Find the nearest common parent
+        return parents1.Intersect(parents2).FirstOrDefault();
+    }
+
+    // Helper method to get all visual parents of a control
+    private static IEnumerable<DependencyObject> GetVisualParents(DependencyObject child)
+    {
+        while (child != null)
+        {
+            yield return child;
+            child = VisualTreeHelper.GetParent(child);
+        }
     }
 
     // Helper method to check if a control is in a given direction from another control
     private static bool IsInDirection(Control source, Control target, Direction direction)
     {
-        // Get the position of the target on the canvas
         var p = target.TranslatePoint(new Point(0, 0), source);
         double x = Math.Round(p.X);
         double y = Math.Round(p.Y);
@@ -137,36 +162,6 @@ public static class WPFUtils
         }
     }
 
-    // Helper method to calculate the distance between the centers of two controls
-    private static double GetDistance(Control source, Control target, Direction direction)
-    {
-        try
-        {
-            // Get the relative position of the target with respect to the source
-            var transform = target.TransformToVisual(source);
-            var position = transform.Transform(new Point(0, 0));
-
-            double dx = source.ActualWidth / 2 - (position.X + target.ActualWidth / 2);
-            double dy = source.ActualHeight / 2 - (position.Y + target.ActualHeight / 2);
-
-            switch (direction)
-            {
-                case Direction.Up:
-                case Direction.Down:
-                    return Math.Sqrt(dy * dy);
-
-                case Direction.Left:
-                case Direction.Right:
-                    return Math.Sqrt(dx * dx);
-            }
-
-            return Math.Sqrt(dx * dx + dy * dy);
-        }
-        catch { }
-
-        return 9999.0d;
-    }
-
     public static double GetDistanceV2(Control c1, Control c2, Direction direction)
     {
         try
@@ -182,51 +177,16 @@ public static class WPFUtils
             // Return the Euclidean distance between the nearest edges
             return Math.Sqrt(dx * dx + dy * dy);
         }
-        catch { }
-
-        return 9999.0d;
-    }
-
-    // This function takes two controls and returns their distance in pixels
-    private static double GetDistanceV3(Control c1, Control c2, Direction direction)
-    {
-        try
+        catch
         {
-            // Get the position of each control relative to the screen
-            Point p1 = c1.PointToScreen(new Point(0, 0));
-            Point p2 = c2.PointToScreen(new Point(0, 0));
-
-            // Convert the points to vectors
-            Vector3 v1 = new Vector3((float)p1.X, (float)p1.Y, 0f);
-            Vector3 v2 = new Vector3((float)p2.X, (float)p2.Y, 0f);
-
-            switch (direction)
-            {
-                case Direction.Up:
-                case Direction.Down:
-                    v1 = new Vector3(0f, (float)p1.Y, 0f);
-                    v2 = new Vector3(0f, (float)p2.Y, 0f);
-                    break;
-
-                case Direction.Left:
-                case Direction.Right:
-                    v1 = new Vector3((float)p1.X, 0f, 0f);
-                    v2 = new Vector3((float)p2.X, 0f, 0f);
-                    break;
-            }
-
-            // Calculate and return the distance between the vectors
-            return Vector3.Distance(v1, v2);
+            return 9999.0d;
         }
-        catch { }
-
-        return 9999.0d;
     }
 
     public static List<FrameworkElement> FindChildren(DependencyObject startNode)
     {
         int count = VisualTreeHelper.GetChildrenCount(startNode);
-        List<FrameworkElement> childs = new();
+        List<FrameworkElement> childs = [];
 
         for (int i = 0; i < count; i++)
         {
@@ -282,6 +242,7 @@ public static class WPFUtils
                     }
                     break;
             }
+
             foreach (var item in FindChildren(current))
             {
                 childs.Add(item);
@@ -311,6 +272,53 @@ public static class WPFUtils
         return parent;
     }
 
+    public static Visual FindCommonAncestor(Visual visual1, Visual visual2)
+    {
+        var ancestor1 = visual1;
+        while (ancestor1 != null)
+        {
+            var ancestor2 = visual2;
+            while (ancestor2 != null)
+            {
+                if (ancestor1 == ancestor2)
+                {
+                    return ancestor1;
+                }
+                ancestor2 = VisualTreeHelper.GetParent(ancestor2) as Visual;
+            }
+            ancestor1 = VisualTreeHelper.GetParent(ancestor1) as Visual;
+        }
+        return null;
+    }
+
+    public static Point TransformToAncestor(Visual child, Visual ancestor, Point point)
+    {
+        return child.TransformToAncestor(ancestor).Transform(point);
+    }
+
+    public static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent == null)
+            return null;
+
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild)
+            {
+                return typedChild;
+            }
+
+            T childOfChild = FindVisualChild<T>(child);
+            if (childOfChild != null)
+            {
+                return childOfChild;
+            }
+        }
+
+        return null;
+    }
+
     // Helper method to find all visual children of a given type
     public static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
     {
@@ -337,7 +345,7 @@ public static class WPFUtils
     public static List<T> GetElementsFromPopup<T>(List<FrameworkElement> elements) where T : FrameworkElement
     {
         // Create an empty list to store the result
-        List<T> result = new List<T>();
+        List<T> result = [];
 
         // Loop through each element in the input list
         foreach (FrameworkElement element in elements)

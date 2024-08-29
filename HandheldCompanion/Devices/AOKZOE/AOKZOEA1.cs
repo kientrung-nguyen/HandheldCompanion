@@ -13,7 +13,20 @@ namespace HandheldCompanion.Devices;
 
 public class AOKZOEA1 : IDevice
 {
+    private enum FanControlMode
+    {
+        Manual = 0x01,
+        Automatic = 0x00,
+        Reset = 0x4C
+    }
+
+    // Define the ACPI memory address for fan control mode
+    byte ACPI_FanMode_Address = 0x4A;
+    // Fan control PWM value
+    byte ACPI_FanPWMDutyCycle_Address = 0x4B;
+
     HidDevice hidDevice;
+
     public AOKZOEA1()
     {
         // device specific settings
@@ -60,48 +73,48 @@ public class AOKZOEA1 : IDevice
             AddressStatusCommandPort = 0x4E, // 78
             AddressDataPort = 0x4F,     // 79
             FanValueMin = 0,
-            FanValueMax = 184
+            FanValueMax = 255
         };
 
         // Home
-        OEMChords.Add(new DeviceChord("Home",
-            new List<KeyCode> { KeyCode.LWin, KeyCode.D },
-            new List<KeyCode> { KeyCode.LWin, KeyCode.D },
+        OEMChords.Add(new KeyboardChord("Home",
+            [KeyCode.LWin, KeyCode.D],
+            [KeyCode.LWin, KeyCode.D],
             false, ButtonFlags.OEM1
         ));
 
         // Home (long press 1.5s)
-        OEMChords.Add(new DeviceChord("Home, Long-press",
-            new List<KeyCode> { KeyCode.LWin, KeyCode.G },
-            new List<KeyCode> { KeyCode.LWin, KeyCode.G },
+        OEMChords.Add(new KeyboardChord("Home, Long-press",
+            [KeyCode.LWin, KeyCode.G],
+            [KeyCode.LWin, KeyCode.G],
             false, ButtonFlags.OEM6
         ));
 
         // Keyboard
-        OEMChords.Add(new DeviceChord("Keyboard",
-            new List<KeyCode> { KeyCode.RControlKey, KeyCode.LWin, KeyCode.O },
-            new List<KeyCode> { KeyCode.O, KeyCode.LWin, KeyCode.RControlKey },
+        OEMChords.Add(new KeyboardChord("Keyboard",
+            [KeyCode.RControlKey, KeyCode.LWin, KeyCode.O],
+            [KeyCode.O, KeyCode.LWin, KeyCode.RControlKey],
             false, ButtonFlags.OEM2
         ));
 
         // Turbo
-        OEMChords.Add(new DeviceChord("Turbo",
-            new List<KeyCode> { KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu },
-            new List<KeyCode> { KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu },
+        OEMChords.Add(new KeyboardChord("Turbo",
+            [KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu],
+            [KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu],
             false, ButtonFlags.OEM3
         ));
 
         // Home + Keyboard
-        OEMChords.Add(new DeviceChord("Home + Keyboard",
-            new List<KeyCode> { KeyCode.RAlt, KeyCode.RControlKey, KeyCode.Delete },
-            new List<KeyCode> { KeyCode.Delete, KeyCode.RControlKey, KeyCode.RAlt },
+        OEMChords.Add(new KeyboardChord("Home + Keyboard",
+            [KeyCode.RAlt, KeyCode.RControlKey, KeyCode.Delete],
+            [KeyCode.Delete, KeyCode.RControlKey, KeyCode.RAlt],
             false, ButtonFlags.OEM4
         ));
 
         // Home + Turbo
-        OEMChords.Add(new DeviceChord("Home + Turbo",
-            new List<KeyCode> { KeyCode.LWin, KeyCode.Snapshot },
-            new List<KeyCode> { KeyCode.Snapshot, KeyCode.LWin },
+        OEMChords.Add(new KeyboardChord("Home + Turbo",
+            [KeyCode.LWin, KeyCode.Snapshot],
+            [KeyCode.Snapshot, KeyCode.LWin],
             false, ButtonFlags.OEM5
         ));
     }
@@ -129,6 +142,35 @@ public class AOKZOEA1 : IDevice
         base.Close();
     }
 
+    public override void SetFanControl(bool enable, int mode)
+    {
+        if (!IsOpen)
+            return;
+
+        // Determine the fan control mode based enable
+        byte controlValue = enable ? (byte)FanControlMode.Manual : (byte)FanControlMode.Automatic;
+
+        // Update the fan control mode
+        if (!enable)
+            ECRAMWrite(ACPI_FanPWMDutyCycle_Address, (byte)FanControlMode.Reset);
+        ECRAMWrite(ACPI_FanMode_Address, controlValue);
+    }
+
+    public override void SetFanDuty(double percent)
+    {
+        if (!IsOpen)
+            return;
+
+        // Convert 0-100 percentage to range
+        byte fanSpeedSetpoint = (byte)(percent * (ECDetails.FanValueMax - ECDetails.FanValueMin) / 100 + ECDetails.FanValueMin);
+
+        // Ensure the value is within the valid range
+        fanSpeedSetpoint = Math.Min((byte)ECDetails.FanValueMax, Math.Max((byte)ECDetails.FanValueMin, fanSpeedSetpoint));
+
+        // Set the requested fan speed
+        ECRAMWrite(ACPI_FanPWMDutyCycle_Address, fanSpeedSetpoint);
+    }
+
     public override string GetGlyph(ButtonFlags button)
     {
         switch (button)
@@ -143,6 +185,7 @@ public class AOKZOEA1 : IDevice
 
         return base.GetGlyph(button);
     }
+
     public override bool IsReady()
     {
         // Prepare list for all HID devices

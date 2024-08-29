@@ -146,8 +146,6 @@ public static class PlatformManager
     {
         /*
          * Dependencies:
-         * LibreHardwareMonitor (LHM): OSD
-         * HWiNFO: AutoPerf, OSD
          * RTSS: AutoTDP, framerate limiter, OSD
          */
 

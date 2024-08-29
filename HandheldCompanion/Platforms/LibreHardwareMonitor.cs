@@ -199,6 +199,9 @@ public class LibreHardwareMonitor : IPlatform
         var highestClock = 0f;
         foreach (var sensor in cpu.Sensors)
         {
+                // May crash the app when Value is null, better to check first
+                if (sensor.Value is null)
+                    continue;
             switch (sensor.SensorType)
             {
                 case SensorType.Load:
@@ -229,10 +232,10 @@ public class LibreHardwareMonitor : IPlatform
     {
         switch (sensor.Name)
         {
-            //case "CPU Total":
-            case "CPU Core Max":
+            case "CPU Total":
+            //case "CPU Core Max":
                 CPULoad = sensor.Value;
-                CPULoadChanged?.Invoke(CPUPower);
+                CPULoadChanged?.Invoke(CPULoad);
                 break;
         }
     }
@@ -273,6 +276,7 @@ public class LibreHardwareMonitor : IPlatform
             case "CPU Package":
             case "Core (Tctl/Tdie)":
                 CPUTemp = sensor.Value;
+
                 // dirty
                 switch (ProductName)
                 {

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Management;
 using System.Numerics;
 using System.Threading.Tasks;
-using WindowsInput.Events;
 
 namespace HandheldCompanion.Devices;
 
@@ -71,7 +70,7 @@ public class ClawA1M : IDevice
     }
 
     private ManagementEventWatcher? specialKeyWatcher;
-    private Dictionary<byte, HidDevice> hidDevices = new();
+    private Dictionary<byte, HidDevice> hidDevices = [];
 
     // todo: find the right value, this is placeholder
     private const byte INPUT_HID_ID = 0x01;
@@ -141,23 +140,23 @@ public class ClawA1M : IDevice
             TDPOverrideValues = new[] { 35.0d, 35.0d, 35.0d }
         });
 
-        OEMChords.Add(new DeviceChord("CLAW",
-            new List<KeyCode>(), new List<KeyCode>(),
+        OEMChords.Add(new KeyboardChord("CLAW",
+            [], [],
             false, ButtonFlags.OEM1
         ));
 
-        OEMChords.Add(new DeviceChord("QS",
-            new List<KeyCode>(), new List<KeyCode>(),
+        OEMChords.Add(new KeyboardChord("QS",
+            [], [],
             false, ButtonFlags.OEM2
         ));
 
-        OEMChords.Add(new DeviceChord("M1",             // unimplemented
-            new List<KeyCode>(), new List<KeyCode>(),
+        OEMChords.Add(new KeyboardChord("M1",             // unimplemented
+            [], [],
             false, ButtonFlags.OEM3
         ));
 
-        OEMChords.Add(new DeviceChord("M2",             // unimplemented
-            new List<KeyCode>(), new List<KeyCode>(),
+        OEMChords.Add(new KeyboardChord("M2",             // unimplemented
+            [], [],
             false, ButtonFlags.OEM4
         ));
     }
@@ -167,7 +166,7 @@ public class ClawA1M : IDevice
         try
         {
             var scope = new ManagementScope("\\\\.\\root\\WMI");
-            specialKeyWatcher = new ManagementEventWatcher(scope, (EventQuery)(new WqlEventQuery("SELECT * FROM MSI_Event")));
+            specialKeyWatcher = new ManagementEventWatcher(scope, new WqlEventQuery("SELECT * FROM MSI_Event"));
             specialKeyWatcher.EventArrived += onWMIEvent;
             specialKeyWatcher.Start();
         }
@@ -201,7 +200,7 @@ public class ClawA1M : IDevice
     private void onWMIEvent(object sender, EventArrivedEventArgs e)
     {
         int WMIEvent = Convert.ToInt32(e.NewEvent.Properties["MSIEvt"].Value);
-        WMIEventCode key = (WMIEventCode)(WMIEvent & (int)byte.MaxValue);
+        WMIEventCode key = (WMIEventCode)(WMIEvent & byte.MaxValue);
 
         // LogManager.LogInformation("Received MSI WMI Event Code {0}", (int)key);
 

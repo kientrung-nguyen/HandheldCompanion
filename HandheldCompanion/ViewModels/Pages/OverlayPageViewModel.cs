@@ -4,13 +4,10 @@ using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Platforms;
 using LiveCharts;
-using RTSSSharedMemoryNET;
 using System;
-using System.Linq;
 using System.Timers;
 using System.Windows;
 using System.Windows.Media;
-using System.Xml.Linq;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -324,7 +321,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private ChartValues<double> _framerateValues = new();
+        private ChartValues<double> _framerateValues = [];
         public ChartValues<double> FramerateValues
         {
             get { return _framerateValues; }
@@ -419,21 +416,20 @@ namespace HandheldCompanion.ViewModels
         {
             // get path
             string path = processEx != null ? processEx.Path : string.Empty;
-            nint handle = processEx != null ? processEx.MainWindowHandle : IntPtr.Zero;
 
             Application.Current.Dispatcher.Invoke(() =>
             {
-                ProcessIcon = processEx?.ProcessIcon;
+                ProcessIcon = processEx != null ? processEx.ProcessIcon : null;
 
-                if (handle != IntPtr.Zero)
-                {
-                    ProcessName = processEx.Executable;
-                    ProcessPath = processEx.Path;
-                }
-                else
+                if (processEx is null)
                 {
                     ProcessName = Properties.Resources.QuickProfilesPage_Waiting;
                     ProcessPath = string.Empty;
+                }
+                else
+                {
+                    ProcessName = processEx.Executable;
+                    ProcessPath = processEx.Path;
                 }
             });
         }

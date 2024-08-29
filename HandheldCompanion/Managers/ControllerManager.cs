@@ -6,7 +6,6 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
-using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
 using Nefarius.Utilities.DeviceManagement.Drivers;
 using Nefarius.Utilities.DeviceManagement.Extensions;
@@ -16,17 +15,17 @@ using SharpDX.XInput;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
-using System.Windows.Controls;
 using Windows.UI;
 using Windows.UI.ViewManagement;
 using static HandheldCompanion.Utils.DeviceUtils;
 using static JSL;
 using DeviceType = SharpDX.DirectInput.DeviceType;
+using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
@@ -42,8 +41,8 @@ public static class ControllerManager
     private static int ControllerManagementAttempts = 0;
     private const int ControllerManagementMaxAttempts = 4;
 
-    private static readonly XInputController? emptyXInput = new();
-    private static readonly DS4Controller? emptyDS4 = new();
+    private static readonly XInputController? emptyXInput = new() { Details = new() { isVirtual = true }, isPlaceholder = true };
+    private static readonly DS4Controller? emptyDS4 = new() { Details = new() { isVirtual = true }, isPlaceholder = true };
 
     private static IController? targetController;
     private static FocusedWindow focusedWindows = FocusedWindow.None;
@@ -53,6 +52,8 @@ public static class ControllerManager
 
     private static object targetLock = new object();
     public static ControllerManagerStatus managerStatus = ControllerManagerStatus.Pending;
+
+    private static Timer scenarioTimer = new(1000) { AutoReset = true };
 
     public static bool IsInitialized;
 
@@ -66,8 +67,13 @@ public static class ControllerManager
 
     static ControllerManager()
     {
-        watchdogThread = new Thread(watchdogThreadLoop);
-        watchdogThread.IsBackground = true;
+        watchdogThread = new Thread(watchdogThreadLoop)
+        {
+            IsBackground = true
+        };
+
+        // prepare timer
+        scenarioTimer.Elapsed += ScenarioTimer_Elapsed;
     }
 
     public static Task Start()
@@ -77,7 +83,6 @@ public static class ControllerManager
 
         DeviceManager.XUsbDeviceArrived += XUsbDeviceArrived;
         DeviceManager.XUsbDeviceRemoved += XUsbDeviceRemoved;
-
         DeviceManager.HidDeviceArrived += HidDeviceArrived;
         DeviceManager.HidDeviceRemoved += HidDeviceRemoved;
 
@@ -97,15 +102,16 @@ public static class ControllerManager
 
         MainWindow.uiSettings.ColorValuesChanged += OnColorValuesChanged;
 
+        // enable timer
+        scenarioTimer.Start();
+
         // enable HidHide
         HidHide.SetCloaking(true);
 
         IsInitialized = true;
         Initialized?.Invoke();
 
-        // summon an empty controller, used to feed Layout UI
-        // todo: improve me
-        ControllerSelected?.Invoke(GetEmulatedController());
+        HasTargetController();
 
         LogManager.LogInformation("{0} has started", "ControllerManager");
 
@@ -129,6 +135,9 @@ public static class ControllerManager
         DeviceManager.HidDeviceRemoved -= HidDeviceRemoved;
 
         SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+
+        // stop timer
+        scenarioTimer.Stop();
 
         // uncloak on close, if requested
         if (SettingsManager.Get<bool>("HIDuncloakonclose"))
@@ -157,17 +166,16 @@ public static class ControllerManager
         Quicktools
     }
 
-    private static void GamepadFocusManager_LostFocus(Control control)
+    private static void GamepadFocusManager_LostFocus(string Name)
     {
-        GamepadWindow gamepadWindow = (GamepadWindow)control;
-
-        switch (gamepadWindow.Title)
+        switch (Name)
         {
+            default:
+            case "MainWindow":
+                focusedWindows &= ~FocusedWindow.MainWindow;
+                break;
             case "QuickTools":
                 focusedWindows &= ~FocusedWindow.Quicktools;
-                break;
-            default:
-                focusedWindows &= ~FocusedWindow.MainWindow;
                 break;
         }
 
@@ -175,16 +183,16 @@ public static class ControllerManager
         CheckControllerScenario();
     }
 
-    private static void GamepadFocusManager_GotFocus(Control control)
+    private static void GamepadFocusManager_GotFocus(string Name)
     {
-        GamepadWindow gamepadWindow = (GamepadWindow)control;
-        switch (gamepadWindow.Title)
+        switch (Name)
         {
+            default:
+            case "MainWindow":
+                focusedWindows |= FocusedWindow.MainWindow;
+                break;
             case "QuickTools":
                 focusedWindows |= FocusedWindow.Quicktools;
-                break;
-            default:
-                focusedWindows |= FocusedWindow.MainWindow;
                 break;
         }
 
@@ -213,26 +221,68 @@ public static class ControllerManager
         targetController?.InjectButton(button, true, false);
     }
 
-    private static void CheckControllerScenario()
+    private static void ScenarioTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
+        // set flag
         ControllerMuted = false;
 
-        // platform specific scenarios
-        if (foregroundProcess?.Platform == PlatformType.Steam)
+        // Steam Deck specific scenario
+        if (IDevice.GetCurrent() is SteamDeck steamDeck)
         {
-            // mute virtual controller if foreground process is Steam or Steam-related and user a toggle the mute setting
-            // Controller specific scenarios
-            if (targetController is SteamController)
+            bool IsExclusiveMode = SettingsManager.Get<bool>("SteamControllerMode");
+
+            // Making sure current controller is embedded
+            if (targetController is NeptuneController neptuneController)
             {
-                SteamController steamController = (SteamController)targetController;
-                if (steamController.IsVirtualMuted())
-                    ControllerMuted = true;
+                // We're busy, come back later
+                if (neptuneController.IsBusy)
+                    return;
+
+                if (IsExclusiveMode)
+                {
+                    // mode: exclusive
+                    // hide embedded controller
+                    if (!neptuneController.IsHidden())
+                        neptuneController.Hide();
+                }
+                else
+                {
+                    // mode: hybrid
+                    if (foregroundProcess?.Platform == PlatformType.Steam)
+                    {
+                        // application is either steam or a steam game
+                        // restore embedded controller and mute virtual controller
+                        if (neptuneController.IsHidden())
+                            neptuneController.Unhide();
+
+                        // set flag
+                        ControllerMuted = true;
+                    }
+                    else
+                    {
+                        // application is not steam related
+                        // hide embbeded controller
+                        if (!neptuneController.IsHidden())
+                            neptuneController.Hide();
+                    }
+                }
+
+                // halt timer
+                scenarioTimer.Stop();
             }
         }
 
         // either main window or quicktools are focused
+        // set flag
         if (focusedWindows != FocusedWindow.None)
             ControllerMuted = true;
+    }
+
+    private static void CheckControllerScenario()
+    {
+        // reset timer
+        scenarioTimer.Stop();
+        scenarioTimer.Start();
     }
 
     private static void SettingsManager_SettingValueChanged(string name, object value)
@@ -255,8 +305,10 @@ public static class ControllerManager
                                 {
                                     watchdogThreadRunning = true;
 
-                                    watchdogThread = new Thread(watchdogThreadLoop);
-                                    watchdogThread.IsBackground = true;
+                                    watchdogThread = new Thread(watchdogThreadLoop)
+                                    {
+                                        IsBackground = true
+                                    };
                                     watchdogThread.Start();
                                 }
                             }
@@ -282,6 +334,10 @@ public static class ControllerManager
 
             case "SensorSelection":
                 sensorSelection = (SensorFamily)Convert.ToInt32(value);
+                break;
+
+            case "SteamControllerMode":
+                CheckControllerScenario();
                 break;
         }
     }
@@ -556,15 +612,11 @@ public static class ControllerManager
         // new controller logic
         if (DeviceManager.IsInitialized)
         {
-            if (controller.IsPhysical() && targetController is null)
+            if (controller.IsPhysical() && (targetController is null || targetController.IsVirtual()))
                 SetTargetController(controller.GetContainerInstancePath(), IsPowerCycling);
 
-            if (targetController is not null)
-            {
-                Color _systemBackground = MainWindow.uiSettings.GetColorValue(UIColorType.Background);
-                Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.Accent);
-                targetController.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
-            }
+            Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.Accent);
+            targetController?.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
         }
     }
 
@@ -604,7 +656,10 @@ public static class ControllerManager
 
             // unplug controller, if needed
             if (WasTarget)
+            {
                 ClearTargetController();
+                HasTargetController();
+            }
             else
                 controller.Unplug();
 
@@ -623,7 +678,7 @@ public static class ControllerManager
         while (watchdogThreadRunning)
         {
             // monitoring unexpected slot changes
-            HashSet<byte> UserIndexes = new();
+            HashSet<byte> UserIndexes = [];
             bool XInputDrunk = false;
 
             foreach (XInputController xInputController in Controllers.Values.Where(c => c.Details is not null && c.Details.isXInput))
@@ -813,24 +868,20 @@ public static class ControllerManager
         // new controller logic
         if (DeviceManager.IsInitialized)
         {
-            if (controller.IsPhysical() && targetController is null)
+            if (controller.IsPhysical() && (targetController is null || targetController.IsVirtual()))
                 SetTargetController(controller.GetContainerInstancePath(), IsPowerCycling);
 
-            if (targetController is not null)
-            {
-                Color _systemBackground = MainWindow.uiSettings.GetColorValue(UIColorType.Background);
-                Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.Accent);
-                targetController.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
+            Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.Accent);
+            targetController?.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
 
-                string ManufacturerName = MotherboardInfo.Manufacturer.ToUpper();
-                switch (ManufacturerName)
-                {
-                    case "AOKZOE":
-                    case "ONE-NETBOOK TECHNOLOGY CO., LTD.":
-                    case "ONE-NETBOOK":
-                        targetController.Rumble();
-                        break;
-                }
+            string ManufacturerName = MotherboardInfo.Manufacturer.ToUpper();
+            switch (ManufacturerName)
+            {
+                case "AOKZOE":
+                case "ONE-NETBOOK TECHNOLOGY CO., LTD.":
+                case "ONE-NETBOOK":
+                    targetController?.Rumble();
+                    break;
             }
         }
     }
@@ -865,7 +916,10 @@ public static class ControllerManager
 
             // controller is current target
             if (WasTarget)
+            {
                 ClearTargetController();
+                HasTargetController();
+            }
             else
                 controller.Unplug();
         }
@@ -874,6 +928,14 @@ public static class ControllerManager
 
         // raise event
         ControllerUnplugged?.Invoke(controller, IsPowerCycling, WasTarget);
+    }
+
+    private static void HasTargetController()
+    {
+        // summon an empty controller, used to feed Layout UI and receive injected inputs from keyboard/oem chords
+        // todo: improve me
+        Controllers[string.Empty] = GetEmulatedController();
+        SetTargetController(string.Empty, false);
     }
 
     private static void ClearTargetController()
@@ -900,9 +962,6 @@ public static class ControllerManager
         {
             // look for new controller
             if (!Controllers.TryGetValue(baseContainerDeviceInstanceId, out IController controller))
-                return;
-
-            if (controller.IsVirtual())
                 return;
 
             // clear current target
@@ -1059,12 +1118,12 @@ public static class ControllerManager
 
     public static IEnumerable<IController> GetPhysicalControllers()
     {
-        return Controllers.Values.Where(a => !a.IsVirtual()).ToList();
+        return Controllers.Values.Where(a => !a.IsVirtual() && !a.isPlaceholder).ToList();
     }
 
     public static IEnumerable<IController> GetVirtualControllers()
     {
-        return Controllers.Values.Where(a => a.IsVirtual()).ToList();
+        return Controllers.Values.Where(a => a.IsVirtual() && !a.isPlaceholder).ToList();
     }
 
     public static XInputController GetControllerFromSlot(UserIndex userIndex = 0, bool physical = true)

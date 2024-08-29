@@ -1,7 +1,7 @@
 ﻿using Gma.System.MouseKeyHook;
 using GregsStack.InputSimulatorStandard;
 using GregsStack.InputSimulatorStandard.Native;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Inputs;
 using System;
 using System.Runtime.InteropServices;
 using WindowsInput.Events;
@@ -150,9 +150,9 @@ public static class KeyboardSimulator
             KeyPress((VirtualKeyCode)key);
     }
 
-    public static void KeyPress(OutputKey[] keys)
+    public static void KeyPress(InputsKey[] keys)
     {
-        foreach (OutputKey key in keys)
+        foreach (InputsKey key in keys)
         {
             VirtualKeyCode virtualKeyCode = (VirtualKeyCode)key.KeyValue;
             if (key.IsKeyDown)

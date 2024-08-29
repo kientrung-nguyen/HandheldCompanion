@@ -6,6 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickSuspender"
@@ -48,7 +49,7 @@
                     </Expander.Header>
 
                     <Expander.Content>
-                        <ui:SimpleStackPanel Margin="0,-4,0,-4" Spacing="6">
+                        <ikw:SimpleStackPanel Margin="0,-4,0,-4" Spacing="6">
                             <!--  Suspend  -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -123,7 +124,7 @@
                                     Content="Kill process"
                                     Style="{DynamicResource AccentButtonStyle}" />
                             </Grid>
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
                     </Expander.Content>
                 </Expander>
             </DataTemplate>

@@ -1,7 +1,5 @@
-using HandheldCompanion.Inputs;
-using System.Collections.Generic;
-using System.Windows.Media;
-using WindowsInput.Events;
+using System.Numerics;
+
 namespace HandheldCompanion.Devices;
 
 public class AYANEOFlipKB : AYANEO.AYANEODeviceCEc
@@ -19,7 +17,6 @@ public class AYANEOFlipKB : AYANEO.AYANEODeviceCEc
         this.GfxClock = new double[] { 100, 2700 };
         this.CpuClock = 5100;
 
-
-        // TODO: Add OEMChords for "three dots" key here
+        this.AccelerometerAxis = new Vector3(1.0f, -1.0f, -1.0f);
     }
 }

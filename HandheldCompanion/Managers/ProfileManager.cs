@@ -57,14 +57,14 @@ public static class ProfileManager
         profileWatcher.Deleted += ProfileDeleted;
 
         // process existing profiles
-        var fileEntries = Directory.GetFiles(profilesPath, "*.json", SearchOption.AllDirectories);
+        var fileEntries = Directory.EnumerateFiles(profilesPath, "*.json", SearchOption.AllDirectories);
         foreach (var fileName in fileEntries)
             ProcessProfile(fileName, false);
 
         // check for default profile
         if (!HasDefault())
         {
-            Layout deviceLayout = IDevice.GetCurrent().DefaultLayout.Clone() as Layout;
+            var deviceLayout = (Layout)IDevice.GetCurrent().DefaultLayout.Clone();
             Profile defaultProfile = new()
             {
                 Name = DefaultName,
@@ -206,9 +206,11 @@ public static class ProfileManager
         if (currentProfile == null)
             return;
         // called using previousSubProfile/nextSubProfile hotkeys
-        List<Profile> subProfilesList = new();
-        subProfilesList.Add(GetProfileForSubProfile(currentProfile)); // adds main profile as sub profile
-        subProfilesList.AddRange(GetSubProfilesFromPath(currentProfile.Path, false).ToList()); // adds all sub profiles
+        List<Profile> subProfilesList =
+        [
+            GetProfileForSubProfile(currentProfile), // adds main profile as sub profile
+            .. GetSubProfilesFromPath(currentProfile.Path, false).ToList(), // adds all sub profiles
+        ];
 
         // if profile does not have sub profiles -> do nothing
         if (subProfilesList.Count <= 1)
@@ -257,7 +259,7 @@ public static class ProfileManager
         if (announce)
         {
             string announcement = string.Empty;
-            switch(profile.IsSubProfile)
+            switch (profile.IsSubProfile)
             {
                 case false:
                     announcement = $"Profile {profile.Name} applied";
@@ -368,7 +370,7 @@ public static class ProfileManager
 
     private static void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
     {
-        if (processEx is null || processEx == ProcessManager.Empty)
+        if (processEx is null)
             return;
 
         try
@@ -463,7 +465,7 @@ public static class ProfileManager
 
     private static void ProcessProfile(string fileName, bool imported = false)
     {
-        Profile profile;
+        Profile? profile;
         try
         {
             string outputraw = File.ReadAllText(fileName);
@@ -508,7 +510,7 @@ public static class ProfileManager
         }
 
         // failed to parse
-        if (!profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
+        if (profile is null || !profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
         {
             LogManager.LogError("Corrupted profile {0}. Profile has an empty name or an empty path.", fileName);
             return;
@@ -587,8 +589,8 @@ public static class ProfileManager
             ApplyProfile(profile, UpdateSource.Serializer);
     }
 
-    private static List<string> pendingCreation = new();
-    private static List<string> pendingDeletion = new();
+    private static List<string> pendingCreation = [];
+    private static List<string> pendingDeletion = [];
 
     public static void DeleteProfile(Profile profile)
     {
@@ -745,7 +747,7 @@ public static class ProfileManager
                 break;
             default:
                 // check if this is current profile
-                isCurrent = currentProfile is null ? false : profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
+                isCurrent = currentProfile is not null && profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
                 break;
         }
 

@@ -52,7 +52,7 @@ public abstract class IPlatform : IDisposable
     protected bool KeepAlive;
     protected int MaxTentative = 3;
 
-    protected List<string> Modules = new();
+    protected List<string> Modules = [];
     protected string Name;
 
     public PlatformType PlatformType;
@@ -176,6 +176,11 @@ public abstract class IPlatform : IDisposable
 
         Status = status;
         Updated?.Invoke(status);
+    }
+
+    protected void SettingsValueChaned(string name, object value)
+    {
+        SettingValueChanged?.Invoke(name, Convert.ToString(value));
     }
 
     public string GetName()
@@ -363,7 +368,7 @@ public abstract class IPlatform : IDisposable
             // Steam was installed, but got removed
             return false;
         }
-        catch (IOException e)
+        catch (IOException)
         {
             LogManager.LogError("Couldn't locate {0} configuration file", PlatformType);
             return false;
@@ -380,12 +385,18 @@ public abstract class IPlatform : IDisposable
 
             var origPath = $"{configPath}.orig";
             if (!File.Exists(origPath))
-                return false;
+                return false; 
+            
+            FileAttributes attr = File.GetAttributes(configPath);
+
+            // unset read-only
+            attr = attr & ~FileAttributes.ReadOnly;
+            File.SetAttributes(configPath, attr);
 
             File.Move(origPath, configPath, true);
             return true;
         }
-        catch (FileNotFoundException e)
+        catch (FileNotFoundException)
         {
             // File was not found (which is valid as it might be before first start of the application)
             LogManager.LogError("Couldn't locate {0} configuration file", PlatformType);
@@ -404,7 +415,7 @@ public abstract class IPlatform : IDisposable
         {
             return false;
         }
-        catch (IOException e)
+        catch (IOException)
         {
             LogManager.LogError("Failed to overwrite {0} configuration file", PlatformType);
             return false;
@@ -430,6 +441,13 @@ public abstract class IPlatform : IDisposable
             }
 
             File.WriteAllBytes(configPath, content);
+
+            FileAttributes attr = File.GetAttributes(configPath);
+
+            // set read-only
+            attr = attr | FileAttributes.ReadOnly;
+            File.SetAttributes(configPath, attr);
+
             return true;
         }
         catch (UnauthorizedAccessException)
@@ -445,16 +463,11 @@ public abstract class IPlatform : IDisposable
             // Steam was installed, but got removed
             return false;
         }
-        catch (IOException e)
+        catch (IOException)
         {
             LogManager.LogError("Failed to overwrite {0} configuration file", PlatformType);
             return false;
         }
-    }
-
-    protected void SystemWatcher_Changed(string name, object value)
-    {
-        SettingValueChanged?.Invoke(name, Convert.ToString(value));
     }
 
     #region events

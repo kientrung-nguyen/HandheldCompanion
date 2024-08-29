@@ -56,12 +56,22 @@ namespace HandheldCompanion.ViewModels
             get => _selectedPreset;
             set
             {
-                _selectedPreset = value;
-                if (!IsQuickTools)
+                if (_selectedPreset != value)
                 {
-                    _selectedPresetIndex = ProfilePickerItems.IndexOf(ProfilePickerItems.First(p => p.LinkedPresetId == _selectedPreset.Guid));
+                    // update variable
+                    _selectedPreset = value;
+
+                    // page-specific behaviors
+                    switch(IsQuickTools)
+                    {
+                        case false:
+                            _selectedPresetIndex = ProfilePickerItems.IndexOf(ProfilePickerItems.First(p => p.LinkedPresetId == _selectedPreset.Guid));
+                            break;
+                    }
+
+                    // refresh all properties
+                    OnPropertyChanged(string.Empty);
                 }
-                OnPropertyChanged(string.Empty); // Refresh all properties
             }
         }
 
@@ -498,34 +508,38 @@ namespace HandheldCompanion.ViewModels
             PowerProfileManager.Updated += PowerProfileManager_Updated;
             PowerProfileManager.Deleted += PowerProfileManager_Deleted;
 
-            PropertyChanged +=
-                (sender, e) =>
+            PropertyChanged += (sender, e) =>
+            {
+                if (SelectedPreset is null)
+                    return;
+
+                // TODO: Get rid of UI update here of fan graph UI dependency
+                if (!IsQuickTools)
                 {
-                    if (SelectedPreset is null)
-                        return;
-
-                    // TODO: Get rid of UI update here of fan graph UI dependency
-                    if (!IsQuickTools)
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            _updatingFanCurveUI = true;
-                            // update charts
-                            for (int idx = 0; idx < _fanGraphLineSeries.ActualValues.Count; idx++)
-                                _fanGraphLineSeries.ActualValues[idx] = SelectedPreset.FanProfile.FanSpeeds[idx];
+                        _updatingFanCurveUI = true;
+                        // update charts
+                        for (int idx = 0; idx < _fanGraphLineSeries.ActualValues.Count; idx++)
+                            _fanGraphLineSeries.ActualValues[idx] = SelectedPreset.FanProfile.FanSpeeds[idx];
 
-                            _updatingFanCurveUI = false;
-                        });
+                        _updatingFanCurveUI = false;
+                    });
 
-                        // No need to update 
-                        if (_skipPropertyChangedUpdate.Contains(e.PropertyName))
-                            return;
-                    }
+                    // No need to update 
+                    if (_skipPropertyChangedUpdate.Contains(e.PropertyName))
+                        return;
+                }
 
-                    _updatingProfile = true;
-                    PowerProfileManager.UpdateOrCreateProfile(SelectedPreset, UpdateSource.ProfilesPage);
-                    _updatingProfile = false;
-                };
+                // set flag
+                _updatingProfile = true;
+
+                // trigger power profile update
+                PowerProfileManager.UpdateOrCreateProfile(SelectedPreset, IsQuickTools ? UpdateSource.QuickProfilesPage : UpdateSource.ProfilesPage);
+
+                // set flag
+                _updatingProfile = false;
+            };
 
             CreatePresetCommand = new DelegateCommand(() =>
             {
@@ -593,7 +607,7 @@ namespace HandheldCompanion.ViewModels
                     var index = ProfilePickerItems.IndexOf(preset.IsDefault() ? _devicePresetsPickerVM : _userPresetsPickerVM) + 1;
                     ProfilePickerItems.Insert(index, new ProfilesPickerViewModel { Text = preset.Name, LinkedPresetId = preset.Guid });
                 }
-
+                
                 // Reset Index to Default, 1 item before _userPresetsPickerVM
                 _selectedPresetIndex = ProfilePickerItems.IndexOf(_userPresetsPickerVM) - 1;
 
@@ -719,8 +733,9 @@ namespace HandheldCompanion.ViewModels
 
         private void PowerProfileManager_Updated(PowerProfile preset, UpdateSource source)
         {
-            // Updated is triggered from PropertyChanged
-            if (_updatingProfile) return;
+            // skip if self update
+            if (_updatingProfile)
+                return;
 
             // Update all properties
             if (SelectedPreset?.Guid == preset.Guid)

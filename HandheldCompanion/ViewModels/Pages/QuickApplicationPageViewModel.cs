@@ -1,12 +1,11 @@
 ﻿using HandheldCompanion.Controls;
 using HandheldCompanion.Extensions;
 using HandheldCompanion.Managers;
+using HandheldCompanion.ViewModels.Commands;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
-using HandheldCompanion.ViewModels.Commands;
 using WpfScreenHelper.Enum;
-using System.Reflection;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -126,6 +125,9 @@ namespace HandheldCompanion.ViewModels
 
         private void ProcessStopped(ProcessEx processEx)
         {
+            if (processEx is null)
+                return;
+
             ProcessExViewModel? foundProcess = Processes.ToList().FirstOrDefault(p => p.Process == processEx || p.Process.ProcessId == processEx.ProcessId);
             if (foundProcess is not null)
             {
@@ -136,6 +138,9 @@ namespace HandheldCompanion.ViewModels
 
         private void ProcessStarted(ProcessEx processEx, bool OnStartup)
         {
+            if (processEx is null)
+                return;
+
             ProcessExViewModel? foundProcess = Processes.ToList().FirstOrDefault(p => p.Process == processEx || p.Process.ProcessId == processEx.ProcessId);
             if (foundProcess is null)
             {

@@ -15,7 +15,7 @@ namespace HandheldCompanion.Managers
     {
         private static PowerProfile currentProfile;
 
-        public static Dictionary<Guid, PowerProfile> profiles = new();
+        public static Dictionary<Guid, PowerProfile> profiles = [];
 
         private static string ProfilesPath;
 
@@ -29,6 +29,7 @@ namespace HandheldCompanion.Managers
                 Directory.CreateDirectory(ProfilesPath);
 
             PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
+
             ProfileManager.Applied += ProfileManager_Applied;
             ProfileManager.Discarded += ProfileManager_Discarded;
         }

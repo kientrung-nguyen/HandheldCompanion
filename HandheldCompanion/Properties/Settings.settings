@@ -125,8 +125,8 @@
     <Setting Name="OverlayControllerMotion" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="SteamControllerMute" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
+    <Setting Name="SteamControllerMode" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="HIDcloakonconnect" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
@@ -168,9 +168,6 @@
       <Value Profile="(Default)">-1</Value>
     </Setting>
     <Setting Name="PlatformRTSSEnabled" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
-    </Setting>
-    <Setting Name="PlatformHWiNFOEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="QuickToolsLocation" Type="System.Int32" Scope="User">
@@ -290,11 +287,20 @@
     <Setting Name="QuickToolsWidth" Type="System.Double" Scope="User">
       <Value Profile="(Default)">480</Value>
     </Setting>
-    <Setting Name="QuickToolsScreen" Type="System.String" Scope="User">
+    <Setting Name="QuickToolsDevicePath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="NightLightSchedule" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
+    <Setting Name="LastVersion" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0.0.0.0</Value>
+    </Setting>
+    <Setting Name="QuickToolsDeviceName" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="AYANEOFlipScreenEnabled" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="AYANEOFlipScreenBrightness" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">100</Value>
     </Setting>
   </Settings>
 </SettingsFile>

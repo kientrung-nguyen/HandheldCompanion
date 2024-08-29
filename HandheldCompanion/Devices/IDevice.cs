@@ -75,7 +75,7 @@ public abstract class IDevice
     private static IDevice device;
 
     protected ushort _vid, _pid;
-    public Dictionary<byte, HidDevice> hidDevices = new();
+    public Dictionary<byte, HidDevice> hidDevices = [];
 
     public Vector3 AccelerometerAxis = new(1.0f, 1.0f, 1.0f);
     public SortedDictionary<char, char> AccelerometerAxisSwap = new()
@@ -131,7 +131,7 @@ public abstract class IDevice
     };
 
     // trigger specific settings
-    public List<DeviceChord> OEMChords = new();
+    public List<KeyboardChord> OEMChords = [];
 
     // UI
     protected FontFamily GlyphFontFamily = new("PromptFont");
@@ -533,7 +533,7 @@ public abstract class IDevice
                                     case "83E1":
                                         device = new LegionGo();
                                         break;
-                                }
+                                }    
                             }
                             break;
                     }
@@ -923,7 +923,7 @@ public abstract class IDevice
 
     public bool HasKey()
     {
-        foreach (DeviceChord pair in OEMChords.Where(a => !a.silenced))
+        foreach (KeyboardChord pair in OEMChords.Where(a => !a.silenced))
         {
             IEnumerable<KeyCode> chords = pair.chords.SelectMany(chord => chord.Value);
             if (chords.Any())

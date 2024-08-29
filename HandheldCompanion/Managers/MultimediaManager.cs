@@ -10,7 +10,6 @@ using System.Linq;
 using System.Management;
 using System.Media;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using WindowsDisplayAPI;
 using WindowsDisplayAPI.DisplayConfig;
 
@@ -35,10 +34,7 @@ public static class MultimediaManager
         MicrophoneSupport = SoundControl.MicrophoneGet() != -1;
         BrightnessSupport = ScreenBrightness.Get() != -1;
         NightLightSupport = NightLight.Get() != -1;
-
-        SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        HotkeysManager.CommandExecuted += HotkeysManager_CommandExecuted;
     }
 
     private static void SettingsManager_SettingValueChanged(string name, object value)
@@ -59,25 +55,6 @@ public static class MultimediaManager
                     if (oldOrientation != screenOrientation.rotation)
                         DisplayOrientationChanged?.Invoke(screenOrientation);
                 }
-                break;
-        }
-    }
-
-    private static void HotkeysManager_CommandExecuted(string listener)
-    {
-        switch (listener)
-        {
-            case "increaseBrightness":
-                ToastManager.RunToast($"{AdjustBrightness(5)}%", ToastIcons.BrightnessUp);
-                break;
-            case "decreaseBrightness":
-                ToastManager.RunToast($"{AdjustBrightness(-5)}%", ToastIcons.BrightnessDown);
-                break;
-            case "increaseVolume":
-                ToastManager.RunToast($"{AdjustVolume(5)}%", ToastIcons.VolumeUp);
-                break;
-            case "decreaseVolume":
-                ToastManager.RunToast($"{AdjustVolume(-5)}%", ToastIcons.VolumeDown);
                 break;
         }
     }
@@ -132,102 +109,6 @@ public static class MultimediaManager
         return PrimaryTarget;
     }
 
-    private static void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
-    {
-        // temporary array to store all current screens
-        //Dictionary<string, DesktopScreen> desktopScreens = new();
-
-        //foreach (Screen screen in Screen.AllScreens)
-        //{
-        //    DesktopScreen desktopScreen = new(screen);
-
-        //    // pull resolutions details
-        //    List<DisplayDevice> resolutions = GetResolutions(desktopScreen.Screen.DeviceName);
-        //    foreach (DisplayDevice mode in resolutions)
-        //    {
-        //        ScreenResolution res = new ScreenResolution(mode.dmPelsWidth, mode.dmPelsHeight, mode.dmBitsPerPel);
-
-        //        List<int> frequencies = resolutions
-        //            .Where(a => a.dmPelsWidth == mode.dmPelsWidth && a.dmPelsHeight == mode.dmPelsHeight)
-        //            .Select(b => b.dmDisplayFrequency).Distinct().ToList();
-
-        //        foreach (int frequency in frequencies)
-        //            res.Frequencies.Add(frequency, frequency);
-
-        //        if (!desktopScreen.HasResolution(res))
-        //            desktopScreen.screenResolutions.Add(res);
-        //    }
-
-        //    // sort resolutions
-        //    desktopScreen.SortResolutions();
-
-        //    // add to temporary array
-        //    desktopScreens.Add(desktopScreen.FriendlyName, desktopScreen);
-        //}
-
-        // get refreshed primary screen (can't be null)
-        //DesktopScreen newPrimary = desktopScreens.Values.Where(a => a.IsPrimary).FirstOrDefault();
-
-        /*
-        // looks like we have a new primary screen
-        if (PrimaryDesktop is null || !PrimaryDesktop.FriendlyName.Equals(newPrimary.FriendlyName))
-        {
-            // raise event (New primary display)
-            PrimaryScreenChanged?.Invoke(newPrimary);
-        }
-        */
-
-        // set or update current primary
-        //PrimaryDesktop = newPrimary;
-
-        /*
-        // raise event (New screen detected)
-        foreach (DesktopScreen desktop in desktopScreens.Values.Where(a => !AllScreens.ContainsKey(a.FriendlyName)))
-            ScreenConnected?.Invoke(desktop);
-
-        // raise event (New screen detected)
-        foreach (DesktopScreen desktop in AllScreens.Values.Where(a => !desktopScreens.ContainsKey(a.FriendlyName)))
-            ScreenDisconnected?.Invoke(desktop);
-        */
-        /*
-        // clear array and transfer screens
-        AllScreens.Clear();
-        foreach (DesktopScreen desktop in desktopScreens.Values)
-            AllScreens.Add(desktop.FriendlyName, desktop);
-        */
-        /*
-        // raise event (Display settings were updated)
-        if (PrimaryDesktop is not null)
-        {
-            ScreenResolution screenResolution = PrimaryDesktop.GetResolution();
-            if (screenResolution is not null)
-                DisplaySettingsChanged?.Invoke(PrimaryDesktop, screenResolution);
-        }
-        */
-
-        /*
-        ScreenRotation.Rotations oldOrientation = screenOrientation.rotation;
-
-        if (!IsInitialized)
-        {
-            ScreenRotation.Rotations nativeScreenRotation = (ScreenRotation.Rotations)SettingsManager.GetInt("NativeDisplayOrientation");
-            screenOrientation = new ScreenRotation((ScreenRotation.Rotations)desktopScreen.devMode.dmDisplayOrientation, nativeScreenRotation);
-            oldOrientation = ScreenRotation.Rotations.UNSET;
-
-            if (nativeScreenRotation == ScreenRotation.Rotations.UNSET)
-                SettingsManager.SetProperty("NativeDisplayOrientation", (int)screenOrientation.rotationNativeBase, true);
-        }
-        else
-        {
-            screenOrientation = new ScreenRotation((ScreenRotation.Rotations)desktopScreen.devMode.dmDisplayOrientation, screenOrientation.rotationNativeBase);
-        }
-
-        // raise event
-        if (oldOrientation != screenOrientation.rotation)
-            DisplayOrientationChanged?.Invoke(screenOrientation);
-        */
-    }
-
     public static ScreenRotation GetScreenOrientation()
     {
         return screenOrientation;
@@ -235,9 +116,6 @@ public static class MultimediaManager
 
     public static void Start()
     {
-        // force trigger events
-        SystemEvents_DisplaySettingsChanged(null, EventArgs.Empty);
-
         // manage events
         ScreenControl.SubscribeToEvents(new Dictionary<string, Action<Display>>
         {
@@ -290,74 +168,12 @@ public static class MultimediaManager
         LogManager.LogInformation("{0} has stopped", "SystemManager");
     }
 
-    public static bool SetResolution(int width, int height, int displayFrequency)
-    {
-        if (!IsInitialized)
-            return false;
-
-        bool ret = false;
-        DisplayDevice dm = new DisplayDevice();
-        dm.dmSize = (short)Marshal.SizeOf(typeof(DisplayDevice));
-        dm.dmPelsWidth = width;
-        dm.dmPelsHeight = height;
-        dm.dmDisplayFrequency = displayFrequency;
-        dm.dmFields = DisplayDevice.DM_PELSWIDTH | DisplayDevice.DM_PELSHEIGHT | DisplayDevice.DM_DISPLAYFREQUENCY;
-
-        long RetVal = ChangeDisplaySettings(ref dm, CDS_TEST);
-        if (RetVal == 0)
-        {
-            RetVal = ChangeDisplaySettings(ref dm, 0);
-            ret = true;
-        }
-
-        return ret;
-    }
-
-    public static bool SetResolution(int width, int height, int displayFrequency, int bitsPerPel)
-    {
-        if (!IsInitialized)
-            return false;
-
-        bool ret = false;
-        DisplayDevice dm = new DisplayDevice();
-        dm.dmSize = (short)Marshal.SizeOf(typeof(DisplayDevice));
-        dm.dmPelsWidth = width;
-        dm.dmPelsHeight = height;
-        dm.dmDisplayFrequency = displayFrequency;
-        dm.dmBitsPerPel = bitsPerPel;
-        dm.dmFields = DisplayDevice.DM_PELSWIDTH | DisplayDevice.DM_PELSHEIGHT | DisplayDevice.DM_DISPLAYFREQUENCY;
-
-        long RetVal = ChangeDisplaySettings(ref dm, CDS_TEST);
-        if (RetVal == 0)
-        {
-            _ = ChangeDisplaySettings(ref dm, 0);
-            ret = true;
-        }
-
-        return ret;
-    }
-
     public static DisplayDevice GetDisplay(string DeviceName)
     {
         DisplayDevice dm = new DisplayDevice();
         dm.dmSize = (short)Marshal.SizeOf(typeof(DisplayDevice));
         EnumDisplaySettings(DeviceName, -1, ref dm);
         return dm;
-    }
-
-    public static List<DisplayDevice> GetResolutions(string DeviceName)
-    {
-        List<DisplayDevice> allMode = new List<DisplayDevice>();
-        DisplayDevice dm = new DisplayDevice();
-        dm.dmSize = (short)Marshal.SizeOf(typeof(DisplayDevice));
-        int index = 0;
-        while (EnumDisplaySettings(DeviceName, index, ref dm))
-        {
-            allMode.Add(dm);
-            index++;
-        }
-
-        return allMode;
     }
 
     public static void PlayWindowsMedia(string file)
@@ -382,8 +198,8 @@ public static class MultimediaManager
 
         var volume = SoundControl.AudioGet();
         volume = delta > 0
-            ? (int)Math.Floor(volume / 5.0d) * 5
-            : (int)Math.Ceiling(volume / 5.0d) * 5;
+            ? (int)Math.Floor(volume / delta * 1d) * delta
+            : (int)Math.Ceiling(volume / delta * 1d) * delta;
         volume = Math.Min(100, Math.Max(0, volume + delta));
         SoundControl.AudioSet(volume);
         return volume;
@@ -409,8 +225,8 @@ public static class MultimediaManager
 
         var brightness = ScreenBrightness.Get();
         brightness = delta > 0
-            ? (int)Math.Floor(brightness / 5.0d) * 5
-            : (int)Math.Ceiling(brightness / 5.0d) * 5;
+            ? (int)Math.Floor(brightness / delta * 1d) * delta
+            : (int)Math.Ceiling(brightness / delta * 1d) * delta;
         brightness = Math.Min(100, Math.Max(0, brightness + delta));
         ScreenBrightness.Set(brightness);
         return brightness;

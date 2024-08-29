@@ -1,9 +1,7 @@
 ﻿using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using WindowsInput.Events;
 
 namespace HandheldCompanion.Devices;
 
@@ -84,8 +82,8 @@ public class SteamDeck : IDevice
         GfxClock = new double[] { 200, 2500 };
         CpuClock = 3500;
 
-        OEMChords.Add(new DeviceChord("...",
-            new List<KeyCode>(), new List<KeyCode>(),
+        OEMChords.Add(new KeyboardChord("...",
+            [], [],
             false, ButtonFlags.OEM1
         ));
 
@@ -215,7 +213,7 @@ public class SteamDeck : IDevice
         int value = SupportedDevice?.BatteryTempLE == true ?
             ((data[1] << 8) + data[0]) :
             ((data[0] << 8) + data[1]);
-        return (float)(value - 0x0AAC) / 10.0f;
+        return (value - 0x0AAC) / 10.0f;
     }
 
     public int? GetMaxBatteryCharge()

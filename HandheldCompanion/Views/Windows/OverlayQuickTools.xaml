@@ -4,23 +4,23 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
+    xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     Title="QuickTools"
-    Width="540"
-    MinWidth="540"
-    MinHeight="540"
+    Width="450"
+    MinWidth="450"
     MaxWidth="960"
     MaxHeight="960"
-    ui:TitleBar.ExtendViewIntoTitleBar="True"
+    Margin="0"
     ui:ThemeManager.IsThemeAware="True"
+    ui:TitleBar.ExtendViewIntoTitleBar="True"
     ui:WindowHelper.SystemBackdropType="Mica"
-    ui:WindowHelper.UseAcrylicBackdrop="True"
-    ui:WindowHelper.UseAeroBackdrop="True"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
+    IsVisibleChanged="GamepadWindow_IsVisibleChanged"
     Loaded="Window_Loaded"
     ResizeMode="NoResize"
     ShowActivated="False"
@@ -28,6 +28,7 @@
     Topmost="True"
     WindowStyle="ToolWindow"
     mc:Ignorable="d">
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="36" />
@@ -160,7 +161,7 @@
                                         FontStretch="SemiCondensed" />
                                 </Border>
                             </Grid>
-                            <ui:SimpleStackPanel
+                            <ikw:SimpleStackPanel
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="0,0,0,0"
@@ -214,7 +215,7 @@
                                             MinWidth="20" Padding="0,4,0,4" />
                                     </DockPanel>
                                 </StackPanel>
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </Grid>
                     </StackPanel>
                     <StackPanel
@@ -247,7 +248,7 @@
                                         FontStretch="SemiCondensed" />
                                 </Border>
                             </Grid>
-                            <ui:SimpleStackPanel
+                            <ikw:SimpleStackPanel
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="0,0,0,0"
@@ -338,7 +339,7 @@
                                             MinWidth="20" Padding="0,4,0,4" />
                                     </DockPanel>
                                 </StackPanel>
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </Grid>
                     </StackPanel>
                     <StackPanel
@@ -371,7 +372,7 @@
                                         Text="GPU" FontStretch="SemiCondensed" />
                                 </Border>
                             </Grid>
-                            <ui:SimpleStackPanel
+                            <ikw:SimpleStackPanel
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="0,0,0,0"
@@ -461,7 +462,7 @@
                                             MinWidth="20" Padding="0,4,0,4" />
                                     </DockPanel>
                                 </StackPanel>
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </Grid>
                     </StackPanel>
                 </Grid>
@@ -494,6 +495,16 @@
                     Grid.Row="0"
                     Grid.Column="0">
                     <ui:NavigationView.MenuItems>
+                        <ui:NavigationViewItem IsEnabled="False">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:FontIcon
+                                    Name="QTLB"
+                                    Margin="-6,0,0,0"
+                                    FontFamily="PromptFont"
+                                    FontSize="22"
+                                    Glyph="&#x2198;" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                         <ui:NavigationViewItem 
                             Name="navSettingsPage" 
                             Tag="QuickHomePage"
@@ -567,6 +578,16 @@
                                     Glyph="&#xE71D;" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        <ui:NavigationViewItem IsEnabled="False">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:FontIcon
+                                    Name="QTRB"
+                                    Margin="-6,0,0,0"
+                                    FontFamily="PromptFont"
+                                    FontSize="22"
+                                    Glyph="&#x2199;" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                     </ui:NavigationView.MenuItems>
                     <ui:NavigationView.Content>
                         <Border>
@@ -580,6 +601,22 @@
                                             <ColumnDefinition Width="46*" />
                                             <ColumnDefinition Width="400*"/>
                                         </Grid.ColumnDefinitions>
+                                        <Border
+                                            Grid.Row="0"
+                                            Grid.RowSpan="3"
+                                            Grid.Column="1"
+                                            CornerRadius="{DynamicResource ControlCornerRadius}">
+                                            <Grid>
+                                                <ui:ContentDialog
+                                                    Name="ContentDialog" 
+                                                    Background="{x:Null}" />
+                                                <common:TouchScrollViewer
+                                                    x:Name="actualScrollViewer"
+                                                    PanningMode="VerticalOnly">
+                                                    <ui:Frame Name="ContentFrame" />
+                                                </common:TouchScrollViewer>
+                                            </Grid>
+                                        </Border>
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition />
@@ -597,6 +634,26 @@
                                                         <RowDefinition Height="1*" />
                                                         <RowDefinition Height="40" />
                                                     </Grid.RowDefinitions>
+                                                    <Grid
+                                                        Name="BrightnessSupport"
+                                                        Grid.Row="0">
+                                                        <Slider
+                                                            x:Name="SliderBrightness"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Stretch"
+                                                            AutoToolTipPrecision="0"
+                                                            IsEnabled="False"
+                                                            IsMoveToPointEnabled="True"
+                                                            IsSnapToTickEnabled="True"
+                                                            LargeChange="10"
+                                                            Orientation="Vertical"
+                                                            Maximum="100"
+                                                            Minimum="0"
+                                                            SmallChange="1"
+                                                            TickFrequency="1"
+                                                            ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
+                                                            ValueChanged="SliderBrightness_ValueChanged" />
+                                                    </Grid>
                                                     <Grid
                                                         Name="NightLightSupport"
                                                         Grid.Row="1" 
@@ -622,26 +679,6 @@
                                                                 Glyph="&#xE706;" />
                                                         </Button>
                                                     </Grid>
-                                                    <Grid
-                                                        Name="BrightnessSupport"
-                                                        Grid.Row="0">
-                                                        <Slider
-                                                            x:Name="SliderBrightness"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Stretch"
-                                                            AutoToolTipPrecision="0"
-                                                            IsEnabled="False"
-                                                            IsMoveToPointEnabled="True"
-                                                            IsSnapToTickEnabled="True"
-                                                            LargeChange="10"
-                                                            Orientation="Vertical"
-                                                            Maximum="100"
-                                                            Minimum="0"
-                                                            SmallChange="1"
-                                                            TickFrequency="1"
-                                                            ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
-                                                            ValueChanged="SliderBrightness_ValueChanged" />
-                                                    </Grid>
                                                 </Grid>
                                             </Border>
                                             <Border
@@ -656,8 +693,25 @@
                                                         <RowDefinition Height="1*" />
                                                         <RowDefinition Height="40" />
                                                     </Grid.RowDefinitions>
+                                                    <Grid Grid.Row="0">
+                                                        <Slider
+                                                            x:Name="SliderVolume"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Stretch"
+                                                            AutoToolTipPrecision="0"
+                                                            IsMoveToPointEnabled="True"
+                                                            IsSnapToTickEnabled="True"
+                                                            Orientation="Vertical"
+                                                            LargeChange="10"
+                                                            Maximum="100"
+                                                            Minimum="0"
+                                                            SmallChange="1"
+                                                            TickFrequency="1"
+                                                            ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
+                                                            ValueChanged="SliderVolume_ValueChanged" />
+                                                    </Grid>
                                                     <Grid Grid.Row="1" Margin="0,4,0,0">
-                                                        <ui:SimpleStackPanel 
+                                                        <ikw:SimpleStackPanel 
                                                             Orientation="Vertical" 
                                                             VerticalAlignment="Center"
                                                             Spacing="4">
@@ -680,24 +734,7 @@
                                                                     FontFamily="{StaticResource SymbolThemeFontFamily}"
                                                                     Glyph="&#xE767;" />
                                                             </Button>
-                                                        </ui:SimpleStackPanel>
-                                                    </Grid>
-                                                    <Grid Grid.Row="0">
-                                                        <Slider
-                                                            x:Name="SliderVolume"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Stretch"
-                                                            AutoToolTipPrecision="0"
-                                                            IsMoveToPointEnabled="True"
-                                                            IsSnapToTickEnabled="True"
-                                                            Orientation="Vertical"
-                                                            LargeChange="10"
-                                                            Maximum="100"
-                                                            Minimum="0"
-                                                            SmallChange="1"
-                                                            TickFrequency="1"
-                                                            ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
-                                                            ValueChanged="SliderVolume_ValueChanged" />
+                                                        </ikw:SimpleStackPanel>
                                                     </Grid>
                                                 </Grid>
                                             </Border>
@@ -728,22 +765,6 @@
                                                 </Button>
                                             </Border>
                                         </Grid>
-                                        <Border
-                                            Grid.Row="0"
-                                            Grid.RowSpan="3"
-                                            Grid.Column="1"
-                                            CornerRadius="{DynamicResource ControlCornerRadius}">
-                                            <Grid>
-                                                <ui:ContentDialog
-                                                    Name="ContentDialog" 
-                                                    Background="{x:Null}" />
-                                                <common:TouchScrollViewer
-                                                    x:Name="actualScrollViewer"
-                                                    PanningMode="VerticalOnly">
-                                                    <ui:Frame Name="ContentFrame" />
-                                                </common:TouchScrollViewer>
-                                            </Grid>
-                                        </Border>
                                     </Grid>
                                 </common:TouchScrollViewer>
                             </Grid>

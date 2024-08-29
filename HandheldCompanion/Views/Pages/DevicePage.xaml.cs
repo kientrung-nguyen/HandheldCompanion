@@ -5,6 +5,7 @@ using HandheldCompanion.Devices;
 using HandheldCompanion.Devices.Lenovo;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
+using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
@@ -199,15 +200,15 @@ namespace HandheldCompanion.Views.Pages
                             {
                                 if (IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.InternalSensor))
                                 {
-                                    SettingsManager.Set(name, (object)cB_SensorSelection.Items.IndexOf(SensorInternal));
+                                    SettingsManager.Set(name, cB_SensorSelection.Items.IndexOf(SensorInternal));
                                 }
                                 else if (IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.ExternalSensor))
                                 {
-                                    SettingsManager.Set(name, (object)cB_SensorSelection.Items.IndexOf(SensorExternal));
+                                    SettingsManager.Set(name, cB_SensorSelection.Items.IndexOf(SensorExternal));
                                 }
                                 else
                                 {
-                                    SettingsManager.Set(name, (object)cB_SensorSelection.Items.IndexOf(SensorNone));
+                                    SettingsManager.Set(name, cB_SensorSelection.Items.IndexOf(SensorNone));
                                 }
 
                                 return;
@@ -255,7 +256,8 @@ namespace HandheldCompanion.Views.Pages
             if (!IsLoaded)
                 return;
 
-            if (Toggle_cTDP.IsOn)
+            bool enabled = Toggle_cTDP.IsOn;
+            if (enabled)
             {
                 // todo: translate me
                 Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
@@ -280,7 +282,7 @@ namespace HandheldCompanion.Views.Pages
                 }
             }
 
-            SettingsManager.Set("ConfigurableTDPOverride", Toggle_cTDP.IsOn);
+            SettingsManager.Set("ConfigurableTDPOverride", enabled);
             SettingsManager.Set("ConfigurableTDPOverrideUp", NumberBox_TDPMax.Value);
             SettingsManager.Set("ConfigurableTDPOverrideDown", NumberBox_TDPMin.Value);
         }
@@ -515,9 +517,9 @@ namespace HandheldCompanion.Views.Pages
             foreach (SimpleStackPanel panel in Grid_SensorPlacementVisualisation.Children)
                 foreach (Button button in panel.Children)
                     if (int.Parse((string)button.Tag) == SensorPlacement)
-                        button.Background = (Brush)Application.Current.Resources["SystemControlForegroundAccentBrush"];
+                        button.SetResourceReference(BackgroundProperty, "SystemControlForegroundAccentBrush");
                     else
-                        button.Background = (Brush)Application.Current.Resources["SystemControlHighlightAltBaseLowBrush"];
+                        button.SetResourceReference(BackgroundProperty, "SystemControlHighlightAltBaseLowBrush");
         }
 
         private void Toggle_SensorPlacementUpsideDown_Toggled(object? sender, RoutedEventArgs? e)

@@ -69,8 +69,10 @@ public partial class ProfilesPage : Page
         GPUManager.Hooked += GPUManager_Hooked;
         GPUManager.Unhooked += GPUManager_Unhooked;
 
-        UpdateTimer = new Timer(UpdateInterval);
-        UpdateTimer.AutoReset = false;
+        UpdateTimer = new Timer(UpdateInterval)
+        {
+            AutoReset = false
+        };
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         // auto-sort
@@ -476,10 +478,12 @@ public partial class ProfilesPage : Page
                 if (idx != 0)
                 {
                     // Create a separator
-                    Separator separator = new Separator();
-                    separator.Margin = new Thickness(-16, 0, -16, 0);
-                    separator.BorderBrush = (Brush)FindResource("SystemControlBackgroundChromeMediumBrush");
-                    separator.BorderThickness = new Thickness(0, 1, 0, 0);
+                    Separator separator = new Separator
+                    {
+                        Margin = new Thickness(-16, 0, -16, 0),
+                        BorderBrush = (Brush)FindResource("SystemControlBackgroundChromeMediumBrush"),
+                        BorderThickness = new Thickness(0, 1, 0, 0)
+                    };
                     ProfileStack.Children.Add(separator);
                 }
 
@@ -900,6 +904,11 @@ public partial class ProfilesPage : Page
         {
             case UpdateSource.ProfilesPage:
             case UpdateSource.ProfilesPageUpdateOnly:
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    cB_Profiles.SelectedItem = profile;
+                });
                 return;
             case UpdateSource.QuickProfilesPage:
                 {
@@ -1356,8 +1365,6 @@ public partial class ProfilesPage : Page
         // change it in 
         int ind = cB_Profiles.Items.IndexOf(selectedMainProfile);
         cB_Profiles.Items[ind] = selectedMainProfile;
-        cB_Profiles.Items.Refresh();
-        cB_Profiles.SelectedIndex = ind;
 
         SubmitProfile(UpdateSource.ProfilesPageUpdateOnly);
     }
