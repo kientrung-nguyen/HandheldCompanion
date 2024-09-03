@@ -806,10 +806,9 @@ public partial class OverlayQuickTools : GamepadWindow
             BatteryLifePanel.Visibility = Visibility.Visible;
             if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
             {
-                var batteryLifeFullCharge = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan * 60d;
-                var time = TimeSpan.FromSeconds(batteryLifeFullCharge ?? 0d);
+                var time = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan;
                 string remaining;
-                if (batteryLifeFullCharge >= 3600)
+                if (time.TotalSeconds >= 3600)
                     remaining = $"{time.Hours}h {time.Minutes}min";
                 else
                     remaining = $"{time.Minutes}min";
@@ -818,11 +817,9 @@ public partial class OverlayQuickTools : GamepadWindow
             }
             else
             {
-                var batteryLifeRemaining = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan * 60d;
-                var time = TimeSpan.FromSeconds(batteryLifeRemaining ?? 0d);
-
+                var time = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan;
                 string remaining;
-                if (batteryLifeRemaining >= 3600)
+                if (time.TotalSeconds >= 3600)
                     remaining = $"{time.Hours}h {time.Minutes}min";
                 else
                     remaining = $"{time.Minutes}min";

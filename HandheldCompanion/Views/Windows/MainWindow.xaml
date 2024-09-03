@@ -184,7 +184,8 @@
         <ui:NavigationView.Content>
             <Grid Margin="0,-24,0,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="9*" />
+                    <RowDefinition Height="19*" />
+                    <RowDefinition Height="1*" />
                 </Grid.RowDefinitions>
 
                 <Grid>
@@ -204,7 +205,8 @@
 
                 <!--  GAMEPAD AREA  -->
                 <Border
-                    Margin="30"
+                    Grid.Row="1"
+                    Margin="0"
                     Padding="6,2,9,2"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Bottom"

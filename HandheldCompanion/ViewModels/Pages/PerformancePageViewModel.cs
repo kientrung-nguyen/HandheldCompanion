@@ -62,7 +62,7 @@ namespace HandheldCompanion.ViewModels
                     _selectedPreset = value;
 
                     // page-specific behaviors
-                    switch(IsQuickTools)
+                    switch (IsQuickTools)
                     {
                         case false:
                             _selectedPresetIndex = ProfilePickerItems.IndexOf(ProfilePickerItems.First(p => p.LinkedPresetId == _selectedPreset.Guid));
@@ -178,7 +178,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public double AutoTDPMaximum => ScreenControl.PrimaryDisplay.DisplayScreen.CurrentSetting.Frequency;
+        public double AutoTDPMaximum => Math.Max(SelectedPreset.AutoTDPRequestedFPS, ScreenControl.PrimaryDisplay.DisplayScreen.CurrentSetting.Frequency);
 
         public bool TDPOverrideEnabled
         {
@@ -502,7 +502,7 @@ namespace HandheldCompanion.ViewModels
             #region General Setup
 
             SettingsManager.SettingValueChanged += SettingsManager_SettingsValueChanged;
-            MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
+            MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
             PerformanceManager.ProcessorStatusChanged += PerformanceManager_ProcessorStatusChanged;
             PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
             PowerProfileManager.Updated += PowerProfileManager_Updated;
@@ -607,7 +607,7 @@ namespace HandheldCompanion.ViewModels
                     var index = ProfilePickerItems.IndexOf(preset.IsDefault() ? _devicePresetsPickerVM : _userPresetsPickerVM) + 1;
                     ProfilePickerItems.Insert(index, new ProfilesPickerViewModel { Text = preset.Name, LinkedPresetId = preset.Guid });
                 }
-                
+
                 // Reset Index to Default, 1 item before _userPresetsPickerVM
                 _selectedPresetIndex = ProfilePickerItems.IndexOf(_userPresetsPickerVM) - 1;
 
@@ -681,7 +681,7 @@ namespace HandheldCompanion.ViewModels
         public override void Dispose()
         {
             SettingsManager.SettingValueChanged -= SettingsManager_SettingsValueChanged;
-            MultimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
+            MultimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
             PerformanceManager.ProcessorStatusChanged -= PerformanceManager_ProcessorStatusChanged;
             PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
             PowerProfileManager.Updated -= PowerProfileManager_Updated;
@@ -714,7 +714,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private void MultimediaManager_PrimaryScreenChanged(Display screen)
+        private void MultimediaManager_DisplaySettingsChanged(Display screen)
         {
             OnPropertyChanged(nameof(AutoTDPMaximum));
         }

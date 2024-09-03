@@ -14,6 +14,7 @@
     MinWidth="450"
     MaxWidth="960"
     MaxHeight="960"
+    d:Height="1600"
     Margin="0"
     ui:ThemeManager.IsThemeAware="True"
     ui:TitleBar.ExtendViewIntoTitleBar="True"
@@ -598,7 +599,7 @@
                                     VerticalScrollBarVisibility="Disabled">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="46*" />
+                                            <ColumnDefinition Width="60*" />
                                             <ColumnDefinition Width="400*"/>
                                         </Grid.ColumnDefinitions>
                                         <Border
@@ -626,13 +627,13 @@
                                             <Border
                                                 Grid.Row="0"
                                                 Grid.Column="0"
-                                                Padding="4,8,4,4"
-                                                Margin="0,0,6,6"
+                                                Padding="0"
+                                                Margin="6,0,6,6"
                                                 CornerRadius="{DynamicResource ControlCornerRadius}">
                                                 <Grid>
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="1*" />
-                                                        <RowDefinition Height="40" />
+                                                        <RowDefinition Height="50" />
                                                     </Grid.RowDefinitions>
                                                     <Grid
                                                         Name="BrightnessSupport"
@@ -662,7 +663,7 @@
                                                         <Button 
                                                             Name="BrightnessButton"
                                                             Click="BrightnessButton_Click"
-                                                            Height="30" Width="30"
+                                                            Height="40" Width="40"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"
                                                             BorderBrush="{x:Null}"
@@ -685,13 +686,13 @@
                                                 Name="VolumeSupport"
                                                 Grid.Row="1"
                                                 Grid.Column="0"
-                                                Padding="4,8,4,4"
-                                                Margin="0,0,6,6"
+                                                Padding="0"
+                                                Margin="6,0,6,6"
                                                 CornerRadius="{DynamicResource ControlCornerRadius}">
                                                 <Grid>
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="1*" />
-                                                        <RowDefinition Height="40" />
+                                                        <RowDefinition Height="50" />
                                                     </Grid.RowDefinitions>
                                                     <Grid Grid.Row="0">
                                                         <Slider
@@ -718,7 +719,7 @@
                                                             <Button 
                                                                 Name="VolumeButton"
                                                                 Click="VolumeButton_Click"
-                                                                Height="30" Width="30"
+                                                                Height="40" Width="40"
                                                                 HorizontalAlignment="Center"
                                                                 VerticalAlignment="Center"
                                                                 BorderBrush="{x:Null}"
@@ -740,14 +741,14 @@
                                             </Border>
                                             <Border
                                                 Padding="0"
-                                                Margin="0,0,6,0"
+                                                Margin="6,0,6,0"
                                                 Grid.Row="2"
                                                 Grid.Column="0"
                                                 CornerRadius="{DynamicResource ControlCornerRadius}">
                                                 <Button 
                                                     Name="MicButton"
                                                     Click="MicButton_Click"
-                                                    Height="30" Width="30"
+                                                    Height="40" Width="40"
                                                     HorizontalAlignment="Center" 
                                                     VerticalAlignment="Center" 
                                                     Padding="0,0,0,1"

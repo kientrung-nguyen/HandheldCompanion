@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Properties;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using HandheldCompanion.Views.Windows;
@@ -47,7 +48,7 @@ namespace HandheldCompanion.Commands.Functions.HC
                     break;
             }
 
-            ToastManager.RunToast($"Overlay Performance {currentProfile.OverlayLevel}", ToastIcons.Game);
+            ToastManager.RunToast($"Overlay Performance {(currentProfile.OverlayLevel == OverlayDisplayLevel.Disabled ? Resources.Off : Resources.On)}", ToastIcons.Game);
             ProfileManager.UpdateOrCreateProfile(currentProfile, UpdateSource.Background);
 
             base.Execute(IsKeyDown, IsKeyUp);

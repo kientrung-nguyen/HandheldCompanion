@@ -9,10 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using HandheldCompanion.Views.Windows;
-using Timer = System.Timers.Timer;
-using System.Windows.Shapes;
 using Path = System.IO.Path;
+using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Platforms;
 
@@ -165,6 +163,10 @@ public class RTSS : IPlatform
         {
             // Apply profile-defined framerate
             RequestFPS(frameLimit, source != UpdateSource.Background);
+        }
+        else if (PowerProfileManager.GetProfile(profile.PowerProfile) is PowerProfile powerProfile && powerProfile.AutoTDPEnabled)
+        {
+            RequestFPS((int)powerProfile.AutoTDPRequestedFPS, source != UpdateSource.Background);
         }
         else if (frameLimit == 0 && RequestedFramerate > 0)
         {
@@ -436,7 +438,7 @@ public class RTSS : IPlatform
         return false;
     }
 
-    private bool SetTargetFPS(int Limit)
+    private bool SetTargetFPS(int limit)
     {
         if (!IsRunning)
             return false;
@@ -447,7 +449,7 @@ public class RTSS : IPlatform
             LoadProfile();
 
             // Set Framerate Limit as requested
-            if (SetProfileProperty("FramerateLimit", Limit))
+            if (SetProfileProperty("FramerateLimit", limit))
             {
                 // Save and reload profile
                 SaveProfile();

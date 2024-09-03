@@ -534,10 +534,8 @@ public static class InputsManager
 
     private static void UpdateInputs(ControllerState controllerState)
     {
-        // prepare button state
-        ButtonState buttonState = controllerState.ButtonState.Clone() as ButtonState;
-
-        if (prevState.Equals(buttonState))
+        // prepare button
+        if (controllerState.ButtonState.Clone() is not ButtonState buttonState || prevState.Equals(buttonState))
             return;
 
         // half-press should be removed if full-press is also present

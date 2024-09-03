@@ -733,7 +733,7 @@ public static class ControllerManager
                             bool HasCyclingController = false;
 
                             // do we have a pending wireless controller ?
-                            XInputController wirelessController = GetPhysicalControllers().OfType<XInputController>().FirstOrDefault(controller => controller.IsWireless && controller.IsBusy);
+                            var wirelessController = GetPhysicalControllers().OfType<XInputController>().FirstOrDefault(controller => controller.IsWireless && controller.IsBusy);
                             if (wirelessController is not null)
                             {
                                 // update busy flag
@@ -801,7 +801,7 @@ public static class ControllerManager
 
     private static async void XUsbDeviceArrived(PnPDetails details, DeviceEventArgs obj)
     {
-        Controllers.TryGetValue(details.baseContainerDeviceInstanceId, out IController controller);
+        Controllers.TryGetValue(details.baseContainerDeviceInstanceId, out var controller);
 
         // are we power cycling ?
         PowerCyclers.TryGetValue(details.baseContainerDeviceInstanceId, out bool IsPowerCycling);
@@ -1077,7 +1077,7 @@ public static class ControllerManager
                 }
                 catch { }
 
-                string enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
+                var enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
                 switch (enumerator)
                 {
                     case "USB":
@@ -1087,8 +1087,7 @@ public static class ControllerManager
                             pnPDevice.InstallCustomDriver("xusb22.inf", out bool rebootRequired);
                         }
 
-                        if (deviceInstanceIds.Contains(baseContainerDeviceInstanceId))
-                            deviceInstanceIds.Remove(baseContainerDeviceInstanceId);
+                        deviceInstanceIds.Remove(baseContainerDeviceInstanceId);
 
                         SettingsManager.Set("SuspendedControllers", deviceInstanceIds);
                         PowerCyclers.TryRemove(baseContainerDeviceInstanceId, out _);

@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Utils;
+﻿using HandheldCompanion.Properties;
+using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using Hwinfo.SharedMemory;
 using PrecisionTiming;
@@ -37,8 +38,8 @@ public static class OSDManager
     private const string Header =
         "<LI=Plugins\\Client\\Overlays\\sample.png>" +
         "<C0=FFFFFF><C1=8040><C2=80FF><C3=FF80C0><C4=FF80FF><C5=FF8000><C6=FF0000>" +
-        "<A0=-4><A1=5><A2=-2><A3=-3><A4=-4><A5=-5>" +
-        "<S0=-60><S1=80>";
+        //"<A0=-4><A1=5><A2=-2><A3=-3><A4=-4><A5=-5>" +
+        "<S0=-40><S1=90>";
     private const string Footer = "<P1><L0><C=80000000><B=0,0>\b<C><E=-140,-2,4>";
     //<P1> "<C0=FFFFFF><C1=458A6E><C2=4C8DB2><C3=AD7B95><C4=A369A6><C5=F19F86><C6=D76D76><A0=-4><A1=5><A2=-2><A3=-3><A4=-4><A5=-5><S0=-50><S1=80><P1><M=0,0,0,0><L0><C=64000000><B=0,0>\b<C>";
 
@@ -141,8 +142,7 @@ public static class OSDManager
             // clear previous display
             if (onScreenDisplays.TryRemove(processId, out var osd))
             {
-                if (osdAppEntry is not null)
-                    ToastManager.RunToast($"{Path.GetFileNameWithoutExtension(osdAppEntry.Name)} OSD Stopped", ToastIcons.Game);
+                ToastManager.RunToast($"On-screen display {Path.GetFileNameWithoutExtension(osdAppEntry.Name)} {Resources.Off}", ToastIcons.Game);
 
                 osd.Update(string.Empty);
                 osd.Dispose();
@@ -163,7 +163,7 @@ public static class OSDManager
             if (!onScreenDisplays.TryGetValue(appEntry.ProcessId, out var osd))
             {
                 onScreenDisplays[osdAppEntry.ProcessId] = new OSD(osdAppEntry.Name);
-                ToastManager.RunToast($"{Path.GetFileNameWithoutExtension(osdAppEntry.Name)} OSD Started", ToastIcons.Game);
+                ToastManager.RunToast($"On-screen display {Path.GetFileNameWithoutExtension(osdAppEntry.Name)} {Resources.On}", ToastIcons.Game);
             }
 
         }
@@ -205,7 +205,7 @@ public static class OSDManager
             }
             catch (Exception ex)
             {
-                LogManager.LogError($"{nameof(OSDManager)} UpdateOSD ({processId}) error {ex.Message} {ex.StackTrace}");
+                LogManager.LogError($"{nameof(OSDManager)} [{processId}] failed {ex.Message} {ex.StackTrace}");
             }
         }
     }
@@ -260,11 +260,12 @@ public static class OSDManager
                     using OverlayEntry BATTentry = new("BATT", "C5");
 
                     AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryCapacity, "%");
-                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryTimeSpan, "mins");
+                    //AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryTimeSpan, "mins");
+                    BATTentry.elements.Add(new OverlayEntryElement(PlatformManager.LibreHardwareMonitor.BatteryTimeSpan.ToString(@"hh\:mm"), ""));
                     row1.entries.Add(BATTentry);
 
                     using OverlayEntry FPSentry = new("FPS", "C6");
-                    FPSentry.elements.Add(new OverlayEntryElement("<FR>", "FPS"));
+                    FPSentry.elements.Add(new OverlayEntryElement("<FR>", ""));
                     FPSentry.elements.Add(new OverlayEntryElement("<FT>", "ms"));
                     row1.entries.Add(FPSentry);
 
@@ -282,7 +283,8 @@ public static class OSDManager
                     using OverlayRow rowRam = new();
                     using OverlayRow rowVram = new();
                     using OverlayRow rowBatt = new();
-                    using OverlayRow rowClock = new();
+                    //using OverlayRow rowClock = new();
+                    using OverlayRow rowTdp = new();
                     using OverlayRow rowFps = new();
 
                     using OverlayEntry GPUentry = new("GPU", "C1");
@@ -299,27 +301,20 @@ public static class OSDManager
                     AddElementIfNotNull(CPUentry, PlatformManager.LibreHardwareMonitor.CPUPower, "W");
                     rowCpu.entries.Add(CPUentry);
 
-                    using OverlayEntry FANentry = new("FAN", "C2");
-                    AddElementIfNotNull(FANentry, PlatformManager.LibreHardwareMonitor.CPUFanSpeed, "rpm");
-                    AddElementIfNotNull(FANentry, PlatformManager.LibreHardwareMonitor.CPUFanDuty, "%");
-                    rowFan.entries.Add(FANentry);
-
                     using OverlayEntry RAMentry = new("RAM", "C3");
-                    AddElementIfNotNull(RAMentry, PlatformManager.LibreHardwareMonitor.MemoryUsage / 1024, "GiB", "{0:0.0}");
+                    AddElementIfNotNull(RAMentry, PlatformManager.LibreHardwareMonitor.MemoryUsage / 1024, "GB", "{0:0.0}");
                     rowRam.entries.Add(RAMentry);
 
 
                     using OverlayEntry VRAMentry = new("VRAM", "C4");
-                    AddElementIfNotNull(VRAMentry, PlatformManager.LibreHardwareMonitor.GPUMemoryUsage / 1024, "GiB", "{0:0.0}");
+                    AddElementIfNotNull(VRAMentry, PlatformManager.LibreHardwareMonitor.GPUMemoryUsage / 1024, "GB", "{0:0.0}");
                     rowVram.entries.Add(VRAMentry);
 
                     using OverlayEntry BATTentry = new("BATT", "C5");
-
-                    AddElementIfNotNull(BATTentry, PerformanceManager.CurrentTDP, "W");
-                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryCapacity, "%", "{0:0.0}");
-                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryPower, "W", "{0:0}");
-                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryTimeSpan, "mins", "{0:0}");
-                    BATTentry.elements.Add(new OverlayEntryElement("<TIME=%I:%M:%S>", "<TIME=%p>"));
+                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryCapacity, "%", "{0:0}");
+                    AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryPower, "W", "{0:0.0}");
+                    //AddElementIfNotNull(BATTentry, PlatformManager.LibreHardwareMonitor.BatteryTimeSpan, "mins", "{0:0}");
+                    BATTentry.elements.Add(new OverlayEntryElement(PlatformManager.LibreHardwareMonitor.BatteryTimeSpan.ToString(@"hh\:mm"), ""));
                     rowBatt.entries.Add(BATTentry);
 
                     //using OverlayEntry TIMEentry = new("", "C0");
@@ -329,18 +324,28 @@ public static class OSDManager
                     //TIMEentry.elements.Add(new OverlayEntryElement("<TIME=%I:%M>", "<TIME=%p>"));
                     //rowClock.entries.Add(TIMEentry);
 
-                    using OverlayEntry FPSentry = new("<APP>", "C6");
-                    FPSentry.elements.Add(new OverlayEntryElement("<FR>", "FPS"));
+                    using OverlayEntry FPSentry = new("FPS", "C6");
+                    FPSentry.elements.Add(new OverlayEntryElement("<FR>", ""));
                     //FPSentry.elements.Add(new OverlayEntryElement("<FT>", "ms"));
                     rowFps.entries.Add(FPSentry);
 
+                    using OverlayEntry TDPentry = new("TDP", "C4");
+                    AddElementIfNotNull(TDPentry, PerformanceManager.CurrentTDP, "W");
+                    rowTdp.entries.Add(TDPentry);
+
+                    using OverlayEntry FANentry = new("FAN", "C2");
+                    AddElementIfNotNull(FANentry, PlatformManager.LibreHardwareMonitor.CPUFanSpeed, "rpm");
+                    //AddElementIfNotNull(FANentry, PlatformManager.LibreHardwareMonitor.CPUFanDuty, "%");
+                    FANentry.elements.Add(new OverlayEntryElement("<TIME=%I:%M:%S>", "<TIME=%p>"));
+                    rowFan.entries.Add(FANentry);
+
 
                     Content.Add(Header + Footer + "   " +
-                        string.Join("<C0>  <C>", [
+                        string.Join("<C4> | <C>", [
                             rowFps.ToString(),
                             rowCpu.ToString() + " " + rowRam.ToString(),
                             rowGpu.ToString() + " " + rowVram.ToString(),
-                            rowBatt.ToString(),
+                            rowBatt.ToString() + " " + rowTdp.ToString(),
                             rowFan.ToString() + "   "
                             //rowClock.ToString()
                         ]));

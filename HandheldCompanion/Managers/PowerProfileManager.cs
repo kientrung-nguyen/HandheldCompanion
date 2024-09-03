@@ -63,7 +63,7 @@ namespace HandheldCompanion.Managers
             LogManager.LogInformation("{0} has stopped", "PowerProfileManager");
         }
 
-        private static void LibreHardwareMonitor_CpuTemperatureChanged(float? value)
+        private static void LibreHardwareMonitor_CpuTemperatureChanged(object? value)
         {
             if (currentProfile is null || currentProfile.FanProfile is null || value is null)
                 return;

@@ -105,8 +105,7 @@ namespace HandheldCompanion.Managers
                 if (OS)
                 {
                     // create new ViGEm client
-                    if (vClient is null)
-                        vClient = new ViGEmClient();
+                    vClient ??= new ViGEmClient();
 
                     // update DSU status
                     SetDSUStatus(SettingsManager.Get<bool>("DSUEnabled"));

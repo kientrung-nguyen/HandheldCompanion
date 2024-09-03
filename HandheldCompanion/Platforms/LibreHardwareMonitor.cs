@@ -17,8 +17,8 @@ public class LibreHardwareMonitor : IPlatform
     private string ProductName;
 
     private Timer sensorTimer;
-    private int updateInterval = 1000;
-    private object updateLock = new();
+    private int updateInterval = 500;
+    private new object updateLock = new();
 
     public float? CPULoad;
     public float? CPUClock;
@@ -45,7 +45,7 @@ public class LibreHardwareMonitor : IPlatform
     public float? BatteryPower = 0f;
     public float? BatteryCapacity = -1f;
     public float? BatteryHealth = -1f;
-    public float? BatteryTimeSpan;
+    public TimeSpan BatteryTimeSpan = TimeSpan.Zero;
 
     static long lastCPURefresh;
     static long lastGPURefresh;
@@ -199,9 +199,9 @@ public class LibreHardwareMonitor : IPlatform
         var highestClock = 0f;
         foreach (var sensor in cpu.Sensors)
         {
-                // May crash the app when Value is null, better to check first
-                if (sensor.Value is null)
-                    continue;
+            // May crash the app when Value is null, better to check first
+            if (sensor.Value is null)
+                continue;
             switch (sensor.SensorType)
             {
                 case SensorType.Load:
@@ -233,7 +233,7 @@ public class LibreHardwareMonitor : IPlatform
         switch (sensor.Name)
         {
             case "CPU Total":
-            //case "CPU Core Max":
+                //case "CPU Core Max":
                 CPULoad = sensor.Value;
                 CPULoadChanged?.Invoke(CPULoad);
                 break;
@@ -527,7 +527,7 @@ public class LibreHardwareMonitor : IPlatform
     private void ReadBatterySensors()
     {
         BatteryPower = 0f;
-        BatteryTimeSpan = null;
+        BatteryTimeSpan = TimeSpan.Zero;
         BatteryFullCapacity = null;
 
         ReadFullChargeCapacity();
@@ -548,9 +548,9 @@ public class LibreHardwareMonitor : IPlatform
             if (BatteryPower != 0)
             {
                 if (BatteryPower > 0)
-                    BatteryTimeSpan = ((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower * 60f;
+                    BatteryTimeSpan = TimeSpan.FromMinutes((((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower).Value * 60d);
                 else
-                    BatteryTimeSpan = BatteryRemainingCapacity / 1000 / BatteryPower * 60f * -1;
+                    BatteryTimeSpan = TimeSpan.FromMinutes((BatteryRemainingCapacity / 1000 / BatteryPower).Value * 60d * -1);
                 BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
             }
         }
@@ -593,9 +593,9 @@ public class LibreHardwareMonitor : IPlatform
             if (BatteryPower != 0)
             {
                 if (BatteryPower > 0)
-                    BatteryTimeSpan = ((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower * 60f;
+                    BatteryTimeSpan = TimeSpan.FromMinutes((((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower).Value * 60d);
                 else
-                    BatteryTimeSpan = BatteryRemainingCapacity / 1000 / BatteryPower * 60f * -1;
+                    BatteryTimeSpan = TimeSpan.FromMinutes((BatteryRemainingCapacity / 1000 / BatteryPower).Value * 60d * -1);
                 BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
             }
         }
@@ -634,7 +634,7 @@ public class LibreHardwareMonitor : IPlatform
         switch (sensor.Name)
         {
             case "Remaining Time (Estimated)":
-                BatteryTimeSpan = sensor.Value / 60;
+                BatteryTimeSpan = TimeSpan.FromMinutes(sensor.Value ?? 0d / 60d);
                 BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
                 break;
         }
@@ -660,7 +660,7 @@ public class LibreHardwareMonitor : IPlatform
 
     #region Events
 
-    public delegate void ChangedHandler(float? value);
+    public delegate void ChangedHandler(object? value);
 
     public event ChangedHandler CPULoadChanged;
     public event ChangedHandler CPUPowerChanged;

@@ -505,7 +505,7 @@ public static class PerformanceManager
             var tdpAdjustment = controllerError * AutoTDP / fpsActual * .9;// Always have a little undershoot
             var tdpDamper = AutoTDPDamper(fpsActual);
 
-            //LogManager.LogDebug($"AutoTDP: {AutoTDP + tdpAdjustment + tdpDamper} = {AutoTDP} + {tdpAdjustment} + {tdpDamper}");
+            LogManager.LogDebug($"AutoTDP ({fpsActual}FPS): {AutoTDP + tdpAdjustment + tdpDamper} = {AutoTDP} + {tdpAdjustment} + {tdpDamper}");
 
             if (tdpAdjustment == 0 && tdpDamper == 0)
             {
@@ -629,7 +629,7 @@ public static class PerformanceManager
         if (powerLock.TryEnter())
         {
             // Checking if active power shceme has changed to reflect that
-            if (PowerGetEffectiveOverlayScheme(out Guid activeScheme) == 0)
+            if (PowerManager.GetPowerMode() is Guid activeScheme)
             {
                 if (activeScheme != currentPowerMode)
                 {
@@ -716,8 +716,7 @@ public static class PerformanceManager
                 // only request an update if current limit is different than stored
                 if (ReadTDP != TDP)
                 {
-                    processor.SetTDPLimit(type, TDP, true);
-                    currentTDP[idx] = TDP;
+                    RequestTDP(type, TDP, true);
                 }
 
                 await Task.Delay(20);
@@ -864,7 +863,8 @@ public static class PerformanceManager
     private static void StopAutoTDPWatchdog(bool immediate = false)
     {
         autoWatchdog.Stop();
-        ToastManager.RunToast($"AutoTDP ({AutoTDPTargetFPS}FPS Limit) stopped");
+        if (!AutoTDPFirstRun)
+            ToastManager.RunToast($"AutoTDP {Resources.Off}");
     }
 
     private static void RequestTDP(PowerType type, double value, bool immediate = false)

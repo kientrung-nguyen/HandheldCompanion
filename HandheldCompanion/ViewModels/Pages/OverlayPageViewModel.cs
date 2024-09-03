@@ -495,7 +495,7 @@ namespace HandheldCompanion.ViewModels
             HasGPULoad = GPU is not null && GPU.HasLoad();
         }
 
-        private void LibreHardwareMonitor_CPULoadChanged(float? value)
+        private void LibreHardwareMonitor_CPULoadChanged(object? value)
         {
             if (value is null)
                 return;
@@ -503,7 +503,7 @@ namespace HandheldCompanion.ViewModels
             CPULoad = (float)Math.Round((float)value);
         }
 
-        private void LibreHardwareMonitor_CPUTemperatureChanged(float? value)
+        private void LibreHardwareMonitor_CPUTemperatureChanged(object? value)
         {
             if (value is null)
                 return;
@@ -511,7 +511,7 @@ namespace HandheldCompanion.ViewModels
             CPUTemperature = (float)Math.Round((float)value);
         }
 
-        private void LibreHardwareMonitor_CPUPowerChanged(float? value)
+        private void LibreHardwareMonitor_CPUPowerChanged(object? value)
         {
             if (value is null)
                 return;

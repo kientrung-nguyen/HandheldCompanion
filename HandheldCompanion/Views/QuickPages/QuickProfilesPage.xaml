@@ -60,6 +60,7 @@
                         <DockPanel>
                             <ui:FontIcon
                                 Height="40"
+                                FontSize="20"
                                 HorizontalAlignment="Center"
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xE7EE;" />
@@ -140,6 +141,52 @@
             <ikw:SimpleStackPanel Spacing="6">
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_PowerSettings}" Visibility="Collapsed" />
 
+                <!--  Framerate Limit  -->
+                <Border
+                    Padding="15,12,12,12"
+                    Background="{StaticResource ExpanderHeaderBackground}"
+                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                    <ikw:SimpleStackPanel
+                            Name="StackProfileFramerate"
+                            IsEnabled="False"
+                            Spacing="6">
+                        <DockPanel>
+                            <ui:FontIcon
+                                Height="40"
+                                FontSize="20"
+                                HorizontalAlignment="Center"
+                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                Glyph="&#xE790;" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="6*" />
+                                    <ColumnDefinition Width="4*" />
+                                </Grid.ColumnDefinitions>
+
+                                <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_FramerateLimit}" />
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{l:Static resx:Resources.ProfilesPage_FramerateLimitDesc}"
+                                        TextWrapping="Wrap" />
+                                </ikw:SimpleStackPanel>
+
+                                <ComboBox
+                                    Name="cB_Framerate"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"
+                                    SelectionChanged="cB_Framerate_SelectionChanged" />
+                            </Grid>
+                        </DockPanel>
+                    </ikw:SimpleStackPanel>
+                </Border>
+                
+                <!--  Separator  -->
+                <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" Visibility="Collapsed" />
+
                 <Expander HorizontalAlignment="Stretch" d:IsExpanded="true" IsExpanded="False">
                     <Expander.Header>
                         <Grid>
@@ -150,19 +197,19 @@
 
                             <DockPanel Margin="0,12,12,12">
                                 <ui:FontIcon
-                                Height="40"
-                                FontSize="20"
-                                HorizontalAlignment="Center"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xe945;" />
+                                    Height="40"
+                                    FontSize="20"
+                                    HorizontalAlignment="Center"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xe945;" />
 
                                 <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                     <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_PowerPreset}" />
                                     <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_PowerPresetDesc}"
-                                    TextWrapping="Wrap" />
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{l:Static resx:Resources.ProfilesPage_PowerPresetDesc}"
+                                        TextWrapping="Wrap" />
                                 </ikw:SimpleStackPanel>
                             </DockPanel>
 
@@ -209,8 +256,8 @@
 
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_OverlayDisplayLevel}" Visibility="Collapsed" />
                 <Border
-                 Padding="15,12,12,12"
-                 Background="{StaticResource ExpanderHeaderBackground}" CornerRadius="4,4,0,0">
+                     Padding="15,12,12,12"
+                     Background="{StaticResource ExpanderHeaderBackground}" CornerRadius="4,4,0,0">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -219,19 +266,19 @@
                         </Grid.ColumnDefinitions>
                         <DockPanel>
                             <ui:FontIcon
-                             Height="40"
-                            FontSize="20"
-                             HorizontalAlignment="Center"
-                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                             Glyph="&#xE78B;" />
+                                Height="40"
+                                FontSize="20"
+                                HorizontalAlignment="Center"
+                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                Glyph="&#xE78B;" />
 
                             <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_OverlayDisplayLevel}" />
                                 <TextBlock
-                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                 Style="{StaticResource CaptionTextBlockStyle}"
-                                 Text="{l:Static resx:Resources.OverlayPage_OverlayDisplayLevelDesc}"
-                                 TextWrapping="Wrap" />
+                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="{l:Static resx:Resources.OverlayPage_OverlayDisplayLevelDesc}"
+                                    TextWrapping="Wrap" />
                             </ikw:SimpleStackPanel>
                         </DockPanel>
                         <DockPanel Grid.Column="1" Margin="12,0,0,0">
@@ -1000,11 +1047,11 @@
 
                             <DockPanel Margin="0,12,12,12">
                                 <ui:FontIcon
-                                Height="40"
-                                FontSize="20"
-                                HorizontalAlignment="Center"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xE790;" />
+                                    Height="40"
+                                    FontSize="20"
+                                    HorizontalAlignment="Center"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xE790;" />
 
                                 <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                     <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_GraphicsSettings}" />
@@ -1130,7 +1177,7 @@
 
                             <DockPanel
                                 Grid.Column="1"
-                                Margin="12,0,0,0"
+                                Margin="0,0,0,0"
                                 d:Visibility="Visible"
                                 ScrollViewer.PanningMode="HorizontalOnly"
                                 Visibility="{Binding ElementName=RSRToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -1348,39 +1395,6 @@
                             </DockPanel>
                         </ikw:SimpleStackPanel>
 
-                        <!--  Separator  -->
-                        <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                        <!--  Framerate Limit  -->
-                        <ikw:SimpleStackPanel
-                            Name="StackProfileFramerate"
-                            IsEnabled="False"
-                            Spacing="6">
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="6*" />
-                                    <ColumnDefinition Width="4*" />
-                                </Grid.ColumnDefinitions>
-
-                                <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_FramerateLimit}" />
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_FramerateLimitDesc}"
-                                        TextWrapping="Wrap" />
-                                </ikw:SimpleStackPanel>
-
-                                <ComboBox
-                                    Name="cB_Framerate"
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Center"
-                                    SelectionChanged="cB_Framerate_SelectionChanged" />
-                            </Grid>
-                        </ikw:SimpleStackPanel>
                     </ikw:SimpleStackPanel>
                 </Expander>
             </ikw:SimpleStackPanel>
