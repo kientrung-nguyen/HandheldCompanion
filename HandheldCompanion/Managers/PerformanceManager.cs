@@ -41,6 +41,8 @@ public enum CPUBoostLevel
     Agressive = 2,
     EfficientEnabled = 3,
     EfficientAgressive = 4,
+    AggressiveAtGuaranteed = 5,
+    EfficientAggressiveAtGuaranteed = 6
 }
 
 public static class PerformanceManager
@@ -112,9 +114,6 @@ public static class PerformanceManager
     public static event InitializedEventHandler Initialized;
     public delegate void InitializedEventHandler();
 
-    static long lastAutoTdp;
-    static long lastAutoCpu;
-
     static PerformanceManager()
     {
         // initialize timer(s)
@@ -178,7 +177,7 @@ public static class PerformanceManager
                 StopTDPWatchdog(true);
             }
         }
-        else 
+        else
         {
             if (cpuWatchdog.Enabled)
                 StopTDPWatchdog(true);
@@ -199,7 +198,7 @@ public static class PerformanceManager
         if (profile.CPUOverrideEnabled)
         {
             RequestCPUClock(Convert.ToUInt32(profile.CPUOverrideValue));
-            AutoCPUClockMin = MotherboardInfo.ProcessorMaxClockSpeed / 2;
+            AutoCPUClockMin = profile.CPUOverrideValue / 2;
             AutoCPUClockMax = Convert.ToUInt32(profile.CPUOverrideValue);
         }
         else
@@ -207,7 +206,7 @@ public static class PerformanceManager
             // restore default GPU clock
             RestoreCPUClock(true);
             AutoCPUClockMin = MotherboardInfo.ProcessorMaxClockSpeed / 2;
-            AutoCPUClockMax = MotherboardInfo.ProcessorMaxTurboSpeed;
+            AutoCPUClockMax = MotherboardInfo.ProcessorMaxClockSpeed;
         }
 
         // apply profile defined GPU
@@ -468,12 +467,10 @@ public static class PerformanceManager
 
     private static void AutoPerf(double processValueFPS)
     {
-        var processFPSTarget = AutoTDPTargetFPS;
-
-        var fpsTarget = Math.Clamp(fpsHistory.Max(), 1, processFPSTarget);
-        var fpsDipper = AutoTDPDipper(processValueFPS, fpsTarget);
+        var fpsDipper = AutoTDPDipper(processValueFPS, AutoTDPTargetFPS);
 
         /*
+        var fpsTarget = Math.Clamp(fpsHistory.Max(), 1, AutoTDPTargetFPS);
         var processValueCPUUse = Math.Clamp(PlatformManager.LibreHardwareMonitor.CPULoad ?? 0d, .1d, 100d);
         var fpsCPU = Math.Max(processValueFPS * 2 - fpsTarget, Math.Max(fpsTarget / 2, 1));
         AutoCpu(fpsTarget / fpsCPU, processValueCPUUse, AutoTargetCPU);
@@ -483,7 +480,7 @@ public static class PerformanceManager
         AutoGpu(fpsDipper > 0 ? 1d : fpsTarget / fpsGPU, processValueGPUUse, AutoTargetGPU);
         */
 
-        AutoTdp(fpsDipper, processValueFPS, fpsTarget);
+        AutoTdp(fpsDipper, processValueFPS, AutoTDPTargetFPS);
 
         //LogManager.LogInformation($"AutoPerf: GPU {PlatformManager.LibreHardwareMonitor.GPUClock}mHz [{PlatformManager.LibreHardwareMonitor.GPUPower}W] | CPU {PlatformManager.LibreHardwareMonitor.CPUClock}mHz [{Math.Round(PlatformManager.LibreHardwareMonitor.CPUPower ?? 0d)}W] | TDP [{(uint)AutoTDP}W]({processValueFPS})");
 
@@ -520,7 +517,7 @@ public static class PerformanceManager
         AutoTDP = Math.Clamp(AutoTDP, TDPMin, AutoTDPMax);
 
         // Only update if we have a different TDP value to set
-        if ((uint)AutoTDP != (uint)AutoTDPPrev)
+        if (AutoTDP != AutoTDPPrev)
             RequestTDP([AutoTDP, AutoTDP, AutoTDP], true);
 
         AutoTDPPrev = AutoTDP;
@@ -539,7 +536,7 @@ public static class PerformanceManager
         var cpuCurrent = Math.Min(cpuActual, cpuAvg * 2);
 
         var cpuClock = (AutoCPUClock * fpsDipper * cpuCurrent / cpuTarget) + cpuOffset;
-        LogManager.LogDebug($"AutoCPU: {(AutoCPUClock * fpsDipper * cpuCurrent / cpuTarget) + cpuOffset} = {AutoCPUClock} * {fpsDipper} * {cpuCurrent} / {cpuTarget}");
+        //LogManager.LogDebug($"AutoCPU: {(AutoCPUClock * fpsDipper * cpuCurrent / cpuTarget) + cpuOffset} = {AutoCPUClock} * {fpsDipper} * {cpuCurrent} / {cpuTarget}");
 
         AutoCPUClock = Math.Clamp(cpuClock, AutoCPUClockMin, AutoCPUClockMax);
         RequestCPUClock(AutoCPUClock, true);
@@ -568,8 +565,7 @@ public static class PerformanceManager
     {
         // Dipper
         // Add small positive "error" if actual and target FPS are similar for a duration
-        double modifier = 0.0d;
-
+        var modifier = 0.0d;
         // Track previous FPS values for average calculation using a rolling array
         Array.Copy(fpsHistory, 0, fpsHistory, 1, fpsHistory.Length - 1);
         fpsHistory[0] = fpsActual; // Add current FPS at the start
@@ -715,9 +711,7 @@ public static class PerformanceManager
 
                 // only request an update if current limit is different than stored
                 if (ReadTDP != TDP)
-                {
                     RequestTDP(type, TDP, true);
-                }
 
                 await Task.Delay(20);
             }
@@ -863,8 +857,6 @@ public static class PerformanceManager
     private static void StopAutoTDPWatchdog(bool immediate = false)
     {
         autoWatchdog.Stop();
-        if (!AutoTDPFirstRun)
-            ToastManager.RunToast($"AutoTDP {Resources.Off}");
     }
 
     private static void RequestTDP(PowerType type, double value, bool immediate = false)
@@ -882,6 +874,7 @@ public static class PerformanceManager
         // immediately apply
         if (immediate)
         {
+            if ((uint)currentTDP[idx] == (uint)value) return;
             processor.SetTDPLimit((PowerType)idx, value, immediate);
             currentTDP[idx] = value;
         }

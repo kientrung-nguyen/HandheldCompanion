@@ -39,7 +39,8 @@ public partial class QuickDevicePage : Page
 
         // Device specific
         LegionGoPanel.Visibility = IDevice.GetCurrent() is LegionGo ? Visibility.Visible : Visibility.Collapsed;
-		AYANEOFlipDSPanel.Visibility = IDevice.GetCurrent() is AYANEOFlipDS ? Visibility.Visible : Visibility.Collapsed;
+        AYANEOFlipDSPanel.Visibility = IDevice.GetCurrent() is AYANEOFlipDS ? Visibility.Visible : Visibility.Collapsed;
+        DeviceSettingPanel.Visibility = LegionGoPanel.Visibility == Visibility.Visible || AYANEOFlipDSPanel.Visibility == Visibility.Visible ? Visibility.Visible : Visibility.Collapsed;
         DynamicLightingPanel.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting) ? Visibility.Visible : Visibility.Collapsed;
         panelNightlight.Visibility = MultimediaManager.HasNightLightSupport() ? Visibility.Visible : Visibility.Collapsed;
         NightLightSchedule.IsEnabled = NightLightToggle.IsEnabled = MultimediaManager.HasNightLightSupport();
@@ -394,8 +395,8 @@ public partial class QuickDevicePage : Page
         SettingsManager.Set("ScreenFrequencyAuto", AutoScreenToggle.IsOn);
 
     }
-	
-	private async void Toggle_AYANEOFlipScreen_Toggled(object sender, RoutedEventArgs e)
+
+    private async void Toggle_AYANEOFlipScreen_Toggled(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
             return;

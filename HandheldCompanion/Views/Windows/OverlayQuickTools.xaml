@@ -11,7 +11,7 @@
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     Title="QuickTools"
     Width="450"
-    MinWidth="450"
+    MinWidth="520"
     MaxWidth="960"
     MaxHeight="960"
     d:Height="1600"
@@ -19,6 +19,8 @@
     ui:ThemeManager.IsThemeAware="True"
     ui:TitleBar.ExtendViewIntoTitleBar="True"
     ui:WindowHelper.SystemBackdropType="Mica"
+    ui:WindowHelper.UseAcrylicBackdrop="True"
+    ui:WindowHelper.UseAeroBackdrop="True"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
     IsVisibleChanged="GamepadWindow_IsVisibleChanged"
@@ -99,8 +101,8 @@
                         <StackPanel Margin="8,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
                             <Grid>
                                 <ui:FontIcon 
-                                    Width="30"
                                     Name="BatteryIndicatorIcon"
+                                    Width="30"
                                     FontSize="26"
                                     FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                     Glyph="&#xE83F;" />
@@ -281,9 +283,9 @@
                                         <ui:FontIcon
                                             Width="26"
                                             Height="30"
-                                            FontSize="24"
-                                            FontFamily="{DynamicResource FluentSystemIcons}"
-                                            Glyph="&#xF059;" />
+                                            FontSize="16"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe9ca;" />
                                     </Grid>
                                     <DockPanel MinWidth="32" HorizontalAlignment="Center">
                                         <TextBlock
@@ -401,12 +403,18 @@
                                 </StackPanel>
                                 <StackPanel VerticalAlignment="Center">
                                     <Grid Margin="0,0,0,0">
-                                        <ui:FontIcon
+                                        <!--<ui:FontIcon
                                             Width="26"
                                             Height="30"
                                             FontSize="24"
                                             FontFamily="{DynamicResource FluentSystemIcons}"
-                                            Glyph="&#xF059;" />
+                                            Glyph="&#xF059;" />-->
+                                        <ui:FontIcon
+                                            Width="26"
+                                            Height="30"
+                                            FontSize="16"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Glyph="&#xe9ca;" />
                                     </Grid>
                                     <DockPanel MinWidth="32" HorizontalAlignment="Center">
                                         <TextBlock
@@ -425,7 +433,7 @@
                                             Height="30"
                                             FontSize="16"
                                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                            Glyph="&#xe9d9;" />
+                                            Glyph="&#xf211;" />
                                         <ui:ProgressRing
                                             Width="30"
                                             Height="30"

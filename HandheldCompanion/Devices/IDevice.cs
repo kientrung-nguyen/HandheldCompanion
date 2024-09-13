@@ -161,7 +161,16 @@ public abstract class IDevice
             Default = true,
             Guid = Guid.Empty,
             OSPowerMode = OSPowerMode.BetterPerformance,
-            TDPOverrideValues = new double[] { this.nTDP[0], this.nTDP[1], this.nTDP[2] }
+            TDPOverrideValues = [this.nTDP[2], this.nTDP[2], this.nTDP[2]]
+        });
+
+        // add default power profile
+        DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileBatteryDefaultName, Properties.Resources.PowerProfileDefaultDescription)
+        {
+            Default = true,
+            Guid = new("00000000-0000-0000-0000-010000000000"),
+            OSPowerMode = OSPowerMode.BetterBattery,
+            TDPOverrideValues = [nTDP[0], nTDP[0], nTDP[0]]
         });
 
         VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;

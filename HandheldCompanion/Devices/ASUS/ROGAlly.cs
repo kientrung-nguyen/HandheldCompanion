@@ -131,7 +131,7 @@ public class ROGAlly : IDevice
             CPUBoostLevel = CPUBoostLevel.Disabled,
             Guid = new("961cc777-2547-4f9d-8174-7d86181b8a7a"),
             TDPOverrideEnabled = true,
-            TDPOverrideValues = new[] { 10.0d, 10.0d, 10.0d }
+            TDPOverrideValues = [10.0d, 10.0d, 10.0d]
         });
 
         DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileROGAllyBetterPerformance, Properties.Resources.PowerProfileROGAllyBetterPerformanceDesc)
@@ -142,7 +142,7 @@ public class ROGAlly : IDevice
             OSPowerMode = OSPowerMode.BetterPerformance,
             Guid = new("3af9B8d9-7c97-431d-ad78-34a8bfea439f"),
             TDPOverrideEnabled = true,
-            TDPOverrideValues = new[] { 15.0d, 15.0d, 15.0d }
+            TDPOverrideValues = [15.0d, 15.0d, 15.0d]
         });
 
         DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileROGAllyBestPerformance, Properties.Resources.PowerProfileROGAllyBestPerformanceDesc)
@@ -153,7 +153,7 @@ public class ROGAlly : IDevice
             OSPowerMode = OSPowerMode.BestPerformance,
             Guid = new("ded574b5-45a0-4f42-8737-46345c09c238"),
             TDPOverrideEnabled = true,
-            TDPOverrideValues = new[] { 25.0d, 25.0d, 25.0d }
+            TDPOverrideValues = [25.0d, 25.0d, 25.0d]
         });
 
         OEMChords.Add(new KeyboardChord("CC",

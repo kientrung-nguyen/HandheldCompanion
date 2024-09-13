@@ -37,7 +37,7 @@ namespace HandheldCompanion.Managers
         public static void Start()
         {
             // process existing profiles
-            var fileEntries = Directory.GetFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
+            var fileEntries = Directory.EnumerateFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
             foreach (var fileName in fileEntries)
                 ProcessProfile(fileName);
 
@@ -85,7 +85,10 @@ namespace HandheldCompanion.Managers
 
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
-            PowerProfile powerProfile = GetProfile(profile.PowerProfile);
+            var powerProfile = GetProfile(
+                        System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online
+                        ? profile.PowerProfile
+                        : profile.BatteryProfile);
             if (powerProfile is null)
                 return;
 
@@ -177,13 +180,13 @@ namespace HandheldCompanion.Managers
 
         private static bool HasDefault()
         {
-            return profiles.Values.Count(a => a.Default) != 0;
+            return profiles.Values.Any(a => a.Default);
         }
 
         public static PowerProfile GetDefault()
         {
             if (HasDefault())
-                return profiles.Values.FirstOrDefault(a => a.Default);
+                return profiles.Values.First(a => a.Default);
             return new PowerProfile();
         }
 
@@ -220,10 +223,8 @@ namespace HandheldCompanion.Managers
         {
             string profilePath = Path.Combine(ProfilesPath, profile.GetFileName());
 
-            if (profiles.ContainsKey(profile.Guid))
+            if (profiles.Remove(profile.Guid))
             {
-                profiles.Remove(profile.Guid);
-
                 // warn owner
                 bool isCurrent = profile.Guid == currentProfile?.Guid;
 

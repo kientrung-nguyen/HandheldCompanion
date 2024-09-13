@@ -961,7 +961,7 @@ public static class ControllerManager
         lock (targetLock)
         {
             // look for new controller
-            if (!Controllers.TryGetValue(baseContainerDeviceInstanceId, out IController controller))
+            if (!Controllers.TryGetValue(baseContainerDeviceInstanceId, out var controller))
                 return;
 
             // clear current target

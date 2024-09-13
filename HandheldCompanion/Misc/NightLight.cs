@@ -111,8 +111,6 @@ public static class NightLight
         if (turnOff > turnOn && now > turnOn && now < turnOff)
             isNightlight = true;
 
-        LogManager.LogInformation($"Night light auto {now} {isNightlight}");
-
         var isEnabled = Set(isNightlight);
         if (isEnabled is not null)
             ToastManager.RunToast(

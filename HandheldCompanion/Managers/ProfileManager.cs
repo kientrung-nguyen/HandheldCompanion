@@ -28,9 +28,9 @@ public static class ProfileManager
     public static List<Profile> subProfiles = new();
     private static Profile currentProfile;
 
-    private static readonly string profilesPath;
+    private static string profilesPath;
 
-    private static bool IsInitialized;
+    public static bool IsInitialized;
 
     static ProfileManager()
     {
@@ -64,7 +64,7 @@ public static class ProfileManager
         // check for default profile
         if (!HasDefault())
         {
-            var deviceLayout = (Layout)IDevice.GetCurrent().DefaultLayout.Clone();
+            Layout deviceLayout = IDevice.GetCurrent().DefaultLayout.Clone() as Layout;
             Profile defaultProfile = new()
             {
                 Name = DefaultName,

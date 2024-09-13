@@ -121,20 +121,14 @@
   <data name="icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="XInputPlus" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\XInputPlus.ini;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-16</value>
+  </data>
   <data name="xinput1_x64" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\xinput1_x64.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="xinput1_x86" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\xinput1_x86.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="XInputPlus" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\XInputPlus.ini;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-16</value>
-  </data>
-  <data name="chord_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\controller_base\chord_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="empty_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\controller_base\empty_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="AboutPage_About" xml:space="preserve">
     <value>Informazioni</value>
@@ -1050,12 +1044,6 @@
   </data>
   <data name="WarningElevated" xml:space="preserve">
     <value>Esegui questo strumento come amministratore per sbloccare queste impostazioni</value>
-  </data>
-  <data name="ControllerPage_SteamControllerMute" xml:space="preserve">
-    <value>Silenzia il controller virtuale</value>
-  </data>
-  <data name="ControllerPage_SteamControllerMuteDesc" xml:space="preserve">
-    <value>Silenzia il controller virtuale nelle applicazioni correlate a Steam</value>
   </data>
   <data name="ProfilesPage_ControllerSettings" xml:space="preserve">
     <value>Impostazioni del controller</value>
@@ -2362,15 +2350,6 @@
   <data name="MainWindow_Select" xml:space="preserve">
     <value>Select</value>
   </data>
-  <data name="Hint_SteamNeptuneReadme" xml:space="preserve">
-    <value>You should restart Steam, so that Handheld Companion can automatically adjust Steam Desktop Layout and prevent double input</value>
-  </data>
-  <data name="Hint_SteamNeptuneDesktopDesc" xml:space="preserve">
-    <value>Steam is already running and Steam Desktop Layout is applied. This may result in double input</value>
-  </data>
-  <data name="Hint_SteamNeptuneDesktop" xml:space="preserve">
-    <value>Steam Desktop Layout is applied</value>
-  </data>
   <data name="Hint_SteamXboxDriversReadme" xml:space="preserve">
     <value>You might want to uninstall Steam Xbox Controller Enhanced Features Driver</value>
   </data>
@@ -2908,10 +2887,34 @@
   <data name="DevicePage_Lenovo_ControllerTriggerMargin" xml:space="preserve">
     <value>Trigger Margin</value>
   </data>
+  <data name="AboutPage_UnsupportedDevice" xml:space="preserve">
+    <value>Oups, it appears your device is not supported yet. The software might not run as expected.</value>
+  </data>
+  <data name="chord_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\controller_base\chord_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="empty_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\controller_base\empty_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ControllerPage_SteamControllerMute" xml:space="preserve">
+    <value>Silenzia il controller virtuale</value>
+  </data>
+  <data name="ControllerPage_SteamControllerMuteDesc" xml:space="preserve">
+    <value>Silenzia il controller virtuale nelle applicazioni correlate a Steam</value>
+  </data>
+  <data name="Hint_SteamNeptuneReadme" xml:space="preserve">
+    <value>You should restart Steam, so that Handheld Companion can automatically adjust Steam Desktop Layout and prevent double input</value>
+  </data>
+  <data name="Hint_SteamNeptuneDesktopDesc" xml:space="preserve">
+    <value>Steam is already running and Steam Desktop Layout is applied. This may result in double input</value>
+  </data>
+  <data name="Hint_SteamNeptuneDesktop" xml:space="preserve">
+    <value>Steam Desktop Layout is applied</value>
+  </data>
   <data name="DevicePage_Lenovo_Settings" xml:space="preserve">
     <value>Lenovo Legion Go settings</value>
   </data>
-  <data name="AboutPage_UnsupportedDevice" xml:space="preserve">
-    <value>Oups, it appears your device is not supported yet. The software might not run as expected.</value>
+  <data name="PowerProfileBatteryDefaultName" xml:space="preserve">
+    <value>Default</value>
   </data>
 </root>

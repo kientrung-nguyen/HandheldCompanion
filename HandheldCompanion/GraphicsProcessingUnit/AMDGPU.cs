@@ -22,7 +22,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         private bool prevRSR = false;
         private int prevRSRSharpness = -1;
 
-        protected new AdlxTelemetryData TelemetryData = new();
+        protected AdlxTelemetryData TelemetryData = new();
 
         public bool HasRSRSupport()
         {

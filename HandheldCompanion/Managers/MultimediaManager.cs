@@ -314,7 +314,6 @@ public static class MultimediaManager
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern bool EnumDisplaySettings(string lpszDeviceName, int iModeNum, ref DisplayDevice lpDevMode);
-
     #endregion
 
     #region events

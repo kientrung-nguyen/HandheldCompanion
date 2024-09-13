@@ -121,7 +121,7 @@ namespace HandheldCompanion.Misc
                 return;
 
             // Add to dictionnary
-            UIElement uIElement = new(this, page);
+            var uIElement = new UIElement(this, page);
             uIElement.textBlock1.Text = Name;
             uIElement.textBlock2.Text = Description;
 
@@ -147,7 +147,7 @@ namespace HandheldCompanion.Misc
                 {
                     Height = 66,
                     Margin = new Thickness(-16),
-                    Padding = new Thickness(50, 12, 12, 12),
+                    Padding = new Thickness(20, 12, 12, 12),
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     HorizontalContentAlignment = HorizontalAlignment.Stretch,
                     Background = Brushes.Transparent,

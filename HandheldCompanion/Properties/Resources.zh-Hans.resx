@@ -1033,12 +1033,6 @@
   <data name="WarningElevated" xml:space="preserve">
     <value>以管理员身份运行此工具以更改这些设置</value>
   </data>
-  <data name="ControllerPage_SteamControllerMute" xml:space="preserve">
-    <value>禁用虚拟手柄</value>
-  </data>
-  <data name="ControllerPage_SteamControllerMuteDesc" xml:space="preserve">
-    <value>对Steam相关程序禁用虚拟手柄</value>
-  </data>
   <data name="ProfilesPage_ControllerSettings" xml:space="preserve">
     <value>手柄设置</value>
   </data>
@@ -2344,15 +2338,6 @@
   <data name="MainWindow_Select" xml:space="preserve">
     <value>Select</value>
   </data>
-  <data name="Hint_SteamNeptuneReadme" xml:space="preserve">
-    <value>You should restart Steam, so that Handheld Companion can automatically adjust Steam Desktop Layout and prevent double input</value>
-  </data>
-  <data name="Hint_SteamNeptuneDesktopDesc" xml:space="preserve">
-    <value>Steam is already running and Steam Desktop Layout is applied. This may result in double input</value>
-  </data>
-  <data name="Hint_SteamNeptuneDesktop" xml:space="preserve">
-    <value>Steam Desktop Layout is applied</value>
-  </data>
   <data name="Hint_SteamXboxDriversReadme" xml:space="preserve">
     <value>You might want to uninstall Steam Xbox Controller Enhanced Features Driver</value>
   </data>
@@ -2890,11 +2875,14 @@
   <data name="DevicePage_Lenovo_ControllerTriggerMargin" xml:space="preserve">
     <value>Trigger Margin</value>
   </data>
-  <data name="DevicePage_Lenovo_Settings" xml:space="preserve">
-    <value>Lenovo Legion Go settings</value>
-  </data>
   <data name="AboutPage_UnsupportedDevice" xml:space="preserve">
     <value>Oups, it appears your device is not supported yet. The software might not run as expected.</value>
+  </data>
+  <data name="DevicePage_DynamicLighting_Presets" xml:space="preserve">
+    <value>预设效果</value>
+  </data>
+  <data name="DevicePage_DynamicLighting_PresetsSelection" xml:space="preserve">
+    <value>选择效果</value>
   </data>
   <data name="LEDPreset_OneXPlayerX1_Preset01" xml:space="preserve">
     <value>怪兽初醒</value>
@@ -2929,10 +2917,25 @@
   <data name="LEDPreset_OneXPlayerX1_Preset11" xml:space="preserve">
     <value>冬日暖阳</value>
   </data>
-  <data name="DevicePage_DynamicLighting_Presets" xml:space="preserve">
-    <value>预设效果</value>
+  <data name="ControllerPage_SteamControllerMute" xml:space="preserve">
+    <value>禁用虚拟手柄</value>
   </data>
-  <data name="DevicePage_DynamicLighting_PresetsSelection" xml:space="preserve">
-    <value>选择效果</value>
+  <data name="ControllerPage_SteamControllerMuteDesc" xml:space="preserve">
+    <value>对Steam相关程序禁用虚拟手柄</value>
+  </data>
+  <data name="Hint_SteamNeptuneReadme" xml:space="preserve">
+    <value>You should restart Steam, so that Handheld Companion can automatically adjust Steam Desktop Layout and prevent double input</value>
+  </data>
+  <data name="Hint_SteamNeptuneDesktopDesc" xml:space="preserve">
+    <value>Steam is already running and Steam Desktop Layout is applied. This may result in double input</value>
+  </data>
+  <data name="Hint_SteamNeptuneDesktop" xml:space="preserve">
+    <value>Steam Desktop Layout is applied</value>
+  </data>
+  <data name="DevicePage_Lenovo_Settings" xml:space="preserve">
+    <value>Lenovo Legion Go settings</value>
+  </data>
+  <data name="PowerProfileBatteryDefaultName" xml:space="preserve">
+    <value>Default</value>
   </data>
 </root>

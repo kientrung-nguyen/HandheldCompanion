@@ -111,7 +111,7 @@ public static class ProcessManager
                 // skip if we couldn't find a process id
                 if (processId == 0)
                     return;
-                
+
                 // create process
                 CreateOrUpdateProcess(processId, senderElement);
             }
@@ -123,7 +123,7 @@ public static class ProcessManager
     {
         if (!IsWindowVisible((int)hWnd))
             return true;
-        
+
         try
         {
             AutomationElement element = AutomationElement.FromHandle(hWnd);
@@ -213,7 +213,7 @@ public static class ProcessManager
         return Processes.Values.Where(a => a.Executable.Equals(executable, StringComparison.InvariantCultureIgnoreCase)).ToList();
     }
 
-    private static async void ForegroundCallback()
+    private static void ForegroundCallback()
     {
         IntPtr hWnd = GetforegroundWindow();
 
@@ -251,7 +251,7 @@ public static class ProcessManager
                     if (!CreateOrUpdateProcess(processId, element))
                         return;
 
-                if (!Processes.TryGetValue(processId, out ProcessEx process))
+                if (!Processes.TryGetValue(processId, out var process))
                     return;
 
                 ProcessEx prevProcess = foregroundProcess;
@@ -302,30 +302,37 @@ public static class ProcessManager
 
     private static void ProcessHalted(object? sender, EventArgs e)
     {
-        if (sender is null) return;
+        if (sender is not Process process) return;
 
-        int processId = ((Process)sender).Id;
-
-        if (!Processes.TryGetValue(processId, out var processEx))
-            return;
-
-        // stopped process can't have foreground
-        if (foregroundProcess == processEx)
+        try
         {
-            LogManager.LogDebug("{0} process {1} that had foreground has halted", foregroundProcess.Platform, foregroundProcess.Executable);
-            ForegroundChanged?.Invoke(null, foregroundProcess);
+            int processId = process.Id;
+
+            if (!Processes.TryGetValue(processId, out var processEx))
+                return;
+
+            // stopped process can't have foreground
+            if (foregroundProcess == processEx)
+            {
+                LogManager.LogDebug("{0} process {1} that had foreground has halted", foregroundProcess.Platform, foregroundProcess.Executable);
+                ForegroundChanged?.Invoke(null, foregroundProcess);
+            }
+
+            bool success = Processes.TryRemove(new KeyValuePair<int, ProcessEx>(processId, processEx));
+
+            // raise event
+            if (success)
+            {
+                ProcessStopped?.Invoke(processEx);
+
+                LogManager.LogDebug("Process halted: {0}", processEx.Executable);
+
+                processEx.Dispose();
+            }
         }
-
-        bool success = Processes.TryRemove(new KeyValuePair<int, ProcessEx>(processId, processEx));
-
-        // raise event
-        if (success)
+        catch (Exception ex)
         {
-            ProcessStopped?.Invoke(processEx);
-
-            LogManager.LogDebug("Process halted: {0}", processEx.Executable);
-
-            processEx.Dispose();
+            LogManager.LogError($"Error at {nameof(ProcessManager)}: {ex}");
         }
     }
 
@@ -338,7 +345,7 @@ public static class ProcessManager
             if (proc.HasExited)
                 return false;
 
-            if (!Processes.TryGetValue(proc.Id, out ProcessEx processEx))
+            if (!Processes.TryGetValue(proc.Id, out var processEx))
             {
                 // hook exited event
                 try

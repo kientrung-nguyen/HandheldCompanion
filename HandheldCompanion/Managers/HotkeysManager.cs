@@ -43,11 +43,11 @@ public static class HotkeysManager
                 switch (storedChord.chordTarget)
                 {
                     case InputsChordTarget.Input:
-                        hotkey.inputsChord = (InputsChord)storedChord.Clone();
+                        hotkey.inputsChord = storedChord.Clone() as InputsChord;
                         break;
                     case InputsChordTarget.Output:
                         if (hotkey.command is KeyboardCommands keyboardCommands)
-                            keyboardCommands.outputChord = (InputsChord)storedChord.Clone();
+                            keyboardCommands.outputChord = storedChord.Clone() as InputsChord;
                         break;
                 }
 

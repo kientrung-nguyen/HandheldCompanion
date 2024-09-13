@@ -247,7 +247,7 @@ public class LegionGo : IDevice
             OEMPowerMode = (int)LegionMode.Quiet,
             Guid = new("961cc777-2547-4f9d-8174-7d86181b8a7a"),
             TDPOverrideEnabled = true,
-            TDPOverrideValues = new[] { 8.0d, 8.0d, 8.0d }
+            TDPOverrideValues = [8.0d, 8.0d, 8.0d]
         });
 
         // Legion Go - Balanced
@@ -259,7 +259,7 @@ public class LegionGo : IDevice
             OEMPowerMode = (int)LegionMode.Balanced,
             Guid = new("3af9B8d9-7c97-431d-ad78-34a8bfea439f"),
             TDPOverrideEnabled = true,
-            TDPOverrideValues = new[] { 15.0d, 15.0d, 15.0d }
+            TDPOverrideValues = [15.0d, 15.0d, 15.0d]
         });
 
         // Legion Go - Performance
@@ -271,7 +271,7 @@ public class LegionGo : IDevice
             OEMPowerMode = (int)LegionMode.Performance,
             Guid = new("ded574b5-45a0-4f42-8737-46345c09c238"),
             TDPOverrideEnabled = true,
-            TDPOverrideValues = new[] { 20.0d, 20.0d, 20.0d }
+            TDPOverrideValues = [20.0d, 20.0d, 20.0d]
         });
 
         PowerProfileManager.Applied += PowerProfileManager_Applied;

@@ -133,32 +133,32 @@ public static class ScreenControl
 
         if (SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online)
         {
-            if (Set(internalDisplay, internalDisplay.DisplayScreen.GetPossibleSettings()
+            if (internalDisplay.DisplayScreen.GetPossibleSettings()
                 .Where(setting =>
                     setting.Resolution.Width == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Width &&
                     setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
-                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth)
-                .OrderByDescending(setting => setting.Frequency).First()))
+                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth &&
+                    setting.Frequency > internalDisplay.DisplayScreen.CurrentSetting.Frequency)
+                .DistinctBy(setting => setting.Frequency)
+                .OrderByDescending(setting => setting.Frequency).FirstOrDefault() is DisplayPossibleSetting higherFrequency)
             {
-                ScreenBrightness.Set(100);
+                if (Set(internalDisplay, higherFrequency))
+                    ScreenBrightness.Set(100);
             }
-
         }
         else
         {
-            var frenquencies = internalDisplay.DisplayScreen.GetPossibleSettings()
+            if (internalDisplay.DisplayScreen.GetPossibleSettings()
                 .Where(setting =>
                     setting.Resolution.Width == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Width &&
                     setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
-                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth)
+                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth &&
+                    setting.Frequency < internalDisplay.DisplayScreen.CurrentSetting.Frequency)
                 .DistinctBy(setting => setting.Frequency)
-                .OrderByDescending(setting => setting.Frequency);
-            if (frenquencies.Count() > 1)
+                .OrderByDescending(setting => setting.Frequency).FirstOrDefault() is DisplayPossibleSetting lowerFrequency)
             {
-                if (Set(internalDisplay, frenquencies.Skip(1).First()))
-                    if (ScreenBrightness.Get() > 70)
-                        ScreenBrightness.Set(75);
-
+                if (Set(internalDisplay, lowerFrequency))
+                    ScreenBrightness.Set(85);
             }
         }
     }

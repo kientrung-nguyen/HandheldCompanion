@@ -43,7 +43,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xE799;" />
@@ -105,7 +104,6 @@
                                         <DockPanel>
                                             <ui:FontIcon
                                                 Height="40"
-                                                FontSize="20"
                                                 HorizontalAlignment="Center"
                                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                                 Glyph="&#xe7f8;" />
@@ -139,7 +137,6 @@
                                         <DockPanel>
                                             <ui:FontIcon
                                                 Height="40"
-                                                FontSize="20"
                                                 HorizontalAlignment="Center"
                                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                                 Glyph="&#xe713;" />
@@ -182,7 +179,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xE701;" />
@@ -215,7 +211,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xE702;" />
@@ -260,7 +255,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xf08c;" />
@@ -297,7 +291,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xf182;" />
@@ -399,7 +392,6 @@
                     <DockPanel>
                         <ui:FontIcon
                             Height="40"
-                            FontSize="20"
                             HorizontalAlignment="Center"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
                             Glyph="&#xE781;" />
@@ -420,7 +412,9 @@
         </ikw:SimpleStackPanel>
 
         <!--  Device settings  -->
-        <ikw:SimpleStackPanel Grid.Row="1" Spacing="6">
+        <ikw:SimpleStackPanel
+            Name="DeviceSettingPanel"
+            Grid.Row="1" Spacing="6">
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_DeviceSettings}" />
 
             <!--  AYANEO Flip DS  -->

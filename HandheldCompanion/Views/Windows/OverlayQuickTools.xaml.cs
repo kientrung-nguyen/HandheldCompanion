@@ -259,7 +259,6 @@ public partial class OverlayQuickTools : GamepadWindow
         Application.Current.Dispatcher.Invoke(() =>
         {
             // Common settings across cases 0 and 1
-
             MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfWorkingArea.Width);
             Width = (int)Math.Max(MinWidth, SettingsManager.Get<double>("QuickToolsWidth"));
             MaxHeight = Math.Min(targetScreen.WpfWorkingArea.Height - (_Margin * 0), _MaxHeight);
@@ -551,7 +550,6 @@ public partial class OverlayQuickTools : GamepadWindow
         // Get the page type before navigation so you can prevent duplicate
         // entries in the backstack.
         var preNavPageType = ContentFrame.CurrentSourcePageType;
-        //var preNavPageType = ContentFrame.Content?.GetType();
 
         // Only navigate if the selected page isn't currently loaded.
         if (_page is not null && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
@@ -600,23 +598,12 @@ public partial class OverlayQuickTools : GamepadWindow
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
         navView.IsBackEnabled = ContentFrame.CanGoBack;
-        if (ContentFrame.SourcePageType is not null)
-        {
-            var preNavPageType = ContentFrame.CurrentSourcePageType;
-            var preNavPageName = preNavPageType.Name;
-
-            var NavViewItem = navView.MenuItems
-                .OfType<NavigationViewItem>().FirstOrDefault(n => n.Tag != null && n.Tag.Equals(preNavPageName));
-
-            if (NavViewItem is not null)
-                navView.SelectedItem = NavViewItem;
-            //navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
-        }
+        //navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
     }
 
-    static long lastRefresh;
-    static long lastBatteryRefresh;
-    static long lastRadioRefresh;
+    long lastRefresh;
+    long lastBatteryRefresh;
+    long lastRadioRefresh;
 
     private void UpdateTime(object? sender, EventArgs e)
     {
@@ -827,6 +814,11 @@ public partial class OverlayQuickTools : GamepadWindow
                 BatteryIndicatorLifeRemaining.Text = " remaining";
             }
         }
+    }
+
+    internal nint GetHandle()
+    {
+        return hwndSource.Handle;
     }
 
     #endregion

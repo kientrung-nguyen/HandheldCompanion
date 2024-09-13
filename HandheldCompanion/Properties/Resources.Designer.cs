@@ -430,16 +430,6 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        public static byte[] chord_neptune {
-            get {
-                object obj = ResourceManager.GetObject("chord_neptune", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Controller_Connect {
@@ -4022,6 +4012,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Restart Steam.
+        /// </summary>
+        public static string Hint_SteamNeptuneAction {
+            get {
+                return ResourceManager.GetString("Hint_SteamNeptuneAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Steam Xbox Controller Enhanced Features Driver is installed.
         /// </summary>
         public static string Hint_SteamXboxDrivers {
@@ -6772,6 +6771,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Default (On battery).
+        /// </summary>
+        public static string PowerProfileBatteryDefaultName {
+            get {
+                return ResourceManager.GetString("PowerProfileBatteryDefaultName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Default power and fan speed for optimal performance, temperature, noise, and battery life..
         /// </summary>
         public static string PowerProfileDefaultDescription {
@@ -6781,7 +6789,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Default.
+        ///   Looks up a localized string similar to Default (Plugged in).
         /// </summary>
         public static string PowerProfileDefaultName {
             get {

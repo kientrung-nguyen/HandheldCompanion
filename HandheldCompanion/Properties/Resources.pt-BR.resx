@@ -124,12 +124,6 @@
   <data name="XInputPlus" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\XInputPlus.ini;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-16</value>
   </data>
-  <data name="chord_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\controller_base\chord_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="empty_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\controller_base\empty_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="xinput1_x64" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\XInputPlus\x64\XInput1_3.dl_;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
@@ -1058,12 +1052,6 @@ Entrada de movimento alternada: Pressione o(s) botão(ões) selecionado(s) para 
   </data>
   <data name="WarningElevated" xml:space="preserve">
     <value>Execute esta ferramenta como um Administrador para destravar estas configurações</value>
-  </data>
-  <data name="ControllerPage_SteamControllerMute" xml:space="preserve">
-    <value>Silenciar controle virtual</value>
-  </data>
-  <data name="ControllerPage_SteamControllerMuteDesc" xml:space="preserve">
-    <value>Silenciar controle virutal em aplicações relacionadas ao Steam</value>
   </data>
   <data name="ProfilesPage_ControllerSettings" xml:space="preserve">
     <value>Configurações de controle</value>
@@ -2370,15 +2358,6 @@ Entrada de movimento alternada: Pressione o(s) botão(ões) selecionado(s) para 
   <data name="MainWindow_Select" xml:space="preserve">
     <value>Selecionar</value>
   </data>
-  <data name="Hint_SteamNeptuneReadme" xml:space="preserve">
-    <value>Você deve reiniciar o Steam, então o Handheld Companion poderá automaticamente ajustar o Layout de Área de Trabalho Steam e prevenir entrada duplicada</value>
-  </data>
-  <data name="Hint_SteamNeptuneDesktopDesc" xml:space="preserve">
-    <value>Steam já está em execução e o Layout de Área de Trabalho Steam está aplicado. Isto pode resultar em entrada duplicada</value>
-  </data>
-  <data name="Hint_SteamNeptuneDesktop" xml:space="preserve">
-    <value>Layout de Área de Trabalho Steam está aplicado</value>
-  </data>
   <data name="Hint_SteamXboxDriversReadme" xml:space="preserve">
     <value>Você pode querer remover o Driver Steam de Funções Avançadas para Controlador Xbox</value>
   </data>
@@ -2916,10 +2895,34 @@ Entrada de movimento alternada: Pressione o(s) botão(ões) selecionado(s) para 
   <data name="DevicePage_Lenovo_ControllerTriggerMargin" xml:space="preserve">
     <value>Trigger Margin</value>
   </data>
+  <data name="AboutPage_UnsupportedDevice" xml:space="preserve">
+    <value>Oups, it appears your device is not supported yet. The software might not run as expected.</value>
+  </data>
+  <data name="chord_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\controller_base\chord_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="empty_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\controller_base\empty_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ControllerPage_SteamControllerMute" xml:space="preserve">
+    <value>Silenciar controle virtual</value>
+  </data>
+  <data name="ControllerPage_SteamControllerMuteDesc" xml:space="preserve">
+    <value>Silenciar controle virutal em aplicações relacionadas ao Steam</value>
+  </data>
+  <data name="Hint_SteamNeptuneReadme" xml:space="preserve">
+    <value>Você deve reiniciar o Steam, então o Handheld Companion poderá automaticamente ajustar o Layout de Área de Trabalho Steam e prevenir entrada duplicada</value>
+  </data>
+  <data name="Hint_SteamNeptuneDesktopDesc" xml:space="preserve">
+    <value>Steam já está em execução e o Layout de Área de Trabalho Steam está aplicado. Isto pode resultar em entrada duplicada</value>
+  </data>
+  <data name="Hint_SteamNeptuneDesktop" xml:space="preserve">
+    <value>Layout de Área de Trabalho Steam está aplicado</value>
+  </data>
   <data name="DevicePage_Lenovo_Settings" xml:space="preserve">
     <value>Lenovo Legion Go settings</value>
   </data>
-  <data name="AboutPage_UnsupportedDevice" xml:space="preserve">
-    <value>Oups, it appears your device is not supported yet. The software might not run as expected.</value>
+  <data name="PowerProfileBatteryDefaultName" xml:space="preserve">
+    <value>Padrão</value>
   </data>
 </root>

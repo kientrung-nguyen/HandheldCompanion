@@ -129,6 +129,7 @@
             <ikw:SimpleStackPanel
                 Name="VirtualDevices"
                 Spacing="24"
+                d:Visibility="Visible"
                 Visibility="Collapsed">
                 <ikw:SimpleStackPanel Spacing="6">
                     <DockPanel>

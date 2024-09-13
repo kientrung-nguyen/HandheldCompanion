@@ -12,8 +12,8 @@ namespace HandheldCompanion.Commands.Functions.HC
     {
         public OverlayPerformanceCommands()
         {
-            base.Name = Properties.Resources.InputsHotkey_OnScreenDisplayToggle;
-            base.Description = Properties.Resources.InputsHotkey_OnScreenDisplayToggleDesc;
+            base.Name = Resources.InputsHotkey_OnScreenDisplayToggle;
+            base.Description = Resources.InputsHotkey_OnScreenDisplayToggleDesc;
             base.Glyph = "\uE78B";
             base.OnKeyUp = true;
 
@@ -31,30 +31,14 @@ namespace HandheldCompanion.Commands.Functions.HC
             // .. if 0 (disabled) -> set OSD level to LastOnScreenDisplayLevel
             // .. else (enabled) -> set OSD level to 0
             var currentProfile = ProfileManager.GetCurrent();
-            int currentOSDLevel = (int)currentProfile.OverlayLevel;
-            int lastOSDLevel = SettingsManager.Get<int>("LastOnScreenDisplayLevel");
-
-            switch (currentOSDLevel)
-            {
-                case (int)OverlayDisplayLevel.Disabled:
-                    if (lastOSDLevel == (int)OverlayDisplayLevel.Disabled)
-                        lastOSDLevel = (int)OverlayDisplayLevel.Full;
-                    SettingsManager.Set("OnScreenDisplayLevel", lastOSDLevel);
-                    currentProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(lastOSDLevel);
-                    break;
-                default:
-                    SettingsManager.Set("OnScreenDisplayLevel", 0);
-                    currentProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(0);
-                    break;
-            }
-
-            ToastManager.RunToast($"Overlay Performance {(currentProfile.OverlayLevel == OverlayDisplayLevel.Disabled ? Resources.Off : Resources.On)}", ToastIcons.Game);
+            currentProfile.OnScreenDisplayToggle = !currentProfile.OnScreenDisplayToggle;
+            ToastManager.RunToast($"Overlay Performance {(currentProfile.OnScreenDisplayToggle ? Resources.On : Resources.Off)}", ToastIcons.Game);
             ProfileManager.UpdateOrCreateProfile(currentProfile, UpdateSource.Background);
 
             base.Execute(IsKeyDown, IsKeyUp);
         }
 
-        public override bool IsToggled =>SettingsManager.Get<int>("OnScreenDisplayLevel") != 0;
+        public override bool IsToggled => ProfileManager.GetCurrent().OnScreenDisplayToggle;
 
         public override object Clone()
         {

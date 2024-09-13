@@ -11,7 +11,6 @@
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickHome"
     Title="{l:Static resx:Resources.QuickHomePage_Title}"
-    Margin="15,0,0,6"
     d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:QuickHomePageViewModel}"
     d:DesignHeight="1200"
@@ -44,6 +43,7 @@
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Stretch"
                                 Background="Transparent"
+                                BorderThickness="0"
                                 Command="{Binding ExecuteCommand}"
                                 IsChecked="{Binding IsToggled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                                 IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
@@ -51,8 +51,8 @@
                                 <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical">
                                     <ui:FontIcon
                                         Width="32"
-                                        Height="36"
-                                        FontSize="20"
+                                        Height="32"
+                                        FontSize="26"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"

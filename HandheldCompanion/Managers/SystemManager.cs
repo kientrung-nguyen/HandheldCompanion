@@ -2,6 +2,7 @@
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using Microsoft.Win32;
+using Sentry;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -94,7 +95,6 @@ public static class SystemManager
         // listen to system events
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
-        SystemEvents.SessionEnding += SystemEvents_SessionEnding;
 
         SystemPowerManager.BatteryStatusChanged += BatteryStatusChanged;
         SystemPowerManager.EnergySaverStatusChanged += BatteryStatusChanged;
@@ -141,7 +141,6 @@ public static class SystemManager
         // stop listening to system events
         SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
         SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
-        SystemEvents.SessionEnding -= SystemEvents_SessionEnding;
 
         LogManager.LogInformation("{0} has stopped", "PowerManager");
     }
@@ -163,16 +162,7 @@ public static class SystemManager
             default:
             case PowerModes.StatusChange:
                 PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
-                if (isPlugged == SystemInformation.PowerStatus.PowerLineStatus)
-                    return;
-
-                var currentProfile = ProfileManager.GetCurrent();
-                ToastManager.RunToast($"{currentProfile.Name}",
-                    SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online
-                    ? ToastIcons.Charger
-                    : ToastIcons.Battery);
-                isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
-                return;
+                break;
         }
 
         LogManager.LogDebug("Device power mode set to {0}", e.Mode);
@@ -194,12 +184,7 @@ public static class SystemManager
                 return;
         }
         LogManager.LogDebug("Session switched to {0}", e.Reason);
-
         SystemRoutine();
-    }
-
-    private static void SystemEvents_SessionEnding(object sender, SessionEndingEventArgs e)
-    {
     }
 
     private static void SystemRoutine()
@@ -235,6 +220,19 @@ public static class SystemManager
             {
                 NightLight.Auto();
                 ScreenControl.Auto();
+                if (isPlugged != SystemInformation.PowerStatus.PowerLineStatus)
+                {
+                    isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
+                    var currentProfile = ProfileManager.GetCurrent();
+                    var powerProfile = PowerProfileManager.GetProfile(isPlugged == PowerLineStatus.Online
+                            ? currentProfile.PowerProfile
+                            : currentProfile.BatteryProfile);
+                    ProfileManager.UpdateOrCreateProfile(currentProfile, UpdateSource.Background);
+                    ToastManager.RunToast($"{powerProfile.Name}",
+                        SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online
+                        ? ToastIcons.Charger
+                        : ToastIcons.Battery);
+                }
             }
             finally
             {

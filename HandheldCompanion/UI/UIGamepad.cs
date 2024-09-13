@@ -638,7 +638,7 @@ namespace HandheldCompanion.Managers
                     }
                     else if (focusedElement is Slider slider)
                     {
-                        slider.Value += slider.TickFrequency;
+                        slider.Value -= slider.TickFrequency;
                         Focus(focusedElement);
                         return;
                     }
@@ -774,7 +774,7 @@ namespace HandheldCompanion.Managers
                     switch (elementType)
                     {
                         case "Slider":
-                            ((Slider)focusedElement).Value -= ((Slider)focusedElement).TickFrequency;
+                            ((Slider)focusedElement).Value += ((Slider)focusedElement).TickFrequency;
                             Focus(focusedElement);
                             break;
                         case "Button":
