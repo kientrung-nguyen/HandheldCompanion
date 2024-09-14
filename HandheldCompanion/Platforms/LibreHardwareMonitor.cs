@@ -134,13 +134,13 @@ public class LibreHardwareMonitor : IPlatform
                 HandleFan();
             }
 
-            
+
             if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) > 500)
             {
                 lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 HandleGPU(GPUManager.GetCurrent());
             }
-            
+
 
             // pull temperature sensor
             foreach (var hardware in computer.Hardware)
@@ -155,17 +155,17 @@ public class LibreHardwareMonitor : IPlatform
                             hardware.Update();
                             HandleCPU(hardware);
                             break;
-                    /*            
-                    case HardwareType.GpuAmd:
-                        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) < 500) continue;
-                        lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                        hardware.Update();
-                        HandleGPU(hardware);
-                        //LogManager.LogDebug($"{GPUTemp}°C {GPUClock}mHz {GPULoad}% {GPUPower}W");
-                        //LogManager.LogDebug($"{amdControl.GetGpuTemperature()}°C {amdControl.GetGpuClock()}mHz {amdControl.GetGpuUse()}% {amdControl.GetGpuPower()}W {amdControl.GetFPS()}FPS");
-                        //LogManager.LogDebug($"{GPUManager.GetCurrent().GetTemperature()}°C {GPUManager.GetCurrent().GetClock()}mHz {GPUManager.GetCurrent().GetLoad()}% {GPUManager.GetCurrent().GetPower()}W {GPUManager.GetCurrent().GetVRAMUsage()}");
-                        break;
-                     */   
+                        /*            
+                        case HardwareType.GpuAmd:
+                            if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) < 500) continue;
+                            lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                            hardware.Update();
+                            HandleGPU(hardware);
+                            //LogManager.LogDebug($"{GPUTemp}°C {GPUClock}mHz {GPULoad}% {GPUPower}W");
+                            //LogManager.LogDebug($"{amdControl.GetGpuTemperature()}°C {amdControl.GetGpuClock()}mHz {amdControl.GetGpuUse()}% {amdControl.GetGpuPower()}W {amdControl.GetFPS()}FPS");
+                            //LogManager.LogDebug($"{GPUManager.GetCurrent().GetTemperature()}°C {GPUManager.GetCurrent().GetClock()}mHz {GPUManager.GetCurrent().GetLoad()}% {GPUManager.GetCurrent().GetPower()}W {GPUManager.GetCurrent().GetVRAMUsage()}");
+                            break;
+                         */
                         case HardwareType.Memory:
                             if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastMemoryRefresh) < 3000) continue;
                             lastMemoryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
@@ -216,6 +216,8 @@ public class LibreHardwareMonitor : IPlatform
                     HandleCPU_Power(sensor);
                     break;
                 case SensorType.Temperature:
+					HandleCPU_Temp(sensor);
+					/*
                     try
                     {
                         using var ct = new PerformanceCounter("Thermal Zone Information", "Temperature", @"\_TZ.TZ01", true);
@@ -225,6 +227,7 @@ public class LibreHardwareMonitor : IPlatform
                     {
                         HandleCPU_Temp(sensor);
                     }
+					*/
                     break;
             }
         }

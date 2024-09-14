@@ -115,7 +115,7 @@ public class ProcessEx : IDisposable
         // get executable icon
         if (File.Exists(Path))
         {
-            Icon? icon = Icon.ExtractAssociatedIcon(Path);
+            var icon = Icon.ExtractAssociatedIcon(Path);
             ProcessIcon = icon?.ToImageSource();
         }
     }
@@ -143,7 +143,7 @@ public class ProcessEx : IDisposable
     public void DetachWindow(int hwnd)
     {
         // raise event
-        if (ProcessWindows.TryRemove(hwnd, out ProcessWindow processWindow))
+        if (ProcessWindows.TryRemove(hwnd, out var processWindow))
             WindowDetached?.Invoke(processWindow);
     }
 
@@ -152,8 +152,8 @@ public class ProcessEx : IDisposable
         get
         {
             string valueStr = GetAppCompatFlags(Path);
-            return !string.IsNullOrEmpty(valueStr)
-                && valueStr.Split(' ').Any(s => s == DisabledMaximizedWindowedValue);
+            return !string.IsNullOrEmpty(valueStr) &&
+                valueStr.Split(' ').Any(s => s == DisabledMaximizedWindowedValue);
         }
     }
 
@@ -260,7 +260,7 @@ public class ProcessEx : IDisposable
         _previousMainThread = newMainThread;
     }
 
-    private void MainThread_Disposed(object sender, EventArgs e)
+    private void MainThread_Disposed(object? sender, EventArgs e)
     {
         // Update MainThread when disposed
         MainThread = GetMainThread(Process);
@@ -277,11 +277,9 @@ public class ProcessEx : IDisposable
         {
             try
             {
-                using (var key = Registry.CurrentUser.OpenSubKey(AppCompatRegistry))
-                {
-                    string valueStr = (string)key?.GetValue(Path);
-                    return valueStr;
-                }
+                using var key = Registry.CurrentUser.OpenSubKey(AppCompatRegistry);
+                string valueStr = (string)key?.GetValue(Path);
+                return valueStr;
             }
             catch { }
         }
@@ -377,6 +375,7 @@ public class ProcessEx : IDisposable
         Process?.Dispose();
         MainThread?.Dispose();
         ChildrenProcessIds.Dispose();
+        ProcessWindows.Clear();
 
         GC.SuppressFinalize(this); //now, the finalizer won't be called
     }

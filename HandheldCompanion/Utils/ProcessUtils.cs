@@ -222,6 +222,37 @@ public static class ProcessUtils
         return placement;
     }
 
+
+
+    public static void KillByName(string name)
+    {
+        foreach (var process in Process.GetProcessesByName(name))
+        {
+            try
+            {
+                process.Kill();
+                Debug.WriteLine($"Stopped: {process.ProcessName}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to stop: {process.ProcessName} {ex.Message}");
+            }
+        }
+    }
+
+    public static void KillByProcess(Process process)
+    {
+        try
+        {
+            process.Kill();
+            Debug.WriteLine($"Stopped: {process.ProcessName}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to stop: {process.ProcessName} {ex.Message}");
+        }
+    }
+
     [Serializable]
     [StructLayout(LayoutKind.Sequential)]
     public struct WINDOWPLACEMENT

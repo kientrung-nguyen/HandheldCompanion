@@ -64,7 +64,7 @@ public static class HotkeysManager
     public static void Start()
     {
         // process existing hotkeys
-        var fileEntries = Directory.EnumerateFiles(HotkeysPath, "*.json", SearchOption.AllDirectories);
+        var fileEntries = Directory.GetFiles(HotkeysPath, "*.json", SearchOption.AllDirectories);
         foreach (string fileName in fileEntries)
             ProcessHotkey(fileName);
 

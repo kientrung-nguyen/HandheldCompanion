@@ -37,7 +37,7 @@ namespace HandheldCompanion.Managers
         public static void Start()
         {
             // process existing profiles
-            var fileEntries = Directory.EnumerateFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
+            var fileEntries = Directory.GetFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
             foreach (var fileName in fileEntries)
                 ProcessProfile(fileName);
 

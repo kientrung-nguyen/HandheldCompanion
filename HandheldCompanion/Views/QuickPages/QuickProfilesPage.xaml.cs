@@ -687,8 +687,8 @@ public partial class QuickProfilesPage : Page
                     else
                     {
                         ProfileToggle.IsEnabled = true;
-                        ProcessName.Text = currentProcess.Executable;
-                        ProcessPath.Text = currentProcess.Path;
+                        ProcessName.Text = currentProcess?.Executable;
+                        ProcessPath.Text = currentProcess?.Path;
                         SubProfilesBorder.IsEnabled = true;
                     }
                 });
@@ -736,7 +736,7 @@ public partial class QuickProfilesPage : Page
         // create profile
         selectedProfile = new Profile(currentProcess.Path)
         {
-            Layout = (ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone() as Layout,
+            Layout = (Layout)(ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone(),
             LayoutTitle = LayoutTemplate.DesktopLayout.Name
         };
 

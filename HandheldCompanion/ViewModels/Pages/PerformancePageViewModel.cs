@@ -178,7 +178,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public double AutoTDPMaximum => Math.Max(SelectedPreset.AutoTDPRequestedFPS, ScreenControl.PrimaryDisplay.DisplayScreen.CurrentSetting.Frequency);
+        public double AutoTDPMaximum => Math.Max(SelectedPreset.AutoTDPRequestedFPS, ScreenControl.PrimaryDisplay.DisplayScreen.GetPossibleSettings().Max(setting => setting.Frequency));
 
         public bool TDPOverrideEnabled
         {
@@ -527,7 +527,7 @@ namespace HandheldCompanion.ViewModels
                     });
 
                     // No need to update 
-                    if (_skipPropertyChangedUpdate.Contains(e.PropertyName))
+                    if (e.PropertyName is null || _skipPropertyChangedUpdate.Contains(e.PropertyName))
                         return;
                 }
 
@@ -544,8 +544,8 @@ namespace HandheldCompanion.ViewModels
             CreatePresetCommand = new DelegateCommand(() =>
             {
                 // Get the count of profiles that are not default, then start with +1 of that
-                int count = PowerProfileManager.profiles.Values.Count(p => !p.IsDefault());
-                int idx = count + 1;
+                var count = PowerProfileManager.profiles.Values.Count(p => !p.IsDefault());
+                var idx = count + 1;
 
                 // Create a base name for the new profile
                 string baseName = Resources.PowerProfileManualName;
@@ -555,10 +555,10 @@ namespace HandheldCompanion.ViewModels
                     idx++;
 
                 // Format the name with the updated index
-                string name = string.Format(baseName, idx);
+                var name = string.Format(baseName, idx);
 
                 // Create the new power profile
-                PowerProfile powerProfile = new PowerProfile(name, Resources.PowerProfileManualDescription)
+                var powerProfile = new PowerProfile(name, Resources.PowerProfileManualDescription)
                 {
                     TDPOverrideValues = IDevice.GetCurrent().nTDP
                 };
@@ -569,7 +569,7 @@ namespace HandheldCompanion.ViewModels
 
             DeletePresetCommand = new DelegateCommand(async () =>
             {
-                Dialog dialog = new Dialog(isQuickTools ? OverlayQuickTools.GetCurrent() : MainWindow.GetCurrent())
+                var dialog = new Dialog(isQuickTools ? OverlayQuickTools.GetCurrent() : MainWindow.GetCurrent())
                 {
                     Title = $"{Resources.ProfilesPage_AreYouSureDelete1} \"{SelectedPreset.Name}\"?",
                     Content = Resources.ProfilesPage_AreYouSureDelete2,

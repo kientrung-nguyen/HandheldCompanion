@@ -285,7 +285,7 @@ namespace HandheldCompanion.Managers
 
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
-            if (!IsInitialized || currentGPU is null || source == UpdateSource.Background)
+            if (!IsInitialized || currentGPU is null)
                 return;
 
             try

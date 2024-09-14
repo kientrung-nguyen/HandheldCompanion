@@ -1,4 +1,6 @@
 ﻿using HandheldCompanion.ADLX;
+using HandheldCompanion.Managers;
+using HandheldCompanion.Utils;
 using SharpDX.Direct3D9;
 using System;
 using System.Linq;
@@ -23,6 +25,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         private int prevRSRSharpness = -1;
 
         protected AdlxTelemetryData TelemetryData = new();
+        //protected AmdGpuControl AmdGpuControl;
+        //protected ADLSingleSensorData[] AmdGpuSensorsData = [];
 
         public bool HasRSRSupport()
         {
@@ -138,7 +142,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             {
                 if (GetIntegerScaling())
                     SetIntegerScaling(false);
-                
+
                 if (GetImageSharpening())
                     SetImageSharpening(false);
             }
@@ -293,6 +297,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (!IsInitialized)
                 return;
 
+            //AmdGpuControl = new AmdGpuControl();
             // pull telemetry once
             TelemetryData = GetTelemetry();
 
@@ -319,6 +324,19 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                 try
                 {
                     TelemetryData = GetTelemetry();
+                    /*
+                    for (int i = 0; i < AmdGpuSensorsData.Length; i++)
+                    {
+                        if (EnumUtils<ADLSensorType>.TryParse(i, out var type))
+                        {
+                            if (AmdGpuSensorsData[(int)type].Supported == 1)
+                                LogManager.LogDebug($"{type}: {AmdGpuSensorsData[(int)type].Value}");
+
+                        }
+                        else if (AmdGpuSensorsData[i].Supported == 1)
+                            LogManager.LogDebug($"[{i}]: {AmdGpuSensorsData[i].Value}");
+                    }
+                    */
                 }
                 finally
                 {

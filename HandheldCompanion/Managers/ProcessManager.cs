@@ -83,7 +83,7 @@ public static class ProcessManager
     private static void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
     {
         // Avoid locking UI thread by running the action in a task
-        Task.Run(ForegroundCallback);
+        Task.Run(() => ForegroundCallback());
     }
 
     private static void OnWindowOpened(object sender, AutomationEventArgs automationEventArgs)
@@ -111,7 +111,7 @@ public static class ProcessManager
                 // skip if we couldn't find a process id
                 if (processId == 0)
                     return;
-
+                
                 // create process
                 CreateOrUpdateProcess(processId, senderElement);
             }
@@ -215,7 +215,7 @@ public static class ProcessManager
 
     private static void ForegroundCallback()
     {
-        IntPtr hWnd = GetforegroundWindow();
+        var hWnd = GetforegroundWindow();
 
         // skip if this window is already in foreground
         if (foregroundWindow == hWnd || hWnd == IntPtr.Zero)
@@ -290,12 +290,16 @@ public static class ProcessManager
             }
             catch
             {
+                if (foregroundWindow != nint.Zero)
+                    foregroundWindow = nint.Zero;
                 // process has too high elevation
                 return;
             }
         }
         catch
         {
+            if (foregroundWindow != nint.Zero)
+                foregroundWindow = nint.Zero;
             return;
         }
     }

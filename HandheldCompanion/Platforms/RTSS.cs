@@ -2,6 +2,7 @@
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
+using iNKORE.UI.WPF.Modern.Controls;
 using RTSSSharedMemoryNET;
 using System;
 using System.Diagnostics;
@@ -26,7 +27,7 @@ public class RTSS : IPlatform
 
     private int hookedProcessId = 0;
     private uint lastOsdFrameId = 0;
-    private bool ProfileLoaded;
+    private bool profileLoaded;
     private AppEntry? appEntry;
 
     private int RequestedFramerate;
@@ -98,7 +99,7 @@ public class RTSS : IPlatform
         }
 
         // our main watchdog to (re)apply requested settings
-        PlatformWatchdog = new Timer(2000) { Enabled = false };
+        PlatformWatchdog = new Timer(5000) { Enabled = false };
         PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
     }
 
@@ -162,17 +163,13 @@ public class RTSS : IPlatform
         if (frameLimit > 0)
         {
             // Apply profile-defined framerate
-            RequestFPS(frameLimit, source != UpdateSource.Background);
-        }
-        else if (PowerProfileManager.GetProfile(profile.PowerProfile) is PowerProfile powerProfile && powerProfile.AutoTDPEnabled)
-        {
-            RequestFPS((int)powerProfile.AutoTDPRequestedFPS, source != UpdateSource.Background);
+            RequestFPS(frameLimit);
         }
         else if (frameLimit == 0 && RequestedFramerate > 0)
         {
             // Reset to 0 only when a cap was set previously and the current profile has no limit 
             // These conditions prevent 0 from being set on every profile change 
-            RequestFPS(frameLimit, source != UpdateSource.Background);
+            RequestFPS(frameLimit, true);
         }
     }
 
@@ -272,11 +269,6 @@ public class RTSS : IPlatform
             if (GetEnableOSD() != true)
                 SetEnableOSD(true);
         }
-    }
-
-    protected override void Process_Exited(object? sender, EventArgs e)
-    {
-        base.Process_Exited(sender, e);
     }
 
     public bool HasHook()
@@ -394,10 +386,10 @@ public class RTSS : IPlatform
         try
         {
             // load default profile
-            if (!ProfileLoaded)
+            if (!profileLoaded)
             {
                 LoadProfile();
-                ProfileLoaded = true;
+                profileLoaded = true;
             }
 
             if (GetProfileProperty("EnableOSD", out int enabled))
@@ -486,10 +478,10 @@ public class RTSS : IPlatform
         try
         {
             // load default profile
-            if (!ProfileLoaded)
+            if (!profileLoaded)
             {
                 LoadProfile();
-                ProfileLoaded = true;
+                profileLoaded = true;
             }
 
             if (GetProfileProperty("FramerateLimit", out int fpsLimit))
@@ -510,12 +502,12 @@ public class RTSS : IPlatform
         */
     }
 
-    public void RequestFPS(int framerate, bool force = false)
+    public void RequestFPS(int framerate, bool immediate = false)
     {
-        if (RequestedFramerate == framerate && !force)
+        RequestedFramerate = framerate;
+        if (!immediate)
             return;
 
-        RequestedFramerate = framerate;
         SetTargetFPS(framerate);
     }
 

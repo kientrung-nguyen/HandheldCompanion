@@ -131,7 +131,7 @@ public static class PerformanceManager
 
         // manage events
         PowerProfileManager.Applied += PowerProfileManager_Applied;
-        PowerProfileManager.Discarded += PowerProfileManager_Discarded;
+        //PowerProfileManager.Discarded += PowerProfileManager_Discarded;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         currentCoreCount = MotherboardInfo.NumberOfCores;
