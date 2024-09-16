@@ -85,9 +85,8 @@ public static class ToastManager
         });
 
         ToastThread.Start();
-
     }
-    
+
     public static void Start()
     {
         IsInitialized = true;

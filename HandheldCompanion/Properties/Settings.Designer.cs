@@ -517,13 +517,13 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool SteamControllerMute {
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool SteamControllerMode {
             get {
-                return ((bool)(this["SteamControllerMute"]));
+                return ((bool)(this["SteamControllerMode"]));
             }
             set {
-                this["SteamControllerMute"] = value;
+                this["SteamControllerMode"] = value;
             }
         }
         
@@ -1176,12 +1176,12 @@ namespace HandheldCompanion.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string QuickToolsScreen {
+        public string QuickToolsDevicePath {
             get {
-                return ((string)(this["QuickToolsScreen"]));
+                return ((string)(this["QuickToolsDevicePath"]));
             }
             set {
-                this["QuickToolsScreen"] = value;
+                this["QuickToolsDevicePath"] = value;
             }
         }
         
@@ -1194,6 +1194,31 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["NightLightSchedule"] = value;
+            }
+        }
+		
+		
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.0.0.0")]
+        public string LastVersion {
+            get {
+                return ((string)(this["LastVersion"]));
+            }
+            set {
+                this["LastVersion"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string QuickToolsDeviceName {
+            get {
+                return ((string)(this["QuickToolsDeviceName"]));
+            }
+            set {
+                this["QuickToolsDeviceName"] = value;
             }
         }
     }

@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using WindowsInput.Events;
-using static HandheldCompanion.Managers.InputsHotkey;
+using static HandheldCompanion.Inputs.InputsHotkey;
 using Application = System.Windows.Application;
 using ButtonState = HandheldCompanion.Inputs.ButtonState;
 using Timer = System.Timers.Timer;
@@ -19,12 +19,15 @@ namespace HandheldCompanion.Managers;
 
 public static class InputsManager
 {
+    #region events
     public delegate void InitializedEventHandler();
+    public static event InitializedEventHandler Initialized;
 
     public delegate void TriggerRaisedEventHandler(string listener, InputsChord inputs, InputsHotkeyType type,
         bool IsKeyDown, bool IsKeyUp);
 
     public delegate void TriggerUpdatedEventHandler(string listener, InputsChord inputs, ListenerType type);
+	#endregion
 
     public enum ListenerType
     {
@@ -41,9 +44,7 @@ public static class InputsManager
 
     private const short TIME_LONG = 600; // default interval between two inputs from a chord
     // default interval before considering a chord as hold
-
-    private const short
-        TIME_EXPIRED = 3000; // default interval before considering a chord as expired if no input is detected
+    private const short TIME_EXPIRED = 2000;        // default interval before considering a chord as expired if no input is detected
 
     private const uint LLKHF_INJECTED = 0x00000010;
     private const uint LLKHF_LOWER_IL_INJECTED = 0x00000002;
@@ -116,8 +117,6 @@ public static class InputsManager
 
     public static event TriggerUpdatedEventHandler TriggerUpdated;
 
-    public static event InitializedEventHandler Initialized;
-
     private static void InputsChordHold_Elapsed()
     {
         // triggered when key is pressed for a long time
@@ -134,6 +133,7 @@ public static class InputsManager
 
     private static bool CheckForSequence(bool IsKeyDown, bool IsKeyUp)
     {
+        // skip if empty
         if (currentChord.State.IsEmpty() &&
             currentChord.OutputKeys.Count == 0)
             return false;
@@ -293,6 +293,8 @@ public static class InputsManager
 
         timer.SetPeriod(interval);
     }
+
+    private static KeyEventArgsExt prevKeyEvent = new(Keys.None);
 
     private static void M_GlobalHook_KeyEvent(object? sender, KeyEventArgs e)
     {

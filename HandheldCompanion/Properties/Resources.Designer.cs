@@ -430,16 +430,6 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        public static byte[] chord_neptune {
-            get {
-                object obj = ResourceManager.GetObject("chord_neptune", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Controller_Connect {
@@ -899,20 +889,20 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Mute virtual controller.
+        ///   Looks up a localized string similar to Steam controller mode.
         /// </summary>
-        public static string ControllerPage_SteamControllerMute {
+        public static string ControllerPage_SteamControllerMode {
             get {
-                return ResourceManager.GetString("ControllerPage_SteamControllerMute", resourceCulture);
+                return ResourceManager.GetString("ControllerPage_SteamControllerMode", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Mute virtual controller on steam related applications.
+        ///   Looks up a localized string similar to Change the Steam controller mode: Exclusive mode or Hybrid mode. Exclusive mode will ensure all inputs are managed by Handheld Companion (HC). Hybrid mode will let Steam manage inputs from Steam applications and HC manage inputs from other applications..
         /// </summary>
-        public static string ControllerPage_SteamControllerMuteDesc {
+        public static string ControllerPage_SteamControllerModeDesc {
             get {
-                return ResourceManager.GetString("ControllerPage_SteamControllerMuteDesc", resourceCulture);
+                return ResourceManager.GetString("ControllerPage_SteamControllerModeDesc", resourceCulture);
             }
         }
         
@@ -1453,16 +1443,6 @@ namespace HandheldCompanion.Properties {
         public static string DPadPage_DPad {
             get {
                 return ResourceManager.GetString("DPadPage_DPad", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        public static byte[] empty_neptune {
-            get {
-                object obj = ResourceManager.GetObject("empty_neptune", resourceCulture);
-                return ((byte[])(obj));
             }
         }
         
@@ -3951,38 +3931,47 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Steam Input is enabled.
+        /// </summary>
+        public static string Hint_SteamInput {
+            get {
+                return ResourceManager.GetString("Hint_SteamInput", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Disable Steam Input.
+        /// </summary>
+        public static string Hint_SteamInputAction {
+            get {
+                return ResourceManager.GetString("Hint_SteamInputAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Steam is already running and Steam Input is activated, which may lead to unexpected behavior.
+        /// </summary>
+        public static string Hint_SteamInputDesc {
+            get {
+                return ResourceManager.GetString("Hint_SteamInputDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Handheld Companion will disable Steam Input and restart Steam.
+        /// </summary>
+        public static string Hint_SteamInputReadme {
+            get {
+                return ResourceManager.GetString("Hint_SteamInputReadme", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Restart Steam.
         /// </summary>
         public static string Hint_SteamNeptuneAction {
             get {
                 return ResourceManager.GetString("Hint_SteamNeptuneAction", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Steam Desktop Layout is applied.
-        /// </summary>
-        public static string Hint_SteamNeptuneDesktop {
-            get {
-                return ResourceManager.GetString("Hint_SteamNeptuneDesktop", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Steam is already running and Steam Desktop Layout is applied. This may result in double input.
-        /// </summary>
-        public static string Hint_SteamNeptuneDesktopDesc {
-            get {
-                return ResourceManager.GetString("Hint_SteamNeptuneDesktopDesc", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to You should restart Steam, so that Handheld Companion can automatically adjust Steam Desktop Layout and prevent double input.
-        /// </summary>
-        public static string Hint_SteamNeptuneReadme {
-            get {
-                return ResourceManager.GetString("Hint_SteamNeptuneReadme", resourceCulture);
             }
         }
         
@@ -6089,6 +6078,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Default (On battery).
+        /// </summary>
+        public static string PowerProfileBatteryDefaultName {
+            get {
+                return ResourceManager.GetString("PowerProfileBatteryDefaultName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Default power and fan speed for optimal performance, temperature, noise, and battery life..
         /// </summary>
         public static string PowerProfileDefaultDescription {
@@ -6098,7 +6096,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Default.
+        ///   Looks up a localized string similar to Default (Plugged in).
         /// </summary>
         public static string PowerProfileDefaultName {
             get {
@@ -6782,7 +6780,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User per-game profile.
+        ///   Looks up a localized string similar to Use per-game profile.
         /// </summary>
         public static string ProfilesPage_EnableProfile {
             get {
@@ -8908,29 +8906,29 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Quicktools options.
-        /// </summary>
-        public static string SettingsPage_QuickToolsOptions {
-            get {
-                return ResourceManager.GetString("SettingsPage_QuickToolsOptions", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Display.
         /// </summary>
-        public static string SettingsPage_QuickToolsScreen {
+        public static string SettingsPage_QuickToolsDevicePath {
             get {
-                return ResourceManager.GetString("SettingsPage_QuickToolsScreen", resourceCulture);
+                return ResourceManager.GetString("SettingsPage_QuickToolsDevicePath", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to The display on which quicktools will be displayed.
         /// </summary>
-        public static string SettingsPage_QuickToolsScreenDesc {
+        public static string SettingsPage_QuickToolsDevicePathDesc {
             get {
-                return ResourceManager.GetString("SettingsPage_QuickToolsScreenDesc", resourceCulture);
+                return ResourceManager.GetString("SettingsPage_QuickToolsDevicePathDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Quicktools options.
+        /// </summary>
+        public static string SettingsPage_QuickToolsOptions {
+            get {
+                return ResourceManager.GetString("SettingsPage_QuickToolsOptions", resourceCulture);
             }
         }
         

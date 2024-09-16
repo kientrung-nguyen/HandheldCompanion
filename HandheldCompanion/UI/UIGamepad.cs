@@ -228,6 +228,10 @@ namespace HandheldCompanion.Managers
             // UI thread (async)
             Application.Current.Dispatcher.Invoke(() =>
             {
+                // store top left navigation view item
+                if (prevNavigation is null)
+                    prevNavigation = WPFUtils.GetTopLeftControl<NavigationViewItem>(_currentWindow.controlElements);
+
                 // specific-cases
                 switch (_gamepadPage.Tag)
                 {
@@ -239,7 +243,7 @@ namespace HandheldCompanion.Managers
                         break;
                 }
 
-                if (prevControl.TryGetValue(_gamepadPage.Tag, out Control control))
+                if (prevControl.TryGetValue(_gamepadPage.Tag, out var control))
                 {
                     if (_goingBack)
                     {
@@ -268,14 +272,17 @@ namespace HandheldCompanion.Managers
                 }
 
                 // clear history on page swap
-                if (_gamepadPage is not null)
+                if (_gamepadPage is not null && _currentWindow is OverlayQuickTools)
                     prevControl.Remove(_gamepadPage.Tag, out _);
 
                 // set rendering state
                 _rendered = true;
             });
         }
-		
+
+        private Control forcedFocus;
+        private Control parentFocus;
+
 		private void TooltipTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             // UI thread
@@ -304,6 +311,8 @@ namespace HandheldCompanion.Managers
                     // update navigation
                     prevNavigation = (NavigationViewItem)control;
                     break;
+				case "ContentDialog":
+                    return;
                 default:
                     ToolTipService.SetInitialShowDelay(control, 250);
                     break;
@@ -454,7 +463,7 @@ namespace HandheldCompanion.Managers
                 prevButtonState = controllerState.ButtonState.Clone() as ButtonState;
             }
 
-            // UI thread (async)
+            // UI thread
             Application.Current.Dispatcher.Invoke(() =>
             {
                 // get current focused element
@@ -526,7 +535,11 @@ namespace HandheldCompanion.Managers
                 else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.B2))
                 {
                     // hide dialog, if any
-                    _currentWindow.currentDialog?.Hide();
+                    if (_currentWindow.currentDialog is not null)
+                    {
+                        _currentWindow.currentDialog.Hide();
+                        return;
+                    }
 
                     // lazy
                     // todo: implement proper RoutedEvent call
@@ -538,7 +551,7 @@ namespace HandheldCompanion.Managers
                                 {
                                     default:
                                         {
-                                            if (HasDialogOpen && prevControl.TryGetValue(_gamepadPage, out Control control))
+                                            if (HasDialogOpen && prevControl.TryGetValue(_gamepadPage, out var control))
                                                 Focus(control);
                                             else
                                                 Focus(prevNavigation);
@@ -568,6 +581,7 @@ namespace HandheldCompanion.Managers
                                         return;
                                 }
                             }
+                            break;
 
                         case "ComboBox":
                             {
@@ -596,19 +610,17 @@ namespace HandheldCompanion.Managers
                                                         }
                                                     }
                                                     break;
-
                                                 default:
                                                     // restore previous NavigationViewItem
                                                     if (prevNavigation is not null)
                                                         Focus(prevNavigation);
                                                     break;
-
                                             }
                                         }
-                                        break;
+                                        return;
                                 }
                             }
-                            return;
+                            break;
 
                         case "ComboBoxItem":
                             {

@@ -22,7 +22,7 @@
 
         <!--  Header  -->
         <ui:SimpleStackPanel Spacing="6">
-            <Border Padding="4,12,12,12" CornerRadius="{StaticResource ControlCornerRadius}">
+            <Border Padding="4,12,12,12" CornerRadius="{DynamicResource ControlCornerRadius}">
                 <DockPanel>
                     <Image
                         Name="ProfileIcon"
@@ -223,10 +223,8 @@
                                     MinWidth="20"
                                     d:Text="100"
                                     Text="{Binding GPUPower, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                <TextBlock 
-                                    VerticalAlignment="Center" 
-                                    Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
-                                    Text="W">
+                                <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
+                                    W
                                 </TextBlock>
                             </DockPanel>
                         </StackPanel>
@@ -241,10 +239,8 @@
                                     MinWidth="20"
                                     d:Text="100"
                                     Text="{Binding GPUTemperature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                <TextBlock 
-                                    VerticalAlignment="Center" 
-                                    Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
-                                    Text="°C">
+                                <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
+                                    °C
                                 </TextBlock>
                             </DockPanel>
                         </StackPanel>

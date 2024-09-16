@@ -787,6 +787,7 @@
                     <!--  Power settings  -->
                     <Expander
                         Name="PowerSettings"
+                        IsExpanded="True"
                         HorizontalAlignment="Stretch"
                         Expanded="Expander_Expanded">
                         <Expander.Header>
@@ -812,7 +813,7 @@
                                             TextWrapping="Wrap" />
                                     </ui:SimpleStackPanel>
                                 </DockPanel>
-
+                                
                                 <TextBlock
                                     Name="SelectedPowerProfileName"
                                     Grid.Column="1"
@@ -821,10 +822,89 @@
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource BodyTextBlockStyle}"
                                     Text="{l:Static resx:Resources.PowerProfileDefaultName}" />
+                                
                             </Grid>
                         </Expander.Header>
+                        
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <Grid Grid.Column="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition />
+                                        <RowDefinition/>
+                                    </Grid.RowDefinitions>
+                                    <DockPanel Margin="12,0,12,6">
+                                        <ui:FontIcon
+                                            VerticalAlignment="Center"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                            Glyph="&#xe95f;" RenderTransformOrigin="0.5,0.5">
+                                            <ui:FontIcon.RenderTransform>
+                                                <TransformGroup>
+                                                    <ScaleTransform/>
+                                                    <SkewTransform/>
+                                                    <RotateTransform Angle="-135"/>
+                                                    <TranslateTransform/>
+                                                </TransformGroup>
+                                            </ui:FontIcon.RenderTransform>
+                                        </ui:FontIcon>
+                                        <TextBlock
+                                            Margin="4,0,0,0"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                            VerticalAlignment="Center"
+                                            Text="Plugged In" />
+                                    </DockPanel>
+                                    <ComboBox
+                                        Grid.Row="1"
+                                        Margin="0,0,0,0"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Center"
+                                        Name="ProfilePluggedIn" SelectionChanged="ProfilePluggedIn_SelectionChanged"></ComboBox>
+                                </Grid>
+                                <!--  Separator  -->
+                                <Separator Grid.Column="1" Margin="0" Background="Transparent" />
+                                <Grid Grid.Column="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition />
+                                        <RowDefinition />
+                                    </Grid.RowDefinitions>
+                                    <DockPanel Margin="12,0,12,6">
+                                        <ui:FontIcon
+                                            VerticalAlignment="Center"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                            Glyph="&#xe83f;">
+                                        </ui:FontIcon>
+                                        <TextBlock
+                                            Margin="4,0,0,0"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                            VerticalAlignment="Center"
+                                            Text="On Battery" />
+                                    </DockPanel>
+                                    <ComboBox
+                                        Grid.Row="1"
+                                        Margin="0,0,0,0"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Center"
+                                        Name="ProfileOnBattery" SelectionChanged="ProfileOnBattery_SelectionChanged"></ComboBox>
+                                </Grid>
+                            </Grid>
 
-                        <ui:SimpleStackPanel Name="ProfileStack" Spacing="16" />
+                            <ui:SimpleStackPanel Name="ProfileStack" Spacing="16" />
+                            </ui:SimpleStackPanel>
                     </Expander>
 
                     <!--  Motion control settings  -->

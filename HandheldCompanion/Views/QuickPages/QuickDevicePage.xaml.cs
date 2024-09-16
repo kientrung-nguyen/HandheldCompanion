@@ -37,6 +37,7 @@ public partial class QuickDevicePage : Page
         ProfileManager.Applied += ProfileManager_Applied;
         ProfileManager.Discarded += ProfileManager_Discarded;
 
+        // Device specific
         LegionGoPanel.Visibility = IDevice.GetCurrent() is LegionGo ? Visibility.Visible : Visibility.Collapsed;
         DynamicLightingPanel.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting) ? Visibility.Visible : Visibility.Collapsed;
         panelNightlight.Visibility = MultimediaManager.HasNightLightSupport() ? Visibility.Visible : Visibility.Collapsed;

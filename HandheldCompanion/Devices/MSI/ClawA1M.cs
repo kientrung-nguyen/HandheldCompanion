@@ -71,7 +71,7 @@ public class ClawA1M : IDevice
     }
 
     private ManagementEventWatcher? specialKeyWatcher;
-    private Dictionary<byte, HidDevice> hidDevices = new();
+    private Dictionary<byte, HidDevice> hidDevices = [];
 
     // todo: find the right value, this is placeholder
     private const byte INPUT_HID_ID = 0x01;
@@ -167,7 +167,7 @@ public class ClawA1M : IDevice
         try
         {
             var scope = new ManagementScope("\\\\.\\root\\WMI");
-            specialKeyWatcher = new ManagementEventWatcher(scope, (EventQuery)(new WqlEventQuery("SELECT * FROM MSI_Event")));
+            specialKeyWatcher = new ManagementEventWatcher(scope, new WqlEventQuery("SELECT * FROM MSI_Event"));
             specialKeyWatcher.EventArrived += onWMIEvent;
             specialKeyWatcher.Start();
         }
@@ -201,7 +201,7 @@ public class ClawA1M : IDevice
     private void onWMIEvent(object sender, EventArrivedEventArgs e)
     {
         int WMIEvent = Convert.ToInt32(e.NewEvent.Properties["MSIEvt"].Value);
-        WMIEventCode key = (WMIEventCode)(WMIEvent & (int)byte.MaxValue);
+        WMIEventCode key = (WMIEventCode)(WMIEvent & byte.MaxValue);
 
         // LogManager.LogInformation("Received MSI WMI Event Code {0}", (int)key);
 

@@ -6,18 +6,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 
 namespace HandheldCompanion.Views.Classes
 {
     public class GamepadWindow : Window
     {
-        public List<Control> controlElements = new();
+        public List<Control> controlElements = [];
         public List<Control> controlScrollViewer = new();
-        public List<FrameworkElement> frameworkElements = new();
+        public List<FrameworkElement> frameworkElements = [];
 
         public ContentDialog currentDialog;
         protected UIGamepad gamepadFocusManager;
+
+        public HwndSource hwndSource;
 
         public GamepadWindow()
         {

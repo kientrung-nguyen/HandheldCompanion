@@ -4,8 +4,6 @@ using HandheldCompanion.Utils;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using static HandheldCompanion.Managers.OSDManager;
 using static HandheldCompanion.Utils.XInputPlusUtils;
 
 namespace HandheldCompanion;
@@ -30,7 +28,8 @@ public enum UpdateSource
     QuickProfilesCreation = 3,
     Creation = 4,
     Serializer = 5,
-    ProfilesPageUpdateOnly = 6
+    ProfilesPageUpdateOnly = 6,
+    PowerStatusChange = 7
 }
 
 public enum SteeringAxis
@@ -79,7 +78,7 @@ public partial class Profile : ICloneable, IComparable
     public bool MotionInvertVertical { get; set; } // if false, invert vertical axis
     public float MotionSensivityX { get; set; } = 1.0f;
     public float MotionSensivityY { get; set; } = 1.0f;
-    public SortedDictionary<double, double> MotionSensivityArray { get; set; } = new();
+    public SortedDictionary<double, double> MotionSensivityArray { get; set; } = [];
 
     // steering
     public float SteeringMaxAngle { get; set; } = 30.0f;
@@ -96,7 +95,8 @@ public partial class Profile : ICloneable, IComparable
     public float FlickstickSensivity { get; set; } = 3.0f;
 
     // power & graphics
-    public Guid PowerProfile { get; set; } = new();
+    public Guid PowerProfile { get; set; } = new("00000000-0000-0000-0000-000000000000");
+    public Guid BatteryProfile { get; set; } = new("00000000-0000-0000-0000-010000000000");
     public int FramerateValue { get; set; } = 0; // default RTSS value
     public bool GPUScaling { get; set; } = false;
     public int ScalingMode { get; set; } = 0; // default AMD value
@@ -107,6 +107,7 @@ public partial class Profile : ICloneable, IComparable
     public byte IntegerScalingType { get; set; } = 0;
     public bool RISEnabled { get; set; } = false;
     public int RISSharpness { get; set; } = 80; // default AMD value
+    public bool OnScreenDisplayToggle { get; set; } = false;
 
     public OverlayDisplayLevel OverlayLevel { get; set; } = OverlayDisplayLevel.Disabled;
     public OverlayEntryLevel OverlayTimeLevel { get; set; } = OverlayEntryLevel.Disabled;
@@ -116,6 +117,8 @@ public partial class Profile : ICloneable, IComparable
     public OverlayEntryLevel OverlayGPULevel { get; set; } = OverlayEntryLevel.Disabled;
     public OverlayEntryLevel OverlayVRAMLevel { get; set; } = OverlayEntryLevel.Disabled;
     public OverlayEntryLevel OverlayBATTLevel { get; set; } = OverlayEntryLevel.Disabled;
+
+    public int OverlayOrientation { get; set; } = 0;
 
     // AppCompatFlags
     public bool FullScreenOptimization { get; set; } = true;

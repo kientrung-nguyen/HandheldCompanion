@@ -56,9 +56,6 @@ public static class SoundControl
     public static int AudioAdjust(int delta)
     {
         var volume = AudioGet();
-        volume = delta > 0
-            ? (int)Math.Floor(volume / 5.0d) * 5
-            : (int)Math.Ceiling(volume / 5.0d) * 5;
         volume = Math.Min(100, Math.Max(0, volume + delta));
         AudioSet(volume);
         return volume;

@@ -92,29 +92,42 @@ namespace HandheldCompanion.ViewModels
 
             StartProcessCommand = new DelegateCommand(async () =>
             {
-            // localize me
-            Dialog dialog = new Dialog(OverlayQuickTools.GetCurrent())
-            {
-                Title = "Quick start",
-                Content = "Please wait while we initialize the application.",
-                CanClose = false
-            };
+                if (!File.Exists(profile.Path))
+                {
+                    // localize me
+                    new Dialog(OverlayQuickTools.GetCurrent())
+                    {
+                        Title = "Quick start",
+                        Content = "The system cannot find the file specified."
+                    }.Show();
 
-            // display dialog
-            dialog.Show();
+                    return;
+                }
 
-            // Create a new instance of ProcessStartInfo
-            ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.FileName = profile.Path;
-            startInfo.Arguments = profile.Arguments;
+                // localize me
+                Dialog dialog = new Dialog(OverlayQuickTools.GetCurrent())
+                {
+                    Title = "Quick start",
+                    Content = "Please wait while we initialize the application.",
+                    CanClose = false
+                };
 
-                Process process = new();
+                // display dialog
+                dialog.Show();
+
+                // Create a new instance of ProcessStartInfo
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = profile.Path,
+                    Arguments = profile.Arguments
+                };
+
+                Process process = new() { StartInfo = startInfo };
 
                 // Run the process start operation in a task to avoid blocking the UI thread
                 await Task.Run(() =>
                 {
-                    // Start the process with the startInfo configuration
-                    process = Process.Start(startInfo);
+                    process.Start();
                     process.WaitForInputIdle();
                 });
 

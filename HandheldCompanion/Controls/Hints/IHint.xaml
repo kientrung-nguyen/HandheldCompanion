@@ -17,7 +17,8 @@
     <Expander
         Name="HintsSteamNeptuneDeskop"
         Padding="15,12,12,12"
-        HorizontalAlignment="Stretch">
+        HorizontalAlignment="Stretch"
+        IsExpanded="True">
 
         <Expander.Header>
             <Grid>

@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.Generic;
@@ -12,14 +13,14 @@ namespace HandheldCompanion.Controls.Hints
 {
     public class Hint_RogAllyServiceCheck : IHint
     {
-        private List<string> serviceNames = new()
-        {
+        private List<string> serviceNames =
+        [
             "ArmouryCrateSEService",
             "AsusAppService",
             "ArmouryCrateControlInterface",
-        };
+        ];
 
-        private List<ServiceController> serviceControllers = new();
+        private List<ServiceController> serviceControllers = [];
         private Timer serviceTimer;
 
         public Hint_RogAllyServiceCheck() : base()
@@ -91,10 +92,18 @@ namespace HandheldCompanion.Controls.Hints
             {
                 foreach (ServiceController serviceController in serviceControllers)
                 {
-                    if (serviceController.Status == ServiceControllerStatus.Running)
-                        serviceController.Stop();
-                    serviceController.WaitForStatus(ServiceControllerStatus.Stopped);
-                    ServiceUtils.ChangeStartMode(serviceController, ServiceStartMode.Disabled, out _);
+                    try
+                    {
+                        if (serviceController.Status == ServiceControllerStatus.Running)
+                            serviceController.Stop();
+
+                        serviceController.WaitForStatus(ServiceControllerStatus.Stopped);
+                        ServiceUtils.ChangeStartMode(serviceController, ServiceStartMode.Disabled, out _);
+                    }
+                    catch
+                    {
+                        LogManager.LogError("Failed to disable service: {0}", serviceController.ServiceName);
+                    }
                 }
             });
         }

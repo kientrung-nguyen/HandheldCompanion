@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -30,9 +31,7 @@ public partial class HotkeysPage : Page
     {
     }
 
-    public void Page_Closed()
-    {
-    }
+    public void Page_Closed() { }
 
     private void HotkeysManager_HotkeyTypeCreated(InputsHotkey.InputsHotkeyType type)
     {

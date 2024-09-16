@@ -1,8 +1,10 @@
 ﻿using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.Utils;
 using System;
 using System.Diagnostics;
 using System.Timers;
+using System.Windows;
 using static HandheldCompanion.Managers.OSDManager;
 using LibreHwdMonitor = HandheldCompanion.Platforms.LibreHardwareMonitor;
 
@@ -48,7 +50,7 @@ public static class PlatformManager
 
         if (RTSS.IsInstalled)
         {
-            //UpdateCurrentNeedsOnScreenDisplay(OSDManager.OverlayLevel);
+            UpdateCurrentNeedsOnScreenDisplay(EnumUtils<OverlayDisplayLevel>.Parse(SettingsManager.Get<int>("OnScreenDisplayLevel")));
         }
 
         if (LibreHardwareMonitor.IsInstalled)
@@ -79,11 +81,6 @@ public static class PlatformManager
         else
             CurrentNeeds &= ~PlatformNeeds.AutoTDP;
 
-        if (profile.FanProfile.FanMode == FanMode.Software)
-            CurrentNeeds |= PlatformNeeds.FanModeSoftware;
-        else
-            CurrentNeeds &= ~PlatformNeeds.FanModeSoftware;
-
         UpdateTimer.Stop();
         UpdateTimer.Start();
     }
@@ -95,12 +92,14 @@ public static class PlatformManager
             CurrentNeeds |= PlatformNeeds.FramerateLimiter;
         else
             CurrentNeeds &= ~PlatformNeeds.FramerateLimiter;
-        UpdateCurrentNeedsOnScreenDisplay(profile.OverlayLevel);
+        UpdateCurrentNeedsOnScreenDisplay(profile.OnScreenDisplayToggle 
+            ? EnumUtils<OverlayDisplayLevel>.Parse(SettingsManager.Get<int>("OnScreenDisplayLevel"))
+            : OverlayDisplayLevel.Disabled);
 
         UpdateTimer.Stop();
         UpdateTimer.Start();
     }
-    /*
+
     private static void SettingsManager_SettingValueChanged(string name, object value)
     {
         // UI thread
@@ -118,7 +117,7 @@ public static class PlatformManager
             }
         });
     }
-    */
+    
     private static void UpdateCurrentNeedsOnScreenDisplay(OverlayDisplayLevel level)
     {
         switch (level)
@@ -146,8 +145,6 @@ public static class PlatformManager
     {
         /*
          * Dependencies:
-         * LibreHardwareMonitor (LHM): OSD
-         * HWiNFO: AutoPerf, OSD
          * RTSS: AutoTDP, framerate limiter, OSD
          */
 
@@ -184,7 +181,6 @@ public static class PlatformManager
             // If none of the needs are present, stop both LHM and RTSS
             if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay) ||
                 PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) ||
-                PreviousNeeds.HasFlag(PlatformNeeds.FanModeSoftware) ||
                 PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
             {
                 // Only stop LHM and RTSS if they were running before and if they are installed
@@ -251,7 +247,6 @@ public static class PlatformManager
         AutoTDP = 1,
         FramerateLimiter = 2,
         OnScreenDisplay = 4,
-        OnScreenDisplayComplex = 8,
-        FanModeSoftware = 16
+        OnScreenDisplayComplex = 8
     }
 }

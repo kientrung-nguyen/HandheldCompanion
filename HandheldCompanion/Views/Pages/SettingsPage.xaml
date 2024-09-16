@@ -464,9 +464,9 @@
 
                 <!--  Telemetry  -->
                 <Border
-                     Padding="15,12,12,12"
-                     Background="{DynamicResource ExpanderHeaderBackground}"
-                     CornerRadius="{DynamicResource ControlCornerRadius}">
+                    Padding="15,12,12,12"
+                    Background="{DynamicResource ExpanderHeaderBackground}"
+                    CornerRadius="{DynamicResource ControlCornerRadius}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -497,7 +497,7 @@
                             HorizontalAlignment="Right"
                             Style="{DynamicResource InvertedToggleSwitchStyle}"
                             Toggled="Toggle_Telemetry_Toggled" />
-                        </Grid>
+                    </Grid>
                 </Border>
 
             </ui:SimpleStackPanel>
@@ -569,21 +569,21 @@
                                 Glyph="&#xE790;" />
 
                             <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.SettingsPage_QuickToolsScreen}" />
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.SettingsPage_QuickToolsDevicePath}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.SettingsPage_QuickToolsScreenDesc}"
+                                    Text="{l:Static resx:Resources.SettingsPage_QuickToolsDevicePathDesc}"
                                     TextWrapping="Wrap" />
                             </ui:SimpleStackPanel>
                         </DockPanel>
 
                         <ComboBox
-                            Name="cB_QuickToolsScreen"
+                            Name="cB_QuickToolsDevicePath"
                             Grid.Column="1"
                             Margin="12,0,0,0"
                             HorizontalAlignment="Stretch"
-                            SelectionChanged="cB_QuickToolsScreen_SelectionChanged" />
+                            SelectionChanged="cB_QuickToolsDevicePath_SelectionChanged" />
                     </Grid>
                 </Border>
 

@@ -187,10 +187,12 @@ public static class ProcessManager
         return Processes.Values.Where(a => a.Executable.Equals(executable, StringComparison.InvariantCultureIgnoreCase)).ToList();
     }
 
-    private static void ForegroundCallback()
+    private static async void ForegroundCallback()
     {
-        IntPtr hWnd = GetforegroundWindow();
-        if (foregroundWindow == hWnd)
+        var hWnd = GetforegroundWindow();
+
+        // skip if this window is already in foreground
+        if (foregroundWindow == hWnd || hWnd == IntPtr.Zero)
             return;
 
         int processId = 0;
@@ -265,34 +267,46 @@ public static class ProcessManager
 
     private static void ProcessHalted(object? sender, EventArgs e)
     {
-        int processId = ((Process)sender).Id;
+        if (sender is not Process process) return;
 
-        if (!Processes.TryGetValue(processId, out ProcessEx processEx))
-            return;
-
-        // stopped process can't have foreground
-        if (foregroundProcess == processEx)
+        try
         {
-            LogManager.LogDebug("{0} process {1} that had foreground has halted", foregroundProcess.Platform, foregroundProcess.Executable);
-            ForegroundChanged?.Invoke(null, foregroundProcess);
+            int processId = process.Id;
+
+            if (!Processes.TryGetValue(processId, out var processEx))
+                return;
+
+            // stopped process can't have foreground
+            if (foregroundProcess == processEx)
+            {
+                LogManager.LogDebug("{0} process {1} that had foreground has halted", foregroundProcess.Platform, foregroundProcess.Executable);
+                ForegroundChanged?.Invoke(null, foregroundProcess);
+            }
+
+            bool success = Processes.TryRemove(new KeyValuePair<int, ProcessEx>(processId, processEx));
+
+            // raise event
+            if (success)
+            {
+                ProcessStopped?.Invoke(processEx);
+
+                LogManager.LogDebug("Process halted: {0}", processEx.Executable);
+
+                processEx.Dispose();
+            }
         }
-
-        Processes.TryRemove(new KeyValuePair<int, ProcessEx>(processId, processEx));
-
-        // raise event
-        ProcessStopped?.Invoke(processEx);
-
-        LogManager.LogDebug("Process halted: {0}", processEx.Executable);
-
-        processEx.Dispose();
+        catch (Exception ex)
+        {
+            LogManager.LogError($"{nameof(ProcessManager)}: {ex}");
+        }
     }
 
-    private static bool CreateProcess(int ProcessID, int NativeWindowHandle = 0, bool OnStartup = false)
+    private static bool CreateProcess(int processId, int NativeWindowHandle = 0, bool OnStartup = false)
     {
         try
         {
             // process has exited on arrival
-            Process proc = Process.GetProcessById(ProcessID);
+            Process proc = Process.GetProcessById(processId);
             if (proc.HasExited)
                 return false;
 
@@ -304,7 +318,7 @@ public static class ProcessManager
             {
                 proc.EnableRaisingEvents = true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // access denied
             }
@@ -338,7 +352,7 @@ public static class ProcessManager
                 processEx.MainThread.Disposed += (sender, e) => processEx.MainThreadDisposed();
             processEx.Platform = PlatformManager.GetPlatform(proc);
 
-            Processes.TryAdd(ProcessID, processEx);
+            Processes.TryAdd(processId, processEx);
 
             if (processEx.Filter != ProcessFilter.Allowed)
                 return true;
@@ -429,6 +443,7 @@ public static class ProcessManager
             case "searchhost.exe":
             case "shellexperiencehost.exe":
             case "startmenuexperiencehost.exe":
+            case "textinputhost.exe":
             case "credentialuibroker.exe":
                 return ProcessFilter.Desktop;
 
@@ -499,7 +514,7 @@ public static class ProcessManager
         // refresh child processes list (most likely useless, a suspended process shouldn't have new child processes)
         processEx.RefreshChildProcesses();
 
-        Parallel.ForEach(processEx.Children,
+        Parallel.ForEach(processEx.ChildrenProcessIds,
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, childId =>
             {
                 Process process = Process.GetProcessById(childId);
@@ -524,7 +539,7 @@ public static class ProcessManager
         // refresh child processes list
         processEx.RefreshChildProcesses();
 
-        Parallel.ForEach(processEx.Children,
+        Parallel.ForEach(processEx.ChildrenProcessIds,
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, childId =>
             {
                 Process process = Process.GetProcessById(childId);
@@ -556,19 +571,15 @@ public static class ProcessManager
     #region events
 
     public static event ForegroundChangedEventHandler ForegroundChanged;
-
     public delegate void ForegroundChangedEventHandler(ProcessEx? processEx, ProcessEx? backgroundEx);
 
     public static event ProcessStartedEventHandler ProcessStarted;
-
     public delegate void ProcessStartedEventHandler(ProcessEx processEx, bool OnStartup);
 
     public static event ProcessStoppedEventHandler ProcessStopped;
-
     public delegate void ProcessStoppedEventHandler(ProcessEx processEx);
 
     public static event InitializedEventHandler Initialized;
-
     public delegate void InitializedEventHandler();
 
     #endregion

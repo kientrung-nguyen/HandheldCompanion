@@ -101,7 +101,6 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
             if (TelemetryTimer != null && TelemetryTimer.Enabled)
                 TelemetryTimer.Stop();
-
         }
 
         protected virtual void OnIntegerScalingChanged(bool supported, bool enabled)

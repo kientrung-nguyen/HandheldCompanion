@@ -19,7 +19,7 @@
 
     <Grid>
         <ui:ContentDialog
-            Name="ProfileRenameDialog"
+            Name="SnapDialog"
             CloseButtonText="{l:Static resx:Resources.ProfilesPage_Dialogue_Cancel}"
             PrimaryButtonStyle="{DynamicResource AccentButtonStyle}"
             PrimaryButtonText="Snap">
@@ -163,69 +163,67 @@
 
         <ui:SimpleStackPanel Spacing="24">
             <ui:SimpleStackPanel Spacing="6">
-                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Visibility="Collapsed" Text="Quick start" />
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Quick start" Visibility="Collapsed" />
 
                 <ui:ItemsRepeater ItemsSource="{Binding Profiles}">
                     <ui:ItemsRepeater.Layout>
                         <ui:UniformGridLayout
                             ItemsStretch="Fill"
                             MaximumRowsOrColumns="6"
-                            MinColumnSpacing="6"
-                            MinRowSpacing="6"
+                            MinColumnSpacing="3"
+                            MinRowSpacing="3"
                             Orientation="Horizontal" />
                     </ui:ItemsRepeater.Layout>
 
                     <ui:ItemsRepeater.ItemTemplate>
                         <DataTemplate>
-                            <Grid>
-                                <Button
-                                    Height="70"
+                            <Button
+                                Width="96"
+                                Height="84"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Command="{Binding StartProcessCommand}"
+                                IsEnabled="{Binding IsAvailable, UpdateSourceTrigger=PropertyChanged}">
+
+                                <ui:SimpleStackPanel
+                                    Margin="0,6,0,0"
                                     HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Stretch"
-                                    Command="{Binding StartProcessCommand}"
-                                    IsEnabled="{Binding IsAvailable, UpdateSourceTrigger=PropertyChanged}">
+                                    Orientation="Vertical"
+                                    Spacing="3">
+                                    <Image
+                                        Width="32"
+                                        Height="32"
+                                        Source="{Binding Icon, UpdateSourceTrigger=PropertyChanged}">
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.20" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
 
-                                    <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical">
-                                        <Image
-                                            Width="24"
-                                            Height="24"
-                                            Source="{Binding Icon, UpdateSourceTrigger=PropertyChanged}">
-                                            <Image.Style>
-                                                <Style TargetType="Image">
-                                                    <Style.Triggers>
-                                                        <Trigger Property="IsEnabled" Value="False">
-                                                            <Setter Property="Opacity" Value="0.20" />
-                                                        </Trigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Image.Style>
-                                        </Image>
-
-                                        <TextBlock
-                                            Width="110"
-                                            FontSize="12"
-                                            Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                            TextAlignment="Center"
-                                            TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </Button>
-
-                                <!--
-                                <ui:FontIcon
-                                    HorizontalAlignment="Left"
-                                    VerticalAlignment="Top"
-                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                    Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
-                                    Glyph="&#xe7e8;" />
-                                -->
-                            </Grid>
+                                    <TextBlock
+                                        Height="40"
+                                        HorizontalAlignment="Center"
+                                        FontSize="12"
+                                        Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                        TextAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="Wrap" />
+                                </ui:SimpleStackPanel>
+                            </Button>
                         </DataTemplate>
                     </ui:ItemsRepeater.ItemTemplate>
                 </ui:ItemsRepeater>
             </ui:SimpleStackPanel>
 
             <ui:SimpleStackPanel Spacing="6">
-                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Visibility="Collapsed" Text="Processes" />
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Processes" Visibility="Collapsed" />
 
                 <ui:ItemsRepeater ItemsSource="{Binding Processes}">
                     <ui:ItemsRepeater.ItemTemplate>

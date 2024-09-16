@@ -44,8 +44,8 @@ public partial class App : Application
         var fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
 
         // set environment variables
-        Environment.SetEnvironmentVariable("APP_BASE_DIRECTORY",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion"));
+        Environment.SetEnvironmentVariable("LOG_PATH",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion", "logs"));
 
         // initialize log
         LogManager.Initialize("HandheldCompanion");
@@ -124,7 +124,7 @@ public partial class App : Application
 
     private void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
     {
-        Exception ex = (Exception)e.Exception;
+        Exception ex = e.Exception;
 
         // send to sentry
         bool IsSentryEnabled = SettingsManager.Get<bool>("TelemetryEnabled");

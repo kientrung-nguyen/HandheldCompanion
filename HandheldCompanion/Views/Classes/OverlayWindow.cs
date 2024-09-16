@@ -146,7 +146,7 @@ public class OverlayWindow : Window
                     break;
                 case Visibility.Collapsed:
                 case Visibility.Hidden:
-                    Show();
+                    try { Show(); } catch { /* ItemsRepeater might have a NaN DesiredSize */ }
                     break;
             }
         });

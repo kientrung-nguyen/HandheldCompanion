@@ -124,12 +124,6 @@
   <data name="XInputPlus" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\XInputPlus.ini;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="chord_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\controller_base\chord_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="empty_neptune" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\controller_base\empty_neptune.vdf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="xinput1_x64" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\XInputPlus\x64\XInput1_3.dl_;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
@@ -671,7 +665,7 @@
     <value>Delete profile</value>
   </data>
   <data name="ProfilesPage_EnableProfile" xml:space="preserve">
-    <value>User per-game profile</value>
+    <value>Use per-game profile</value>
   </data>
   <data name="ProfilesPage_EnableProfileDesc" xml:space="preserve">
     <value>The profile will be automatically applied when the associated application is detected</value>
@@ -1059,11 +1053,11 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="WarningElevated" xml:space="preserve">
     <value>Run this tool as Administrator to unlock these settings</value>
   </data>
-  <data name="ControllerPage_SteamControllerMute" xml:space="preserve">
-    <value>Mute virtual controller</value>
+  <data name="ControllerPage_SteamControllerMode" xml:space="preserve">
+    <value>Steam controller mode</value>
   </data>
-  <data name="ControllerPage_SteamControllerMuteDesc" xml:space="preserve">
-    <value>Mute virtual controller on steam related applications</value>
+  <data name="ControllerPage_SteamControllerModeDesc" xml:space="preserve">
+    <value>Change the Steam controller mode: Exclusive mode or Hybrid mode. Exclusive mode will ensure all inputs are managed by Handheld Companion (HC). Hybrid mode will let Steam manage inputs from Steam applications and HC manage inputs from other applications.</value>
   </data>
   <data name="ProfilesPage_ControllerSettings" xml:space="preserve">
     <value>Controller settings</value>
@@ -2370,14 +2364,14 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="MainWindow_Select" xml:space="preserve">
     <value>Select</value>
   </data>
-  <data name="Hint_SteamNeptuneReadme" xml:space="preserve">
-    <value>You should restart Steam, so that Handheld Companion can automatically adjust Steam Desktop Layout and prevent double input</value>
+  <data name="Hint_SteamInputReadme" xml:space="preserve">
+    <value>Handheld Companion will disable Steam Input and restart Steam</value>
   </data>
-  <data name="Hint_SteamNeptuneDesktopDesc" xml:space="preserve">
-    <value>Steam is already running and Steam Desktop Layout is applied. This may result in double input</value>
+  <data name="Hint_SteamInputDesc" xml:space="preserve">
+    <value>Steam is already running and Steam Input is activated, which may lead to unexpected behavior</value>
   </data>
-  <data name="Hint_SteamNeptuneDesktop" xml:space="preserve">
-    <value>Steam Desktop Layout is applied</value>
+  <data name="Hint_SteamInput" xml:space="preserve">
+    <value>Steam Input is enabled</value>
   </data>
   <data name="Hint_SteamXboxDriversReadme" xml:space="preserve">
     <value>You might want to uninstall Steam Xbox Controller Enhanced Features Driver</value>
@@ -2476,7 +2470,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Default power and fan speed for optimal performance, temperature, noise, and battery life.</value>
   </data>
   <data name="PowerProfileDefaultName" xml:space="preserve">
-    <value>Default</value>
+    <value>Default (Plugged in)</value>
   </data>
   <data name="PowerProfileManualDescription" xml:space="preserve">
     <value>User-defined power and fan speed.</value>
@@ -3213,10 +3207,10 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="SettingsPage_QuickToolsWindowLocationMaximized" xml:space="preserve">
     <value>Maximized</value>
   </data>
-  <data name="SettingsPage_QuickToolsScreen" xml:space="preserve">
+  <data name="SettingsPage_QuickToolsDevicePath" xml:space="preserve">
     <value>Display</value>
   </data>
-  <data name="SettingsPage_QuickToolsScreenDesc" xml:space="preserve">
+  <data name="SettingsPage_QuickToolsDevicePathDesc" xml:space="preserve">
     <value>The display on which quicktools will be displayed</value>
   </data>
   <data name="MainWindow_TelemetryText" xml:space="preserve">
@@ -3299,5 +3293,11 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="BatteryFullyCharged" xml:space="preserve">
     <value>Battery fully charged</value>
+  </data>
+  <data name="PowerProfileBatteryDefaultName" xml:space="preserve">
+    <value>Default (On battery)</value>
+  </data>
+  <data name="Hint_SteamInputAction" xml:space="preserve">
+    <value>Disable Steam Input</value>
   </data>
 </root>

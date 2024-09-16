@@ -60,7 +60,7 @@ public static class ProcessUtils
 
     public static Dictionary<string, string> GetAppProperties(string filePath1)
     {
-        Dictionary<string, string> AppProperties = new();
+        Dictionary<string, string> AppProperties = [];
 
         var shellFile = ShellObject.FromParsingName(filePath1);
         foreach (var property in typeof(ShellProperties.PropertySystem).GetProperties(BindingFlags.Public |
@@ -122,7 +122,7 @@ public static class ProcessUtils
         Process[] allProcesses = Process.GetProcesses();
 
         // Create a list to store the matching processes
-        List<Process> matchingProcesses = new List<Process>();
+        List<Process> matchingProcesses = [];
 
         // Loop through each process and check if its executable name matches the parameter
         foreach (Process process in allProcesses)
@@ -222,6 +222,37 @@ public static class ProcessUtils
         return placement;
     }
 
+
+
+    public static void KillByName(string name)
+    {
+        foreach (var process in Process.GetProcessesByName(name))
+        {
+            try
+            {
+                process.Kill();
+                Debug.WriteLine($"Stopped: {process.ProcessName}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to stop: {process.ProcessName} {ex.Message}");
+            }
+        }
+    }
+
+    public static void KillByProcess(Process process)
+    {
+        try
+        {
+            process.Kill();
+            Debug.WriteLine($"Stopped: {process.ProcessName}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to stop: {process.ProcessName} {ex.Message}");
+        }
+    }
+
     [Serializable]
     [StructLayout(LayoutKind.Sequential)]
     public struct WINDOWPLACEMENT
@@ -248,7 +279,22 @@ public static class ProcessUtils
                     return;
 
                 uint processId = (uint)WinAPI.GetWindowProcessId(hWnd);
+
+                // try and get the process
                 _realProcess = ProcessDiagnosticInfo.TryGetForProcessId(processId);
+
+                // failed to retrieve process
+                if (_realProcess is null)
+                {
+                    // use Levenshtein to find the process with closest name
+                    Process process = FindProcessByWindowName(hWnd);                    
+                    if (process is not null)
+                        processId = (uint)process.Id;
+
+                    // try and get the process (once more)
+                    _realProcess = ProcessDiagnosticInfo.TryGetForProcessId(processId);
+                }
+
                 if (_realProcess is null)
                     return;
 

@@ -1,6 +1,7 @@
 ﻿using GregsStack.InputSimulatorStandard.Native;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
+using HandheldCompanion.Inputs;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Properties;
 using HandheldCompanion.Simulators;
@@ -16,7 +17,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using Windows.System;
-using static HandheldCompanion.Managers.InputsHotkey;
+using static HandheldCompanion.Inputs.InputsHotkey;
 using static HandheldCompanion.Managers.InputsManager;
 using static HandheldCompanion.Managers.OSDManager;
 

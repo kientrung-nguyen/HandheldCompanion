@@ -28,9 +28,9 @@ public static class ProfileManager
     public static List<Profile> subProfiles = new();
     private static Profile currentProfile;
 
-    private static readonly string profilesPath;
+    private static string profilesPath;
 
-    private static bool IsInitialized;
+    public static bool IsInitialized;
 
     static ProfileManager()
     {
@@ -64,7 +64,7 @@ public static class ProfileManager
         // check for default profile
         if (!HasDefault())
         {
-            Layout deviceLayout = IDevice.GetCurrent().DefaultLayout.Clone() as Layout;
+            Layout deviceLayout = (Layout)IDevice.GetCurrent().DefaultLayout.Clone();
             Profile defaultProfile = new()
             {
                 Name = DefaultName,
@@ -149,12 +149,10 @@ public static class ProfileManager
 
     public static Profile GetProfileFromGuid(Guid Guid, bool ignoreStatus, bool isSubProfile = false)
     {
-        Profile profile = null;
+        var profile = profiles.Values.FirstOrDefault(pr => pr.Guid == Guid);
 
         if (isSubProfile)
             profile = subProfiles.FirstOrDefault(pr => pr.Guid == Guid);
-        else
-            profile = profiles.Values.FirstOrDefault(pr => pr.Guid == Guid);
 
         // get profile from path
         if (profile is null)
@@ -206,9 +204,11 @@ public static class ProfileManager
         if (currentProfile == null)
             return;
         // called using previousSubProfile/nextSubProfile hotkeys
-        List<Profile> subProfilesList = new();
-        subProfilesList.Add(GetProfileForSubProfile(currentProfile)); // adds main profile as sub profile
-        subProfilesList.AddRange(GetSubProfilesFromPath(currentProfile.Path, false).ToList()); // adds all sub profiles
+        List<Profile> subProfilesList =
+        [
+            GetProfileForSubProfile(currentProfile), // adds main profile as sub profile
+            .. GetSubProfilesFromPath(currentProfile.Path, false).ToList(), // adds all sub profiles
+        ];
 
         // if profile does not have sub profiles -> do nothing
         if (subProfilesList.Count <= 1)
@@ -239,38 +239,44 @@ public static class ProfileManager
 
     private static void ApplyProfile(Profile profile, UpdateSource source = UpdateSource.Background, bool announce = true)
     {
-        // might not be the same anymore if disabled
-        profile = GetProfileFromGuid(profile.Guid, false, profile.IsSubProfile);
-
-        // we've already announced this profile
-        if (currentProfile is not null)
-            if (currentProfile.Guid == profile.Guid)
-                announce = false;
-
-        // update current profile before invoking event
-        currentProfile = profile;
-
-        // raise event
-        Applied?.Invoke(profile, source);
-
-        // todo: localize me
-        if (announce)
+        try
         {
-            string announcement = string.Empty;
-            switch(profile.IsSubProfile)
-            {
-                case false:
-                    announcement = $"Profile {profile.Name} applied";
-                    break;
-                case true:
-                    string mainProfileName = GetProfileForSubProfile(profile).Name;
-                    announcement = $"Subprofile {mainProfileName} {profile.Name} applied";
-                    break;
-            }
+            // might not be the same anymore if disabled
+            profile = GetProfileFromGuid(profile.Guid, false, profile.IsSubProfile);
 
-            // push announcement
-            LogManager.LogInformation(announcement);
-            ToastManager.SendToast("Profile", announcement);
+            // we've already announced this profile
+            if (currentProfile is not null)
+                if (currentProfile.Guid == profile.Guid)
+                    announce = false;
+
+            // update current profile before invoking event
+            currentProfile = profile;
+
+            // raise event
+            Applied?.Invoke(profile, source);
+
+            // todo: localize me
+            if (announce)
+            {
+                string announcement = string.Empty;
+                switch (profile.IsSubProfile)
+                {
+                    case false:
+                        announcement = $"Profile {profile.Name} applied";
+                        break;
+                    case true:
+                        string mainProfileName = GetProfileForSubProfile(profile).Name;
+                        announcement = $"Subprofile {mainProfileName} {profile.Name} applied";
+                        break;
+                }
+
+                // push announcement
+                LogManager.LogInformation(announcement);
+                ToastManager.SendToast("Profile", announcement);
+            }
+        }
+        catch
+        {
         }
     }
 
@@ -340,6 +346,8 @@ public static class ProfileManager
                 // restore default profile
                 ApplyProfile(GetDefault());
             }
+
+            LogManager.LogInformation($"Profile {profile.Name} discarded");
         }
         catch
         {
@@ -438,13 +446,13 @@ public static class ProfileManager
 
     private static bool HasDefault()
     {
-        return profiles.Values.Count(a => a.Default) != 0;
+        return profiles.Values.Any(a => a.Default);
     }
 
     public static Profile GetDefault()
     {
         if (HasDefault())
-            return profiles.Values.FirstOrDefault(a => a.Default);
+            return profiles.Values.First(a => a.Default);
         return new Profile();
     }
 
@@ -463,7 +471,7 @@ public static class ProfileManager
 
     private static void ProcessProfile(string fileName, bool imported = false)
     {
-        Profile profile;
+        Profile? profile;
         try
         {
             string outputraw = File.ReadAllText(fileName);
@@ -508,7 +516,7 @@ public static class ProfileManager
         }
 
         // failed to parse
-        if (!profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
+        if (profile is null || !profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
         {
             LogManager.LogError("Corrupted profile {0}. Profile has an empty name or an empty path.", fileName);
             return;
@@ -526,7 +534,7 @@ public static class ProfileManager
                 Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
                 {
                     Title = $"Importing profile for {profile.Name}",
-                    Content = $"Would you like to import this profile to your database ?",
+                    Content = $"Would you like to import this profile to your database?",
                     PrimaryButtonText = Resources.ProfilesPage_OK,
                     CloseButtonText = Resources.ProfilesPage_Cancel
                 }.ShowAsync();
@@ -587,8 +595,8 @@ public static class ProfileManager
             ApplyProfile(profile, UpdateSource.Serializer);
     }
 
-    private static List<string> pendingCreation = new();
-    private static List<string> pendingDeletion = new();
+    private static List<string> pendingCreation = [];
+    private static List<string> pendingDeletion = [];
 
     public static void DeleteProfile(Profile profile)
     {
@@ -731,7 +739,7 @@ public static class ProfileManager
 
     public static void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)
     {
-        LogManager.LogInformation($"Attempting to update/create {(profile.IsSubProfile ? "subprofile" : "profile")} {profile.Name}");
+        LogManager.LogInformation($"Attempting to update/create {(profile.IsSubProfile ? "subprofile" : "profile")} {profile.Name} ({source})");
 
         bool isCurrent = false;
         switch (source)
@@ -745,7 +753,7 @@ public static class ProfileManager
                 break;
             default:
                 // check if this is current profile
-                isCurrent = currentProfile is null ? false : profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
+                isCurrent = currentProfile is not null && profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
                 break;
         }
 

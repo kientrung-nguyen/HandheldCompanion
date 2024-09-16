@@ -15,7 +15,7 @@
     KeepAlive="True"
     mc:Ignorable="d">
 
-    <ui:SimpleStackPanel Spacing="24">
+    <ui:SimpleStackPanel>
 
         <!--  Device settings  -->
         <ui:SimpleStackPanel Spacing="6">
@@ -42,7 +42,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xE799;" />
@@ -65,25 +64,31 @@
                                     IsReadOnly="True"
                                     SelectionChanged="ComboBoxResolution_SelectionChanged" />
 
-                                <ui:SimpleStackPanel
+                                <Border
                                     Name="ResolutionOverrideStack"
                                     Grid.Row="1"
                                     Grid.ColumnSpan="2"
-                                    Margin="20,6,0,0"
-                                    HorizontalAlignment="Center"
-                                    Orientation="Horizontal">
-                                    <ui:FontIcon
-                                        Height="20"
-                                        Margin="10,0"
+                                    ui:ThemeManager.RequestedTheme="{Binding Source={x:Static ui:ThemeManager.Current}, Path=ActualApplicationTheme, Converter={StaticResource InverseAppThemeConverter}}"
+                                    Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
+                                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                                    <ui:SimpleStackPanel
+                                        Margin="20,6,0,0"
                                         HorizontalAlignment="Center"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe7ba;" />
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.QuickSettingsPage_ResolutionOverrideWarning}"
-                                        TextWrapping="Wrap" />
-                                </ui:SimpleStackPanel>
+                                        Orientation="Horizontal">
+                                        <ui:FontIcon
+                                            Height="20"
+                                            Margin="10,0"
+                                            HorizontalAlignment="Center"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                            Glyph="&#xe7ba;" />
+                                        <TextBlock
+                                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{l:Static resx:Resources.QuickSettingsPage_ResolutionOverrideWarning}"
+                                            TextWrapping="Wrap" />
+                                    </ui:SimpleStackPanel>
+                                </Border>
                             </Grid>
                         </Border>
                         <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
@@ -98,7 +103,6 @@
                                         <DockPanel>
                                             <ui:FontIcon
                                                 Height="40"
-                                                FontSize="20"
                                                 HorizontalAlignment="Center"
                                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                                 Glyph="&#xe7f8;" />
@@ -132,7 +136,6 @@
                                         <DockPanel>
                                             <ui:FontIcon
                                                 Height="40"
-                                                FontSize="20"
                                                 HorizontalAlignment="Center"
                                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                                 Glyph="&#xe713;" />
@@ -175,7 +178,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xE701;" />
@@ -208,7 +210,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xE702;" />
@@ -253,7 +254,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xf08c;" />
@@ -290,7 +290,6 @@
                                 <DockPanel>
                                     <ui:FontIcon
                                         Height="40"
-                                        FontSize="20"
                                         HorizontalAlignment="Center"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Glyph="&#xf182;" />
@@ -392,7 +391,6 @@
                     <DockPanel>
                         <ui:FontIcon
                             Height="40"
-                            FontSize="20"
                             HorizontalAlignment="Center"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
                             Glyph="&#xE781;" />

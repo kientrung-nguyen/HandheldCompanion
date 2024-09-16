@@ -5,16 +5,12 @@ using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using RTSSSharedMemoryNET;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
-using WindowsDisplayAPI;
-using static HandheldCompanion.Managers.OSDManager;
+using Path = System.IO.Path;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Platforms;
@@ -31,14 +27,10 @@ public class RTSS : IPlatform
 
     private int hookedProcessId = 0;
     private uint lastOsdFrameId = 0;
-    private bool ProfileLoaded;
+    private bool profileLoaded;
     private AppEntry? appEntry;
 
     private int RequestedFramerate;
-    private OverlayDisplayLevel OverlayLevel = OverlayDisplayLevel.Disabled;
-
-    protected bool halting = false;
-
     private AppFlags[] appFlags = [
         AppFlags.DirectDraw,
         AppFlags.Direct3D9,
@@ -107,7 +99,7 @@ public class RTSS : IPlatform
         }
 
         // our main watchdog to (re)apply requested settings
-        PlatformWatchdog = new Timer(2000) { Enabled = false };
+        PlatformWatchdog = new Timer(5000) { Enabled = false };
         PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
     }
 
@@ -124,13 +116,13 @@ public class RTSS : IPlatform
         ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
         ProfileManager.Applied += ProfileManager_Applied;
 
-        halting = false;
-
-        // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
+        // If RTSS was started while HC was fully initialized,
+        // we need to pass both current profile and foreground process
+        //
         if (SettingsManager.IsInitialized)
         {
-            ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
             ProcessManager_ForegroundChanged(ProcessManager.GetForegroundProcess(), null);
+            ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
         }
 
         return base.Start();
@@ -141,8 +133,6 @@ public class RTSS : IPlatform
         ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
         ProfileManager.Applied -= ProfileManager_Applied;
-
-        halting = true;
 
         return base.Stop(kill);
     }
@@ -179,10 +169,8 @@ public class RTSS : IPlatform
         {
             // Reset to 0 only when a cap was set previously and the current profile has no limit 
             // These conditions prevent 0 from being set on every profile change 
-            RequestFPS(frameLimit);
+            RequestFPS(frameLimit, true);
         }
-
-        OverlayLevel = profile.OverlayLevel;
     }
 
     private async void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
@@ -197,7 +185,6 @@ public class RTSS : IPlatform
         var foregroundId = processId;
         if (processId == 0) return;
 
-        if (OverlayLevel == OverlayDisplayLevel.Disabled) return;
 
         if (processEx.Filter != ProcessEx.ProcessFilter.Allowed) return;
         do
@@ -208,16 +195,13 @@ public class RTSS : IPlatform
              * - process no longer exists
              * - RTSS was closed
              */
-            if (halting)
-                return;
 
             var foreground = ProcessManager.GetForegroundProcess();
             foregroundId = foreground is not null ? foreground.ProcessId : 0;
 
             try
             {
-                var entries = OSD.GetAppEntries();
-                appEntry = entries.FirstOrDefault(entry =>
+                appEntry = OSD.GetAppEntries().FirstOrDefault(entry =>
                         (entry.Flags & AppFlags.MASK) != AppFlags.None &&
                         entry.ProcessId == processId
                     );
@@ -251,6 +235,7 @@ public class RTSS : IPlatform
 
         // clear HookedProcessId
         hookedProcessId = 0;
+        appEntry = null;
 
         // raise event
         Unhooked?.Invoke(processId);
@@ -286,14 +271,9 @@ public class RTSS : IPlatform
         }
     }
 
-    protected override void Process_Exited(object? sender, EventArgs e)
-    {
-        base.Process_Exited(sender, e);
-    }
-
     public bool HasHook()
     {
-        return hookedProcessId != 0 && lastOsdFrameId != 0;
+        return hookedProcessId != 0;
     }
 
     public void RefreshAppEntry()
@@ -309,12 +289,12 @@ public class RTSS : IPlatform
         {
             if (refresh)
                 RefreshAppEntry();
-            if (appEntry is null) return 0.0d;
+            if (appEntry is null || lastOsdFrameId == 0) return 0.0d;
             return appEntry.StatFrameTimeBufFramerate / 10.0d;
         }
         catch (InvalidDataException) { }
         catch (FileNotFoundException) { }
-        return 0;
+        return 0d;
     }
 
     public double GetFrametime(bool refresh = false)
@@ -406,10 +386,10 @@ public class RTSS : IPlatform
         try
         {
             // load default profile
-            if (!ProfileLoaded)
+            if (!profileLoaded)
             {
                 LoadProfile();
-                ProfileLoaded = true;
+                profileLoaded = true;
             }
 
             if (GetProfileProperty("EnableOSD", out int enabled))
@@ -450,7 +430,7 @@ public class RTSS : IPlatform
         return false;
     }
 
-    private bool SetTargetFPS(int Limit)
+    private bool SetTargetFPS(int limit)
     {
         if (!IsRunning)
             return false;
@@ -461,7 +441,7 @@ public class RTSS : IPlatform
             LoadProfile();
 
             // Set Framerate Limit as requested
-            if (SetProfileProperty("FramerateLimit", Limit))
+            if (SetProfileProperty("FramerateLimit", limit))
             {
                 // Save and reload profile
                 SaveProfile();
@@ -498,10 +478,10 @@ public class RTSS : IPlatform
         try
         {
             // load default profile
-            if (!ProfileLoaded)
+            if (!profileLoaded)
             {
                 LoadProfile();
-                ProfileLoaded = true;
+                profileLoaded = true;
             }
 
             if (GetProfileProperty("FramerateLimit", out int fpsLimit))
@@ -522,12 +502,12 @@ public class RTSS : IPlatform
         */
     }
 
-    public void RequestFPS(int framerate)
+    public void RequestFPS(int framerate, bool immediate = false)
     {
-        if (RequestedFramerate == framerate)
+        RequestedFramerate = framerate;
+        if (!immediate)
             return;
 
-        RequestedFramerate = framerate;
         SetTargetFPS(framerate);
     }
 

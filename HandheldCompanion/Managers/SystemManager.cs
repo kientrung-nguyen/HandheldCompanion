@@ -43,7 +43,7 @@ public static class SystemManager
 
     private static PowerLineStatus isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
 
-    private static bool IsInitialized;
+    public static bool IsInitialized;
 
     public static readonly SortedDictionary<string, string> PowerStatusIcon = new()
     {
@@ -101,7 +101,6 @@ public static class SystemManager
         // listen to system events
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
-        SystemEvents.SessionEnding += SystemEvents_SessionEnding;
 
         SystemPowerManager.BatteryStatusChanged += BatteryStatusChanged;
         SystemPowerManager.EnergySaverStatusChanged += BatteryStatusChanged;
@@ -122,12 +121,12 @@ public static class SystemManager
         var handle = OpenInputDesktop(0, false, 0);
         IsSessionLocked = handle == IntPtr.Zero;
         isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
+        SystemRoutine();
 
         IsInitialized = true;
         Initialized?.Invoke();
 
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
-        SystemRoutine();
 
         LogManager.LogInformation("{0} has started", "PowerManager");
     }
@@ -142,7 +141,6 @@ public static class SystemManager
         // stop listening to system events
         SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
         SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
-        SystemEvents.SessionEnding -= SystemEvents_SessionEnding;
 
         LogManager.LogInformation("{0} has stopped", "PowerManager");
     }
@@ -157,26 +155,19 @@ public static class SystemManager
                 break;
             case PowerModes.Suspend:
                 IsPowerSuspended = true;
+
                 // Prevent system sleep
-                SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+                _ = SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
                 LogManager.LogDebug("System is trying to suspend. Performing tasks...");
                 break;
             default:
             case PowerModes.StatusChange:
                 PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
-                if (isPlugged == SystemInformation.PowerStatus.PowerLineStatus)
-                    return;
-
-                var currentProfile = ProfileManager.GetCurrent();
-                ToastManager.RunToast($"{currentProfile.Name}",
-                    SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online
-                    ? ToastIcons.Charger
-                    : ToastIcons.Battery);
-                isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
-                return;
+                break;
         }
 
         LogManager.LogDebug("Device power mode set to {0}", e.Mode);
+
         SystemRoutine();
     }
 
@@ -195,12 +186,7 @@ public static class SystemManager
                 return;
         }
         LogManager.LogDebug("Session switched to {0}", e.Reason);
-
         SystemRoutine();
-    }
-
-    private static void SystemEvents_SessionEnding(object sender, SessionEndingEventArgs e)
-    {
     }
 
     private static void SystemRoutine()
@@ -236,6 +222,16 @@ public static class SystemManager
             {
                 NightLight.Auto();
                 ScreenControl.Auto();
+                var powerLineStatus = SystemInformation.PowerStatus.PowerLineStatus;
+                if (isPlugged != powerLineStatus)
+                {
+                    isPlugged = powerLineStatus;
+                    var currentProfile = ProfileManager.GetCurrent();
+                    var powerProfile = PowerProfileManager.GetProfile(isPlugged == PowerLineStatus.Online
+                            ? currentProfile.PowerProfile
+                            : currentProfile.BatteryProfile);
+                    PowerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.PowerStatusChange);
+                }
             }
             finally
             {

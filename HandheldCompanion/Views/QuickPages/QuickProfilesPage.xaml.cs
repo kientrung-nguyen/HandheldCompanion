@@ -9,6 +9,8 @@ using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
+using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
@@ -55,6 +57,7 @@ public partial class QuickProfilesPage : Page
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
         ProfileManager.Applied += ProfileManager_Applied;
         ProfileManager.Deleted += ProfileManager_Deleted;
+        PowerProfileManager.Applied += PowerProfileManager_Applied;
         PowerProfileManager.Updated += PowerProfileManager_Updated;
         PowerProfileManager.Deleted += PowerProfileManager_Deleted;
         MultimediaManager.Initialized += MultimediaManager_Initialized;
@@ -68,13 +71,13 @@ public partial class QuickProfilesPage : Page
         foreach (var mode in Enum.GetValues<MotionOutput>())
         {
             // create panel
-            ComboBoxItem comboBoxItem = new ComboBoxItem()
+            var comboBoxItem = new ComboBoxItem()
             {
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Left,
             };
 
-            SimpleStackPanel simpleStackPanel = new SimpleStackPanel
+            var simpleStackPanel = new SimpleStackPanel
             {
                 Spacing = 6,
                 Orientation = Orientation.Horizontal,
@@ -139,6 +142,37 @@ public partial class QuickProfilesPage : Page
         RTSS_Updated(PlatformManager.RTSS.Status);
     }
 
+    private void PowerProfileManager_Applied(PowerProfile powerProfile, UpdateSource source)
+    {
+        switch (source)
+        {
+            // self update, unlock and exit
+            case UpdateSource.QuickProfilesPage:
+                return;
+        }
+
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            // power profile
+            powerProfile?.Check(this);
+            if (System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online)
+            {
+                PowerPresetIcon.Glyph = "\ue95f";
+                PowerPresetIcon.RenderTransformOrigin = new Point(.5, .5);
+                PowerPresetIcon.RenderTransform = new RotateTransform(-135);
+            }
+            else
+            {
+                PowerPresetIcon.Glyph = "\ue83f";
+                PowerPresetIcon.RenderTransformOrigin = new Point(0, 0);
+                PowerPresetIcon.RenderTransform = Transform.Identity;
+            }
+
+            SelectedPowerProfileName.Text = powerProfile?.Name;
+        });
+    }
+
     private void MultimediaManager_Initialized()
     {
         // UI thread (async)
@@ -179,7 +213,7 @@ public partial class QuickProfilesPage : Page
             GPUScalingToggle.IsEnabled = HasGPUScalingSupport;
             GPUScalingComboBox.IsEnabled = HasGPUScalingSupport && HasScalingModeSupport;
 
-            CurrentDeviceName.Text = GPU.adapterInformation.Details.Description;
+            //CurrentDeviceName.Text = GPU.adapterInformation.Details.Description;
         });
     }
 
@@ -379,23 +413,55 @@ public partial class QuickProfilesPage : Page
                 if (idx != 0)
                 {
                     // Create a separator
-                    Separator separator = new Separator();
-                    separator.Margin = new Thickness(-16, 0, -16, 0);
-                    separator.BorderBrush = (Brush)FindResource("SystemControlBackgroundChromeMediumBrush");
-                    separator.BorderThickness = new Thickness(0, 1, 0, 0);
+                    Separator separator = new()
+                    {
+                        Margin = new Thickness(-16, 0, -16, 0),
+                        BorderBrush = (Brush)FindResource("SystemControlBackgroundChromeMediumBrush"),
+                        BorderThickness = new Thickness(0, 1, 0, 0)
+                    };
                     ProfileStack.Children.Add(separator);
                 }
 
-                Button button = powerProfile.GetButton(this);
-                if (button is not null)
-                    button.Click += (sender, e) => PowerProfile_Clicked(powerProfile);
-
-                RadioButton radioButton = powerProfile.GetRadioButton(this);
-                if (radioButton is not null)
-                    radioButton.Checked += (sender, e) => PowerProfile_Selected(powerProfile);
-
                 // add new entry
-                ProfileStack.Children.Add(button);
+                if (powerProfile.Default)
+                {
+                    if (powerProfile.Guid == new Guid("00000000-0000-0000-0000-010000000000"))
+                        ProfileOnBattery.Items.Add(new ComboBoxItem
+                        {
+                            Content = powerProfile.Name,
+                            Tag = powerProfile
+                        });
+                    else
+                        ProfilePluggedIn.Items.Add(new ComboBoxItem
+                        {
+                            Content = powerProfile.Name,
+                            Tag = powerProfile
+                        });
+                }
+                else
+                {
+                    ProfileOnBattery.Items.Add(new ComboBoxItem
+                    {
+                        Content = powerProfile.Name,
+                        Tag = powerProfile
+                    });
+                    ProfilePluggedIn.Items.Add(new ComboBoxItem
+                    {
+                        Content = powerProfile.Name,
+                        Tag = powerProfile
+                    });
+                }
+
+                if (powerProfile.GetButton(this) is Button button)
+                {
+                    button.Click += (sender, e) => PowerProfile_Clicked(powerProfile);
+                    if (powerProfile.GetRadioButton(this) is RadioButton radioButton)
+                    {
+                        radioButton.IsEnabled = false;
+                        //radioButton.Checked += (sender, e) => PowerProfile_Selected(powerProfile);
+                    }
+                    ProfileStack.Children.Add(button);
+                }
             }
         });
     }
@@ -410,7 +476,7 @@ public partial class QuickProfilesPage : Page
         MainWindow.overlayquickTools.NavView_Navigate("QuickPerformancePage");
     }
 
-    private void PowerProfile_Selected(PowerProfile powerProfile)
+    private void PowerProfile_Selected(PowerProfile powerProfile, bool isPlugged = true)
     {
         if (selectedProfile is null)
             return;
@@ -422,11 +488,32 @@ public partial class QuickProfilesPage : Page
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
-            SelectedPowerProfileName.Text = powerProfile.Name;
+            if ((isPlugged && System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online) ||
+                (!isPlugged && System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus != System.Windows.Forms.PowerLineStatus.Online))
+            {
+                SelectedPowerProfileName.Text = powerProfile.Name;
+                powerProfile?.Check(this);
+                if (System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online)
+                {
+                    PowerPresetIcon.Glyph = "\ue95f";
+                    PowerPresetIcon.RenderTransformOrigin = new Point(.5, .5);
+                    PowerPresetIcon.RenderTransform = new RotateTransform(-135);
+                }
+                else
+                {
+                    PowerPresetIcon.Glyph = "\ue83f";
+                    PowerPresetIcon.RenderTransformOrigin = new Point(0, 0);
+                    PowerPresetIcon.RenderTransform = Transform.Identity;
+                }
+            }
         });
 
         // update profile
-        selectedProfile.PowerProfile = powerProfile.Guid;
+        if (!isPlugged)
+            selectedProfile.BatteryProfile = powerProfile.Guid;
+        else
+            selectedProfile.PowerProfile = powerProfile.Guid;
+
         UpdateProfile();
     }
 
@@ -487,21 +574,13 @@ public partial class QuickProfilesPage : Page
 
                     cb_SubProfiles.SelectedIndex = selectedIndex;
 
-                    // power profile
-                    PowerProfile powerProfile = PowerProfileManager.GetProfile(profile.PowerProfile);
-                    powerProfile?.Check(this);
-                    SelectedPowerProfileName.Text = powerProfile?.Name;
+                    ProfilePluggedIn.SelectedItem = ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == profile.PowerProfile);
+                    ProfileOnBattery.SelectedItem = ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == profile.BatteryProfile);
+                    OnScreenOverlayToggle.IsOn = selectedProfile.OnScreenDisplayToggle;
 
-                    comboBoxOSDLevel.SelectedIndex = (int)selectedProfile.OverlayLevel;
-                    comboBoxTimeDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayTimeLevel;
-                    comboBoxFPSDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayFPSLevel;
-                    comboBoxCPUDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayCPULevel;
-                    comboBoxGPUDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayGPULevel;
-                    comboBoxRAMDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayRAMLevel;
-                    comboBoxVRAMDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayVRAMLevel;
-                    comboBoxBATTDisplayLevel.SelectedIndex = (int)selectedProfile.OverlayBATTLevel;
+
                     // gyro layout
-                    if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
+                    if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out var currentAction))
                     {
                         // no gyro layout available, mark as disabled
                         cB_Output.SelectedIndex = (int)MotionOutput.Disabled;
@@ -607,8 +686,8 @@ public partial class QuickProfilesPage : Page
                 currentProcess = processEx;
 
                 // get path
-                string path = currentProcess != null ? currentProcess.Path : string.Empty;
-                ImageSource imageSource = currentProcess != null ? currentProcess.ProcessIcon : null;
+                var path = currentProcess != null ? currentProcess.Path : string.Empty;
+                var imageSource = currentProcess?.ProcessIcon;
                 nint handle = currentProcess != null ? currentProcess.MainWindowHandle : IntPtr.Zero;
 
                 // update real profile
@@ -627,7 +706,7 @@ public partial class QuickProfilesPage : Page
                         ProfileToggle.IsEnabled = true;
                         ProcessName.Text = currentProcess.Executable;
                         ProcessPath.Text = currentProcess.Path;
-                        SubProfilesBorder.Visibility = Visibility.Visible;
+                        SubProfilesBorder.IsEnabled = true;
                     }
                     else
                     {
@@ -636,7 +715,7 @@ public partial class QuickProfilesPage : Page
                         ProfileToggle.IsEnabled = false;
                         ProcessName.Text = Properties.Resources.QuickProfilesPage_Waiting;
                         ProcessPath.Text = string.Empty;
-                        SubProfilesBorder.Visibility = Visibility.Collapsed;
+                        SubProfilesBorder.IsEnabled = false;
                     }
                 });
             }
@@ -681,9 +760,11 @@ public partial class QuickProfilesPage : Page
             return;
 
         // create profile
-        selectedProfile = new Profile(currentProcess.Path);
-        selectedProfile.Layout = (ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone() as Layout;
-        selectedProfile.LayoutTitle = LayoutTemplate.DesktopLayout.Name;
+        selectedProfile = new Profile(currentProcess.Path)
+        {
+            Layout = (Layout)(ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone(),
+            LayoutTitle = LayoutTemplate.DesktopLayout.Name
+        };
 
         // if an update is pending, execute it and stop timer
         if (UpdateTimer.Enabled)
@@ -707,7 +788,7 @@ public partial class QuickProfilesPage : Page
         if (profileLock.IsEntered())
             return;
 
-        if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
+        if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out var currentAction))
             return;
 
         ((GyroActions)currentAction).MotionInput = (MotionInput)cB_Input.SelectedIndex;
@@ -724,7 +805,7 @@ public partial class QuickProfilesPage : Page
             return;
 
         // try get current actions, if exists
-        selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions gyroActions);
+        selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out var gyroActions);
 
         MotionOutput motionOuput = (MotionOutput)cB_Output.SelectedIndex;
         switch (motionOuput)
@@ -1184,7 +1265,8 @@ public partial class QuickProfilesPage : Page
             comboBoxGPUDisplayLevel.SelectedIndex >= 0 &&
             comboBoxRAMDisplayLevel.SelectedIndex >= 0 &&
             comboBoxVRAMDisplayLevel.SelectedIndex >= 0 &&
-            comboBoxBATTDisplayLevel.SelectedIndex >= 0)
+            comboBoxBATTDisplayLevel.SelectedIndex >= 0 &&
+            comboBoxDisplayOrientation.SelectedIndex >= 0)
         {
             selectedProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(comboBoxOSDLevel.SelectedIndex);
             selectedProfile.OverlayTimeLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxTimeDisplayLevel.SelectedIndex);
@@ -1194,6 +1276,7 @@ public partial class QuickProfilesPage : Page
             selectedProfile.OverlayRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxRAMDisplayLevel.SelectedIndex);
             selectedProfile.OverlayVRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxVRAMDisplayLevel.SelectedIndex);
             selectedProfile.OverlayBATTLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxBATTDisplayLevel.SelectedIndex);
+            selectedProfile.OverlayOrientation = comboBoxDisplayOrientation.SelectedIndex;
 
             UpdateProfile();
         }
@@ -1242,5 +1325,30 @@ public partial class QuickProfilesPage : Page
     private void comboBoxBATTDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         BindOSDToProfile();
+    }
+
+    private void comboBoxDisplayOrientation_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        BindOSDToProfile();
+    }
+
+    private void ProfilePluggedIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ProfilePluggedIn.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
+            PowerProfile_Selected(powerProfile);
+
+    }
+
+    private void ProfileOnBattery_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ProfileOnBattery.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
+            PowerProfile_Selected(powerProfile, false);
+    }
+
+    private void OnScreenOverlayToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        selectedProfile.OnScreenDisplayToggle = OnScreenOverlayToggle.IsOn;
+        SettingsManager.Set("OnScreenDisplayToggle", OnScreenOverlayToggle.IsOn);
+        UpdateProfile();
     }
 }

@@ -39,7 +39,7 @@
                 <ui:FontIcon
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    FontFamily="Segoe Fluent Icons"
+                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
                     FontSize="24"
                     FontWeight="Bold">
                     <ui:FontIcon.Style>

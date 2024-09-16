@@ -1,6 +1,5 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
-using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Views;
@@ -15,7 +14,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using WindowsDisplayAPI;
@@ -56,12 +54,22 @@ namespace HandheldCompanion.ViewModels
             get => _selectedPreset;
             set
             {
-                _selectedPreset = value;
-                if (!IsQuickTools)
+                if (_selectedPreset != value)
                 {
-                    _selectedPresetIndex = ProfilePickerItems.IndexOf(ProfilePickerItems.First(p => p.LinkedPresetId == _selectedPreset.Guid));
+                    // update variable
+                    _selectedPreset = value;
+
+                    // page-specific behaviors
+                    switch (IsQuickTools)
+                    {
+                        case false:
+                            _selectedPresetIndex = ProfilePickerItems.IndexOf(ProfilePickerItems.First(p => p.LinkedPresetId == _selectedPreset.Guid));
+                            break;
+                    }
+
+                    // refresh all properties
+                    OnPropertyChanged(string.Empty);
                 }
-                OnPropertyChanged(string.Empty); // Refresh all properties
             }
         }
 
@@ -168,7 +176,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public double AutoTDPMaximum => ScreenControl.PrimaryDisplay.DisplayScreen.CurrentSetting.Frequency;
+        public double AutoTDPMaximum => Math.Max(SelectedPreset.AutoTDPRequestedFPS, ScreenControl.PrimaryDisplay.DisplayScreen.GetPossibleSettings().Max(setting => setting.Frequency));
 
         public bool TDPOverrideEnabled
         {
@@ -492,7 +500,7 @@ namespace HandheldCompanion.ViewModels
             #region General Setup
 
             SettingsManager.SettingValueChanged += SettingsManager_SettingsValueChanged;
-            MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
+            MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
             PerformanceManager.ProcessorStatusChanged += PerformanceManager_ProcessorStatusChanged;
             PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
             PowerProfileManager.Updated += PowerProfileManager_Updated;
@@ -518,20 +526,25 @@ namespace HandheldCompanion.ViewModels
                         });
 
                         // No need to update 
-                        if (_skipPropertyChangedUpdate.Contains(e.PropertyName))
+                        if (e.PropertyName is null || _skipPropertyChangedUpdate.Contains(e.PropertyName))
                             return;
                     }
 
+                    // set flag
                     _updatingProfile = true;
-                    PowerProfileManager.UpdateOrCreateProfile(SelectedPreset, UpdateSource.ProfilesPage);
+
+                    // trigger power profile update
+                    PowerProfileManager.UpdateOrCreateProfile(SelectedPreset, IsQuickTools ? UpdateSource.QuickProfilesPage : UpdateSource.ProfilesPage);
+
+                    // set flag
                     _updatingProfile = false;
                 };
 
             CreatePresetCommand = new DelegateCommand(() =>
             {
                 // Get the count of profiles that are not default, then start with +1 of that
-                int count = PowerProfileManager.profiles.Values.Count(p => !p.IsDefault());
-                int idx = count + 1;
+                var count = PowerProfileManager.profiles.Values.Count(p => !p.IsDefault());
+                var idx = count + 1;
 
                 // Create a base name for the new profile
                 string baseName = Resources.PowerProfileManualName;
@@ -541,10 +554,10 @@ namespace HandheldCompanion.ViewModels
                     idx++;
 
                 // Format the name with the updated index
-                string name = string.Format(baseName, idx);
+                var name = string.Format(baseName, idx);
 
                 // Create the new power profile
-                PowerProfile powerProfile = new PowerProfile(name, Resources.PowerProfileManualDescription)
+                var powerProfile = new PowerProfile(name, Resources.PowerProfileManualDescription)
                 {
                     TDPOverrideValues = IDevice.GetCurrent().nTDP
                 };
@@ -555,7 +568,7 @@ namespace HandheldCompanion.ViewModels
 
             DeletePresetCommand = new DelegateCommand(async () =>
             {
-                Dialog dialog = new Dialog(isQuickTools ? OverlayQuickTools.GetCurrent() : MainWindow.GetCurrent())
+                var dialog = new Dialog(isQuickTools ? OverlayQuickTools.GetCurrent() : MainWindow.GetCurrent())
                 {
                     Title = $"{Resources.ProfilesPage_AreYouSureDelete1} \"{SelectedPreset.Name}\"?",
                     Content = Resources.ProfilesPage_AreYouSureDelete2,
@@ -667,7 +680,7 @@ namespace HandheldCompanion.ViewModels
         public override void Dispose()
         {
             SettingsManager.SettingValueChanged -= SettingsManager_SettingsValueChanged;
-            MultimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
+            MultimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
             PerformanceManager.ProcessorStatusChanged -= PerformanceManager_ProcessorStatusChanged;
             PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
             PowerProfileManager.Updated -= PowerProfileManager_Updated;
@@ -700,7 +713,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private void MultimediaManager_PrimaryScreenChanged(Display screen)
+        private void MultimediaManager_DisplaySettingsChanged(Display screen)
         {
             OnPropertyChanged(nameof(AutoTDPMaximum));
         }
@@ -719,8 +732,9 @@ namespace HandheldCompanion.ViewModels
 
         private void PowerProfileManager_Updated(PowerProfile preset, UpdateSource source)
         {
-            // Updated is triggered from PropertyChanged
-            if (_updatingProfile) return;
+            // skip if self update
+            if (_updatingProfile)
+                return;
 
             // Update all properties
             if (SelectedPreset?.Guid == preset.Guid)

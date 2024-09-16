@@ -3,9 +3,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
-    xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickPerformance"
@@ -494,6 +494,8 @@
                             <ComboBoxItem Content="Agressive" />
                             <ComboBoxItem Content="Efficient enabled" />
                             <ComboBoxItem Content="Efficient aggressive" />
+                            <ComboBoxItem Content="Aggressive at Guaranteed" />
+                            <ComboBoxItem Content="Efficient Aggressive at Guaranteed" />
                         </ComboBox>
                     </DockPanel>
                 </Grid>

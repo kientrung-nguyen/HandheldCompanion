@@ -643,15 +643,21 @@
                                         <ComboBox
                                             Name="LedPresetsComboBox"
                                             Grid.Column="1"
+                                            Margin="12,0,0,0"
                                             HorizontalAlignment="Stretch"
                                             VerticalAlignment="Center"
-                                            Margin="12,0,0,0"
                                             SelectionChanged="LEDOEMPreset_SelectionChanged">
                                             <ComboBox.ItemTemplate>
                                                 <ItemContainerTemplate>
                                                     <WrapPanel>
-                                                        <Image Source="{Binding IconPath}" Width="25" Height="25" />
-                                                        <TextBlock Text="{Binding DisplayName}" Height="25" Margin="10,6,0,0" />
+                                                        <Image
+                                                            Width="25"
+                                                            Height="25"
+                                                            Source="{Binding IconPath}" />
+                                                        <TextBlock
+                                                            Height="25"
+                                                            Margin="10,6,0,0"
+                                                            Text="{Binding DisplayName}" />
                                                     </WrapPanel>
                                                 </ItemContainerTemplate>
                                             </ComboBox.ItemTemplate>

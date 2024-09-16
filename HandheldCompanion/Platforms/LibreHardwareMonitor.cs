@@ -17,8 +17,8 @@ public class LibreHardwareMonitor : IPlatform
     private string ProductName;
 
     private Timer sensorTimer;
-    private int updateInterval = 1000;
-    private object updateLock = new();
+    private int updateInterval = 500;
+    private new object updateLock = new();
 
     public float? CPULoad;
     public float? CPUClock;
@@ -45,14 +45,14 @@ public class LibreHardwareMonitor : IPlatform
     public float? BatteryPower = 0f;
     public float? BatteryCapacity = -1f;
     public float? BatteryHealth = -1f;
-    public float? BatteryTimeSpan;
+    public TimeSpan BatteryTimeSpan = TimeSpan.Zero;
 
-    static long lastCPURefresh;
-    static long lastGPURefresh;
-    static long lastFanRefresh;
-    static long lastMemoryRefresh;
-    static long lastBatteryRefresh;
-    static long lastChargeRefresh;
+    long lastCPURefresh;
+    long lastGPURefresh;
+    long lastFanRefresh;
+    long lastMemoryRefresh;
+    long lastBatteryRefresh;
+    long lastChargeRefresh;
 
 
     public LibreHardwareMonitor()
@@ -71,6 +71,7 @@ public class LibreHardwareMonitor : IPlatform
         computer = new Computer
         {
             IsCpuEnabled = true,
+            //IsGpuEnabled = true,
             IsMemoryEnabled = true
         };
 
@@ -140,6 +141,7 @@ public class LibreHardwareMonitor : IPlatform
                 HandleGPU(GPUManager.GetCurrent());
             }
 
+
             // pull temperature sensor
             foreach (var hardware in computer.Hardware)
             {
@@ -153,17 +155,17 @@ public class LibreHardwareMonitor : IPlatform
                             hardware.Update();
                             HandleCPU(hardware);
                             break;
-                        /*
-                    case HardwareType.GpuAmd:
-                        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) < 500) continue;
-                        lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                        hardware.Update();
-                        HandleGPU(hardware);
-                        LogManager.LogDebug($"{GPUTemp}°C {GPUClock}mHz {GPULoad}% {GPUPower}W");
-                        LogManager.LogDebug($"{amdControl.GetGpuTemperature()}°C {amdControl.GetGpuClock()}mHz {amdControl.GetGpuUse()}% {amdControl.GetGpuPower()}W {amdControl.GetFPS()}FPS");
-                        LogManager.LogDebug($"{GPUManager.GetCurrent().GetTemperature()}°C {GPUManager.GetCurrent().GetClock()}mHz {GPUManager.GetCurrent().GetLoad()}% {GPUManager.GetCurrent().GetPower()}W {GPUManager.GetCurrent().GetVRAMUsage()}");
-                        break;
-                        */
+                        /*            
+                        case HardwareType.GpuAmd:
+                            if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) < 500) continue;
+                            lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                            hardware.Update();
+                            HandleGPU(hardware);
+                            //LogManager.LogDebug($"{GPUTemp}°C {GPUClock}mHz {GPULoad}% {GPUPower}W");
+                            //LogManager.LogDebug($"{amdControl.GetGpuTemperature()}°C {amdControl.GetGpuClock()}mHz {amdControl.GetGpuUse()}% {amdControl.GetGpuPower()}W {amdControl.GetFPS()}FPS");
+                            //LogManager.LogDebug($"{GPUManager.GetCurrent().GetTemperature()}°C {GPUManager.GetCurrent().GetClock()}mHz {GPUManager.GetCurrent().GetLoad()}% {GPUManager.GetCurrent().GetPower()}W {GPUManager.GetCurrent().GetVRAMUsage()}");
+                            break;
+                         */
                         case HardwareType.Memory:
                             if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastMemoryRefresh) < 3000) continue;
                             lastMemoryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
@@ -199,6 +201,9 @@ public class LibreHardwareMonitor : IPlatform
         var highestClock = 0f;
         foreach (var sensor in cpu.Sensors)
         {
+            // May crash the app when Value is null, better to check first
+            if (sensor.Value is null)
+                continue;
             switch (sensor.SensorType)
             {
                 case SensorType.Load:
@@ -211,6 +216,8 @@ public class LibreHardwareMonitor : IPlatform
                     HandleCPU_Power(sensor);
                     break;
                 case SensorType.Temperature:
+					HandleCPU_Temp(sensor);
+					/*
                     try
                     {
                         using var ct = new PerformanceCounter("Thermal Zone Information", "Temperature", @"\_TZ.TZ01", true);
@@ -220,6 +227,7 @@ public class LibreHardwareMonitor : IPlatform
                     {
                         HandleCPU_Temp(sensor);
                     }
+					*/
                     break;
             }
         }
@@ -232,7 +240,7 @@ public class LibreHardwareMonitor : IPlatform
             //case "CPU Total":
             case "CPU Core Max":
                 CPULoad = sensor.Value;
-                CPULoadChanged?.Invoke(CPUPower);
+                CPULoadChanged?.Invoke(CPULoad);
                 break;
         }
     }
@@ -273,6 +281,7 @@ public class LibreHardwareMonitor : IPlatform
             case "CPU Package":
             case "Core (Tctl/Tdie)":
                 CPUTemp = sensor.Value;
+
                 // dirty
                 switch (ProductName)
                 {
@@ -523,7 +532,7 @@ public class LibreHardwareMonitor : IPlatform
     private void ReadBatterySensors()
     {
         BatteryPower = 0f;
-        BatteryTimeSpan = null;
+        BatteryTimeSpan = TimeSpan.Zero;
         BatteryFullCapacity = null;
 
         ReadFullChargeCapacity();
@@ -544,9 +553,9 @@ public class LibreHardwareMonitor : IPlatform
             if (BatteryPower != 0)
             {
                 if (BatteryPower > 0)
-                    BatteryTimeSpan = ((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower * 60f;
+                    BatteryTimeSpan = TimeSpan.FromMinutes((((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower).Value * 60d);
                 else
-                    BatteryTimeSpan = BatteryRemainingCapacity / 1000 / BatteryPower * 60f * -1;
+                    BatteryTimeSpan = TimeSpan.FromMinutes((BatteryRemainingCapacity / 1000 / BatteryPower).Value * 60d * -1);
                 BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
             }
         }
@@ -589,9 +598,9 @@ public class LibreHardwareMonitor : IPlatform
             if (BatteryPower != 0)
             {
                 if (BatteryPower > 0)
-                    BatteryTimeSpan = ((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower * 60f;
+                    BatteryTimeSpan = TimeSpan.FromMinutes((((BatteryFullCapacity / 1000) - (BatteryRemainingCapacity / 1000)) / BatteryPower).Value * 60d);
                 else
-                    BatteryTimeSpan = BatteryRemainingCapacity / 1000 / BatteryPower * 60f * -1;
+                    BatteryTimeSpan = TimeSpan.FromMinutes((BatteryRemainingCapacity / 1000 / BatteryPower).Value * 60d * -1);
                 BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
             }
         }
@@ -630,7 +639,7 @@ public class LibreHardwareMonitor : IPlatform
         switch (sensor.Name)
         {
             case "Remaining Time (Estimated)":
-                BatteryTimeSpan = sensor.Value / 60;
+                BatteryTimeSpan = TimeSpan.FromMinutes(sensor.Value ?? 0d / 60d);
                 BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
                 break;
         }
@@ -656,7 +665,7 @@ public class LibreHardwareMonitor : IPlatform
 
     #region Events
 
-    public delegate void ChangedHandler(float? value);
+    public delegate void ChangedHandler(object? value);
 
     public event ChangedHandler CPULoadChanged;
     public event ChangedHandler CPUPowerChanged;

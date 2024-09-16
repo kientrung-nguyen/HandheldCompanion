@@ -1,7 +1,7 @@
 ﻿using Gma.System.MouseKeyHook;
 using GregsStack.InputSimulatorStandard;
 using GregsStack.InputSimulatorStandard.Native;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Inputs;
 using System;
 using System.Runtime.InteropServices;
 using WindowsInput.Events;

@@ -71,6 +71,13 @@ public static class ScreenControl
         // A variable to store the divider value, rounded to nearest even number
         int divider = 1;
         int dmDisplayFrequency = RoundToEven(display.DisplayScreen.CurrentSetting.Frequency);
+        int maxDisplayFrequency = display.DisplayScreen.GetPossibleSettings()
+            .Where(setting =>
+                setting.Resolution.Width == display.DisplayScreen.CurrentSetting.Resolution.Width &&
+                setting.Resolution.Height == display.DisplayScreen.CurrentSetting.Resolution.Height &&
+                setting.ColorDepth == display.DisplayScreen.CurrentSetting.ColorDepth)
+            .DistinctBy(setting => setting.Frequency)
+            .OrderByDescending(setting => setting.Frequency).First().Frequency;
 
         if (cachedFrameLimits.TryGetValue(dmDisplayFrequency, out IEnumerable<int?>? value)) return value;
 
@@ -82,14 +89,15 @@ public static class ScreenControl
         do
         {
             // If the frequency is divisible by the divider, add the quotient to the list
-            if (dmDisplayFrequency % divider == 0)
+            if (maxDisplayFrequency % divider == 0)
             {
-                int frequency = dmDisplayFrequency / divider;
+                int frequency = maxDisplayFrequency / divider;
                 if (frequency < 20)
                 {
                     break;
                 }
-                fpsLimits.Add(frequency);
+                if (frequency <= dmDisplayFrequency)
+                    fpsLimits.Add(frequency);
                 lowestFPS = frequency;
             }
 
@@ -98,20 +106,18 @@ public static class ScreenControl
         } while (true);
 
         // loop to fill all possible fps limit options from lowest fps limit (e.g. getting 40FPS or 60Hz)
-        int nrOptions = dmDisplayFrequency / lowestFPS;
+        int nrOptions = maxDisplayFrequency / lowestFPS;
         for (int i = 1; i < nrOptions; i++)
         {
-            fpsLimits.Add(lowestFPS * i);
+            if (lowestFPS * i <= dmDisplayFrequency)
+                fpsLimits.Add(lowestFPS * i);
         }
 
         // Fill limits
 
         var orderedFpsLimits = fpsLimits.OrderByDescending(f => f);
-
         for (int i = 0; i < orderedFpsLimits.Count(); i++)
-        {
             limits.Add(orderedFpsLimits.ElementAt(i));
-        }
 
         cachedFrameLimits.TryAdd(dmDisplayFrequency, limits);
 
@@ -127,33 +133,32 @@ public static class ScreenControl
 
         if (SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online)
         {
-            if (Set(internalDisplay, internalDisplay.DisplayScreen.GetPossibleSettings()
+            if (internalDisplay.DisplayScreen.GetPossibleSettings()
                 .Where(setting =>
                     setting.Resolution.Width == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Width &&
                     setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
-                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth)
-                .OrderByDescending(setting => setting.Frequency).First()))
+                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth &&
+                    setting.Frequency > internalDisplay.DisplayScreen.CurrentSetting.Frequency)
+                .DistinctBy(setting => setting.Frequency)
+                .OrderByDescending(setting => setting.Frequency).FirstOrDefault() is DisplayPossibleSetting higherFrequency)
             {
-                if (ScreenBrightness.Get() > 80)
+                if (Set(internalDisplay, higherFrequency))
                     ScreenBrightness.Set(100);
             }
-
         }
         else
         {
-            var frenquencies = internalDisplay.DisplayScreen.GetPossibleSettings()
+            if (internalDisplay.DisplayScreen.GetPossibleSettings()
                 .Where(setting =>
                     setting.Resolution.Width == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Width &&
                     setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
-                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth)
+                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth &&
+                    setting.Frequency < internalDisplay.DisplayScreen.CurrentSetting.Frequency)
                 .DistinctBy(setting => setting.Frequency)
-                .OrderByDescending(setting => setting.Frequency);
-            if (frenquencies.Count() > 1)
+                .OrderByDescending(setting => setting.Frequency).FirstOrDefault() is DisplayPossibleSetting lowerFrequency)
             {
-                if (Set(internalDisplay, frenquencies.Skip(1).First()))
-                    if (ScreenBrightness.Get() > 70)
-                        ScreenBrightness.Set(75);
-
+                if (Set(internalDisplay, lowerFrequency))
+                    ScreenBrightness.Set(85);
             }
         }
     }

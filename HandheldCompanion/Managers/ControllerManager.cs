@@ -66,8 +66,10 @@ public static class ControllerManager
 
     static ControllerManager()
     {
-        watchdogThread = new Thread(watchdogThreadLoop);
-        watchdogThread.IsBackground = true;
+        watchdogThread = new Thread(watchdogThreadLoop)
+        {
+            IsBackground = true
+        };
     }
 
     public static Task Start()
@@ -77,7 +79,6 @@ public static class ControllerManager
 
         DeviceManager.XUsbDeviceArrived += XUsbDeviceArrived;
         DeviceManager.XUsbDeviceRemoved += XUsbDeviceRemoved;
-
         DeviceManager.HidDeviceArrived += HidDeviceArrived;
         DeviceManager.HidDeviceRemoved += HidDeviceRemoved;
 
@@ -163,11 +164,12 @@ public static class ControllerManager
 
         switch (gamepadWindow.Title)
         {
+            default:
+            case "MainWindow":
+                focusedWindows &= ~FocusedWindow.MainWindow;
+                break;
             case "QuickTools":
                 focusedWindows &= ~FocusedWindow.Quicktools;
-                break;
-            default:
-                focusedWindows &= ~FocusedWindow.MainWindow;
                 break;
         }
 
@@ -180,11 +182,12 @@ public static class ControllerManager
         GamepadWindow gamepadWindow = (GamepadWindow)control;
         switch (gamepadWindow.Title)
         {
+            default:
+            case "MainWindow":
+                focusedWindows |= FocusedWindow.MainWindow;
+                break;
             case "QuickTools":
                 focusedWindows |= FocusedWindow.Quicktools;
-                break;
-            default:
-                focusedWindows |= FocusedWindow.MainWindow;
                 break;
         }
 
@@ -215,6 +218,7 @@ public static class ControllerManager
 
     private static void CheckControllerScenario()
     {
+        // set flag
         ControllerMuted = false;
 
         // platform specific scenarios
@@ -255,8 +259,10 @@ public static class ControllerManager
                                 {
                                     watchdogThreadRunning = true;
 
-                                    watchdogThread = new Thread(watchdogThreadLoop);
-                                    watchdogThread.IsBackground = true;
+                                    watchdogThread = new Thread(watchdogThreadLoop)
+                                    {
+                                        IsBackground = true
+                                    };
                                     watchdogThread.Start();
                                 }
                             }
@@ -623,7 +629,7 @@ public static class ControllerManager
         while (watchdogThreadRunning)
         {
             // monitoring unexpected slot changes
-            HashSet<byte> UserIndexes = new();
+            HashSet<byte> UserIndexes = [];
             bool XInputDrunk = false;
 
             foreach (XInputController xInputController in Controllers.Values.Where(c => c.Details is not null && c.Details.isXInput))
@@ -678,7 +684,7 @@ public static class ControllerManager
                             bool HasCyclingController = false;
 
                             // do we have a pending wireless controller ?
-                            XInputController wirelessController = GetPhysicalControllers().OfType<XInputController>().FirstOrDefault(controller => controller.IsWireless && controller.IsBusy);
+                            var wirelessController = GetPhysicalControllers().OfType<XInputController>().FirstOrDefault(controller => controller.IsWireless && controller.IsBusy);
                             if (wirelessController is not null)
                             {
                                 // update busy flag
@@ -746,7 +752,7 @@ public static class ControllerManager
 
     private static async void XUsbDeviceArrived(PnPDetails details, DeviceEventArgs obj)
     {
-        Controllers.TryGetValue(details.baseContainerDeviceInstanceId, out IController controller);
+        Controllers.TryGetValue(details.baseContainerDeviceInstanceId, out var controller);
 
         // are we power cycling ?
         PowerCyclers.TryGetValue(details.baseContainerDeviceInstanceId, out bool IsPowerCycling);
@@ -899,7 +905,7 @@ public static class ControllerManager
         lock (targetLock)
         {
             // look for new controller
-            if (!Controllers.TryGetValue(baseContainerDeviceInstanceId, out IController controller))
+            if (!Controllers.TryGetValue(baseContainerDeviceInstanceId, out var controller))
                 return;
 
             if (controller.IsVirtual())
@@ -1018,7 +1024,7 @@ public static class ControllerManager
                 }
                 catch { }
 
-                string enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
+                var enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
                 switch (enumerator)
                 {
                     case "USB":
@@ -1028,8 +1034,7 @@ public static class ControllerManager
                             pnPDevice.InstallCustomDriver("xusb22.inf", out bool rebootRequired);
                         }
 
-                        if (deviceInstanceIds.Contains(baseContainerDeviceInstanceId))
-                            deviceInstanceIds.Remove(baseContainerDeviceInstanceId);
+                        deviceInstanceIds.Remove(baseContainerDeviceInstanceId);
 
                         SettingsManager.Set("SuspendedControllers", deviceInstanceIds);
                         PowerCyclers.TryRemove(baseContainerDeviceInstanceId, out _);

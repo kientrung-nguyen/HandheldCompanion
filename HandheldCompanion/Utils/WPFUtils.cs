@@ -34,21 +34,21 @@ public static class WPFUtils
     {
         IntPtr hWnd = GetControlHandle(c).Handle;
         // SendMessage(hWnd, WM_CHANGEUISTATE, (IntPtr)MakeLong((int)UIS_CLEAR, (int)UISF_HIDEFOCUS), IntPtr.Zero);
-        SendMessage(hWnd, 257, (IntPtr)0x0000000000000009, (IntPtr)0x00000000c00f0001);
+        SendMessage(hWnd, 257, 0x0000000000000009, (IntPtr)0x00000000c00f0001);
     }
 
     public static void MakeFocusInvisible(Control c)
     {
         IntPtr hWnd = GetControlHandle(c).Handle;
-        SendMessage(hWnd, WM_CHANGEUISTATE, (IntPtr)MakeLong((int)UIS_SET, (int)UISF_HIDEFOCUS), IntPtr.Zero);
+        SendMessage(hWnd, WM_CHANGEUISTATE, MakeLong(UIS_SET, UISF_HIDEFOCUS), IntPtr.Zero);
     }
 
     public static int MakeLong(int wLow, int wHigh)
     {
-        int low = (int)IntLoWord(wLow);
+        int low = IntLoWord(wLow);
         short high = IntLoWord(wHigh);
-        int product = 0x10000 * (int)high;
-        int mkLong = (int)(low | product);
+        int product = 0x10000 * high;
+        int mkLong = low | product;
         return mkLong;
     }
 
@@ -61,7 +61,7 @@ public static class WPFUtils
     public static Control GetTopLeftControl<T>(List<Control> controls) where T : Control
     {
         // filter list
-        controls = controls.Where(c => c is T).ToList();
+        controls = controls.Where(c => c is T && c.IsEnabled).ToList();
 
         // If no controls are found, return null
         if (controls == null || controls.Count == 0)
@@ -95,7 +95,7 @@ public static class WPFUtils
     public static Control GetClosestControl<T>(Control source, List<Control> controls, Direction direction, List<Type> typesToIgnore = null) where T : Control
     {
         // Filter list based on requested type
-        controls = controls.Where(c => c is T).ToList();
+        controls = controls.Where(c => c is T && c.IsEnabled).ToList();
 
         // Filter based on exclusion type list
         if (typesToIgnore is not null)
@@ -117,7 +117,6 @@ public static class WPFUtils
     // Helper method to check if a control is in a given direction from another control
     private static bool IsInDirection(Control source, Control target, Direction direction)
     {
-        // Get the position of the target on the canvas
         var p = target.TranslatePoint(new Point(0, 0), source);
         double x = Math.Round(p.X);
         double y = Math.Round(p.Y);
@@ -226,7 +225,7 @@ public static class WPFUtils
     public static List<FrameworkElement> FindChildren(DependencyObject startNode)
     {
         int count = VisualTreeHelper.GetChildrenCount(startNode);
-        List<FrameworkElement> childs = new();
+        List<FrameworkElement> childs = [];
 
         for (int i = 0; i < count; i++)
         {
@@ -282,6 +281,7 @@ public static class WPFUtils
                     }
                     break;
             }
+
             foreach (var item in FindChildren(current))
             {
                 childs.Add(item);
@@ -337,7 +337,7 @@ public static class WPFUtils
     public static List<T> GetElementsFromPopup<T>(List<FrameworkElement> elements) where T : FrameworkElement
     {
         // Create an empty list to store the result
-        List<T> result = new List<T>();
+        List<T> result = [];
 
         // Loop through each element in the input list
         foreach (FrameworkElement element in elements)

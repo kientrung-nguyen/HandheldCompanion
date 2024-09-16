@@ -4,7 +4,6 @@ using LiveCharts;
 using LiveCharts.Defaults;
 using System;
 using System.Numerics;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -33,7 +32,7 @@ public partial class SettingsMode1 : Page
 
         MotionManager.SettingsMode1Update += MotionManager_SettingsMode1Update;
 
-        SteeringLinearityPoints = new ChartValues<ObservablePoint>();
+        SteeringLinearityPoints = [];
         for (var i = 0; i < SteeringArraySize; i++)
         {
             var value = i / (double)(SteeringArraySize - 1);

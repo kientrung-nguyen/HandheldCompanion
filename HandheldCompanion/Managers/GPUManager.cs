@@ -238,8 +238,8 @@ namespace HandheldCompanion.Managers
 
             // manage events
             ProfileManager.Applied += ProfileManager_Applied;
-            ProfileManager.Discarded += ProfileManager_Discarded;
-            ProfileManager.Updated += ProfileManager_Updated;
+            //ProfileManager.Discarded += ProfileManager_Discarded;
+            //ProfileManager.Updated += ProfileManager_Updated;
             DeviceManager.DisplayAdapterArrived += DeviceManager_DisplayAdapterArrived;
             DeviceManager.DisplayAdapterRemoved += DeviceManager_DisplayAdapterRemoved;
             MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
@@ -256,8 +256,8 @@ namespace HandheldCompanion.Managers
 
             // manage events
             ProfileManager.Applied -= ProfileManager_Applied;
-            ProfileManager.Discarded -= ProfileManager_Discarded;
-            ProfileManager.Updated -= ProfileManager_Updated;
+            //ProfileManager.Discarded -= ProfileManager_Discarded;
+            //ProfileManager.Updated -= ProfileManager_Updated;
             DeviceManager.DisplayAdapterArrived -= DeviceManager_DisplayAdapterArrived;
             DeviceManager.DisplayAdapterRemoved -= DeviceManager_DisplayAdapterRemoved;
             MultimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
@@ -285,7 +285,7 @@ namespace HandheldCompanion.Managers
 
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
-            if (!IsInitialized || currentGPU is null || source == UpdateSource.Background)
+            if (!IsInitialized || currentGPU is null)
                 return;
 
             try

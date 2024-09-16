@@ -1,21 +1,19 @@
 ﻿using HandheldCompanion.Controls;
-using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
-using System.Drawing;
-using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 using System.Windows.Forms;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
-using WpfScreenHelper.Enum;
 
 namespace HandheldCompanion.ViewModels
 {
     public class ProcessExViewModel : BaseViewModel
     {
-        QuickApplicationsPageViewModel PageViewModel;
+        public QuickApplicationsPageViewModel PageViewModel;
+
+        public ObservableCollection<ProcessWindowViewModel> ProcessWindows { get; set; } = [];
 
         private ProcessEx _process;
         public ProcessEx Process
@@ -54,6 +52,7 @@ namespace HandheldCompanion.ViewModels
             get => !Process.FullScreenOptimization;
             set { } // empty set to allow binding to ToggleSwitch.IsOn
         }
+
         public bool HighDPIAware
         {
             get => !Process.HighDPIAware;
@@ -77,11 +76,11 @@ namespace HandheldCompanion.ViewModels
             {
                 OverlayQuickTools qtWindow = OverlayQuickTools.GetCurrent();
 
-                ContentDialogResult result = await qtWindow.applicationsPage.ProfileRenameDialog.ShowAsync();
-                switch(result)
+                ContentDialogResult result = await qtWindow.applicationsPage.SnapDialog.ShowAsync();
+                switch (result)
                 {
                     case ContentDialogResult.None:
-                        qtWindow.applicationsPage.ProfileRenameDialog.Hide();
+                        qtWindow.applicationsPage.SnapDialog.Hide();
                         return;
                 }
 
@@ -107,9 +106,7 @@ namespace HandheldCompanion.ViewModels
         private void UpdateProcess(ProcessEx oldProcess, ProcessEx newProcess)
         {
             if (oldProcess is not null)
-            {
                 oldProcess.Refreshed -= ProcessRefreshed;
-            }
 
             newProcess.Refreshed += ProcessRefreshed;
 

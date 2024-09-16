@@ -2,9 +2,12 @@
 
 namespace HandheldCompanion.Devices.Lenovo
 {
-    // Define the C extern functions and structures
     public class SapientiaUsb
     {
+        private static readonly object _lock = new object();
+
+        // Define the C extern functions and structures
+
         //leftGyroState rightGyroState 0 关闭陀螺仪 1开启陀螺仪
         public delegate void GyroStateCbFunc(int leftGyroState, int rightGyroState);
         //陀螺仪数据回调函数 leftGyroX左陀螺仪X leftGyroY 左陀螺仪Y rightGyroX 右陀螺仪X rightGyroY 右陀螺仪Y
@@ -14,37 +17,15 @@ namespace HandheldCompanion.Devices.Lenovo
         [StructLayout(LayoutKind.Sequential)]
         public struct GyroSensorStatus
         {
-            /* 
-                gyro_timestamp: 陀螺仪时间戳(0 - 255)
-            */
             public uint gyro_timestamp;
-            /*
-                g_sensor_ax: 陀螺仪角速度 X 轴
-            */
             public int g_sensor_ax;
-            /*
-                g_sensor_ay: 陀螺仪角速度 Y 轴        
-            */
             public int g_sensor_ay;
-            /*
-                g_sensor_az: 陀螺仪角速度 Z 轴        
-            */
             public int g_sensor_az;
-            /*
-                g_sensor_gx: 陀螺仪重力加速度 X 轴
-            */
             public int g_sensor_gx;
-            /*
-               g_sensor_gy: 陀螺仪重力加速度 Y 轴
-           */
             public int g_sensor_gy;
-            /*
-               g_sensor_gz: 陀螺仪重力加速度 Z 轴
-           */
             public int g_sensor_gz;
         };
 
-        // 陀螺仪传感器状态回调 left_gyro: 左陀螺仪传感器数据 right_gyro: 右陀螺仪传感器数据
         public delegate void GyroSensorStatusCbFunc(GyroSensorStatus left_gyro, GyroSensorStatus right_gyro);
 
         [DllImport("SapientiaUsb.dll", CallingConvention = CallingConvention.StdCall)]

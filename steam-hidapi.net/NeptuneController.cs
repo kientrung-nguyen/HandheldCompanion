@@ -16,12 +16,17 @@ namespace steam_hidapi.net
 
         public NeptuneController(ushort vid, ushort pid, short index) : base(vid, pid, index)
         {
-            _hidDevice = new HidDevice(_vid, _pid, 64, index);
-            _hidDevice.OnInputReceived = input => Task.Run(() => OnInputReceived(input));
+            _hidDevice = new HidDevice(_vid, _pid, 64, index)
+            {
+                OnInputReceived = input => Task.Run(() => OnInputReceived(input))
+            };
         }
 
         internal override void OnInputReceived(HidDeviceInputReceivedEventArgs e)
         {
+            if (!_hidDevice.IsDeviceValid || !_active)
+                return;
+
             // this should always be so
             if ((e.Buffer[0] != 1) || (e.Buffer[1] != 0))
                 return;
@@ -82,17 +87,18 @@ namespace steam_hidapi.net
 
         public byte[] SetHaptic2(SCHapticMotor position, NCHapticStyle style, sbyte intensity)
         {
-            if (!_hidDevice.IsDeviceValid)
+            if (!_hidDevice.IsDeviceValid || !_active)
                 return null;
 
-            NCHapticPacket2 haptic = new NCHapticPacket2();
-
-            haptic.packet_type = (byte)SCPacketType.SET_HAPTIC2;
-            haptic.len = 0xd;
-            haptic.position = position;
-            haptic.style = style;
-            haptic.unsure3 = 0x4;
-            haptic.intensity = intensity;
+            NCHapticPacket2 haptic = new NCHapticPacket2
+            {
+                packet_type = (byte)SCPacketType.SET_HAPTIC2,
+                len = 0xd,
+                position = position,
+                style = style,
+                unsure3 = 0x4,
+                intensity = intensity
+            };
             var ts = Environment.TickCount;
             haptic.tsA = ts;
             haptic.tsB = ts;

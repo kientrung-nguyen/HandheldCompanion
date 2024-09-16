@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
-using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
@@ -12,6 +11,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
@@ -45,30 +45,38 @@ public partial class OverlayQuickTools : GamepadWindow
     private const int SC_MOVE = 0xF010;
     private readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 
-    const UInt32 SWP_NOSIZE = 0x0001;
-    const UInt32 SWP_NOMOVE = 0x0002;
-    const UInt32 SWP_NOACTIVATE = 0x0010;
-    const UInt32 SWP_NOZORDER = 0x0004;
+    private const int SWP_NOSIZE = 0x0001;
+    private const int SWP_NOMOVE = 0x0002;
+    private const int SWP_NOACTIVATE = 0x0010;
+    private const int SWP_NOZORDER = 0x0004;
 
     // Define the Win32 API constants and functions
-    const int WM_PAINT = 0x000F;
-    const int WM_ACTIVATEAPP = 0x001C;
-    const int WM_ACTIVATE = 0x0006;
-    const int WM_SETFOCUS = 0x0007;
-    const int WM_KILLFOCUS = 0x0008;
-    const int WM_NCACTIVATE = 0x0086;
-    const int WM_SYSCOMMAND = 0x0112;
-    const int WM_WINDOWPOSCHANGING = 0x0046;
-    const int WM_SHOWWINDOW = 0x0018;
-    const int WM_MOUSEACTIVATE = 0x0021;
+    private const int WM_PAINT = 0x000F;
+    private const int WM_ACTIVATEAPP = 0x001C;
+    private const int WM_ACTIVATE = 0x0006;
+    private const int WM_SETFOCUS = 0x0007;
+    private const int WM_KILLFOCUS = 0x0008;
+    private const int WM_NCACTIVATE = 0x0086;
+    private const int WM_SYSCOMMAND = 0x0112;
+    private const int WM_WINDOWPOSCHANGING = 0x0046;
+    private const int WM_SHOWWINDOW = 0x0018;
+    private const int WM_MOUSEACTIVATE = 0x0021;
+    private const int MA_NOACTIVATE = 0x0003;
+    private const int WM_NCHITTEST = 0x0084;
+    private const int HTCAPTION = 0x02;
+    private const int MA_NOACTIVATEANDEAT = 4;
 
-    const int WS_EX_NOACTIVATE = 0x08000000;
-    const int GWL_EXSTYLE = -20;
+    private const int WS_EX_NOACTIVATE = 0x08000000;
+    private const int WS_EX_TOOLWINDOW = 0x00000080;
+    private const int WS_SIZEBOX = 0x00040000;
+
+    private const int GWL_STYLE = -16;
+    private const int GWL_EXSTYLE = -20;
 
     public HwndSource hwndSource;
 
     // page vars
-    private readonly Dictionary<string, Page> _pages = new();
+    private readonly Dictionary<string, Page> _pages = [];
 
     private bool autoHide;
     private bool isClosing;
@@ -172,14 +180,14 @@ public partial class OverlayQuickTools : GamepadWindow
                 case "QuickToolsAutoHide":
                     autoHide = Convert.ToBoolean(value);
                     break;
-                case "QuickToolsScreen":
+                case "QuickToolsDevicePath":
                     UpdateLocation();
                     break;
             }
         });
     }
 
-    private void SystemManager_DisplaySettingsChanged(Display? desktopScreen)
+    private void SystemManager_DisplaySettingsChanged(Display desktopScreen)
     {
         // ignore if we're not ready yet
         if (!MultimediaManager.IsInitialized) return;
@@ -191,25 +199,31 @@ public partial class OverlayQuickTools : GamepadWindow
     private const double _MaxHeight = 960;
     private const double _MaxWidth = 960;
     private const WindowStyle _Style = WindowStyle.ToolWindow;
+    private double _Top = 0;
+    private double _Left = 0;
+    private Screen targetScreen;
 
     private void UpdateLocation()
     {
         // pull quicktools settings
         var QuickToolsLocation = SettingsManager.Get<int>("QuickToolsLocation");
-        var FriendlyName = SettingsManager.Get<string>("QuickToolsScreen");
+        string DevicePath = SettingsManager.Get<string>("QuickToolsDevicePath");
+        string DeviceName = SettingsManager.Get<string>("QuickToolsDeviceName");
 
-        var targetDisplay = ScreenControl.AllDisplays.FirstOrDefault(display => display.ToPathDisplayTarget().FriendlyName.Equals(FriendlyName)) ?? ScreenControl.PrimaryDisplay;
+        // Attempt to find the screen with the specified friendly name
+        var targetDisplay = ScreenControl.AllDisplays.FirstOrDefault(display =>
+                                display.DevicePath.Equals(DevicePath) ||
+                                display.ToPathDisplayTarget().FriendlyName.Equals(DeviceName)) ?? ScreenControl.PrimaryDisplay;
 
         // Find the corresponding Screen object
-        var targetScreen = targetDisplay is null 
-            ? Screen.PrimaryScreen 
+        targetScreen = targetDisplay is null
+            ? Screen.PrimaryScreen
             : Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName.Equals(targetDisplay.DeviceName, StringComparison.OrdinalIgnoreCase)) ?? Screen.PrimaryScreen;
 
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
             // Common settings across cases 0 and 1
-
             MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfWorkingArea.Width);
             Width = (int)Math.Max(MinWidth, SettingsManager.Get<double>("QuickToolsWidth"));
             MaxHeight = Math.Min(targetScreen.WpfWorkingArea.Height - (_Margin * 0), _MaxHeight);
@@ -218,29 +232,50 @@ public partial class OverlayQuickTools : GamepadWindow
 
             switch (QuickToolsLocation)
             {
-                case 0: // Left
-                    this.SetWindowPosition(WindowPositions.BottomLeft, targetScreen);
-                    Left += _Margin * 0;
-                    break;
-
-                case 1: // Right
-                    this.SetWindowPosition(WindowPositions.BottomRight, targetScreen);
-                    Left -= _Margin * 0;
-                    break;
-
                 case 2: // Maximized
                     Top = 0;
                     MaxWidth = double.PositiveInfinity;
                     MaxHeight = double.PositiveInfinity;
                     WindowStyle = WindowStyle.None;
-                    this.SetWindowPosition(WindowPositions.Maximize, targetScreen);
-                    return; // Early return for case 2
+                    break;
             }
-
-            // Common operation for case 0 and 1 after switch
-            //Top = targetScreen.WpfBounds.Bottom - Height - _Margin;
-            Top = _Margin * 0;
         });
+
+        switch (QuickToolsLocation)
+        {
+            case 0: // Left
+                this.SetWindowPosition(WindowPositions.BottomLeft, targetScreen);
+                break;
+
+            case 1: // Right
+                this.SetWindowPosition(WindowPositions.BottomRight, targetScreen);
+                break;
+
+            case 2: // Maximized
+                this.SetWindowPosition(WindowPositions.Maximize, targetScreen);
+                break;
+        }
+
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            switch (QuickToolsLocation)
+            {
+                case 0: // Left
+                    Top = _Margin * 0;
+                    Left += _Margin * 0;
+                    break;
+
+                case 1: // Right
+                    Top = _Margin * 0;
+                    Left -= _Margin * 0;
+                    break;
+            }
+        });
+
+        // used by SlideIn/SlideOut
+        _Top = Top;
+        _Left = Left;
     }
 
     private void PowerManager_PowerStatusChanged(PowerStatus status)
@@ -261,6 +296,15 @@ public partial class OverlayQuickTools : GamepadWindow
             WinAPI.SetWindowPos(this.hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
         }
     }
+	
+    [DllImport("user32.dll")]
+    private static extern IntPtr DefWindowProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+    
+    private const int WA_ACTIVE = 1;
+    private const int WA_CLICKACTIVE = 2;
+    private const int WA_INACTIVE = 0;
+    private static readonly IntPtr HWND_TOP = new IntPtr(0);
+    private const uint SWP_FRAMECHANGED = 0x0020;
 
     private IntPtr prevWParam = new(0x0000000000000086);
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -394,37 +438,40 @@ public partial class OverlayQuickTools : GamepadWindow
             {
                 case Visibility.Collapsed:
                 case Visibility.Hidden:
-
-                    UpdateTime(this, EventArgs.Empty);
-
-                    Show();
-                    Focus();
-
-                    if (hwndSource != null)
-                        WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
-
-                    InvokeGotGamepadWindowFocus();
-                    clockUpdateTimer.Start();
+                    try { Show(); } catch { /* ItemsRepeater might have a NaN DesiredSize */ }
                     break;
                 case Visibility.Visible:
-                    Hide();
-
-                    InvokeLostGamepadWindowFocus();
-
-                    clockUpdateTimer.Stop();
+                    try { Hide(); } catch { /* ItemsRepeater might have a NaN DesiredSize */ }
                     break;
             }
         });
     }
 
-    private void Window_Closing(object sender, CancelEventArgs e)
+    private void GamepadWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        switch (WindowStyle)
+        switch (Visibility)
         {
-            case WindowStyle.ToolWindow:
-                SettingsManager.Set("QuickToolsWidth", ActualWidth);
+            case Visibility.Collapsed:
+            case Visibility.Hidden:
+                InvokeLostGamepadWindowFocus();
+                clockUpdateTimer.Stop();
+                break;
+            case Visibility.Visible:
+                Focus();
+                if (hwndSource != null)
+                    WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
+                InvokeGotGamepadWindowFocus();
+                clockUpdateTimer.Start();
+                UpdateTime(sender, EventArgs.Empty);
                 break;
         }
+    }
+
+    private void Window_Closing(object sender, CancelEventArgs e)
+    {
+        // position and size settings
+        SettingsManager.Set("QuickToolsWidth", ActualWidth);
+
 
         e.Cancel = !isClosing;
 
@@ -477,7 +524,6 @@ public partial class OverlayQuickTools : GamepadWindow
         // Get the page type before navigation so you can prevent duplicate
         // entries in the backstack.
         var preNavPageType = ContentFrame.CurrentSourcePageType;
-        //var preNavPageType = ContentFrame.Content?.GetType();
 
         // Only navigate if the selected page isn't currently loaded.
         if (_page is not null && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
@@ -492,8 +538,9 @@ public partial class OverlayQuickTools : GamepadWindow
     {
         // Add handler for ContentFrame navigation.
         ContentFrame.Navigated += On_Navigated;
+
         // NavView doesn't load any page by default, so load home page.
-        navView.SelectedItem = navView.MenuItems[0];
+        navView.SelectedItem = navView.MenuItems[1];
 
         // If navigation occurs on SelectionChanged, this isn't needed.
         // Because we use ItemInvoked to navigate, we need to call Navigate
@@ -525,23 +572,12 @@ public partial class OverlayQuickTools : GamepadWindow
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
         navView.IsBackEnabled = ContentFrame.CanGoBack;
-        if (ContentFrame.SourcePageType is not null)
-        {
-            var preNavPageType = ContentFrame.CurrentSourcePageType;
-            var preNavPageName = preNavPageType.Name;
-
-            var NavViewItem = navView.MenuItems
-                .OfType<NavigationViewItem>().FirstOrDefault(n => n.Tag != null && n.Tag.Equals(preNavPageName));
-
-            if (NavViewItem is not null)
-                navView.SelectedItem = NavViewItem;
-            //navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
-        }
+        //navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
     }
 
-    static long lastRefresh;
-    static long lastBatteryRefresh;
-    static long lastRadioRefresh;
+    long lastRefresh;
+    long lastBatteryRefresh;
+    long lastRadioRefresh;
 
     private void UpdateTime(object? sender, EventArgs e)
     {
@@ -731,10 +767,9 @@ public partial class OverlayQuickTools : GamepadWindow
             BatteryLifePanel.Visibility = Visibility.Visible;
             if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
             {
-                var batteryLifeFullCharge = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan * 60d;
-                var time = TimeSpan.FromSeconds(batteryLifeFullCharge ?? 0d);
+                var time = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan;
                 string remaining;
-                if (batteryLifeFullCharge >= 3600)
+                if (time.TotalSeconds >= 3600)
                     remaining = $"{time.Hours}h {time.Minutes}min";
                 else
                     remaining = $"{time.Minutes}min";
@@ -743,11 +778,9 @@ public partial class OverlayQuickTools : GamepadWindow
             }
             else
             {
-                var batteryLifeRemaining = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan * 60d;
-                var time = TimeSpan.FromSeconds(batteryLifeRemaining ?? 0d);
-
+                var time = PlatformManager.LibreHardwareMonitor.BatteryTimeSpan;
                 string remaining;
-                if (batteryLifeRemaining >= 3600)
+                if (time.TotalSeconds >= 3600)
                     remaining = $"{time.Hours}h {time.Minutes}min";
                 else
                     remaining = $"{time.Minutes}min";
@@ -755,6 +788,11 @@ public partial class OverlayQuickTools : GamepadWindow
                 BatteryIndicatorLifeRemaining.Text = " remaining";
             }
         }
+    }
+
+    internal nint GetHandle()
+    {
+        return hwndSource.Handle;
     }
 
     #endregion

@@ -69,8 +69,10 @@ public partial class ProfilesPage : Page
         GPUManager.Hooked += GPUManager_Hooked;
         GPUManager.Unhooked += GPUManager_Unhooked;
 
-        UpdateTimer = new Timer(UpdateInterval);
-        UpdateTimer.AutoReset = false;
+        UpdateTimer = new Timer(UpdateInterval)
+        {
+            AutoReset = false
+        };
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         // auto-sort
@@ -476,13 +478,56 @@ public partial class ProfilesPage : Page
                 if (idx != 0)
                 {
                     // Create a separator
-                    Separator separator = new Separator();
-                    separator.Margin = new Thickness(-16, 0, -16, 0);
-                    separator.BorderBrush = (Brush)FindResource("SystemControlBackgroundChromeMediumBrush");
-                    separator.BorderThickness = new Thickness(0, 1, 0, 0);
+                    Separator separator = new Separator
+                    {
+                        Margin = new Thickness(-16, 0, -16, 0),
+                        BorderBrush = (Brush)FindResource("SystemControlBackgroundChromeMediumBrush"),
+                        BorderThickness = new Thickness(0, 1, 0, 0)
+                    };
                     ProfileStack.Children.Add(separator);
                 }
 
+                // add new entry
+                if (powerProfile.Default)
+                {
+                    if (powerProfile.Guid == new Guid("00000000-0000-0000-0000-010000000000"))
+                        ProfileOnBattery.Items.Add(new ComboBoxItem
+                        {
+                            Content = powerProfile.Name,
+                            Tag = powerProfile
+                        });
+                    else
+                        ProfilePluggedIn.Items.Add(new ComboBoxItem
+                        {
+                            Content = powerProfile.Name,
+                            Tag = powerProfile
+                        });
+                }
+                else
+                {
+                    ProfileOnBattery.Items.Add(new ComboBoxItem
+                    {
+                        Content = powerProfile.Name,
+                        Tag = powerProfile
+                    });
+                    ProfilePluggedIn.Items.Add(new ComboBoxItem
+                    {
+                        Content = powerProfile.Name,
+                        Tag = powerProfile
+                    });
+                }
+
+                if (powerProfile.GetButton(this) is Button button)
+                {
+                    button.Click += (sender, e) => PowerProfile_Clicked(powerProfile);
+                    if (powerProfile.GetRadioButton(this) is RadioButton radioButton)
+                    {
+                        radioButton.IsEnabled = false;
+                        //radioButton.Checked += (sender, e) => PowerProfile_Selected(powerProfile);
+                    }
+                    ProfileStack.Children.Add(button);
+                }
+                /*
                 Button button = powerProfile.GetButton(this);
                 if (button is not null)
                     button.Click += (sender, e) => PowerProfile_Clicked(powerProfile);
@@ -493,6 +538,7 @@ public partial class ProfilesPage : Page
 
                 // add new entry
                 ProfileStack.Children.Add(button);
+                */
             }
         });
     }
@@ -507,7 +553,7 @@ public partial class ProfilesPage : Page
         MainWindow.GetCurrent().NavView_Navigate("PerformancePage");
     }
 
-    private void PowerProfile_Selected(PowerProfile powerProfile)
+    private void PowerProfile_Selected(PowerProfile powerProfile, bool isPlugged = true)
     {
         if (selectedProfile is null)
             return;
@@ -519,13 +565,14 @@ public partial class ProfilesPage : Page
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
-            // update UI
-            SelectedPowerProfileName.Text = powerProfile.Name;
-
             // update profile
-            selectedProfile.PowerProfile = powerProfile.Guid;
+            if (!isPlugged)
+                selectedProfile.BatteryProfile = powerProfile.Guid;
+            else
+                selectedProfile.PowerProfile = powerProfile.Guid;
             UpdateProfile();
         });
+
     }
 
     private void cB_Profiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -681,6 +728,8 @@ public partial class ProfilesPage : Page
                     PowerProfile powerProfile = PowerProfileManager.GetProfile(selectedProfile.PowerProfile);
                     powerProfile.Check(this);
                     SelectedPowerProfileName.Text = powerProfile.Name;
+                    ProfilePluggedIn.SelectedItem = ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == selectedProfile.PowerProfile);
+                    ProfileOnBattery.SelectedItem = ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == selectedProfile.BatteryProfile);
 
                     // display warnings
                     WarningContent.Text = EnumUtils.GetDescriptionFromEnumValue(selectedProfile.ErrorCode);
@@ -900,6 +949,11 @@ public partial class ProfilesPage : Page
         {
             case UpdateSource.ProfilesPage:
             case UpdateSource.ProfilesPageUpdateOnly:
+                // UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    cB_Profiles.SelectedItem = profile;
+                });
                 return;
             case UpdateSource.QuickProfilesPage:
                 {
@@ -1242,7 +1296,7 @@ public partial class ProfilesPage : Page
     {
         if (selectedProfile is null)
             return;
-        
+
         // prevent update loop
         if (profileLock.IsEntered())
             return;
@@ -1356,8 +1410,6 @@ public partial class ProfilesPage : Page
         // change it in 
         int ind = cB_Profiles.Items.IndexOf(selectedMainProfile);
         cB_Profiles.Items[ind] = selectedMainProfile;
-        cB_Profiles.Items.Refresh();
-        cB_Profiles.SelectedIndex = ind;
 
         SubmitProfile(UpdateSource.ProfilesPageUpdateOnly);
     }
@@ -1506,4 +1558,18 @@ public partial class ProfilesPage : Page
         selectedProfile.Arguments = tB_ProfileArguments.Text;
         UpdateProfile();
     }
+
+    private void ProfilePluggedIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ProfilePluggedIn.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
+            PowerProfile_Selected(powerProfile);
+
+    }
+
+    private void ProfileOnBattery_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ProfileOnBattery.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
+            PowerProfile_Selected(powerProfile, false);
+    }
+
 }
