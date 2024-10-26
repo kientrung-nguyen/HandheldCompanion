@@ -2,7 +2,6 @@
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Processors.AMD;
 using System;
-using System.Threading;
 using static HandheldCompanion.Devices.LegionGo;
 
 namespace HandheldCompanion.Processors;
@@ -82,11 +81,11 @@ public class AMDProcessor : Processor
                 switch (type)
                 {
                     case PowerType.Fast:
-                        legion.SetCPUPowerLimit(CapabilityID.CPUShortTermPowerLimit, (int)limit);
-                        legion.SetCPUPowerLimit(CapabilityID.CPUPeakPowerLimit, (int)limit);
+                        legion.SetCPUPowerLimit(CapabilityID.CPUShortTermPowerLimit, (int)limit).GetAwaiter().GetResult();
+                        legion.SetCPUPowerLimit(CapabilityID.CPUPeakPowerLimit, (int)limit).GetAwaiter().GetResult();
                         break;
                     case PowerType.Slow:
-                        legion.SetCPUPowerLimit(CapabilityID.CPULongTermPowerLimit, (int)limit);
+                        legion.SetCPUPowerLimit(CapabilityID.CPULongTermPowerLimit, (int)limit).GetAwaiter().GetResult();
                         break;
                 }
             }
@@ -180,4 +179,5 @@ public class AMDProcessor : Processor
 
         }
     }
+
 }

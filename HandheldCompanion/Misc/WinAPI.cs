@@ -37,13 +37,13 @@ public static class WinAPI
     public static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
     public static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 
-    public const int GWL_STYLE = -16;
-    public const int WS_BORDER = 0x00800000;
-    public const int WS_CAPTION = 0x00C00000;
-    public const int WS_SYSMENU = 0x00080000;
-    public const int WS_THICKFRAME = 0x00040000;
-    public const int WS_MINIMIZEBOX = 0x00020000;
-    public const int WS_MAXIMIZEBOX = 0x00010000;
+    private const int GWL_STYLE = -16;
+    private const int WS_BORDER = 0x00800000;
+    private const int WS_CAPTION = 0x00C00000;
+    private const int WS_SYSMENU = 0x00080000;
+    private const int WS_THICKFRAME = 0x00040000;
+    private const int WS_MINIMIZEBOX = 0x00020000;
+    private const int WS_MAXIMIZEBOX = 0x00010000;
 
     public const int GWL_EXSTYLE = -20;
     public const int WS_EX_NOACTIVATE = 0x08000000;
@@ -287,7 +287,7 @@ public static class WinAPI
         }
     }
 	
-	public static void MakeBorderless(nint hWnd, bool IsBorderless)
+    public static void MakeBorderless(nint hWnd, bool IsBorderless)
     {
         int currentStyle = GetWindowLong(hWnd, GWL_STYLE);
 

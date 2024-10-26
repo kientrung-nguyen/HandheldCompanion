@@ -194,16 +194,18 @@ public static class PerformanceManager
     private static void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
     {
         // apply profile defined TDP
-        if (profile.TDPOverrideEnabled && profile.TDPOverrideValues is not null)
+        if (profile.TDPOverrideEnabled)
         {
-            // Manual TDP is set, use it and set max limit
-            RequestTDP(profile.TDPOverrideValues, profile.AutoTDPEnabled);
             if (!profile.AutoTDPEnabled)
             {
-                StartTDPWatchdog();
+                // Manual TDP is set, use it and set max limit
+                RequestTDP(profile.TDPOverrideValues);
+
+                if (!cpuWatchdog.Enabled)
+                    StartTDPWatchdog();
                 AutoTDPMax = SettingsManager.Get<int>("ConfigurableTDPOverrideUp");
             }
-            else
+            else if (profile.TDPOverrideValues is not null)
             {
                 // Both manual TDP and AutoTDP are on,
                 // use manual slider as the max limit for AutoTDP
@@ -736,6 +738,7 @@ public static class PerformanceManager
                         continue;
                 }
 
+                // todo: find a way to read TDP limits
                 var ReadTDP = currentTDP[idx];
 
                 if (ReadTDP != 0)
@@ -916,6 +919,10 @@ public static class PerformanceManager
 
     private static async void RequestTDP(double[] values, bool immediate = false)
     {
+        // Handle null or empty array scenario
+        if (values == null || values.Length == 0)
+            return;
+
         for (int idx = (int)PowerType.Slow; idx <= (int)PowerType.Fast; idx++)
         {
             RequestTDP((PowerType)idx, values[idx], immediate);

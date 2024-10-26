@@ -18,13 +18,19 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         #region events
         public event RSRStateChangedEventHandler RSRStateChanged;
         public delegate void RSRStateChangedEventHandler(bool Supported, bool Enabled, int Sharpness);
+
+        public event AFMFStateChangedEventHandler AFMFStateChanged;
+        public delegate void AFMFStateChangedEventHandler(bool Supported, bool Enabled);
         #endregion
 
         private bool prevRSRSupport = false;
         private bool prevRSR = false;
         private int prevRSRSharpness = -1;
 
-        protected AdlxTelemetryData TelemetryData = new();
+        private bool prevAFMFSupport = false;
+        private bool prevAFMF = false;
+
+        protected new AdlxTelemetryData TelemetryData = new();
         //protected AmdGpuControl AmdGpuControl;
         //protected ADLSingleSensorData[] AmdGpuSensorsData = [];
 
@@ -68,6 +74,22 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             return Execute(ADLXBackend.GetRSR, false);
         }
 
+        public bool HasAFMFSupport()
+        {
+            if (!IsInitialized)
+                return false;
+
+            return Execute(ADLXBackend.HasAFMFSupport, false);
+        }
+
+        public bool GetAFMF()
+        {
+            if (!IsInitialized)
+                return false;
+
+            return Execute(ADLXBackend.GetAFMF, false);
+        }
+
         public int GetRSRSharpness()
         {
             if (!IsInitialized)
@@ -106,6 +128,22 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                 return false;
 
             return Execute(() => ADLXBackend.GetGPUScaling(displayIdx), false);
+        }
+
+        public bool SetAntiLag(bool enable)
+        {
+            if (!IsInitialized)
+                return false;
+
+            return Execute(() => ADLXBackend.SetAntiLag(displayIdx, enable), false);
+        }
+
+        public bool GetAntiLag()
+        {
+            if (!IsInitialized)
+                return false;
+
+            return Execute(() => ADLXBackend.GetAntiLag(displayIdx), false);
         }
 
         public override int GetScalingMode()
@@ -148,6 +186,14 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             }
 
             return Execute(() => ADLXBackend.SetRSR(enable), false);
+        }
+
+        public bool SetAFMF(bool enable)
+        {
+            if (!IsInitialized)
+                return false;
+
+            return Execute(() => ADLXBackend.SetAFMF(enable), false);
         }
 
         public override bool SetImageSharpeningSharpness(int sharpness)
@@ -264,6 +310,10 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (result != ADLX_RESULT.ADLX_OK)
                 return;
 
+            if (adapterCount == 1)
+                displayIdx = 0;
+            else
+            {
             for (int idx = 0; idx < adapterCount; idx++)
             {
                 var displayName = new StringBuilder(256); // Assume display name won't exceed 255 characters
@@ -280,6 +330,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                 // update displayIdx
                 displayIdx = idx;
                 break;
+                }
             }
 
             if (displayIdx != -1)
@@ -398,7 +449,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
                     try
                     {
-                        // get rsr
+                        // get RSR
                         bool RSRSupport = false;
                         bool RSR = false;
                         int RSRSharpness = GetRSRSharpness();
@@ -419,6 +470,31 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                             prevRSRSupport = RSRSupport;
                             prevRSR = RSR;
                             prevRSRSharpness = RSRSharpness;
+                        }
+                    }
+                    catch { }
+
+                    try
+                    {
+                        // get AFMF
+                        bool AFMFSupport = false;
+                        bool AFMF = false;
+
+                        DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(2));
+                        while (DateTime.Now < timeout && !AFMFSupport)
+                        {
+                            AFMFSupport = HasAFMFSupport();
+                            Thread.Sleep(250);
+                        }
+                        AFMF = GetAFMF();
+
+                        if (AFMFSupport != prevAFMFSupport || AFMF != prevAFMF)
+                        {
+                            // raise event
+                            AFMFStateChanged?.Invoke(AFMFSupport, AFMF);
+
+                            prevAFMFSupport = AFMFSupport;
+                            prevAFMF = AFMF;
                         }
                     }
                     catch { }

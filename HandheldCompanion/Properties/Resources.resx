@@ -1366,7 +1366,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>You might want to hide your physical controller or mute your virtual controller.</value>
   </data>
   <data name="ControllerPage_PhysicalControllerNotHiddenDesc" xml:space="preserve">
-    <value>Your physical controller is not hidden, yet you have an unmuted virtual controller. You might encounter double inputs in games.</value>
+    <value>Your physical controller is not hidden, yet you have a connected virtual controller. You might encounter double inputs in games.</value>
   </data>
   <data name="ControllerPage_PhysicalControllerNotHiddenWarning" xml:space="preserve">
     <value>Physical controller is not hidden</value>
@@ -3299,5 +3299,11 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="Hint_SteamInputAction" xml:space="preserve">
     <value>Disable Steam Input</value>
+  </data>
+  <data name="ProfilesPage_AFMF" xml:space="preserve">
+    <value>AMD Fluid Motion Frames</value>
+  </data>
+  <data name="ProfilesPage_AFMFDesc" xml:space="preserve">
+    <value>Enhance performance by utilizing frame generation technology to increase FPS beyond the in-game limit, resulting in a smoother experience</value>
   </data>
 </root>

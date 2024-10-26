@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
@@ -205,21 +206,21 @@
                 <!--  GAMEPAD AREA  -->
                 <Border
                     Grid.Row="1"
-                    Margin="0"
+                    Margin="30"
                     Padding="6,2,9,2"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Bottom"
                     Background="{DynamicResource NavigationViewDefaultPaneBackground}"
                     CornerRadius="{DynamicResource ControlCornerRadius}">
 
-                    <ui:SimpleStackPanel
+                    <ikw:SimpleStackPanel
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
                         Spacing="6">
 
                         <!--  More options  -->
-                        <ui:SimpleStackPanel Orientation="Horizontal" Spacing="2">
+                        <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="2">
                             <Grid>
                                 <ui:FontIcon
                                     VerticalAlignment="Center"
@@ -239,10 +240,10 @@
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource BodyTextBlockStyle}"
                                 Text="Open navigation" />
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
 
                         <!--  Select  -->
-                        <ui:SimpleStackPanel
+                        <ikw:SimpleStackPanel
                             Name="GamepadUISelect"
                             Orientation="Horizontal"
                             Spacing="2"
@@ -265,10 +266,10 @@
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource BodyTextBlockStyle}" />
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
 
                         <!--  Back  -->
-                        <ui:SimpleStackPanel
+                        <ikw:SimpleStackPanel
                             Name="GamepadUIBack"
                             Orientation="Horizontal"
                             Spacing="2"
@@ -291,10 +292,10 @@
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource BodyTextBlockStyle}" />
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
 
                         <!--  Toggle  -->
-                        <ui:SimpleStackPanel
+                        <ikw:SimpleStackPanel
                             Name="GamepadUIToggle"
                             Orientation="Horizontal"
                             Spacing="2"
@@ -317,8 +318,8 @@
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource BodyTextBlockStyle}" />
-                        </ui:SimpleStackPanel>
-                    </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
+                    </ikw:SimpleStackPanel>
                 </Border>
             </Grid>
         </ui:NavigationView.Content>

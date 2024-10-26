@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
@@ -146,7 +147,7 @@ namespace HandheldCompanion.Misc
                 {
                     Height = 66,
                     Margin = new Thickness(-16),
-                    Padding = new Thickness(20, 12, 12, 12),
+                    Padding = new Thickness(20, 6, 12, 6),
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     HorizontalContentAlignment = HorizontalAlignment.Stretch,
                     Background = Brushes.Transparent,
@@ -220,7 +221,7 @@ namespace HandheldCompanion.Misc
                 dockPanel.Children.Add(radioButtons);
 
                 // Create a font icon
-                FontIcon fontIcon = new FontIcon
+                var fontIcon = new FontIcon
                 {
                     Margin = new Thickness(0, 0, 7, 0),
                     HorizontalAlignment = HorizontalAlignment.Right,

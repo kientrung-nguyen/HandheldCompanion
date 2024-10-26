@@ -1,9 +1,12 @@
 ﻿using HandheldCompanion.Controls;
+using HandheldCompanion.Extensions;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.ObjectModel;
-using System.Windows.Forms;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -21,15 +24,13 @@ namespace HandheldCompanion.ViewModels
             get => _process;
             set
             {
-                if (value != _process)
-                {
-                    UpdateProcess(_process, value);
-                    OnPropertyChanged(nameof(Process));
-                }
+                // todo: we need to check if _hotkey != value but this will return false because this is a pointer
+                // I've implemented all required Clone() functions but not sure where to call them
+
+                UpdateProcess(_process, value);
+                OnPropertyChanged(nameof(Process));
             }
         }
-
-        public string Title => Process.MainWindowTitle;
 
         public ImageSource Icon => Process.ProcessIcon;
 
@@ -60,47 +61,70 @@ namespace HandheldCompanion.ViewModels
         }
 
         public ICommand KillProcessCommand { get; private set; }
-        public ICommand BringProcessCommand { get; private set; }
 
         public ProcessExViewModel(ProcessEx process, QuickApplicationsPageViewModel pageViewModel)
         {
             Process = process;
+            Process.WindowAttached += Process_WindowAttached;
+            Process.WindowDetached += Process_WindowDetached;
+
+            foreach (ProcessWindow processWindow in Process.ProcessWindows.Values)
+            {
+                if (string.IsNullOrEmpty(processWindow.Name))
+                    continue;
+
+                Process_WindowAttached(processWindow);
+            }
+
             PageViewModel = pageViewModel;
 
-            KillProcessCommand = new DelegateCommand(() =>
+            KillProcessCommand = new DelegateCommand(async () =>
             {
-                Process.Process?.Kill();
-            });
+                Dialog dialog = new Dialog(OverlayQuickTools.GetCurrent())
+                {
+                    Title = "Terminate application",
+                    Content = string.Format("Do you want to end the application '{0}'?", Executable),
+                    DefaultButton = ContentDialogButton.Close,
+                    CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+                    PrimaryButtonText = Properties.Resources.ProfilesPage_Yes,
+                };
 
-            BringProcessCommand = new DelegateCommand(async () =>
+                Task<ContentDialogResult> dialogTask = dialog.ShowAsync();
+                await dialogTask; // sync call
+
+                switch (dialogTask.Result)
+                {
+                    case ContentDialogResult.Primary:
+                        Process.Process?.Kill();
+                        break;
+                    default:
+                        dialog.Hide();
+                        break;
+                }
+            });
+        }
+
+        private void Process_WindowAttached(ProcessWindow processWindow)
+        {
+            ProcessWindowViewModel? foundWindow = ProcessWindows.ToList().FirstOrDefault(win => win.ProcessWindow.Hwnd == processWindow.Hwnd);
+            if (foundWindow is null)
             {
-                OverlayQuickTools qtWindow = OverlayQuickTools.GetCurrent();
+                ProcessWindows.SafeAdd(new ProcessWindowViewModel(processWindow, this));
+            }
+            else
+            {
+                foundWindow.ProcessWindow = processWindow;
+            }
+        }
 
-                ContentDialogResult result = await qtWindow.applicationsPage.SnapDialog.ShowAsync();
-                switch (result)
-                {
-                    case ContentDialogResult.None:
-                        qtWindow.applicationsPage.SnapDialog.Hide();
-                        return;
-                }
-
-                // Get the screen where the reference window is located
-                Screen screen = Screen.FromHandle(qtWindow.hwndSource.Handle);
-                if (screen is null)
-                    return;
-
-                int style = WinAPI.GetWindowLong(Process.MainWindowHandle, WinAPI.GWL_STYLE);
-                if (PageViewModel.BorderlessEnabled && PageViewModel.BorderlessToggle)
-                {
-                    WinAPI.SetWindowLong(Process.MainWindowHandle, WinAPI.GWL_STYLE, (style & ~WinAPI.WS_BORDER & ~WinAPI.WS_CAPTION & ~WinAPI.WS_SYSMENU));
-                }
-                else if ((style & WinAPI.WS_BORDER) == 0 && (style & WinAPI.WS_CAPTION) == 0)
-                {
-                    WinAPI.SetWindowLong(Process.MainWindowHandle, WinAPI.GWL_STYLE, (style | WinAPI.WS_BORDER | WinAPI.WS_CAPTION | WinAPI.WS_SYSMENU));
-                }
-
-                WinAPI.MoveWindow(Process.MainWindowHandle, screen, PageViewModel.windowPositions);
-            });
+        private void Process_WindowDetached(ProcessWindow processWindow)
+        {
+            ProcessWindowViewModel? foundWindow = ProcessWindows.ToList().FirstOrDefault(win => win.ProcessWindow.Hwnd == processWindow.Hwnd);
+            if (foundWindow is not null)
+            {
+                ProcessWindows.SafeRemove(foundWindow);
+                foundWindow.Dispose();
+            }
         }
 
         private void UpdateProcess(ProcessEx oldProcess, ProcessEx newProcess)
@@ -119,7 +143,6 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(IsSuspended));
             OnPropertyChanged(nameof(FullScreenOptimization));
             OnPropertyChanged(nameof(HighDPIAware));
-            OnPropertyChanged(nameof(Title));
         }
 
         public override void Dispose()

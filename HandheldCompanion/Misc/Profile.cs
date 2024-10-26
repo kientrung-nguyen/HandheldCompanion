@@ -107,18 +107,7 @@ public partial class Profile : ICloneable, IComparable
     public byte IntegerScalingType { get; set; } = 0;
     public bool RISEnabled { get; set; } = false;
     public int RISSharpness { get; set; } = 80; // default AMD value
-    public bool OnScreenDisplayToggle { get; set; } = false;
-
-    public OverlayDisplayLevel OverlayLevel { get; set; } = OverlayDisplayLevel.Disabled;
-    public OverlayEntryLevel OverlayTimeLevel { get; set; } = OverlayEntryLevel.Disabled;
-    public OverlayEntryLevel OverlayFPSLevel { get; set; } = OverlayEntryLevel.Disabled;
-    public OverlayEntryLevel OverlayCPULevel { get; set; } = OverlayEntryLevel.Disabled;
-    public OverlayEntryLevel OverlayRAMLevel { get; set; } = OverlayEntryLevel.Disabled;
-    public OverlayEntryLevel OverlayGPULevel { get; set; } = OverlayEntryLevel.Disabled;
-    public OverlayEntryLevel OverlayVRAMLevel { get; set; } = OverlayEntryLevel.Disabled;
-    public OverlayEntryLevel OverlayBATTLevel { get; set; } = OverlayEntryLevel.Disabled;
-
-    public int OverlayOrientation { get; set; } = 0;
+    public bool AFMFEnabled { get; set; } = false;
 
     // AppCompatFlags
     public bool FullScreenOptimization { get; set; } = true;

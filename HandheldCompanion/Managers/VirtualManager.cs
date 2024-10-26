@@ -110,24 +110,19 @@ namespace HandheldCompanion.Managers
                     // update DSU status
                     SetDSUStatus(SettingsManager.Get<bool>("DSUEnabled"));
                 }
-
-                // set controller mode
-                SetControllerMode(HIDmode);
             }
+
+            // set controller mode
+            SetControllerMode(HIDmode);
         }
 
         public static void Suspend(bool OS)
         {
+            // dispose virtual controller
+            SetControllerMode(HIDmode.NoController);
+
             lock (threadLock)
             {
-                // dispose virtual controller
-                if (vTarget is not null)
-                {
-                    vTarget.Disconnect();
-                    vTarget.Dispose();
-                    vTarget = null;
-                }
-
                 if (OS)
                 {
                     // dispose ViGEm drivers
@@ -242,12 +237,7 @@ namespace HandheldCompanion.Managers
                 {
                     default:
                     case HIDmode.NoController:
-                        if (vTarget is not null)
-                        {
-                            vTarget.Disconnect();
-                            vTarget.Dispose();
-                            vTarget = null;
-                        }
+                        // controller was disposed already above
                         break;
 
                     case HIDmode.DualShock4Controller:

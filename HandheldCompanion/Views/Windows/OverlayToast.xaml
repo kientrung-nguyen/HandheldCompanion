@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
@@ -40,7 +41,7 @@
                     Opacity="0.65" BorderThickness="1,1,1,1">
                 </Border>
                 <Border Padding="10">
-                    <ui:SimpleStackPanel
+                    <ikw:SimpleStackPanel
                         Orientation="Vertical"
                         Spacing="10" Panel.ZIndex="1">
                         <Grid>
@@ -82,7 +83,7 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center" />
                         </Grid>
-                    </ui:SimpleStackPanel>
+                    </ikw:SimpleStackPanel>
                 </Border>
             </Grid>
 

@@ -107,11 +107,39 @@ public static class WPFUtils
         // If no controls are found, return source
         if (controls.Count == 0) return source;
 
-        // Find the control with the same parent and the minimum distance to the source
-        // If no control has the same parent, find the control with the minimum distance to the source
-        controls = controls.OrderBy(c => GetDistanceV2(source, c, direction)).ToList();
+        // Group controls by their nearest common parent
+        var groupedControls = controls
+            .GroupBy(c => GetNearestCommonParent(source, c))
+            .OrderBy(g => g.Key == null ? double.MaxValue : GetDistanceV2(source, g.First(), direction))
+            .ToList();
 
-        return controls.First();
+        // Flatten the groups and sort controls by distance
+        var closestControls = groupedControls
+            .SelectMany(g => g.OrderBy(c => GetDistanceV2(source, c, direction)))
+            .ToList();
+
+        return closestControls.FirstOrDefault();
+    }
+
+    // Helper method to find the nearest common parent of two controls
+    private static DependencyObject GetNearestCommonParent(Control c1, Control c2)
+    {
+        // Get the visual tree parents of both controls
+        var parents1 = GetVisualParents(c1).ToList();
+        var parents2 = GetVisualParents(c2).ToList();
+
+        // Find the nearest common parent
+        return parents1.Intersect(parents2).FirstOrDefault();
+    }
+
+    // Helper method to get all visual parents of a control
+    private static IEnumerable<DependencyObject> GetVisualParents(DependencyObject child)
+    {
+        while (child != null)
+        {
+            yield return child;
+            child = VisualTreeHelper.GetParent(child);
+        }
     }
 
     // Helper method to check if a control is in a given direction from another control
@@ -309,6 +337,53 @@ public static class WPFUtils
             CurrentParent = VisualTreeHelper.GetParent(CurrentParent);
         }
         return parent;
+    }
+
+    public static Visual FindCommonAncestor(Visual visual1, Visual visual2)
+    {
+        var ancestor1 = visual1;
+        while (ancestor1 != null)
+        {
+            var ancestor2 = visual2;
+            while (ancestor2 != null)
+            {
+                if (ancestor1 == ancestor2)
+                {
+                    return ancestor1;
+                }
+                ancestor2 = VisualTreeHelper.GetParent(ancestor2) as Visual;
+            }
+            ancestor1 = VisualTreeHelper.GetParent(ancestor1) as Visual;
+        }
+        return null;
+    }
+
+    public static Point TransformToAncestor(Visual child, Visual ancestor, Point point)
+    {
+        return child.TransformToAncestor(ancestor).Transform(point);
+    }
+
+    public static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent == null)
+            return null;
+
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild)
+            {
+                return typedChild;
+            }
+
+            T childOfChild = FindVisualChild<T>(child);
+            if (childOfChild != null)
+            {
+                return childOfChild;
+            }
+        }
+
+        return null;
     }
 
     // Helper method to find all visual children of a given type

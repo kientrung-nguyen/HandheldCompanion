@@ -247,6 +247,9 @@ public class ProcessEx : IDisposable
 
         // update main window handle
         MainWindowHandle = Process.MainWindowHandle;
+		// refresh attached windows
+        //foreach (ProcessWindow processWindow in ProcessWindows.Values)
+        //    processWindow.Refresh();
 
         // raise event
         Refreshed?.Invoke(this, EventArgs.Empty);

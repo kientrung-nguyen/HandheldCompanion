@@ -5,7 +5,6 @@ using System;
 using System.Diagnostics;
 using System.Timers;
 using System.Windows;
-using static HandheldCompanion.Managers.OSDManager;
 using LibreHwdMonitor = HandheldCompanion.Platforms.LibreHardwareMonitor;
 
 namespace HandheldCompanion.Managers;
@@ -56,7 +55,7 @@ public static class PlatformManager
         if (LibreHardwareMonitor.IsInstalled)
             LibreHardwareMonitor.Start();
 
-        //SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         ProfileManager.Applied += ProfileManager_Applied;
         PowerProfileManager.Applied += PowerProfileManager_Applied;
 
@@ -92,9 +91,6 @@ public static class PlatformManager
             CurrentNeeds |= PlatformNeeds.FramerateLimiter;
         else
             CurrentNeeds &= ~PlatformNeeds.FramerateLimiter;
-        UpdateCurrentNeedsOnScreenDisplay(profile.OnScreenDisplayToggle 
-            ? EnumUtils<OverlayDisplayLevel>.Parse(SettingsManager.Get<int>("OnScreenDisplayLevel"))
-            : OverlayDisplayLevel.Disabled);
 
         UpdateTimer.Stop();
         UpdateTimer.Start();
@@ -117,7 +113,7 @@ public static class PlatformManager
             }
         });
     }
-    
+
     private static void UpdateCurrentNeedsOnScreenDisplay(OverlayDisplayLevel level)
     {
         switch (level)
@@ -168,19 +164,15 @@ public static class PlatformManager
         else if (CurrentNeeds.HasFlag(PlatformNeeds.AutoTDP) || CurrentNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
         {
             // If AutoTDP or framerate limiter is needed, start only RTSS and stop LHM
-            if (!PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) &&
-                !PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
-            {
+            if (!PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) && !PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
                 // Only start RTSS if it was not running before and if it is installed
                 if (RTSS.IsInstalled)
                     RTSS.Start();
-            }
         }
         else
         {
             // If none of the needs are present, stop both LHM and RTSS
-            if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay) ||
-                PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) ||
+            if (PreviousNeeds.HasFlag(PlatformNeeds.OnScreenDisplay) || PreviousNeeds.HasFlag(PlatformNeeds.AutoTDP) ||
                 PreviousNeeds.HasFlag(PlatformNeeds.FramerateLimiter))
             {
                 // Only stop LHM and RTSS if they were running before and if they are installed

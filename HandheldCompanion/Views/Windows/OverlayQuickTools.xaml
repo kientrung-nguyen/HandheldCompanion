@@ -4,13 +4,14 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     Title="QuickTools"
     Width="450"
-    MinWidth="520"
+    MinWidth="450"
     MaxWidth="960"
     MaxHeight="960"
     d:Height="1600"
@@ -34,7 +35,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="36" />
-            <RowDefinition Height="100" />
+            <RowDefinition Height="90" />
             <RowDefinition Height="320*" />
         </Grid.RowDefinitions>
         <DockPanel
@@ -85,6 +86,24 @@
                                 HorizontalAlignment="Left"
                                 Orientation="Horizontal">
                                 <TextBlock
+                                    Name="BatteryPower"
+                                    VerticalAlignment="Center"
+                                    Text="5W"
+                                    FontWeight="Bold"
+                                    FontSize="13" />
+                                <ui:FontIcon
+                                    Margin="4,0,0,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="13"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xe945;" />
+                            </StackPanel>
+                            <StackPanel 
+                                Margin="4,0,0,0" 
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Left"
+                                Orientation="Horizontal">
+                                <TextBlock
                                     Name="BatteryIndicatorLife"
                                     Margin="0,0,0,0"
                                     VerticalAlignment="Center"
@@ -122,11 +141,8 @@
         </DockPanel>
         <DockPanel
             Grid.Row="1"
-            VerticalAlignment="Stretch"
-            Background="{DynamicResource NavigationViewContentBackground}">
-            <Border
-                Margin="4"
-                CornerRadius="{DynamicResource ControlCornerRadius}">
+            VerticalAlignment="Stretch">
+            <Border CornerRadius="{DynamicResource ControlCornerRadius}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition />
@@ -139,9 +155,6 @@
                         HorizontalAlignment="Center"
                         Orientation="Horizontal">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition />
-                            </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height=".8*" />
                                 <RowDefinition Height="2*" />
@@ -163,7 +176,7 @@
                                         FontStretch="SemiCondensed" />
                                 </Border>
                             </Grid>
-                            <ui:SimpleStackPanel
+                            <ikw:SimpleStackPanel
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="0,0,0,0"
@@ -198,26 +211,7 @@
                                             MinWidth="20" Padding="0,4,0,4" />
                                     </StackPanel>
                                 </StackPanel>
-                                <StackPanel VerticalAlignment="Center">
-                                    <Grid Margin="0,0,0,0">
-                                        <ui:FontIcon
-                                            Width="26"
-                                            Height="30"
-                                            FontSize="16"
-                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                            Glyph="&#xe945;" />
-                                    </Grid>
-                                    <DockPanel MinWidth="32" HorizontalAlignment="Center">
-                                        <TextBlock
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center"
-                                            Name="BatteryPower"
-                                            Text="5W"
-                                            FontSize="12"
-                                            MinWidth="20" Padding="0,4,0,4" />
-                                    </DockPanel>
-                                </StackPanel>
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </Grid>
                     </StackPanel>
                     <StackPanel
@@ -250,7 +244,7 @@
                                         FontStretch="SemiCondensed" />
                                 </Border>
                             </Grid>
-                            <ui:SimpleStackPanel
+                            <ikw:SimpleStackPanel
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="0,0,0,0"
@@ -341,7 +335,7 @@
                                             MinWidth="20" Padding="0,4,0,4" />
                                     </DockPanel>
                                 </StackPanel>
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </Grid>
                     </StackPanel>
                     <StackPanel
@@ -374,7 +368,7 @@
                                         Text="GPU" FontStretch="SemiCondensed" />
                                 </Border>
                             </Grid>
-                            <ui:SimpleStackPanel
+                            <ikw:SimpleStackPanel
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="0,0,0,0"
@@ -470,7 +464,7 @@
                                             MinWidth="20" Padding="0,4,0,4" />
                                     </DockPanel>
                                 </StackPanel>
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </Grid>
                     </StackPanel>
                 </Grid>
@@ -478,308 +472,128 @@
         </DockPanel>
         <DockPanel
             Grid.Row="2"
-            VerticalAlignment="Stretch"
-            Background="{DynamicResource NavigationViewContentBackground}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition />
-                </Grid.RowDefinitions>
-                <ui:NavigationView
-                    Name="navView"
-                    Margin="0,0,0,0"
-                    BackRequested="navView_BackRequested"
-                    IsBackButtonVisible="Collapsed"
-                    IsBackEnabled="False"
-                    IsSettingsVisible="False"
-                    IsPaneToggleButtonVisible="False"
-                    ItemInvoked="navView_ItemInvoked"
-                    Loaded="navView_Loaded"
-                    PaneDisplayMode="Top"
-                    Style="{StaticResource NavigationViewStyle1}"
-                    SelectionFollowsFocus="Enabled"
-                    Grid.Row="0"
-                    Grid.Column="0">
-                    <ui:NavigationView.MenuItems>
-                        <ui:NavigationViewItem IsEnabled="False">
-                            <ui:NavigationViewItem.Icon>
-                                <ui:FontIcon
-                                    Name="QTLB"
-                                    Margin="-6,0,0,0"
-                                    FontFamily="PromptFont"
-                                    FontSize="22"
-                                    Glyph="&#x2198;" />
-                            </ui:NavigationViewItem.Icon>
-                        </ui:NavigationViewItem>
-                        <ui:NavigationViewItem 
-                            Name="navSettingsPage" 
-                            Tag="QuickHomePage"
-		                    FontSize="12"
-                            Style="{StaticResource NavigationViewItemStyle1}"
-                            Content="{l:Static resx:Resources.QuickHomePage_Title}">
-                            <ui:NavigationViewItem.Icon>
-                                <ui:FontIcon 
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Center"
-                                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                    Glyph="&#xE80F;" />
-                            </ui:NavigationViewItem.Icon>
-                        </ui:NavigationViewItem>
-                        <ui:NavigationViewItem 
-                            Name="navDevicePage" 
-                            Tag="QuickDevicePage"
-		                    FontSize="12"
-                            Style="{StaticResource NavigationViewItemStyle1}"
-                            Content="{l:Static resx:Resources.QuickDevicePage_Title}">
-                            <ui:NavigationViewItem.Icon>
-                                <ui:FontIcon 
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Center"
-                                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                    Glyph="&#xE70A;" />
-                            </ui:NavigationViewItem.Icon>
-                        </ui:NavigationViewItem>
-                        <ui:NavigationViewItem 
-                            Name="navProfilesPage" 
-                            Tag="QuickProfilesPage"
-		                    FontSize="12"
-                            Style="{StaticResource NavigationViewItemStyle1}"
-                            Content="{l:Static resx:Resources.QuickProfilesPage_Title}">
-                            <ui:NavigationViewItem.Icon>
-                                <ui:FontIcon 
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Center"
-                                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                    Glyph="&#xE77B;" />
-                            </ui:NavigationViewItem.Icon>
-                        </ui:NavigationViewItem>
-
-                        <ui:NavigationViewItem 
-                            Name="navOverlayPage" 
-                            Tag="QuickOverlayPage"
-                            FontSize="12"
-                            Style="{StaticResource NavigationViewItemStyle1}"
-                            Visibility="Collapsed"
-                            Content="{l:Static resx:Resources.QuickOverlayPage_Title}">
-                            <ui:NavigationViewItem.Icon>
-                                <ui:FontIcon 
+            VerticalAlignment="Stretch">
+            <ui:NavigationView
+                Name="navView"
+                Margin="0,0,0,0"
+                BackRequested="navView_BackRequested"
+                IsBackButtonVisible="Collapsed"
+                IsBackEnabled="False"
+                IsSettingsVisible="False"
+                IsPaneToggleButtonVisible="False"
+                ItemInvoked="navView_ItemInvoked"
+                Loaded="navView_Loaded"
+                PaneDisplayMode="Top"
+                Style="{StaticResource NavigationViewStyle1}"
+                SelectionFollowsFocus="Enabled"
+                Grid.Row="0"
+                Grid.Column="0">
+                <ui:NavigationView.MenuItems>
+                    <ui:NavigationViewItem IsEnabled="False">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:FontIcon
+                                Name="QTLB"
+                                Margin="-6,0,0,0"
+                                FontFamily="PromptFont"
+                                FontSize="22"
+                                Glyph="&#x2198;" />
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
+                    <ui:NavigationViewItem 
+                        Name="navSettingsPage" 
+                        Tag="QuickHomePage"
+		                FontSize="12"
+                        Style="{StaticResource NavigationViewItemStyle1}"
+                        Content="{l:Static resx:Resources.QuickHomePage_Title}">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:FontIcon 
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
                                 FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                Glyph="&#xE78B;" />
-                            </ui:NavigationViewItem.Icon>
-                        </ui:NavigationViewItem>
+                                Glyph="&#xE80F;" />
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
+                    <ui:NavigationViewItem 
+                        Name="navDevicePage" 
+                        Tag="QuickDevicePage"
+		                FontSize="12"
+                        Style="{StaticResource NavigationViewItemStyle1}"
+                        Content="{l:Static resx:Resources.QuickDevicePage_Title}">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:FontIcon 
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                Glyph="&#xE70A;" />
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
+                    <ui:NavigationViewItem 
+                        Name="navProfilesPage" 
+                        Tag="QuickProfilesPage"
+		                FontSize="12"
+                        Style="{StaticResource NavigationViewItemStyle1}"
+                        Content="{l:Static resx:Resources.QuickProfilesPage_Title}">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:FontIcon 
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                Glyph="&#xE77B;" />
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
 
-                        <ui:NavigationViewItem 
-                            Name="navApplicationsPage" 
-                            Tag="QuickApplicationsPage"
-		                    FontSize="12"
-                            Style="{StaticResource NavigationViewItemStyle1}"
-                            Content="{l:Static resx:Resources.QuickApplicationsPage_Title}">
-                            <ui:NavigationViewItem.Icon>
-                                <ui:FontIcon 
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Center"
-                                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                    Glyph="&#xE71D;" />
-                            </ui:NavigationViewItem.Icon>
-                        </ui:NavigationViewItem>
-                        <ui:NavigationViewItem IsEnabled="False">
-                            <ui:NavigationViewItem.Icon>
-                                <ui:FontIcon
-                                    Name="QTRB"
-                                    Margin="-6,0,0,0"
-                                    FontFamily="PromptFont"
-                                    FontSize="22"
-                                    Glyph="&#x2199;" />
-                            </ui:NavigationViewItem.Icon>
-                        </ui:NavigationViewItem>
-                    </ui:NavigationView.MenuItems>
-                    <ui:NavigationView.Content>
-                        <Border>
-                            <Grid>
-                                <common:TouchScrollViewer
-                                    Margin="0,0,0,0"
-                                    x:Name="scrollViewer"
-                                    VerticalScrollBarVisibility="Disabled">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="60*" />
-                                            <ColumnDefinition Width="400*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border
-                                            Grid.Row="0"
-                                            Grid.RowSpan="3"
-                                            Grid.Column="1"
-                                            CornerRadius="{DynamicResource ControlCornerRadius}">
-                                            <Grid>
-                                                <ui:ContentDialog
-                                                    Name="ContentDialog" 
-                                                    Background="{x:Null}" />
-                                                <common:TouchScrollViewer
-                                                    x:Name="actualScrollViewer"
-                                                    PanningMode="VerticalOnly">
-                                                    <ui:Frame Name="ContentFrame" />
-                                                </common:TouchScrollViewer>
-                                            </Grid>
-                                        </Border>
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition />
-                                                <RowDefinition />
-                                                <RowDefinition Height="44" />
-                                            </Grid.RowDefinitions>
-                                            <Border
-                                                Grid.Row="0"
-                                                Grid.Column="0"
-                                                Padding="0"
-                                                Margin="6,0,6,6"
-                                                CornerRadius="{DynamicResource ControlCornerRadius}">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="1*" />
-                                                        <RowDefinition Height="50" />
-                                                    </Grid.RowDefinitions>
-                                                    <Grid
-                                                        Name="BrightnessSupport"
-                                                        Grid.Row="0">
-                                                        <Slider
-                                                            x:Name="SliderBrightness"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Stretch"
-                                                            AutoToolTipPrecision="0"
-                                                            IsEnabled="False"
-                                                            IsMoveToPointEnabled="True"
-                                                            IsSnapToTickEnabled="True"
-                                                            LargeChange="10"
-                                                            Orientation="Vertical"
-                                                            Maximum="100"
-                                                            Minimum="0"
-                                                            SmallChange="1"
-                                                            TickFrequency="1"
-                                                            ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
-                                                            ValueChanged="SliderBrightness_ValueChanged" />
-                                                    </Grid>
-                                                    <Grid
-                                                        Name="NightLightSupport"
-                                                        Grid.Row="1" 
-                                                        Margin="0,4,0,0" 
-                                                        VerticalAlignment="Center">
-                                                        <Button 
-                                                            Name="BrightnessButton"
-                                                            Click="BrightnessButton_Click"
-                                                            Height="40" Width="40"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center"
-                                                            BorderBrush="{x:Null}"
-                                                            Background="{x:Null}"
-                                                            Padding="0,0,0,1">
-                                                            <ui:FontIcon
-                                                                Name="LightIcon"
-                                                                Width="30"
-                                                                Height="30"
-                                                                FontSize="18"
-                                                                HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center"
-                                                                FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                                                Glyph="&#xE706;" />
-                                                        </Button>
-                                                    </Grid>
-                                                </Grid>
-                                            </Border>
-                                            <Border
-                                                Name="VolumeSupport"
-                                                Grid.Row="1"
-                                                Grid.Column="0"
-                                                Padding="0"
-                                                Margin="6,0,6,6"
-                                                CornerRadius="{DynamicResource ControlCornerRadius}">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="1*" />
-                                                        <RowDefinition Height="50" />
-                                                    </Grid.RowDefinitions>
-                                                    <Grid Grid.Row="0">
-                                                        <Slider
-                                                            x:Name="SliderVolume"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Stretch"
-                                                            AutoToolTipPrecision="0"
-                                                            IsMoveToPointEnabled="True"
-                                                            IsSnapToTickEnabled="True"
-                                                            Orientation="Vertical"
-                                                            LargeChange="10"
-                                                            Maximum="100"
-                                                            Minimum="0"
-                                                            SmallChange="1"
-                                                            TickFrequency="1"
-                                                            ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
-                                                            ValueChanged="SliderVolume_ValueChanged" />
-                                                    </Grid>
-                                                    <Grid Grid.Row="1" Margin="0,4,0,0">
-                                                        <ui:SimpleStackPanel 
-                                                            Orientation="Vertical" 
-                                                            VerticalAlignment="Center"
-                                                            Spacing="4">
-                                                            <Button 
-                                                                Name="VolumeButton"
-                                                                Click="VolumeButton_Click"
-                                                                Height="40" Width="40"
-                                                                HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center"
-                                                                BorderBrush="{x:Null}"
-                                                                Background="{x:Null}"
-                                                                Padding="0,0,0,0">
-                                                                <ui:FontIcon
-                                                                    Name="VolumeIcon"
-                                                                    Width="30"
-                                                                    Height="30"
-                                                                    FontSize="20"
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center" 
-                                                                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                                                    Glyph="&#xE767;" />
-                                                            </Button>
-                                                        </ui:SimpleStackPanel>
-                                                    </Grid>
-                                                </Grid>
-                                            </Border>
-                                            <Border
-                                                Padding="0"
-                                                Margin="6,0,6,0"
-                                                Grid.Row="2"
-                                                Grid.Column="0"
-                                                CornerRadius="{DynamicResource ControlCornerRadius}">
-                                                <Button 
-                                                    Name="MicButton"
-                                                    Click="MicButton_Click"
-                                                    Height="40" Width="40"
-                                                    HorizontalAlignment="Center" 
-                                                    VerticalAlignment="Center" 
-                                                    Padding="0,0,0,1"
-                                                    BorderBrush="{x:Null}"
-                                                    Background="{x:Null}">
-                                                    <ui:FontIcon
-                                                        Name="MicIcon"
-                                                        Width="30"
-                                                        Height="30"
-                                                        FontSize="18"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center" 
-                                                        FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                                        Glyph="&#xe720;" />
-                                                </Button>
-                                            </Border>
-                                        </Grid>
-                                    </Grid>
-                                </common:TouchScrollViewer>
-                            </Grid>
-                        </Border>
-                    </ui:NavigationView.Content>
-                </ui:NavigationView>
-            </Grid>
+                    <ui:NavigationViewItem 
+                        Name="navOverlayPage" 
+                        Tag="QuickOverlayPage"
+                        FontSize="12"
+                        Style="{StaticResource NavigationViewItemStyle1}"
+                        Visibility="Collapsed"
+                        Content="{l:Static resx:Resources.QuickOverlayPage_Title}">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:FontIcon 
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            FontFamily="{StaticResource SymbolThemeFontFamily}"
+                            Glyph="&#xE78B;" />
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
+
+                    <ui:NavigationViewItem 
+                        Name="navApplicationsPage" 
+                        Tag="QuickApplicationsPage"
+		                FontSize="12"
+                        Style="{StaticResource NavigationViewItemStyle1}"
+                        Content="{l:Static resx:Resources.QuickApplicationsPage_Title}">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:FontIcon 
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                Glyph="&#xE71D;" />
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
+                    <ui:NavigationViewItem IsEnabled="False">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:FontIcon
+                                Name="QTRB"
+                                Margin="-6,0,0,0"
+                                FontFamily="PromptFont"
+                                FontSize="22"
+                                Glyph="&#x2199;" />
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
+                </ui:NavigationView.MenuItems>
+                <Grid>
+                    <ui:ContentDialog Name="ContentDialog" />
+                    <common:TouchScrollViewer
+                        x:Name="scrollViewer"
+                        Margin="0,12,0,12"
+                        PanningMode="VerticalOnly">
+                        <ui:Frame Name="ContentFrame" />
+                    </common:TouchScrollViewer>
+                </Grid>
+            </ui:NavigationView>
+
         </DockPanel>
     </Grid>
 </common:GamepadWindow>

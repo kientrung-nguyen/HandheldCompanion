@@ -1,7 +1,5 @@
 ﻿using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
 using steam_hidapi.net.Hid;
-using System;
 
 namespace HandheldCompanion.Controllers
 {
@@ -13,9 +11,6 @@ namespace HandheldCompanion.Controllers
         public SteamController() : base()
         {
             Capabilities |= ControllerCapabilities.MotionSensor;
-
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-            UpdateSettings();
         }
 
         public override void AttachDetails(PnPDetails details)
@@ -23,34 +18,9 @@ namespace HandheldCompanion.Controllers
             base.AttachDetails(details);
         }
 
-        protected override void UpdateSettings()
-        {
-            SetVirtualMuted(SettingsManager.Get<bool>("SteamControllerMute"));
-        }
-
-        private void SettingsManager_SettingValueChanged(string name, object value)
-        {
-            switch (name)
-            {
-                case "SteamControllerMute":
-                    SetVirtualMuted(Convert.ToBoolean(value));
-                    break;
-            }
-        }
-
         public override bool IsConnected()
         {
             return isConnected;
-        }
-
-        public virtual bool IsVirtualMuted()
-        {
-            return isVirtualMuted;
-        }
-
-        public virtual void SetVirtualMuted(bool mute)
-        {
-            isVirtualMuted = mute;
         }
 
         public override string GetGlyph(ButtonFlags button)

@@ -5,6 +5,7 @@ using HandheldCompanion.Devices;
 using HandheldCompanion.Devices.Lenovo;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
+using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
@@ -13,7 +14,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Windows.UI.ViewManagement;
-using HandheldCompanion.Models;
 using static HandheldCompanion.Utils.DeviceUtils;
 using Page = System.Windows.Controls.Page;
 
@@ -361,7 +361,7 @@ namespace HandheldCompanion.Views.Pages
 
             SettingsManager.Set("LEDSettingsLevel", level);
         }
-        
+
         private void LEDOEMPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!IsLoaded)

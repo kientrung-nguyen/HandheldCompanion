@@ -383,8 +383,8 @@ public abstract class IPlatform : IDisposable
 
             var origPath = $"{configPath}.orig";
             if (!File.Exists(origPath))
-                return false; 
-            
+                return false;
+
             FileAttributes attr = File.GetAttributes(configPath);
 
             // unset read-only

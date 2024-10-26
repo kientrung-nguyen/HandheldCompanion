@@ -25,7 +25,8 @@ public static class ProfileManager
     private const string DefaultName = "Default";
 
     public static ConcurrentDictionary<string, Profile> profiles = new(StringComparer.InvariantCultureIgnoreCase);
-    public static List<Profile> subProfiles = new();
+    public static List<Profile> subProfiles = [];
+
     private static Profile currentProfile;
 
     private static string profilesPath;
@@ -149,10 +150,12 @@ public static class ProfileManager
 
     public static Profile GetProfileFromGuid(Guid Guid, bool ignoreStatus, bool isSubProfile = false)
     {
-        var profile = profiles.Values.FirstOrDefault(pr => pr.Guid == Guid);
+        Profile profile = null;
 
         if (isSubProfile)
             profile = subProfiles.FirstOrDefault(pr => pr.Guid == Guid);
+        else
+            profile = profiles.Values.FirstOrDefault(pr => pr.Guid == Guid);
 
         // get profile from path
         if (profile is null)
@@ -272,7 +275,7 @@ public static class ProfileManager
 
                 // push announcement
                 LogManager.LogInformation(announcement);
-                ToastManager.SendToast("Profile", announcement);
+            	ToastManager.SendToast(announcement);
             }
         }
         catch
@@ -335,10 +338,12 @@ public static class ProfileManager
             if (profile is null || profile.Default)
                 return;
 
+            bool isCurrent = profile.ErrorCode.HasFlag(ProfileErrorCode.Running);
+
             // raise event
             Discarded?.Invoke(profile);
 
-            if (profile.ErrorCode.HasFlag(ProfileErrorCode.Running))
+            if (isCurrent)
             {
                 // update profile
                 UpdateOrCreateProfile(profile);
@@ -471,21 +476,22 @@ public static class ProfileManager
 
     private static void ProcessProfile(string fileName, bool imported = false)
     {
-        Profile? profile;
+        Profile profile;
         try
         {
-            string outputraw = File.ReadAllText(fileName);
-            JObject jObject = JObject.Parse(outputraw);
-
             string rawName = Path.GetFileNameWithoutExtension(fileName);
             if (string.IsNullOrEmpty(rawName))
                 throw new Exception("Profile has an incorrect file name.");
+
+            string outputraw = File.ReadAllText(fileName);
+            JObject jObject = JObject.Parse(outputraw);
 
             // latest pre-versionning release
             Version version = new("0.15.0.4");
             if (jObject.TryGetValue("Version", out var value))
                 version = new Version(value.ToString());
 
+            // pre-parse manipulations
             switch (version.ToString())
             {
                 case "0.15.0.4":
@@ -669,7 +675,7 @@ public static class ProfileManager
 
             // send toast
             // todo: localize me
-            ToastManager.SendToast("Sub-Profile", $"Subprofile {subProfile.Name} deleted");
+            ToastManager.SendToast($"Subprofile {subProfile.Name} deleted");
 
             LogManager.LogInformation("Deleted subprofile {0}", profilePath);
 

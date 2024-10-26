@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using Sentry;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -8,8 +9,6 @@ using System.Reflection;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
-using Sentry;
-using Sentry.Profiling;
 using static HandheldCompanion.WinAPI;
 using System.IO;
 
@@ -63,15 +62,23 @@ public partial class App : Application
                 using (Process prevProcess = processes[0])
                 {
                     nint handle = prevProcess.MainWindowHandle;
+
+                    // Bring the previous process window to the foreground if it's minimized
                     if (ProcessUtils.IsIconic(handle))
                         ProcessUtils.ShowWindow(handle, (int)ProcessUtils.ShowWindowCommands.Restored);
 
-                    // force close this process if we were able to bring previous process to foreground
-                    // kill previous process otherwise (means it's stalled)
-                    if (ProcessUtils.SetForegroundWindow(handle))
+                    // Check if the previous process is responding to user input
+                    bool isPrevProcessResponding = prevProcess.Responding;
+                    if (isPrevProcessResponding && ProcessUtils.SetForegroundWindow(handle))
+                    {
+                        // If the previous process is responding and was successfully brought to the foreground, kill the current process
                         process.Kill();
+                    }
                     else
+                    {
+                        // If the previous process is not responding or cannot be brought to the foreground, assume it is stalled and kill it
                         prevProcess.Kill();
+                    }
 
                     return;
                 }
@@ -159,6 +166,7 @@ public partial class App : Application
         // dirty: filter ItemsRepeater DesiredSize is NaN
         if (ex.Message.Contains("ItemsRepeater"))
             goto Handled;
+
         // send to sentry
         bool IsSentryEnabled = SettingsManager.Get<bool>("TelemetryEnabled");
         if (SentrySdk.IsEnabled && IsSentryEnabled)
@@ -185,13 +193,13 @@ public partial class App : Application
                 // Tells which project in Sentry to send events to:
                 options.Dsn = url;
 
-                #if DEBUG
+#if DEBUG
                 // When configuring for the first time, to see what the SDK is doing:
                 options.Debug = true;
-                #else
+#else
                 options.Debug = false;
-                #endif
-                
+#endif
+
                 // Enable Global Mode since this is a client app
                 options.IsGlobalModeEnabled = true;
             });

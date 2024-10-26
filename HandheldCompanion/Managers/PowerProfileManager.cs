@@ -88,14 +88,14 @@ namespace HandheldCompanion.Managers
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
             var powerProfile = GetProfile(
-                        System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online
+                        SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online
                         ? profile.PowerProfile
                         : profile.BatteryProfile);
             if (powerProfile is null)
                 return;
 
             // update current profile
-            currentProfile = powerProfile;
+            //currentProfile = powerProfile;
 
             ApplyProfile(powerProfile, source);
         }
@@ -106,7 +106,7 @@ namespace HandheldCompanion.Managers
             currentProfile = null;
 
             var powerProfile = GetProfile(
-                System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online
+                SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online
                         ? profile.PowerProfile
                         : profile.BatteryProfile);
             if (powerProfile is null)

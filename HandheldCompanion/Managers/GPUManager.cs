@@ -42,6 +42,7 @@ namespace HandheldCompanion.Managers
             if (GPU is AmdGpu amdGpu)
             {
                 amdGpu.RSRStateChanged += CurrentGPU_RSRStateChanged;
+                amdGpu.AFMFStateChanged += CurrentGPU_AFMFStateChanged;
             }
             else if (GPU is IntelGpu)
             {
@@ -170,6 +171,20 @@ namespace HandheldCompanion.Managers
             }
 
         }
+		
+		private static void CurrentGPU_AFMFStateChanged(bool Supported, bool Enabled)
+        {
+            if (!IsInitialized)
+                return;
+
+            // todo: use ProfileMager events
+            Profile profile = ProfileManager.GetCurrent();
+            var amdGPU = (AmdGpu)currentGPU;
+
+            if (Enabled != profile.AFMFEnabled)
+                amdGPU.SetAFMF(profile.AFMFEnabled);
+        }
+
 
         private static void CurrentGPU_IntegerScalingChanged(bool Supported, bool Enabled)
         {
@@ -220,13 +235,26 @@ namespace HandheldCompanion.Managers
             if (IsInitialized)
                 return;
 
-            lock (GPU.functionLock)
+            if (!IsLoaded_IGCL)
             {
-                if (!IsLoaded_IGCL)
-                    IsLoaded_IGCL = IGCLBackend.Initialize();
+                // try to initialized IGCL
+                IsLoaded_IGCL = IGCLBackend.Initialize();
 
-                if (!IsLoaded_ADLX)
-                    IsLoaded_ADLX = ADLXBackend.IntializeAdlx();
+                if (IsLoaded_IGCL)
+                    LogManager.LogInformation("IGCL was successfully initialized", "GPUManager");
+                else
+                    LogManager.LogError("Failed to initialize IGCL", "GPUManager");
+            }
+
+            if (!IsLoaded_ADLX)
+            {
+                // try to initialized ADLX
+                IsLoaded_ADLX = ADLXBackend.IntializeAdlx();
+
+                if (IsLoaded_ADLX)
+                    LogManager.LogInformation("ADLX was successfully initialized", "GPUManager");
+                else
+                    LogManager.LogError("Failed to initialize ADLX", "GPUManager");
             }
 
             // todo: check if usefull on resume
@@ -320,6 +348,19 @@ namespace HandheldCompanion.Managers
                     {
                         amdGpu.SetRSR(false);
                     }
+
+                    if (profile.AFMFEnabled)
+                    {
+                        if (!amdGpu.GetAFMF())
+                            amdGpu.SetAFMF(true);
+
+                        if (!amdGpu.GetAntiLag())
+                            amdGpu.SetAntiLag(true);
+                    }
+                    else if (amdGpu.GetAFMF())
+                    {
+                        amdGpu.SetAFMF(false);
+                    }
                 }
 
                 // apply profile Integer Scaling
@@ -350,9 +391,13 @@ namespace HandheldCompanion.Managers
             catch { }
         }
 
-        private static void ProfileManager_Discarded(Profile profile)
+        private static void ProfileManager_Discarded(Profile profile, bool swapped)
         {
             if (!IsInitialized || currentGPU is null)
+                return;
+
+            // don't bother discarding settings, new one will be enforce shortly
+            if (swapped)
                 return;
 
             try

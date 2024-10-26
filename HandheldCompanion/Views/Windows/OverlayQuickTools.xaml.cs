@@ -1,4 +1,6 @@
-﻿using HandheldCompanion.Devices;
+﻿using HandheldCompanion.Controllers;
+using HandheldCompanion.Devices;
+using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
@@ -18,6 +20,7 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 using System.Windows.Threading;
 using Windows.Devices.Radios;
@@ -73,8 +76,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private const int GWL_STYLE = -16;
     private const int GWL_EXSTYLE = -20;
 
-    public HwndSource hwndSource;
-
+    private CrossThreadLock Sliding = new();
     // page vars
     private readonly Dictionary<string, Page> _pages = [];
 
@@ -99,11 +101,6 @@ public partial class OverlayQuickTools : GamepadWindow
     private static OverlayQuickTools currentWindow;
     private string preNavItemTag;
 
-    private CrossThreadLock brightnessLock = new();
-    private CrossThreadLock volumeLock = new();
-    private CrossThreadLock microphoneLock = new();
-    private CrossThreadLock nightlightLock = new();
-
     public OverlayQuickTools()
     {
         InitializeComponent();
@@ -120,37 +117,44 @@ public partial class OverlayQuickTools : GamepadWindow
 
         // create manager(s)
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
-
-        MultimediaManager.VolumeNotification += MultimediaManager_VolumeNotification;
-        MultimediaManager.BrightnessNotification += MultimediaManager_BrightnessNotification;
-        MultimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
-        MultimediaManager.Initialized += MultimediaManager_Initialized;
-
         MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
-
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-
+        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
         CPUName.Text = IDevice.GetCurrent().Processor.Split("w/").First();
         GPUName.Text = IDevice.GetCurrent().GraphicName;
-
-        VolumeSupport.IsEnabled = MultimediaManager.HasVolumeSupport();
-        BrightnessSupport.IsEnabled = MultimediaManager.HasBrightnessSupport();
-        NightLightSupport.IsEnabled = MultimediaManager.HasNightLightSupport();
 
         // create pages
         homePage = new("quickhome");
         devicePage = new("quickdevice");
-        //performancePage = new("quickperformance");
         profilesPage = new("quickprofiles");
-        //overlayPage = new("quickoverlay");
         applicationsPage = new("quickapplications");
 
         _pages.Add("QuickHomePage", homePage);
         _pages.Add("QuickDevicePage", devicePage);
-        //_pages.Add("QuickPerformancePage", performancePage);
         _pages.Add("QuickProfilesPage", profilesPage);
-        //_pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickApplicationsPage", applicationsPage);
+
+        // load gamepad navigation manager
+        gamepadFocusManager = new(this, ContentFrame);
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        hwndSource.AddHook(WndProc);
+
+        int exStyle = WinAPI.GetWindowLong(hwndSource.Handle, GWL_EXSTYLE);
+        exStyle |= WS_EX_NOACTIVATE;
+        WinAPI.SetWindowLong(hwndSource.Handle, GWL_EXSTYLE, exStyle);
+
+        /*
+        int Style = WinAPI.GetWindowLong(hwndSource.Handle, GWL_STYLE);
+        exStyle &= ~WS_SIZEBOX;
+        WinAPI.SetWindowLong(hwndSource.Handle, GWL_STYLE, Style);
+        */
+
+        WinAPI.SetWindowPos(hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOACTIVATE);
     }
 
     public void LoadPages_MVVM()
@@ -184,6 +188,16 @@ public partial class OverlayQuickTools : GamepadWindow
                     UpdateLocation();
                     break;
             }
+        });
+    }
+
+    private void ControllerManager_ControllerSelected(IController Controller)
+    {
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            QTLB.Glyph = Controller.GetGlyph(ButtonFlags.L1);
+            QTRB.Glyph = Controller.GetGlyph(ButtonFlags.R1);
         });
     }
 
@@ -233,7 +247,6 @@ public partial class OverlayQuickTools : GamepadWindow
             switch (QuickToolsLocation)
             {
                 case 2: // Maximized
-                    Top = 0;
                     MaxWidth = double.PositiveInfinity;
                     MaxHeight = double.PositiveInfinity;
                     WindowStyle = WindowStyle.None;
@@ -286,20 +299,12 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        // load gamepad navigation maanger
-        gamepadFocusManager = new(this, ContentFrame);
-
-        if (PresentationSource.FromVisual(this) is HwndSource hwndSource)
-        {
-            this.hwndSource = hwndSource;
-            this.hwndSource.AddHook(WndProc);
-            WinAPI.SetWindowPos(this.hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-        }
+        // do something
     }
-	
+
     [DllImport("user32.dll")]
     private static extern IntPtr DefWindowProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
-    
+
     private const int WA_ACTIVE = 1;
     private const int WA_CLICKACTIVE = 2;
     private const int WA_INACTIVE = 0;
@@ -318,60 +323,16 @@ public partial class OverlayQuickTools : GamepadWindow
                 }
                 break;
 
-            case WM_SETFOCUS:
-                {
-                    if (hwndSource != null)
-                        WinAPI.SetWindowPos(hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-                    handled = true;
-                }
-                break;
-
-            case WM_NCACTIVATE:
-                {
-                    // prevent window from loosing its fancy style
-                    if (wParam == 0 && (lParam == 0))
-                    {
-                        if (prevWParam != new IntPtr(0x0000000000000086))
-                            if (autoHide && Visibility == Visibility.Visible)
-                                ToggleVisibility();
-                        handled = true;
-                    }
-
-                    if (wParam == 1)
-                    {
-                        handled = true;
-                    }
-
-                    prevWParam = wParam;
-                }
-                break;
-
-            case WM_ACTIVATEAPP:
-                {
-                    if (wParam == 0)
-                    {
-                        if (hwndSource != null)
-                            WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
-                    }
-                }
-                break;
-
             case WM_ACTIVATE:
-                {
-                    // WA_INACTIVE
-                    if (wParam == 0)
-                        handled = true;
-                }
-                break;
-
-            case WM_MOUSEACTIVATE:
-                {
-                    handled = true;
-                }
+                handled = true;
+                WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
                 break;
 
             case WM_PAINT:
                 {
+                    if (Sliding.IsEntered())
+                        break;
+
                     DateTime drawTime = DateTime.Now;
 
                     double drawDiff = Math.Abs((prevDraw - drawTime).TotalMilliseconds);
@@ -447,6 +408,56 @@ public partial class OverlayQuickTools : GamepadWindow
         });
     }
 
+    private void SlideIn()
+    {
+        // set lock
+        if (Sliding.TryEnter())
+        {
+            DoubleAnimation animation = new DoubleAnimation
+            {
+                From = targetScreen.WpfBounds.Height,
+                To = _Top,
+                Duration = TimeSpan.FromSeconds(0.17),
+                AccelerationRatio = 0.25,
+                DecelerationRatio = 0.75,
+            };
+
+            animation.Completed += (s, e) =>
+            {
+                // release lock
+                Sliding.Exit();
+            };
+
+            this.BeginAnimation(Window.TopProperty, animation);
+        }
+    }
+
+    private void SlideOut()
+    {
+        // set lock
+        if (Sliding.TryEnter())
+        {
+            DoubleAnimation animation = new DoubleAnimation
+            {
+                From = _Top,
+                To = targetScreen.WpfBounds.Height,
+                Duration = TimeSpan.FromSeconds(0.17),
+                AccelerationRatio = 0.75,
+                DecelerationRatio = 0.25,
+            };
+
+            animation.Completed += (s, e) =>
+            {
+                this.Hide();
+
+                // release lock
+                Sliding.Exit();
+            };
+
+            this.BeginAnimation(Window.TopProperty, animation);
+        }
+    }
+
     private void GamepadWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         switch (Visibility)
@@ -457,9 +468,7 @@ public partial class OverlayQuickTools : GamepadWindow
                 clockUpdateTimer.Stop();
                 break;
             case Visibility.Visible:
-                Focus();
-                if (hwndSource != null)
-                    WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
+                WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
                 InvokeGotGamepadWindowFocus();
                 clockUpdateTimer.Start();
                 UpdateTime(sender, EventArgs.Empty);
@@ -471,7 +480,6 @@ public partial class OverlayQuickTools : GamepadWindow
     {
         // position and size settings
         SettingsManager.Set("QuickToolsWidth", ActualWidth);
-
 
         e.Cancel = !isClosing;
 
@@ -572,7 +580,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
         navView.IsBackEnabled = ContentFrame.CanGoBack;
-        //navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
+        // navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
     }
 
     long lastRefresh;
@@ -797,198 +805,6 @@ public partial class OverlayQuickTools : GamepadWindow
 
     #endregion
 
-    private void MultimediaManager_Initialized()
-    {
-        if (MultimediaManager.HasBrightnessSupport())
-        {
-            lock (brightnessLock)
-            {
-                // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    SliderBrightness.IsEnabled = true;
-                    SliderBrightness.Value = ScreenBrightness.Get();
-                });
-            }
-        }
-
-        if (MultimediaManager.HasNightLightSupport())
-        {
-            lock (brightnessLock)
-            {
-                // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    LightIcon.Glyph = NightLight.Get() == 0 ? "\uE706" : "\uf08c";
-                });
-            }
-        }
-
-        if (MultimediaManager.HasVolumeSupport())
-        {
-            lock (volumeLock)
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    SliderVolume.IsEnabled = true;
-                    SliderVolume.Value = SoundControl.AudioGet();
-                    UpdateVolumeIcon((float)SliderVolume.Value, SoundControl.AudioMuted() ?? true);
-
-                    MicIcon.Glyph = SoundControl.MicrophoneMuted() ?? true ? "\uf781" : "\ue720";
-                });
-            }
-
-            lock (microphoneLock)
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    MicIcon.Glyph = SoundControl.MicrophoneMuted() ?? true ? "\uf781" : "\ue720";
-                });
-            }
-        }
-    }
-
-    private void MultimediaManager_NightLightNotification(bool enabled)
-    {
-        if (nightlightLock.TryEnter())
-        {
-            try
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    LightIcon.Glyph = !enabled ? "\uE706" : "\uf08c";
-                });
-            }
-            finally
-            {
-                nightlightLock.Exit();
-            }
-        }
-    }
-
-    private void MultimediaManager_BrightnessNotification(int brightness)
-    {
-        if (brightnessLock.TryEnter())
-        {
-            try
-            {
-                // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    SliderBrightness.Value = brightness;
-                });
-            }
-            finally
-            {
-                brightnessLock.Exit();
-            }
-        }
-    }
-
-    private void MultimediaManager_VolumeNotification(SoundDirections flow, float volume, bool isMute)
-    {
-        switch (flow)
-        {
-            case SoundDirections.Output:
-                if (volumeLock.TryEnter())
-                {
-                    try
-                    {
-                        // UI thread
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            UpdateVolumeIcon(volume, isMute);
-                            SliderVolume.Value = Math.Round(volume);
-                        });
-                    }
-                    finally
-                    {
-                        volumeLock.Exit();
-                    }
-                }
-                break;
-            case SoundDirections.Input:
-                if (microphoneLock.TryEnter())
-                {
-                    try
-                    {
-                        // UI thread
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            MicIcon.Glyph = isMute ? "\uf781" : "\ue720";
-                        });
-                    }
-                    finally
-                    {
-                        microphoneLock.Exit();
-                    }
-                }
-                break;
-        }
-
-    }
-
-    private void SliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!IsLoaded)
-            return;
-
-        // prevent update loop
-        if (brightnessLock.IsEntered())
-            return;
-
-        MultimediaManager.SetBrightness(SliderBrightness.Value);
-    }
-
-    private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!IsLoaded)
-            return;
-
-        // prevent update loop
-        if (volumeLock.IsEntered())
-            return;
-
-        MultimediaManager.SetVolume(SliderVolume.Value);
-    }
-
-    private void UpdateVolumeIcon(float volume, bool mute = false)
-    {
-        VolumeIcon.Glyph = mute ? "\uE74F" :
-            volume switch
-            {
-                <= 0 => "\uE74F",// Mute icon
-                <= 33 => "\uE993",// Low volume icon
-                <= 65 => "\uE994",// Medium volume icon
-                _ => "\uE995",// High volume icon (default)
-            };
-    }
-
-    private void VolumeButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (volumeLock.TryEnter())
-        {
-            try
-            {
-                // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    var isMute = SoundControl.ToggleAudio();
-                    UpdateVolumeIcon(SoundControl.AudioGet(), isMute ?? true);
-                    if (isMute is not null)
-                        ToastManager.RunToast(
-                            isMute.Value ? Properties.Resources.Muted : Properties.Resources.Unmuted,
-                            isMute.Value ? ToastIcons.VolumeMute : ToastIcons.Volume);
-                });
-            }
-            finally
-            {
-                volumeLock.Exit();
-            }
-        }
-
-    }
-
     private void GamepadWindow_Deactivated(object sender, EventArgs e)
     {
         Window window = (Window)sender;
@@ -1011,53 +827,4 @@ public partial class OverlayQuickTools : GamepadWindow
         }
     }
 
-    private void MicButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (microphoneLock.TryEnter())
-        {
-            try
-            {
-                // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    var isMute = SoundControl.ToggleMicrophone();
-                    MicIcon.Glyph = (isMute ?? true) ? "\uf781" : "\ue720";
-                    if (isMute is not null)
-                        ToastManager.RunToast(
-                            isMute.Value ? Properties.Resources.Muted : Properties.Resources.Unmuted,
-                            isMute.Value ? ToastIcons.MicrophoneMute : ToastIcons.Microphone);
-                });
-            }
-            finally
-            {
-                microphoneLock.Exit();
-            }
-        }
-    }
-
-    private void BrightnessButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (nightlightLock.TryEnter())
-        {
-            try
-            {
-                // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    var isEnabled = NightLight.Toggle();
-                    if (isEnabled is not null)
-                    {
-                        LightIcon.Glyph = !isEnabled.Value ? "\uE706" : "\uf08c";
-                        ToastManager.RunToast(
-                            $"Night light {(isEnabled.Value ? Properties.Resources.On : Properties.Resources.Off)}",
-                            isEnabled.Value ? ToastIcons.Nightlight : ToastIcons.NightlightOff);
-                    }
-                });
-            }
-            finally
-            {
-                nightlightLock.Exit();
-            }
-        }
-    }
 }

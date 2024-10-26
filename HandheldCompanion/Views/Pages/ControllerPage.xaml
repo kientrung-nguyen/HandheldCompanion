@@ -5,6 +5,7 @@
     xmlns:converters="clr-namespace:HandheldCompanion.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hints="clr-namespace:HandheldCompanion.Controls.Hints"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
@@ -22,10 +23,10 @@
     </Page.Resources>
 
     <Grid Name="MainGrid" Margin="20">
-        <ui:SimpleStackPanel Spacing="24">
+        <ikw:SimpleStackPanel Spacing="24">
 
             <!--  Hints  -->
-            <ui:SimpleStackPanel Name="Hints" Spacing="6">
+            <ikw:SimpleStackPanel Name="Hints" Spacing="6">
 
                 <!--  Has physical controller but none are connected  -->
                 <Expander
@@ -44,7 +45,7 @@
                                 Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                 Glyph="&#xe7ba;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                     Style="{StaticResource BodyTextBlockStyle}"
@@ -54,7 +55,7 @@
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_NoPhysicalControllerDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
                     </Expander.Header>
                     <TextBlock Text="{l:Static resx:Resources.ControllerPage_NoPhysicalControllerAction}" TextWrapping="Wrap" />
@@ -77,7 +78,7 @@
                                 Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                 Glyph="&#xe7ba;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                     Style="{StaticResource BodyTextBlockStyle}"
@@ -87,7 +88,7 @@
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_HIDManagedByProfileDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
                     </Expander.Header>
                     <TextBlock Text="{l:Static resx:Resources.ControllerPage_HIDManagedByProfileAction}" TextWrapping="Wrap" />
@@ -110,27 +111,27 @@
                                 Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                 Glyph="&#xe7ba;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_PhysicalControllerNotHiddenWarning}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_PhysicalControllerNotHiddenDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
                     </Expander.Header>
                     <TextBlock Text="{l:Static resx:Resources.ControllerPage_PhysicalControllerNotHiddenAction}" TextWrapping="Wrap" />
                 </Expander>
-            </ui:SimpleStackPanel>
+            </ikw:SimpleStackPanel>
 
             <!--  Virtual devices  -->
-            <ui:SimpleStackPanel
+            <ikw:SimpleStackPanel
                 Name="VirtualDevices"
                 Spacing="24"
                 d:Visibility="Visible"
                 Visibility="Collapsed">
-                <ui:SimpleStackPanel Spacing="6">
+                <ikw:SimpleStackPanel Spacing="6">
                     <DockPanel>
                         <TextBlock
                             VerticalAlignment="Center"
@@ -143,8 +144,8 @@
                             Text="{l:Static resx:Resources.ControllerPage_VirtualDevicesDesc}" />
                     </DockPanel>
 
-                    <ui:SimpleStackPanel Name="VirtualDevicesList" Spacing="6" />
-                </ui:SimpleStackPanel>
+                    <ikw:SimpleStackPanel Name="VirtualDevicesList" Spacing="6" />
+                </ikw:SimpleStackPanel>
 
                 <!--  WARNING: No physical controller detected  -->
                 <Border
@@ -169,7 +170,7 @@
                                 Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                 Glyph="&#xE99A;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                     Style="{StaticResource BodyTextBlockStyle}"
@@ -179,18 +180,18 @@
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_NoVirtualControllerDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
                     </Grid>
                 </Border>
-            </ui:SimpleStackPanel>
+            </ikw:SimpleStackPanel>
 
             <!--  Input devices  -->
-            <ui:SimpleStackPanel
+            <ikw:SimpleStackPanel
                 Name="PhysicalDevices"
                 Spacing="24"
                 Visibility="Collapsed">
-                <ui:SimpleStackPanel Spacing="6">
+                <ikw:SimpleStackPanel Spacing="6">
                     <DockPanel>
                         <TextBlock
                             VerticalAlignment="Center"
@@ -203,8 +204,8 @@
                             Text="{l:Static resx:Resources.ControllerPage_PhysicalDevicesDesc}" />
                     </DockPanel>
 
-                    <ui:SimpleStackPanel Name="PhysicalDevicesList" Spacing="6" />
-                </ui:SimpleStackPanel>
+                    <ikw:SimpleStackPanel Name="PhysicalDevicesList" Spacing="6" />
+                </ikw:SimpleStackPanel>
 
                 <!--  WARNING: No physical controller detected  -->
                 <Border
@@ -229,7 +230,7 @@
                                 Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                 Glyph="&#xE99A;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                     Style="{StaticResource BodyTextBlockStyle}"
@@ -239,14 +240,14 @@
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_NoPhysicalControllerDetectedAction}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
                     </Grid>
                 </Border>
-            </ui:SimpleStackPanel>
+            </ikw:SimpleStackPanel>
 
             <!--  Virtual controller settings  -->
-            <ui:SimpleStackPanel Spacing="6">
+            <ikw:SimpleStackPanel Spacing="6">
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_VirtualDeviceSettings}" />
 
                 <!--  Controller status  -->
@@ -268,14 +269,14 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xECF0;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_VirtualStatus}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_VirtualStatusDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <ComboBox
@@ -309,14 +310,14 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xE7FC;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_VirtualType}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_VirtualTypeDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <ComboBox
@@ -350,14 +351,14 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xE877;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_VibrationStrength}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_VibrationStrengthExpl}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <DockPanel
@@ -410,14 +411,14 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xedab;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_ControllerManagement}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_ControllerManagementDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <ui:ToggleSwitch
@@ -428,11 +429,11 @@
                             Toggled="Toggle_ControllerManagement_Toggled" />
                     </Grid>
                 </Border>
-            </ui:SimpleStackPanel>
+            </ikw:SimpleStackPanel>
 
 
             <!--  Physical controller settings  -->
-            <ui:SimpleStackPanel Name="SteamDeckPanel" Spacing="6">
+            <ikw:SimpleStackPanel Name="SteamDeckPanel" Spacing="6">
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Steam Deck settings" />
 
                 <!--  Mute virtual controller (Steam Deck)  -->
@@ -454,14 +455,14 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xE789;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_SteamControllerMode}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_SteamControllerModeDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <ComboBox
@@ -475,10 +476,10 @@
                         </ComboBox>
                     </Grid>
                 </Border>
-            </ui:SimpleStackPanel>
+            </ikw:SimpleStackPanel>
 
             <!--  Physical controller settings  -->
-            <ui:SimpleStackPanel Name="DeviceSpecificPanel" Spacing="6">
+            <ikw:SimpleStackPanel Name="DeviceSpecificPanel" Spacing="6">
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_PhysicalDeviceSettings}" />
 
                 <!--  Vibrate on connect  -->
@@ -500,14 +501,14 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xe95f;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_VibrateDevice}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_VibrateDeviceDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <ui:ToggleSwitch
@@ -538,14 +539,14 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xED1A;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_CloakDevice}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_CloakDeviceDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <ui:ToggleSwitch
@@ -576,14 +577,14 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xE7B3;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_UncloakOnClose}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_UncloakOnCloseDesc}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <ui:ToggleSwitch
@@ -594,10 +595,10 @@
                             Toggled="Toggle_Uncloak_Toggled" />
                     </Grid>
                 </Border>
-            </ui:SimpleStackPanel>
+            </ikw:SimpleStackPanel>
 
             <!--  Non-game controller layouts  -->
-            <ui:SimpleStackPanel Spacing="6">
+            <ikw:SimpleStackPanel Spacing="6">
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_NonGameControllerLayouts}" />
 
                 <Expander
@@ -613,19 +614,19 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xE713;" />
 
-                            <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ControllerPage_DesktopLayout}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{l:Static resx:Resources.ControllerPage_DesktopLayoutDefineController}"
                                     TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
                     </Expander.Header>
 
                     <Expander.Content>
-                        <ui:SimpleStackPanel Margin="30,0,0,0" Spacing="12">
+                        <ikw:SimpleStackPanel Margin="30,0,0,0" Spacing="12">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="8*" MinWidth="200" />
@@ -670,10 +671,10 @@
                                     Click="Button_Layout_Click"
                                     Content="{l:Static resx:Resources.ControllerPage_DesktopLayoutEdit}" />
                             </Grid>
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
                     </Expander.Content>
                 </Expander>
-            </ui:SimpleStackPanel>
-        </ui:SimpleStackPanel>
+            </ikw:SimpleStackPanel>
+        </ikw:SimpleStackPanel>
     </Grid>
 </Page>

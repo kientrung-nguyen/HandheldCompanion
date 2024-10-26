@@ -6,27 +6,28 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
-using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
 using Nefarius.Utilities.DeviceManagement.Drivers;
 using Nefarius.Utilities.DeviceManagement.Extensions;
 using Nefarius.Utilities.DeviceManagement.PnP;
+using Newtonsoft.Json;
 using SharpDX.DirectInput;
 using SharpDX.XInput;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
-using System.Windows.Controls;
 using Windows.UI;
 using Windows.UI.ViewManagement;
 using static HandheldCompanion.Utils.DeviceUtils;
 using static JSL;
 using DeviceType = SharpDX.DirectInput.DeviceType;
+using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
@@ -42,8 +43,8 @@ public static class ControllerManager
     private static int ControllerManagementAttempts = 0;
     private const int ControllerManagementMaxAttempts = 4;
 
-    private static readonly XInputController? emptyXInput = new();
-    private static readonly DS4Controller? emptyDS4 = new();
+    private static readonly XInputController? emptyXInput = new() { Details = new() { isVirtual = true }, isPlaceholder = true };
+    private static readonly DS4Controller? emptyDS4 = new() { Details = new() { isVirtual = true }, isPlaceholder = true };
 
     private static IController? targetController;
     private static FocusedWindow focusedWindows = FocusedWindow.None;
@@ -74,6 +75,9 @@ public static class ControllerManager
 
     public static Task Start()
     {
+        // get driver store
+        DriversStore = DeserializeDriverStore();
+
         // Flushing possible JoyShocks...
         JslDisconnectAndDisposeAll();
 
@@ -158,11 +162,9 @@ public static class ControllerManager
         Quicktools
     }
 
-    private static void GamepadFocusManager_LostFocus(Control control)
+    private static void GamepadFocusManager_LostFocus(string Name)
     {
-        GamepadWindow gamepadWindow = (GamepadWindow)control;
-
-        switch (gamepadWindow.Title)
+        switch (Name)
         {
             default:
             case "MainWindow":
@@ -177,10 +179,9 @@ public static class ControllerManager
         CheckControllerScenario();
     }
 
-    private static void GamepadFocusManager_GotFocus(Control control)
+    private static void GamepadFocusManager_GotFocus(string Name)
     {
-        GamepadWindow gamepadWindow = (GamepadWindow)control;
-        switch (gamepadWindow.Title)
+        switch (Name)
         {
             default:
             case "MainWindow":
@@ -221,20 +222,54 @@ public static class ControllerManager
         // set flag
         ControllerMuted = false;
 
-        // platform specific scenarios
-        if (foregroundProcess?.Platform == PlatformType.Steam)
+        // Steam Deck specific scenario
+        if (IDevice.GetCurrent() is SteamDeck steamDeck)
         {
-            // mute virtual controller if foreground process is Steam or Steam-related and user a toggle the mute setting
-            // Controller specific scenarios
-            if (targetController is SteamController)
+            bool IsExclusiveMode = SettingsManager.Get<bool>("SteamControllerMode");
+
+            // Making sure current controller is embedded
+            if (targetController is NeptuneController neptuneController)
             {
-                SteamController steamController = (SteamController)targetController;
-                if (steamController.IsVirtualMuted())
-                    ControllerMuted = true;
+                // We're busy, come back later
+                if (neptuneController.IsBusy)
+                    return;
+
+                if (IsExclusiveMode)
+                {
+                    // mode: exclusive
+                    // hide embedded controller
+                    if (!neptuneController.IsHidden())
+                        neptuneController.Hide();
+                }
+                else
+                {
+                    // mode: hybrid
+                    if (foregroundProcess?.Platform == PlatformType.Steam)
+                    {
+                        // application is either steam or a steam game
+                        // restore embedded controller and mute virtual controller
+                        if (neptuneController.IsHidden())
+                            neptuneController.Unhide();
+
+                        // set flag
+                        ControllerMuted = true;
+                    }
+                    else
+                    {
+                        // application is not steam related
+                        // hide embbeded controller
+                        if (!neptuneController.IsHidden())
+                            neptuneController.Hide();
+                    }
+                }
+
+                // halt timer
+                //scenarioTimer.Stop();
             }
         }
 
         // either main window or quicktools are focused
+        // set flag
         if (focusedWindows != FocusedWindow.None)
             ControllerMuted = true;
     }
@@ -288,6 +323,10 @@ public static class ControllerManager
 
             case "SensorSelection":
                 sensorSelection = (SensorFamily)Convert.ToInt32(value);
+                break;
+
+            case "SteamControllerMode":
+                CheckControllerScenario();
                 break;
         }
     }
@@ -562,15 +601,11 @@ public static class ControllerManager
         // new controller logic
         if (DeviceManager.IsInitialized)
         {
-            if (controller.IsPhysical() && targetController is null)
+            if (controller.IsPhysical() && (targetController is null || targetController.IsVirtual()))
                 SetTargetController(controller.GetContainerInstancePath(), IsPowerCycling);
 
-            if (targetController is not null)
-            {
-                Color _systemBackground = MainWindow.uiSettings.GetColorValue(UIColorType.Background);
-                Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.Accent);
-                targetController.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
-            }
+            Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.Accent);
+            targetController?.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
         }
     }
 
@@ -610,7 +645,10 @@ public static class ControllerManager
 
             // unplug controller, if needed
             if (WasTarget)
+            {
                 ClearTargetController();
+                HasTargetController();
+            }
             else
                 controller.Unplug();
 
@@ -710,9 +748,7 @@ public static class ControllerManager
                             VirtualManager.Resume(false);
 
                             // resume all physical controllers
-                            var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
-                            if (deviceInstanceIds is not null && deviceInstanceIds.Count != 0)
-                                ResumeControllers();
+                            ResumeControllers();
 
                             // suspend and resume virtual controller
                             VirtualManager.Suspend(false);
@@ -727,9 +763,7 @@ public static class ControllerManager
                     else
                     {
                         // resume all physical controllers
-                        var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
-                        if (deviceInstanceIds is not null && deviceInstanceIds.Count != 0)
-                            ResumeControllers();
+                        ResumeControllers();
 
                         // give us one extra loop to make sure we're good
                         if (managerStatus != ControllerManagerStatus.Succeeded)
@@ -819,24 +853,20 @@ public static class ControllerManager
         // new controller logic
         if (DeviceManager.IsInitialized)
         {
-            if (controller.IsPhysical() && targetController is null)
+            if (controller.IsPhysical() && (targetController is null || targetController.IsVirtual()))
                 SetTargetController(controller.GetContainerInstancePath(), IsPowerCycling);
 
-            if (targetController is not null)
-            {
-                Color _systemBackground = MainWindow.uiSettings.GetColorValue(UIColorType.Background);
-                Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.Accent);
-                targetController.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
+            Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.Accent);
+            targetController?.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
 
-                string ManufacturerName = MotherboardInfo.Manufacturer.ToUpper();
-                switch (ManufacturerName)
-                {
-                    case "AOKZOE":
-                    case "ONE-NETBOOK TECHNOLOGY CO., LTD.":
-                    case "ONE-NETBOOK":
-                        targetController.Rumble();
-                        break;
-                }
+            string ManufacturerName = MotherboardInfo.Manufacturer.ToUpper();
+            switch (ManufacturerName)
+            {
+                case "AOKZOE":
+                case "ONE-NETBOOK TECHNOLOGY CO., LTD.":
+                case "ONE-NETBOOK":
+                    targetController?.Rumble();
+                    break;
             }
         }
     }
@@ -871,7 +901,10 @@ public static class ControllerManager
 
             // controller is current target
             if (WasTarget)
+            {
                 ClearTargetController();
+                HasTargetController();
+            }
             else
                 controller.Unplug();
         }
@@ -880,6 +913,14 @@ public static class ControllerManager
 
         // raise event
         ControllerUnplugged?.Invoke(controller, IsPowerCycling, WasTarget);
+    }
+
+    private static void HasTargetController()
+    {
+        // summon an empty controller, used to feed Layout UI and receive injected inputs from keyboard/oem chords
+        // todo: improve me
+        Controllers[string.Empty] = GetEmulatedController();
+        SetTargetController(string.Empty, false);
     }
 
     private static void ClearTargetController()
@@ -906,9 +947,6 @@ public static class ControllerManager
         {
             // look for new controller
             if (!Controllers.TryGetValue(baseContainerDeviceInstanceId, out var controller))
-                return;
-
-            if (controller.IsVirtual())
                 return;
 
             // clear current target
@@ -960,13 +998,11 @@ public static class ControllerManager
         }
     }
 
+    public static string DriversPath = Path.Combine(MainWindow.SettingsPath, "drivers.json");
+    public static Dictionary<string, string> DriversStore = [];
+
     public static bool SuspendController(string baseContainerDeviceInstanceId)
     {
-        // PnPUtil.StartPnPUtil(@"/delete-driver C:\Windows\INF\xusb22.inf /uninstall /force");
-        var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
-
-        deviceInstanceIds ??= new();
-
         try
         {
             PnPDevice pnPDevice = PnPDevice.GetDeviceByInstanceId(baseContainerDeviceInstanceId);
@@ -983,16 +1019,15 @@ public static class ControllerManager
             switch (enumerator)
             {
                 case "USB":
-                    if (pnPDriver is not null)
+                    if (!string.IsNullOrEmpty(pnPDriver?.InfPath))
                     {
+                        // store driver to collection
+                        AddOrUpdateDriverStore(baseContainerDeviceInstanceId, pnPDriver.InfPath);
+
                         pnPDevice.InstallNullDriver(out bool rebootRequired);
                         usbPnPDevice.CyclePort();
                     }
 
-                    if (!deviceInstanceIds.Contains(baseContainerDeviceInstanceId))
-                        deviceInstanceIds.Add(baseContainerDeviceInstanceId);
-
-                    SettingsManager.Set("SuspendedControllers", deviceInstanceIds);
                     PowerCyclers[baseContainerDeviceInstanceId] = true;
                     return true;
             }
@@ -1004,47 +1039,94 @@ public static class ControllerManager
 
     public static bool ResumeControllers()
     {
-        // PnPUtil.StartPnPUtil(@"/add-driver C:\Windows\INF\xusb22.inf /install");
-        var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
-
-        if (deviceInstanceIds is null || deviceInstanceIds.Count == 0)
-            return true;
-
-        foreach (string baseContainerDeviceInstanceId in deviceInstanceIds)
+        // loop through controllers
+        foreach (string baseContainerDeviceInstanceId in DriversStore.Keys)
         {
             try
             {
                 PnPDevice pnPDevice = PnPDevice.GetDeviceByInstanceId(baseContainerDeviceInstanceId);
                 UsbPnPDevice usbPnPDevice = pnPDevice.ToUsbPnPDevice();
-                DriverMeta pnPDriver = null;
 
+                // get current driver
+                DriverMeta pnPDriver = null;
                 try
                 {
                     pnPDriver = pnPDevice.GetCurrentDriver();
                 }
                 catch { }
 
-                var enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
+                string enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
                 switch (enumerator)
                 {
                     case "USB":
-                        if (pnPDriver is null || pnPDriver.InfPath != "xusb22.inf")
                         {
-                            pnPDevice.RemoveAndSetup();
-                            pnPDevice.InstallCustomDriver("xusb22.inf", out bool rebootRequired);
+                            // todo: check PnPDevice PID/VID to deploy the appropriate inf
+                            string InfPath = GetDriverFromDriverStore(baseContainerDeviceInstanceId);
+                            if (pnPDriver?.InfPath != InfPath && !string.IsNullOrEmpty(InfPath))
+                            {
+                                pnPDevice.RemoveAndSetup();
+                                pnPDevice.InstallCustomDriver(InfPath, out bool rebootRequired);
+                            }
+
+                            // remove device from store
+                            RemoveFromDriverStore(baseContainerDeviceInstanceId);
+
+                            PowerCyclers.TryRemove(baseContainerDeviceInstanceId, out _);
+                            return true;
                         }
-
-                        deviceInstanceIds.Remove(baseContainerDeviceInstanceId);
-
-                        SettingsManager.Set("SuspendedControllers", deviceInstanceIds);
-                        PowerCyclers.TryRemove(baseContainerDeviceInstanceId, out _);
-                        return true;
                 }
             }
             catch { }
         }
 
         return false;
+    }
+
+    private static void SerializeDriverStore()
+    {
+        string json = JsonConvert.SerializeObject(DriversStore, Formatting.Indented);
+        File.WriteAllText(DriversPath, json);
+    }
+
+    private static Dictionary<string, string> DeserializeDriverStore()
+    {
+        if (!File.Exists(DriversPath))
+            return [];
+
+        string json = File.ReadAllText(DriversPath);
+        return JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+    }
+
+    private static string GetDriverFromDriverStore(string path)
+    {
+        if (DriversStore.TryGetValue(path, out string driver))
+            return driver;
+
+        return "xusb22.inf";
+    }
+
+    private static void AddOrUpdateDriverStore(string path, string calibration)
+    {
+        // upcase
+        path = path.ToUpper();
+
+        // update array
+        DriversStore[path] = calibration;
+
+        // serialize store
+        SerializeDriverStore();
+    }
+
+    private static void RemoveFromDriverStore(string path)
+    {
+        // upcase
+        path = path.ToUpper();
+
+        // update array
+        DriversStore.Remove(path);
+
+        // serialize store
+        SerializeDriverStore();
     }
 
     public static IController GetTargetController()
@@ -1064,12 +1146,12 @@ public static class ControllerManager
 
     public static IEnumerable<IController> GetPhysicalControllers()
     {
-        return Controllers.Values.Where(a => !a.IsVirtual()).ToList();
+        return Controllers.Values.Where(a => !a.IsVirtual() && !a.isPlaceholder).ToList();
     }
 
     public static IEnumerable<IController> GetVirtualControllers()
     {
-        return Controllers.Values.Where(a => a.IsVirtual()).ToList();
+        return Controllers.Values.Where(a => a.IsVirtual() && !a.isPlaceholder).ToList();
     }
 
     public static XInputController GetControllerFromSlot(UserIndex userIndex = 0, bool physical = true)
@@ -1116,6 +1198,7 @@ public static class ControllerManager
         {
             // compute layout
             controllerState = LayoutManager.MapController(controllerState);
+            InputsUpdated2?.Invoke(controllerState);
         }
 
         VirtualManager.UpdateInputs(controllerState, gamepadMotion);
@@ -1157,8 +1240,19 @@ public static class ControllerManager
     public static event ControllerSelectedEventHandler ControllerSelected;
     public delegate void ControllerSelectedEventHandler(IController Controller);
 
+    /// <summary>
+    /// Controller state has changed, before layout manager
+    /// </summary>
+    /// <param name="Inputs">The updated controller state.</param>
     public static event InputsUpdatedEventHandler InputsUpdated;
     public delegate void InputsUpdatedEventHandler(ControllerState Inputs);
+
+    /// <summary>
+    /// Controller state has changed, after layout manager
+    /// </summary>
+    /// <param name="Inputs">The updated controller state.</param>
+    public static event InputsUpdated2EventHandler InputsUpdated2;
+    public delegate void InputsUpdated2EventHandler(ControllerState Inputs);
 
     public static event StatusChangedEventHandler StatusChanged;
     public delegate void StatusChangedEventHandler(ControllerManagerStatus status, int attempts);

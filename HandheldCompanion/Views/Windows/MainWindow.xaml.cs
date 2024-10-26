@@ -16,7 +16,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -68,7 +67,6 @@ public partial class MainWindow : GamepadWindow
     public static string CurrentExe, CurrentPath;
 
     private static MainWindow currentWindow;
-
     public static FileVersionInfo fileVersionInfo;
 
     public static string InstallPath = string.Empty;
@@ -128,8 +126,6 @@ public partial class MainWindow : GamepadWindow
             SplashScreen.Show();
 #endif
         }
-
-        SplashScreen.LoadingSequence.Text = "Preparing UI...";
 
         InitializeComponent();
         this.Tag = "MainWindow";
@@ -224,10 +220,6 @@ public partial class MainWindow : GamepadWindow
         {
             RefreshSensors();
 
-            // Get context menu handle and bring it to the foreground
-            if (PresentationSource.FromVisual(notifyContextMenu) is HwndSource hwndSource)
-                WinAPI.SetForegroundWindow(hwndSource.Handle);
-
             if (!sensorTimer.IsEnabled)
                 sensorTimer.Start();
         };
@@ -242,13 +234,16 @@ public partial class MainWindow : GamepadWindow
 
         // collect details from MotherboardInfo
         MotherboardInfo.Collect();
+
+        // initialize title
+        Title += $" ({fileVersionInfo.FileVersion})";
+
         // initialize device
-        SplashScreen.LoadingSequence.Text = "Initializing device...";
         currentDevice = IDevice.GetCurrent();
         currentDevice.PullSensors();
 
         // initialize title
-        Title += $" ({fileVersionInfo.FileVersion}) {currentDevice.ProductName}";
+        Title += $" {currentDevice.ProductName}";
         if (FirstStart)
         {
             if (currentDevice is SteamDeck steamDeck)
@@ -269,18 +264,10 @@ public partial class MainWindow : GamepadWindow
         UISounds uiSounds = new UISounds();
 
         // load window(s)
-        SplashScreen.LoadingSequence.Text = "Drawing windows...";
-        Dispatcher.Invoke(new Action(() =>
-        {
-            loadWindows();
-        }), DispatcherPriority.Background); // Lower priority
+        loadWindows();
 
         // load page(s)
-        SplashScreen.LoadingSequence.Text = "Drawing pages...";
-        Dispatcher.Invoke(new Action(() =>
-        {
-            loadPages();
-        }), DispatcherPriority.Background); // Lower priority
+        loadPages();
 
         // manage events
         InputsManager.TriggerRaised += InputsManager_TriggerRaised;
@@ -293,7 +280,6 @@ public partial class MainWindow : GamepadWindow
         ToastManager.IsEnabled = SettingsManager.Get<bool>("ToastEnable");
 
         // start static managers in sequence
-        SplashScreen.LoadingSequence.Text = "Initializing managers...";
         GPUManager.Start();
         PowerProfileManager.Start();
         ProfileManager.Start();
@@ -565,13 +551,6 @@ public partial class MainWindow : GamepadWindow
             case "ToastEnable":
                 ToastManager.IsEnabled = Convert.ToBoolean(value);
                 break;
-            case "DesktopProfileOnStart":
-                if (SettingsManager.IsInitialized)
-                    break;
-
-                var DesktopLayout = Convert.ToBoolean(value);
-                SettingsManager.Set("DesktopLayoutEnabled", DesktopLayout, false);
-                break;
             case "TelemetryApproved":
 
                 // If the input is null or empty, return false or handle as needed
@@ -613,26 +592,25 @@ public partial class MainWindow : GamepadWindow
         controllerPage.Loaded += ControllerPage_Loaded;
 
         devicePage = new DevicePage("device");
-        //performancePage = new PerformancePage("performance");
         profilesPage = new ProfilesPage("profiles");
         settingsPage = new SettingsPage("settings");
-        //aboutPage = new AboutPage("about");
+
         overlayPage = new OverlayPage("overlay");
         hotkeysPage = new HotkeysPage("hotkeys");
-        //layoutPage = new LayoutPage("layout", navView);
+
         notificationsPage = new NotificationsPage("notifications");
         notificationsPage.StatusChanged += NotificationsPage_LayoutUpdated;
 
         // store pages
         _pages.Add("ControllerPage", controllerPage);
         _pages.Add("DevicePage", devicePage);
-        //_pages.Add("PerformancePage", performancePage);
+
         _pages.Add("ProfilesPage", profilesPage);
-        //_pages.Add("AboutPage", aboutPage);
+
         _pages.Add("OverlayPage", overlayPage);
         _pages.Add("SettingsPage", settingsPage);
         _pages.Add("HotkeysPage", hotkeysPage);
-        //_pages.Add("LayoutPage", layoutPage);
+
         _pages.Add("NotificationsPage", notificationsPage);
     }
 
@@ -712,9 +690,8 @@ public partial class MainWindow : GamepadWindow
         // load gamepad navigation maanger
         gamepadFocusManager = new(this, ContentFrame);
 
-        //HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
-        if (PresentationSource.FromVisual(this) is HwndSource source)
-            source.AddHook(WndProc); // Hook into the window's message loop
+        HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
+        source.AddHook(WndProc); // Hook into the window's message loop
 
         // restore window state
         WindowState = SettingsManager.Get<bool>("StartMinimized") ? WindowState.Minimized : (WindowState)SettingsManager.Get<int>("MainWindowState");
@@ -790,7 +767,6 @@ public partial class MainWindow : GamepadWindow
                     }).Start();
                 }
                 break;
-
             case SystemManager.SystemStatus.SystemPending:
                 {
                     // when device goes to sleep
@@ -801,13 +777,15 @@ public partial class MainWindow : GamepadWindow
                     InputsManager.Stop();
                     GPUManager.Stop();
                     OSDManager.Stop();
-                    PerformanceManager.Stop();
 
                     // suspend platform(s)
                     PlatformManager.LibreHardwareMonitor.Stop();
 
                     // close current device
                     currentDevice.Close();
+
+                    // free memory
+                    GC.Collect();
 
                     // Allow system to sleep
                     SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);

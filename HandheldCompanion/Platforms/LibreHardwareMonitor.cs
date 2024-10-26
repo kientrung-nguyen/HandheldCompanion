@@ -216,8 +216,6 @@ public class LibreHardwareMonitor : IPlatform
                     HandleCPU_Power(sensor);
                     break;
                 case SensorType.Temperature:
-					HandleCPU_Temp(sensor);
-					/*
                     try
                     {
                         using var ct = new PerformanceCounter("Thermal Zone Information", "Temperature", @"\_TZ.TZ01", true);
@@ -227,7 +225,7 @@ public class LibreHardwareMonitor : IPlatform
                     {
                         HandleCPU_Temp(sensor);
                     }
-					*/
+					
                     break;
             }
         }

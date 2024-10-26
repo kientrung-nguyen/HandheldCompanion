@@ -430,6 +430,12 @@ public partial class ProfilesPage : Page
                 // remove profile
                 ProfileStack.Children.RemoveAt(idx);
 
+                if (ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == powerProfile.Guid) is ComboBoxItem item1)
+                    ProfilePluggedIn.Items.Remove(item1);
+
+                if (ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == powerProfile.Guid) is ComboBoxItem item2)
+                    ProfileOnBattery.Items.Remove(item2);
+
                 // remove separator
                 if (idx >= ProfileStack.Children.Count)
                     idx = ProfileStack.Children.Count - 1;
@@ -467,6 +473,11 @@ public partial class ProfilesPage : Page
             if (idx != -1)
             {
                 // found it
+                if (ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == powerProfile.Guid) is ComboBoxItem item1)
+                    item1.Content = powerProfile.Name;
+
+                if (ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == powerProfile.Guid) is ComboBoxItem item2)
+                    item2.Content = powerProfile.Name;
                 return;
             }
             else
@@ -569,7 +580,11 @@ public partial class ProfilesPage : Page
             if (!isPlugged)
                 selectedProfile.BatteryProfile = powerProfile.Guid;
             else
+            {
+                SelectedPowerProfileName.Text = powerProfile.Name;
                 selectedProfile.PowerProfile = powerProfile.Guid;
+                powerProfile.Check(this);
+            }
             UpdateProfile();
         });
 

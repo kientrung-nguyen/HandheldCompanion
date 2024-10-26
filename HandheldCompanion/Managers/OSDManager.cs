@@ -1,16 +1,10 @@
-﻿using HandheldCompanion.Properties;
-using HandheldCompanion.Utils;
-using HandheldCompanion.Views.Windows;
+﻿using HandheldCompanion.Utils;
 using Hwinfo.SharedMemory;
 using PrecisionTiming;
 using RTSSSharedMemoryNET;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using WindowsInput.Native;
 
 namespace HandheldCompanion.Managers;
 
@@ -74,7 +68,6 @@ public static class OSDManager
 
         PlatformManager.RTSS.Hooked += RTSS_Hooked;
         PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
-        ProfileManager.Applied += ProfileManager_Applied;
 
         // timer used to monitor foreground application framerate
         RefreshInterval = SettingsManager.Get<int>("OnScreenDisplayRefreshRate");
@@ -85,27 +78,6 @@ public static class OSDManager
     }
 
     public static event InitializedEventHandler Initialized;
-    private static void ProfileManager_Applied(Profile profile, UpdateSource source)
-    {
-        OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(SettingsManager.Get<int>("OnScreenDisplayLevel"));
-        if (!profile.OnScreenDisplayToggle || OverlayLevel == OverlayDisplayLevel.Disabled || OverlayLevel == OverlayDisplayLevel.External)
-        {
-            RefreshTimer.Stop();
-            // clear UI on stop
-            foreach (var osd in onScreenDisplays.Values)
-            {
-                osd.Update(string.Empty);
-                osd.Dispose();
-            }
-            onScreenDisplays.Clear();
-            return;
-        }
-
-        // Other modes need the refresh timer to update OSD
-        if (!RefreshTimer.IsRunning())
-            RefreshTimer.Start();
-
-    }
 
     private static void RTSS_Unhooked(int processId)
     {
@@ -169,11 +141,9 @@ public static class OSDManager
                     processOSD.Update(Draw(processId));
                 else
                     processOSD.Update(string.Empty);
-
             }
-            catch (Exception ex)
+            catch
             {
-                LogManager.LogError($"{nameof(OSDManager)} [{processId}] failed {ex.Message} {ex.StackTrace}");
             }
         }
     }
@@ -181,6 +151,9 @@ public static class OSDManager
     private static string Draw(int processId)
     {
         Content = [];
+        var gpu = GPUManager.GetCurrent();
+        if (gpu is null) return string.Empty;
+
         switch (OverlayLevel)
         {
             default:
@@ -236,7 +209,7 @@ public static class OSDManager
                     rowBatt.entries.Add(BATTentry);
 
                     using OverlayEntry FPSentry = new("FPS", "C6");
-                    FPSentry.elements.Add(new OverlayEntryElement("<FR>", ""));
+                    FPSentry.elements.Add(new OverlayEntryElement("<FR>", "fps"));
                     FPSentry.elements.Add(new OverlayEntryElement("<FT>", "ms"));
                     rowFps.entries.Add(FPSentry);
 
@@ -349,14 +322,18 @@ public static class OSDManager
 
         RefreshTimer.Stop();
 
-        // unhook all processes
-        foreach (var osd in onScreenDisplays)
+        try
         {
-            osd.Value.Update(string.Empty);
-            osd.Value.Dispose();
-        }
+            // unhook all processes
+            foreach (var osd in onScreenDisplays)
+            {
+                osd.Value.Update(string.Empty);
+                osd.Value.Dispose();
+            }
 
-        onScreenDisplays.Clear();
+            onScreenDisplays.Clear();
+        }
+        catch { }
 
         IsInitialized = false;
 
@@ -497,13 +474,52 @@ public static class OSDManager
                     {
                         RefreshTimer.Stop();
                         RefreshTimer.SetPeriod(RefreshInterval);
-
-                        if (OverlayLevel != OverlayDisplayLevel.Disabled &&
-                            OverlayLevel != OverlayDisplayLevel.External)
-                            RefreshTimer.Start();
+                        RefreshTimer.Start();
                     }
                 }
                 break;
+
+            case "OnScreenDisplayLevel":
+                {
+                    OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(value));
+
+                    // set OSD toggle hotkey state
+                    SettingsManager.Set("OnScreenDisplayToggle", Convert.ToBoolean(value));
+
+                    if (OverlayLevel > 0)
+                    {
+                        // set lastOSDLevel to be used in OSD toggle hotkey
+                        SettingsManager.Set("LastOnScreenDisplayLevel", value);
+
+                        if (OverlayLevel == OverlayDisplayLevel.External)
+                        {
+                            // No need to update OSD in External
+                            RefreshTimer.Stop();
+
+                            // Remove previous UI in External
+                            foreach (var pair in onScreenDisplays)
+                                pair.Value.Update(string.Empty);
+
+                        }
+                        else
+                        {
+                            // Other modes need the refresh timer to update OSD
+                            if (!RefreshTimer.IsRunning())
+                                RefreshTimer.Start();
+                        }
+                    }
+                    else
+                    {
+                        RefreshTimer.Stop();
+
+                        // clear UI on stop
+                        foreach (var pair in onScreenDisplays)
+                            pair.Value.Update(string.Empty);
+                        
+                    }
+                }
+                break;
+
             case "OnScreenDisplayOrder":
                 OverlayOrder = value.ToString().Split(",");
                 OverlayCount = OverlayOrder.Length;
@@ -529,78 +545,6 @@ public static class OSDManager
             case "OnScreenDisplayBATTLevel":
                 OverlayBATTLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
                 break;
-            case "OnScreenDisplayLevel":
-                // set lastOSDLevel to be used in OSD toggle hotkey
-                SettingsManager.Set("LastOnScreenDisplayLevel", value);
-
-                break;
-                /*
-                    case "OnScreenDisplayLevel":
-                        {
-                            OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(Convert.ToInt16(value));
-
-                            // set OSD toggle hotkey state
-                            SettingsManager.Set("OnScreenDisplayToggle", Convert.ToBoolean(value));
-
-                            if (OverlayLevel != OverlayDisplayLevel.Disabled)
-                            {
-                                // set lastOSDLevel to be used in OSD toggle hotkey
-                                SettingsManager.Set("LastOnScreenDisplayLevel", value);
-
-                                if (OverlayLevel == OverlayDisplayLevel.External)
-                                {
-                                    // No need to update OSD in External
-                                    RefreshTimer.Stop();
-
-                                    // Remove previous UI in External
-                                    foreach (var pair in OnScreenDisplay)
-                                    {
-                                        var processOSD = pair.Value;
-                                        processOSD.Update(string.Empty);
-                                    }
-                                }
-                                else
-                                {
-                                    // Other modes need the refresh timer to update OSD
-                                    if (!RefreshTimer.IsRunning())
-                                        RefreshTimer.Start();
-                                }
-                            }
-                            else
-                            {
-                                RefreshTimer.Stop();
-
-                                // clear UI on stop
-                                foreach (var pair in OnScreenDisplay)
-                                {
-                                    var processOSD = pair.Value;
-                                    processOSD.Update(string.Empty);
-                                }
-                            }
-                        }
-                        break;
-                    case "OnScreenDisplayTimeLevel":
-                        OverlayTimeLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                        break;
-                    case "OnScreenDisplayFPSLevel":
-                        OverlayFPSLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                        break;
-                    case "OnScreenDisplayCPULevel":
-                        OverlayCPULevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                        break;
-                    case "OnScreenDisplayRAMLevel":
-                        OverlayRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                        break;
-                    case "OnScreenDisplayGPULevel":
-                        OverlayGPULevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                        break;
-                    case "OnScreenDisplayVRAMLevel":
-                        OverlayVRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                        break;
-                    case "OnScreenDisplayBATTLevel":
-                        OverlayBATTLevel = EnumUtils<OverlayEntryLevel>.Parse(Convert.ToInt16(value));
-                        break;
-            */
         }
     }
 }
@@ -631,7 +575,7 @@ public struct OverlayEntryElement
         Value = input[leadingZeroCount..].PadLeft(input.Length, ' ');
         SzUnit = unit;
         if (colorScheme != null && colorScheme.Length > 0)
-        { 
+        {
             Value = "<C=" + colorScheme + ">" + Value + "<C>";
             SzUnit = "<C=" + colorScheme + ">" + unit + "<C>";
         }
@@ -652,7 +596,7 @@ public struct OverlayEntryElement
 
 public class OverlayEntry : IDisposable
 {
-    public List<OverlayEntryElement> elements = new();
+    public List<OverlayEntryElement> elements = [];
 
     public OverlayEntry(string name, string colorScheme = "", bool indent = false)
     {
@@ -673,7 +617,7 @@ public class OverlayEntry : IDisposable
 
 public class OverlayRow : IDisposable
 {
-    public List<OverlayEntry> entries = new();
+    public List<OverlayEntry> entries = [];
 
     public void Dispose()
     {
@@ -683,7 +627,8 @@ public class OverlayRow : IDisposable
 
     public override string ToString()
     {
-        var rowStr = new List<string>();
+        List<string> rowStr = [];
+
         foreach (var entry in entries)
         {
             if (entry.elements is null || entry.elements.Count == 0)

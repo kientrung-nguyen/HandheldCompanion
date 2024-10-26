@@ -9,18 +9,16 @@ using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
-using HandheldCompanion.ViewModels;
+using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using WindowsDisplayAPI;
-using static HandheldCompanion.Managers.OSDManager;
-using static Microsoft.WindowsAPICodePack.Shell.PropertySystem.SystemProperties.System;
+using static HandheldCompanion.GraphicsProcessingUnit.GPU;
 using Page = System.Windows.Controls.Page;
 using Separator = System.Windows.Controls.Separator;
 using Timer = System.Timers.Timer;
@@ -42,6 +40,7 @@ public partial class QuickProfilesPage : Page
     private CrossThreadLock graphicLock = new();
 
     private Hotkey GyroHotkey = new(61);
+
     private Profile realProfile;
 
     public QuickProfilesPage(string Tag) : this()
@@ -186,10 +185,15 @@ public partial class QuickProfilesPage : Page
     private void GPUManager_Hooked(GPU GPU)
     {
         bool HasRSRSupport = false;
+        bool HasAFMFSupport = false;
+
         if (GPU is AmdGpu amdGPU)
         {
             amdGPU.RSRStateChanged += OnRSRStateChanged;
             HasRSRSupport = amdGPU.HasRSRSupport();
+
+            amdGPU.AFMFStateChanged += OnAFMFStateChanged;
+            HasAFMFSupport = amdGPU.HasAFMFSupport();
         }
 
         GPU.IntegerScalingChanged += OnIntegerScalingChanged;
@@ -205,9 +209,12 @@ public partial class QuickProfilesPage : Page
         {
             // GPU-specific settings
             StackProfileRSR.Visibility = GPU is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
+            StackProfileAFMF.Visibility = GPU is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
             IntegerScalingTypeGrid.Visibility = GPU is IntelGpu ? Visibility.Visible : Visibility.Collapsed;
 
             StackProfileRSR.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasRSRSupport;
+            StackProfileAFMF.IsEnabled = HasAFMFSupport;
+
             StackProfileIS.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasIntegerScalingSupport;
             StackProfileRIS.IsEnabled = HasGPUScalingSupport; // check if processor is AMD should be enough
             GPUScalingToggle.IsEnabled = HasGPUScalingSupport;
@@ -220,7 +227,10 @@ public partial class QuickProfilesPage : Page
     private void GPUManager_Unhooked(GPU GPU)
     {
         if (GPU is AmdGpu amdGPU)
+        {
             amdGPU.RSRStateChanged -= OnRSRStateChanged;
+            amdGPU.AFMFStateChanged -= OnAFMFStateChanged;
+        }
 
         GPU.IntegerScalingChanged -= OnIntegerScalingChanged;
         GPU.GPUScalingChanged -= OnGPUScalingChanged;
@@ -229,6 +239,7 @@ public partial class QuickProfilesPage : Page
         Application.Current.Dispatcher.Invoke(() =>
         {
             StackProfileRSR.IsEnabled = false;
+            StackProfileAFMF.IsEnabled = false;
             StackProfileIS.IsEnabled = false;
             GPUScalingToggle.IsEnabled = false;
             GPUScalingComboBox.IsEnabled = false;
@@ -241,6 +252,15 @@ public partial class QuickProfilesPage : Page
         Application.Current.Dispatcher.Invoke(() =>
         {
             StackProfileRSR.IsEnabled = Supported;
+        });
+    }
+
+    private void OnAFMFStateChanged(bool Supported, bool Enabled)
+    {
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            StackProfileAFMF.IsEnabled = Supported;
         });
     }
 
@@ -365,6 +385,12 @@ public partial class QuickProfilesPage : Page
                 // remove profile
                 ProfileStack.Children.RemoveAt(idx);
 
+                if (ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == powerProfile.Guid) is ComboBoxItem item1)
+                    ProfilePluggedIn.Items.Remove(item1);
+
+                if (ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == powerProfile.Guid) is ComboBoxItem item2)
+                    ProfileOnBattery.Items.Remove(item2);
+
                 // remove separator
                 if (idx >= ProfileStack.Children.Count)
                     idx = ProfileStack.Children.Count - 1;
@@ -402,6 +428,14 @@ public partial class QuickProfilesPage : Page
             if (idx != -1)
             {
                 // found it
+
+                if (ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == powerProfile.Guid) is ComboBoxItem item1)
+                    item1.Content = powerProfile.Name;
+
+                if (ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == powerProfile.Guid) is ComboBoxItem item2)
+                    item2.Content = powerProfile.Name;
+
+
                 return;
             }
             else
@@ -576,7 +610,6 @@ public partial class QuickProfilesPage : Page
 
                     ProfilePluggedIn.SelectedItem = ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == profile.PowerProfile);
                     ProfileOnBattery.SelectedItem = ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == profile.BatteryProfile);
-                    OnScreenOverlayToggle.IsOn = selectedProfile.OnScreenDisplayToggle;
 
 
                     // gyro layout
@@ -649,6 +682,9 @@ public partial class QuickProfilesPage : Page
                     // RSR
                     RSRToggle.IsOn = selectedProfile.RSREnabled;
                     RSRSlider.Value = selectedProfile.RSRSharpness;
+
+                    // AFMF
+                    AFMFToggle.IsOn = selectedProfile.AFMFEnabled;
 
                     // Integer Scaling
                     IntegerScalingToggle.IsOn = selectedProfile.IntegerScalingEnabled;
@@ -983,6 +1019,19 @@ public partial class QuickProfilesPage : Page
         UpdateProfile();
     }
 
+    private void AFMFToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (selectedProfile is null)
+            return;
+
+        // prevent update loop
+        if (profileLock.IsEntered() || graphicLock.IsEntered())
+            return;
+
+        UpdateGraphicsSettings(UpdateGraphicsSettingsSource.AFMF, AFMFToggle.IsOn);
+        UpdateProfile();
+    }
+
     private void RSRSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (selectedProfile is null)
@@ -1133,6 +1182,14 @@ public partial class QuickProfilesPage : Page
         };
 
         PowerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
+
+        // localize me
+        new Dialog(OverlayQuickTools.GetCurrent())
+        {
+            Title = "Power preset",
+            Content = $"{powerProfile.Name} preset was created",
+            PrimaryButtonText = Properties.Resources.ProfilesPage_OK
+        }.Show();
     }
 
     private void cb_SubProfiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1172,14 +1229,6 @@ public partial class QuickProfilesPage : Page
         }
     }
 
-    private enum UpdateGraphicsSettingsSource
-    {
-        GPUScaling,
-        RadeonSuperResolution,
-        RadeonImageSharpening,
-        IntegerScaling
-    }
-
     private void UpdateGraphicsSettings(UpdateGraphicsSettingsSource source, bool isEnabled)
     {
         if (graphicLock.TryEnter())
@@ -1201,6 +1250,7 @@ public partial class QuickProfilesPage : Page
                             }
                         }
                         break;
+
                     // RSR is incompatible with RIS and IS
                     case UpdateGraphicsSettingsSource.RadeonSuperResolution:
                         {
@@ -1222,6 +1272,7 @@ public partial class QuickProfilesPage : Page
                             }
                         }
                         break;
+
                     // Image Sharpening is incompatible with RSR
                     case UpdateGraphicsSettingsSource.RadeonImageSharpening:
                         {
@@ -1247,6 +1298,13 @@ public partial class QuickProfilesPage : Page
                             }
                         }
                         break;
+
+                    // AFMF
+                    case UpdateGraphicsSettingsSource.AFMF:
+                        {
+                            selectedProfile.AFMFEnabled = isEnabled;
+                        }
+                        break;
                 }
             }
             finally
@@ -1254,82 +1312,6 @@ public partial class QuickProfilesPage : Page
                 graphicLock.Exit();
             }
         }
-    }
-
-    void BindOSDToProfile()
-    {
-        if (comboBoxOSDLevel.SelectedIndex >= 0 &&
-            comboBoxTimeDisplayLevel.SelectedIndex >= 0 &&
-            comboBoxFPSDisplayLevel.SelectedIndex >= 0 &&
-            comboBoxCPUDisplayLevel.SelectedIndex >= 0 &&
-            comboBoxGPUDisplayLevel.SelectedIndex >= 0 &&
-            comboBoxRAMDisplayLevel.SelectedIndex >= 0 &&
-            comboBoxVRAMDisplayLevel.SelectedIndex >= 0 &&
-            comboBoxBATTDisplayLevel.SelectedIndex >= 0 &&
-            comboBoxDisplayOrientation.SelectedIndex >= 0)
-        {
-            selectedProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(comboBoxOSDLevel.SelectedIndex);
-            selectedProfile.OverlayTimeLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxTimeDisplayLevel.SelectedIndex);
-            selectedProfile.OverlayFPSLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxFPSDisplayLevel.SelectedIndex);
-            selectedProfile.OverlayCPULevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxCPUDisplayLevel.SelectedIndex);
-            selectedProfile.OverlayGPULevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxGPUDisplayLevel.SelectedIndex);
-            selectedProfile.OverlayRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxRAMDisplayLevel.SelectedIndex);
-            selectedProfile.OverlayVRAMLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxVRAMDisplayLevel.SelectedIndex);
-            selectedProfile.OverlayBATTLevel = EnumUtils<OverlayEntryLevel>.Parse(comboBoxBATTDisplayLevel.SelectedIndex);
-            selectedProfile.OverlayOrientation = comboBoxDisplayOrientation.SelectedIndex;
-
-            UpdateProfile();
-        }
-    }
-
-    private void comboBoxOSDLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxTimeOSDLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxTimeDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxFPSDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxCPUDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxRAMDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxGPUDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxVRAMDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxBATTDisplayLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
-    }
-
-    private void comboBoxDisplayOrientation_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        BindOSDToProfile();
     }
 
     private void ProfilePluggedIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1345,10 +1327,15 @@ public partial class QuickProfilesPage : Page
             PowerProfile_Selected(powerProfile, false);
     }
 
-    private void OnScreenOverlayToggle_Toggled(object sender, RoutedEventArgs e)
+    private void ProfilePluggedInButton_Click(object sender, RoutedEventArgs e)
     {
-        selectedProfile.OnScreenDisplayToggle = OnScreenOverlayToggle.IsOn;
-        SettingsManager.Set("OnScreenDisplayToggle", OnScreenOverlayToggle.IsOn);
-        UpdateProfile();
+        if (ProfilePluggedIn.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
+            PowerProfile_Clicked(powerProfile);
+    }
+
+    private void PorfileBatteryButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ProfileOnBattery.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
+            PowerProfile_Clicked(powerProfile);
     }
 }

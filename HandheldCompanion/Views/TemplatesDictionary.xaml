@@ -2,6 +2,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:converters="clr-namespace:HandheldCompanion.Converters"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
@@ -156,10 +157,10 @@
                 </Expander.Header>
 
                 <Expander.Content>
-                    <ui:SimpleStackPanel Margin="30,-10,0,-4" Spacing="6">
+                    <ikw:SimpleStackPanel Margin="30,-10,0,-4" Spacing="6">
 
                         <!--  Button 2 Button, Long press  -->
-                        <ui:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|3|4}">
+                        <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|3|4}">
 
                             <Grid Height="40">
                                 <Grid.ColumnDefinitions>
@@ -204,10 +205,10 @@
                                 Margin="-46,0,-16,0"
                                 BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                                 BorderThickness="0,1,0,0" />
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
 
                         <!--  Button 2 Keyboard/Mouse, modifiers  -->
-                        <ui:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3|4}">
+                        <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3|4}">
 
                             <Grid Height="40">
                                 <Grid.ColumnDefinitions>
@@ -242,13 +243,13 @@
                                 Margin="-46,0,-16,0"
                                 BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                                 BorderThickness="0,1,0,0" />
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
 
                         <!--  Button 2 Button/Keyboard/Mouse  -->
                         <Grid Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|3|4}">
 
-                            <ui:SimpleStackPanel Spacing="6">
-                                <ui:SimpleStackPanel Spacing="6">
+                            <ikw:SimpleStackPanel Spacing="6">
+                                <ikw:SimpleStackPanel Spacing="6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="2*" MinWidth="200" />
@@ -268,7 +269,7 @@
                                     </Grid>
 
                                     <!--  Repeat rate (hidden)  -->
-                                    <ui:SimpleStackPanel Spacing="6" Visibility="{Binding Turbo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding Turbo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                                         <!--  Separator  -->
                                         <Separator Background="{DynamicResource ExpanderHeaderBackground}" />
@@ -311,16 +312,16 @@
                                                     Value="{Binding TurboDelay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                             </DockPanel>
                                         </Grid>
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
 
                                     <!--  Separator  -->
                                     <Separator
                                         Margin="-46,0,-16,0"
                                         BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                                         BorderThickness="0,1,0,0" />
-                                </ui:SimpleStackPanel>
+                                </ikw:SimpleStackPanel>
 
-                                <ui:SimpleStackPanel Spacing="6">
+                                <ikw:SimpleStackPanel Spacing="6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="5*" MinWidth="200" />
@@ -369,8 +370,8 @@
                                         BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                                         BorderThickness="0,1,0,0" />
 
-                                </ui:SimpleStackPanel>
-                            </ui:SimpleStackPanel>
+                                </ikw:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
                         </Grid>
 
                         <!--  Button 2 Button, haptic  -->
@@ -419,7 +420,7 @@
                             </DockPanel>
                         </Grid>
 
-                    </ui:SimpleStackPanel>
+                    </ikw:SimpleStackPanel>
                 </Expander.Content>
             </Expander>
         </Grid>
@@ -510,11 +511,11 @@
                 </Grid>
             </Expander.Header>
             <Expander.Content>
-                <ui:SimpleStackPanel Spacing="6">
+                <ikw:SimpleStackPanel Spacing="6">
                     <!--  Shared  -->
                     <Grid>
-                        <ui:SimpleStackPanel Spacing="6">
-                            <ui:SimpleStackPanel Spacing="6">
+                        <ikw:SimpleStackPanel Spacing="6">
+                            <ikw:SimpleStackPanel Spacing="6">
 
                                 <!--  Gyro input  -->
                                 <Grid>
@@ -545,13 +546,13 @@
                                         SelectedIndex="{Binding MotionInputIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate DataType="{x:Type viewmodels:MotionInputViewModel}">
-                                                <ui:SimpleStackPanel
+                                                <ikw:SimpleStackPanel
                                                     VerticalAlignment="Center"
                                                     Orientation="Horizontal"
                                                     Spacing="6">
                                                     <ui:FontIcon Glyph="{Binding Glyph}" Visibility="{Binding HasGlyph, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                     <TextBlock Text="{Binding Description}" />
-                                                </ui:SimpleStackPanel>
+                                                </ikw:SimpleStackPanel>
                                             </DataTemplate>
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
@@ -582,7 +583,7 @@
                                             TextWrapping="Wrap" />
                                     </StackPanel>
 
-                                    <ui:SimpleStackPanel
+                                    <ikw:SimpleStackPanel
                                         Grid.Column="1"
                                         Margin="12,0,0,0"
                                         HorizontalAlignment="Stretch"
@@ -597,11 +598,11 @@
                                             <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionToggle}" />
                                         </ComboBox>
                                         <ContentControl Content="{Binding HotkeyContent, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
-                            </ui:SimpleStackPanel>
-                        </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
                     </Grid>
 
                     <!--  Separator  -->
@@ -612,8 +613,8 @@
 
                     <!--  Axis 2 Axis  -->
                     <Grid Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
-                        <ui:SimpleStackPanel Spacing="6">
-                            <ui:SimpleStackPanel Spacing="6">
+                        <ikw:SimpleStackPanel Spacing="6">
+                            <ikw:SimpleStackPanel Spacing="6">
 
                                 <!--  Separator  -->
                                 <Separator
@@ -720,7 +721,7 @@
 
                                 <!--  Axis rotation  -->
                                 <Grid IsEnabled="{Binding Axis2AxisAutoRotate, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource InvertBooleanConverter}}">
-                                    <ui:SimpleStackPanel Spacing="6">
+                                    <ikw:SimpleStackPanel Spacing="6">
                                         <Grid>
                                             <TextBlock
                                                 HorizontalAlignment="Left"
@@ -746,7 +747,7 @@
                                             TickPlacement="BottomRight"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                             Value="{Binding Axis2AxisRotation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
                                 <!--  Separator  -->
@@ -757,7 +758,7 @@
 
                                 <!--  Inner deadzone  -->
                                 <Grid>
-                                    <ui:SimpleStackPanel Spacing="6">
+                                    <ikw:SimpleStackPanel Spacing="6">
                                         <Grid>
                                             <TextBlock
                                                 HorizontalAlignment="Left"
@@ -782,7 +783,7 @@
                                             TickFrequency="1"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                             Value="{Binding Axis2AxisInnerDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
                                 <!--  Separator  -->
@@ -793,7 +794,7 @@
 
                                 <!--  Outer deadzone  -->
                                 <Grid>
-                                    <ui:SimpleStackPanel Spacing="6">
+                                    <ikw:SimpleStackPanel Spacing="6">
                                         <Grid>
                                             <TextBlock
                                                 HorizontalAlignment="Left"
@@ -818,7 +819,7 @@
                                             TickFrequency="1"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                             Value="{Binding Axis2AxisOuterDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
                                 <!--  Separator  -->
@@ -829,7 +830,7 @@
 
                                 <!--  Anti deadzone  -->
                                 <Grid>
-                                    <ui:SimpleStackPanel Spacing="6">
+                                    <ikw:SimpleStackPanel Spacing="6">
                                         <Grid>
                                             <TextBlock
                                                 HorizontalAlignment="Left"
@@ -853,7 +854,7 @@
                                             TickFrequency="1"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                             Value="{Binding Axis2AxisAntiDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
                                 <!--  Separator  -->
@@ -862,14 +863,14 @@
                                     BorderThickness="0,1,0,0"
                                     Opacity="0.25" />
 
-                            </ui:SimpleStackPanel>
-                        </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
                     </Grid>
 
                     <!--  Axis 2 Mouse  -->
                     <Grid Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
-                        <ui:SimpleStackPanel Spacing="6">
-                            <ui:SimpleStackPanel Spacing="6">
+                        <ikw:SimpleStackPanel Spacing="6">
+                            <ikw:SimpleStackPanel Spacing="6">
 
                                 <!--  Auto rotate  -->
                                 <Grid>
@@ -898,7 +899,7 @@
 
                                 <!--  Axis rotation  -->
                                 <Grid IsEnabled="{Binding Axis2MouseAutoRotate, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource InvertBooleanConverter}}">
-                                    <ui:SimpleStackPanel Spacing="6">
+                                    <ikw:SimpleStackPanel Spacing="6">
                                         <Grid>
                                             <TextBlock
                                                 HorizontalAlignment="Left"
@@ -924,7 +925,7 @@
                                             TickPlacement="BottomRight"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                             Value="{Binding Axis2MouseRotation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
                                 <!--  Separator  -->
@@ -935,7 +936,7 @@
 
                                 <!--  Pointer Speed  -->
                                 <Grid>
-                                    <ui:SimpleStackPanel Spacing="6">
+                                    <ikw:SimpleStackPanel Spacing="6">
                                         <Grid>
                                             <TextBlock
                                                 HorizontalAlignment="Left"
@@ -959,7 +960,7 @@
                                             TickFrequency="1"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                             Value="{Binding Axis2MousePointerSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
                                 <!--  Separator  -->
@@ -970,7 +971,7 @@
 
                                 <!--  Acceleration  -->
                                 <Grid>
-                                    <ui:SimpleStackPanel Spacing="6">
+                                    <ikw:SimpleStackPanel Spacing="6">
                                         <Grid>
                                             <TextBlock
                                                 HorizontalAlignment="Left"
@@ -995,7 +996,7 @@
                                             TickFrequency="0.05"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                             Value="{Binding Axis2MouseAcceleration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
                                 <!--  Separator  -->
@@ -1006,7 +1007,7 @@
 
                                 <!--  Deadzone  -->
                                 <Grid>
-                                    <ui:SimpleStackPanel Spacing="6">
+                                    <ikw:SimpleStackPanel Spacing="6">
                                         <Grid>
                                             <TextBlock
                                                 HorizontalAlignment="Left"
@@ -1030,7 +1031,7 @@
                                             TickFrequency="1"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                             Value="{Binding Axis2MouseDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </ui:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
                                 </Grid>
 
                                 <!--  Separator  -->
@@ -1038,10 +1039,10 @@
                                     BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                                     BorderThickness="0,1,0,0"
                                     Opacity="0.25" />
-                            </ui:SimpleStackPanel>
-                        </ui:SimpleStackPanel>
+                            </ikw:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
                     </Grid>
-                </ui:SimpleStackPanel>
+                </ikw:SimpleStackPanel>
             </Expander.Content>
         </Expander>
     </DataTemplate>
@@ -1125,10 +1126,10 @@
             </Expander.Header>
 
             <Expander.Content>
-                <ui:SimpleStackPanel Margin="30,-10,0,-4" Spacing="6">
+                <ikw:SimpleStackPanel Margin="30,-10,0,-4" Spacing="6">
 
                     <!--  Axis 2 Axis  -->
-                    <ui:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
+                    <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
 
                         <!--  Improve circularity  -->
                         <Grid>
@@ -1175,7 +1176,7 @@
                         </Grid>
 
                         <!--  Axis rotation (hidden)  -->
-                        <ui:SimpleStackPanel Spacing="6" Visibility="{Binding Axis2AxisAutoRotate, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding Axis2AxisAutoRotate, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
 
                             <!--  Separator  -->
                             <Separator Background="{DynamicResource ExpanderHeaderBackground}" />
@@ -1220,7 +1221,7 @@
                                         Value="{Binding Axis2AxisRotation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </DockPanel>
                             </Grid>
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
 
                         <!--  Separator  -->
                         <Separator
@@ -1361,10 +1362,10 @@
                                     Value="{Binding Axis2AxisAntiDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </DockPanel>
                         </Grid>
-                    </ui:SimpleStackPanel>
+                    </ikw:SimpleStackPanel>
 
                     <!--  Axis 2 Mouse  -->
-                    <ui:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
+                    <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
 
                         <!--  Auto rotate  -->
                         <Grid Height="40">
@@ -1386,7 +1387,7 @@
                         </Grid>
 
                         <!--  Axis rotation (hidden)  -->
-                        <ui:SimpleStackPanel Spacing="6" Visibility="{Binding Axis2MouseAutoRotate, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding Axis2MouseAutoRotate, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                             <!--  Separator  -->
                             <Separator Background="{DynamicResource ExpanderHeaderBackground}" />
@@ -1431,7 +1432,7 @@
                                         Value="{Binding Axis2MouseRotation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </DockPanel>
                             </Grid>
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
 
                         <!--  Separator  -->
                         <Separator
@@ -1552,7 +1553,7 @@
                         </Grid>
 
                         <!--  Filtering (hidden)  -->
-                        <ui:SimpleStackPanel Spacing="6" Visibility="{Binding Axis2MouseFiltering, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding Axis2MouseFiltering, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                             <!--  Separator  -->
                             <Separator Background="{DynamicResource ExpanderHeaderBackground}" />
@@ -1597,7 +1598,7 @@
                                         Value="{Binding Axis2MouseFilterCutoff, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </DockPanel>
                             </Grid>
-                        </ui:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
 
                         <!--  Separator  -->
                         <Separator
@@ -1644,8 +1645,8 @@
                                     Value="{Binding Axis2MouseDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </DockPanel>
                         </Grid>
-                    </ui:SimpleStackPanel>
-                </ui:SimpleStackPanel>
+                    </ikw:SimpleStackPanel>
+                </ikw:SimpleStackPanel>
             </Expander.Content>
         </Expander>
     </DataTemplate>
@@ -1729,9 +1730,9 @@
             </Expander.Header>
 
             <Expander.Content>
-                <ui:SimpleStackPanel Margin="30,-10,0,-4" Spacing="6">
+                <ikw:SimpleStackPanel Margin="30,-10,0,-4" Spacing="6">
                     <!--  Trigger 2 Trigger  -->
-                    <ui:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=5}">
+                    <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=5}">
 
                         <!--  Inner deadzone  -->
                         <Grid Height="40">
@@ -1866,8 +1867,8 @@
                                     Value="{Binding Trigger2TriggerAntiDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </DockPanel>
                         </Grid>
-                    </ui:SimpleStackPanel>
-                </ui:SimpleStackPanel>
+                    </ikw:SimpleStackPanel>
+                </ikw:SimpleStackPanel>
             </Expander.Content>
         </Expander>
     </DataTemplate>

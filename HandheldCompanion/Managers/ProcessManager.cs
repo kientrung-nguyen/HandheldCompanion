@@ -115,11 +115,19 @@ public static class ProcessManager
     {
         if (IsWindowVisible((int)hWnd))
         {
-            var processInfo = new ProcessUtils.FindHostedProcess(hWnd)._realProcess;
-            if (processInfo is null)
-                return false;
+            try
+            {
 
-            CreateProcess((int)processInfo.ProcessId, (int)hWnd, true);
+                var processInfo = new ProcessUtils.FindHostedProcess(hWnd)._realProcess;
+                if (processInfo is null)
+                    return false;
+
+                CreateProcess((int)processInfo.ProcessId, (int)hWnd, true);
+            }
+            catch
+            {
+                // timeout
+            }
         }
 
         return true;
@@ -195,6 +203,14 @@ public static class ProcessManager
         if (foregroundWindow == hWnd || hWnd == IntPtr.Zero)
             return;
 
+        try
+        {
+            //AutomationElement element = AutomationElement.FromHandle(hWnd);
+            if (AutomationElement.FromHandle(hWnd) is null)
+                return;
+        }
+        catch { return; }
+
         int processId = 0;
 
         // update current foreground window
@@ -242,7 +258,7 @@ public static class ProcessManager
                 // update foreground process
                 default:
                     foregroundProcess = process;
-                    foregroundProcess.MainWindowHandle = hWnd;
+                    foregroundProcess.Refresh();
                     break;
             }
 
@@ -295,9 +311,8 @@ public static class ProcessManager
                 processEx.Dispose();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            LogManager.LogError($"{nameof(ProcessManager)}: {ex}");
         }
     }
 
@@ -364,7 +379,7 @@ public static class ProcessManager
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // process has too high elevation
         }

@@ -155,7 +155,6 @@ public static class SystemManager
                 break;
             case PowerModes.Suspend:
                 IsPowerSuspended = true;
-
                 // Prevent system sleep
                 _ = SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
                 LogManager.LogDebug("System is trying to suspend. Performing tasks...");
@@ -197,13 +196,15 @@ public static class SystemManager
             AutoRoutine();
         }
         else
+        {
             currentSystemStatus = SystemStatus.SystemPending;
+        }
 
         if (previousSystemStatus == currentSystemStatus)
             return;
 
         // only raise event is system status has changed
-        LogManager.LogInformation("System status set to {0}", currentSystemStatus);
+        LogManager.LogInformation("System status set to {0} {1}", currentSystemStatus, previousSystemStatus);
         SystemStatusChanged?.Invoke(currentSystemStatus, previousSystemStatus);
         previousSystemStatus = currentSystemStatus;
     }

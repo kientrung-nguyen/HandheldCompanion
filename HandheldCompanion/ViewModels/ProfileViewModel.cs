@@ -1,10 +1,7 @@
-﻿using HandheldCompanion.Controls;
-using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views;
 using HandheldCompanion.Views.Windows;
-using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -28,39 +25,19 @@ namespace HandheldCompanion.ViewModels
             get => _Profile;
             set
             {
+                // todo: we need to check if _hotkey != value but this will return false because this is a pointer
+                // I've implemented all required Clone() functions but not sure where to call them
+
                 _Profile = value;
-                _Name = value.ToString();
 
                 OnPropertyChanged(nameof(Profile));
                 OnPropertyChanged(nameof(Name));
             }
         }
 
-        private string _Name = string.Empty;
-        public string Name
-        {
-            get
-            {
-                return _Name;
-            }
-            set
-            {
-                _Name = value;
-                OnPropertyChanged(nameof(Name));
-            }
-        }
+        public string Name => _Profile.ToString();
 
-        public bool IsAvailable
-        {
-            get
-            {
-                return !ProcessManager.GetProcesses().Any(p => p.Path.Equals(Profile.Path));
-            }
-            set
-            {
-                OnPropertyChanged(nameof(IsAvailable));
-            }
-        }
+        public bool IsAvailable => !ProcessManager.GetProcesses().Any(p => p.Path.Equals(Profile.Path));
 
         public ImageSource Icon
         {
@@ -98,7 +75,8 @@ namespace HandheldCompanion.ViewModels
                     new Dialog(OverlayQuickTools.GetCurrent())
                     {
                         Title = "Quick start",
-                        Content = "The system cannot find the file specified."
+                        Content = "The system cannot find the file specified.",
+                        PrimaryButtonText = Properties.Resources.ProfilesPage_OK
                     }.Show();
 
                     return;
@@ -140,7 +118,7 @@ namespace HandheldCompanion.ViewModels
 
         private void ProcessManager_Changes()
         {
-            IsAvailable = !ProcessManager.GetProcesses().Any(p => p.Path.Equals(Profile.Path));
+            OnPropertyChanged(nameof(IsAvailable));
         }
     }
 }

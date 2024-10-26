@@ -31,17 +31,6 @@ public class RTSS : IPlatform
     private AppEntry? appEntry;
 
     private int RequestedFramerate;
-    private AppFlags[] appFlags = [
-        AppFlags.DirectDraw,
-        AppFlags.Direct3D9,
-        AppFlags.Direct3D9Ex,
-        AppFlags.Direct3D10,
-        AppFlags.Direct3D11,
-        AppFlags.Direct3D12,
-        AppFlags.Direct3D12AFR,
-        AppFlags.Vulkan,
-        AppFlags.OpenGL
-    ];
 
     public RTSS()
     {
@@ -99,7 +88,7 @@ public class RTSS : IPlatform
         }
 
         // our main watchdog to (re)apply requested settings
-        PlatformWatchdog = new Timer(5000) { Enabled = false };
+        PlatformWatchdog = new Timer(2000) { Enabled = false };
         PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
     }
 
@@ -116,9 +105,7 @@ public class RTSS : IPlatform
         ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
         ProfileManager.Applied += ProfileManager_Applied;
 
-        // If RTSS was started while HC was fully initialized,
-        // we need to pass both current profile and foreground process
-        //
+        // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
         if (SettingsManager.IsInitialized)
         {
             ProcessManager_ForegroundChanged(ProcessManager.GetForegroundProcess(), null);
@@ -260,7 +247,7 @@ public class RTSS : IPlatform
             try
             {
                 // force "Show On-Screen Display" to On
-                SetFlags(~RTSSHOOKSFLAG_OSD_VISIBLE, RTSSHOOKSFLAG_OSD_VISIBLE);
+                _ = SetFlags(~RTSSHOOKSFLAG_OSD_VISIBLE, RTSSHOOKSFLAG_OSD_VISIBLE);
             }
             catch (DllNotFoundException)
             { }

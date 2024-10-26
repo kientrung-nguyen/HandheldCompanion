@@ -130,18 +130,6 @@ public static class HotkeysManager
                 }
         }
 
-        // set lastOSDLevel to be used in OSD toggle hotkey
-        SettingsManager.Set("LastOnScreenDisplayLevel", (int)profile.OverlayLevel);
-
-        // manage toggle type hotkeys
-        foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("OnScreenDisplayToggle")).ToList())
-        {
-            if (!hotkey.inputsHotkey.IsToggle)
-                continue;
-
-            hotkey.SetToggle(profile.OverlayLevel != OverlayDisplayLevel.Disabled);
-        }
-
         // enable/disable hotkey based on profile HIDmode
         List<Hotkey> hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode")).ToList();
         Application.Current.Dispatcher.Invoke(() =>
@@ -493,9 +481,7 @@ public static class HotkeysManager
                         // check current OSD level
                         // .. if 0 (disabled) -> set OSD level to LastOnScreenDisplayLevel
                         // .. else (enabled) -> set OSD level to 0
-                        var currentProfile = ProfileManager.GetCurrent();
-                        int currentOSDLevel = (int)currentProfile.OverlayLevel;
-                        //SettingsManager.GetInt("OnScreenDisplayLevel");
+                        int currentOSDLevel = SettingsManager.Get<int>("OnScreenDisplayLevel");
                         int lastOSDLevel = SettingsManager.Get<int>("LastOnScreenDisplayLevel");
 
                         switch (currentOSDLevel)
@@ -504,16 +490,11 @@ public static class HotkeysManager
                                 if (lastOSDLevel == 0)
                                     lastOSDLevel = (int)OverlayDisplayLevel.Full;
                                 SettingsManager.Set("OnScreenDisplayLevel", lastOSDLevel);
-                                currentProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(lastOSDLevel);
                                 break;
                             default:
                                 SettingsManager.Set("OnScreenDisplayLevel", 0);
-                                currentProfile.OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(0);
                                 break;
                         }
-
-                        ToastManager.RunToast($"On-Screen Display {currentProfile.OverlayLevel}", ToastIcons.Game);
-                        ProfileManager.UpdateOrCreateProfile(currentProfile, UpdateSource.Background);
                     }
                     break;
                 case "OnScreenDisplayLevel":

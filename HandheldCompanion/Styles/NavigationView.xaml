@@ -2,6 +2,7 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:local="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:primitives="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern">
@@ -1223,14 +1224,13 @@
                                     </Border>
                                 </local:SplitView.Pane>
 
-                                <!--
-                                Background="{DynamicResource NavigationViewContentBackground}"
-                                BorderBrush="{DynamicResource NavigationViewContentGridBorderBrush}"
-                                BorderThickness="{DynamicResource NavigationViewContentGridBorderThickness}"-->
                                 <local:SplitView.Content>
                                     <Border
                                         x:Name="ContentBorder"
                                         Margin="{DynamicResource NavigationViewContentMargin}"
+                                        Background="{DynamicResource NavigationViewContentBackground}"
+                                        BorderBrush="{DynamicResource NavigationViewContentGridBorderBrush}"
+                                        BorderThickness="{DynamicResource NavigationViewContentGridBorderThickness}"
                                         CornerRadius="{DynamicResource NavigationViewContentGridCornerRadius}">
                                         <Grid x:Name="ContentGrid">
                                             <Grid.RowDefinitions>

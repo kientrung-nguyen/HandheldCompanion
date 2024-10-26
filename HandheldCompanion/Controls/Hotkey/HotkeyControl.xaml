@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
@@ -40,7 +41,7 @@
                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                         Glyph="&#xE713;" />
 
-                    <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock
                             Name="HotkeyName"
                             Style="{StaticResource BodyTextBlockStyle}"
@@ -59,10 +60,10 @@
                             Style="{StaticResource CaptionTextBlockStyle}"
                             Text="Desc"
                             TextWrapping="Wrap" />
-                    </ui:SimpleStackPanel>
+                    </ikw:SimpleStackPanel>
                 </DockPanel>
 
-                <ui:SimpleStackPanel
+                <ikw:SimpleStackPanel
                     Name="HotkeyButtons"
                     Grid.Column="1"
                     HorizontalAlignment="Stretch"
@@ -86,7 +87,7 @@
                         Content="{l:Static resx:Resources.InputsHotkey_fallbackOutput}"
                         ToolTip="{l:Static resx:Resources.InputsHotkey_fallbackOutput}"
                         Visibility="Collapsed" />
-                </ui:SimpleStackPanel>
+                </ikw:SimpleStackPanel>
 
                 <Button
                     Name="HotkeyErase"
