@@ -57,7 +57,6 @@ public partial class OverlayModel : OverlayWindow
     public OverlayModel()
     {
         InitializeComponent();
-        this._hotkeyId = 1;
 
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 

@@ -204,7 +204,8 @@ public partial class OverlayQuickTools : GamepadWindow
     private void SystemManager_DisplaySettingsChanged(Display desktopScreen)
     {
         // ignore if we're not ready yet
-        if (!MultimediaManager.IsInitialized) return;
+        if (!MultimediaManager.IsInitialized)
+            return;
 
         UpdateLocation();
     }
@@ -511,12 +512,6 @@ public partial class OverlayQuickTools : GamepadWindow
             {
                 default:
                     preNavItemTag = navItemTag;
-                    break;
-                case "shortcutKeyboard":
-                case "shortcutDesktop":
-                case "shortcutESC":
-                case "shortcutExpand":
-                    HotkeysManager.TriggerRaised(navItemTag, null, 0, false, true);
                     break;
             }
 

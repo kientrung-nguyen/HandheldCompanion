@@ -1,571 +1,364 @@
-﻿using GregsStack.InputSimulatorStandard.Native;
-using HandheldCompanion.Controllers;
-using HandheldCompanion.Controls;
+﻿using HandheldCompanion.Commands;
+using HandheldCompanion.Commands.Functions.HC;
+using HandheldCompanion.Commands.Functions.Multimedia;
+using HandheldCompanion.Commands.Functions.Windows;
 using HandheldCompanion.Inputs;
-using HandheldCompanion.Misc;
-using HandheldCompanion.Properties;
-using HandheldCompanion.Simulators;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
-using HandheldCompanion.Views.Windows;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Windows;
-using Windows.System;
-using static HandheldCompanion.Inputs.InputsHotkey;
-using static HandheldCompanion.Managers.InputsManager;
-using static HandheldCompanion.Managers.OSDManager;
 
 namespace HandheldCompanion.Managers;
 
 public static class HotkeysManager
 {
-    public delegate void CommandExecutedEventHandler(string listener);
+    public static ConcurrentDictionary<ButtonFlags, Hotkey> hotkeys = new();
 
-    public delegate void HotkeyCreatedEventHandler(Hotkey hotkey);
-
-    public delegate void HotkeyTypeCreatedEventHandler(InputsHotkeyType type);
-
-    public delegate void HotkeyUpdatedEventHandler(Hotkey hotkey);
-
-    public delegate void InitializedEventHandler();
-
-    private const short PIN_LIMIT = 18;
-    private static readonly string InstallPath;
-    private static bool hasProfileHID = false;
-    public static ConcurrentDictionary<ushort, Hotkey> Hotkeys = new();
+    private static readonly string HotkeysPath;
 
     private static bool IsInitialized;
 
     static HotkeysManager()
     {
         // initialize path
-        InstallPath = Path.Combine(MainWindow.SettingsPath, "hotkeys");
-        if (!Directory.Exists(InstallPath))
-            Directory.CreateDirectory(InstallPath);
+        HotkeysPath = Path.Combine(MainWindow.SettingsPath, "hotkeys");
+        if (!Directory.Exists(HotkeysPath))
+            Directory.CreateDirectory(HotkeysPath);
 
-        InputsManager.TriggerUpdated += TriggerUpdated;
-        InputsManager.TriggerRaised += TriggerRaised;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-        ProfileManager.Applied += ProfileManager_Applied;
-        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+        InputsManager.StoppedListening += InputsManager_StoppedListening;
     }
 
-    public static event HotkeyTypeCreatedEventHandler HotkeyTypeCreated;
-
-    public static event HotkeyCreatedEventHandler HotkeyCreated;
-
-    public static event HotkeyUpdatedEventHandler HotkeyUpdated;
-
-    public static event CommandExecutedEventHandler CommandExecuted;
-
-    public static event InitializedEventHandler Initialized;
-
-    private static void ControllerManager_ControllerSelected(IController Controller)
+    private static void InputsManager_StoppedListening(ButtonFlags buttonFlags, InputsChord storedChord)
     {
-        foreach (Hotkey? hotkey in Hotkeys.Values)
-            hotkey.ControllerSelected(Controller);
-    }
-
-    private static void ControllerManager_ControllerPlugged(IController Controller, bool IsPowerCycling)
-    {
-        // when the target emulated controller is Dualshock
-        // only enable HIDmode switch hotkey when controller is plugged (last stage of HIDmode change in this case)
-        HIDmode targetHIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode");
-        if (targetHIDmode == HIDmode.DualShock4Controller)
+        // update chord(s)
+        if (storedChord.KeyState.Count != 0 || storedChord.ButtonState.Buttons.Count() != 0)
         {
-            List<Hotkey> hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode")).ToList();
-            Application.Current.Dispatcher.Invoke(() =>
+            if (hotkeys.TryGetValue(buttonFlags, out Hotkey hotkey))
             {
-                foreach (Hotkey? hotkey in hotkeys)
-                    hotkey.IsEnabled = !hasProfileHID;
-            });
-        }
-    }
-
-    private static void ControllerManager_ControllerUnplugged(IController Controller, bool IsPowerCycling, bool WasTarget)
-    {
-        // when the target emulated controller is Xbox Controller
-        // only enable HIDmode switch hotkey when controller is unplugged (last stage of HIDmode change in this case)
-        HIDmode targetHIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode");
-        if (targetHIDmode == HIDmode.Xbox360Controller)
-        {
-            List<Hotkey> hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode")).ToList();
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                foreach (Hotkey? hotkey in hotkeys)
-                    hotkey.IsEnabled = !hasProfileHID;
-            });
-        }
-    }
-
-    private static void ProfileManager_Applied(Profile profile, UpdateSource source)
-    {
-        // check if profile-specific HIDmode -> disable emulated controller hotkey, else -> enable it
-        HIDmode HIDmode;
-
-        switch (profile.HID)
-        {
-            case HIDmode.Xbox360Controller:
-            case HIDmode.DualShock4Controller:
+                switch (storedChord.chordTarget)
                 {
-                    hasProfileHID = true;
-                    HIDmode = (HIDmode)profile.HID; // Applies profile-specific HID
-                    break;
+                    case InputsChordTarget.Input:
+                        hotkey.inputsChord = storedChord.Clone() as InputsChord;
+                        break;
+                    case InputsChordTarget.Output:
+                        if (hotkey.command is KeyboardCommands keyboardCommands)
+                            keyboardCommands.outputChord = storedChord.Clone() as InputsChord;
+                        break;
                 }
 
-            default: // Default
-                {
-                    HIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode"); // Applies default HID from settings
-                    hasProfileHID = false;
-                    break;
-                }
-        }
-
-        // enable/disable hotkey based on profile HIDmode
-        List<Hotkey> hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode")).ToList();
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            foreach (Hotkey? hotkey in hotkeys)
-                hotkey.IsEnabled = !hasProfileHID;
-        });
-
-        // change glyph at startup only
-        if (!IsInitialized)
-        {
-            VirtualManager_ControllerSelected(HIDmode);
-        }
-    }
-
-    private static void VirtualManager_ControllerSelected(HIDmode HIDmode)
-    {
-        // change glyph of shortcutChangeHIDMode to the corresponding target emulated controller
-        var hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode")).ToList();
-        foreach (Hotkey? hotkey in hotkeys)
-        {
-            switch (HIDmode)
-            {
-                case HIDmode.Xbox360Controller:
-                    hotkey.inputsHotkey.Glyph = "\uE001";
-                    break;
-                case HIDmode.DualShock4Controller:
-                    hotkey.inputsHotkey.Glyph = "\uE000";
-                    break;
-                default:
-                    break;
+                UpdateOrCreateHotkey(hotkey);
             }
-
-            // redraw to change glyph
-            hotkey.Draw();
         }
     }
 
+    public static ICollection<Hotkey> GetHotkeys()
+    {
+        return hotkeys.Values;
+    }
 
     public static void Start()
     {
-        // process hotkeys types
-        foreach (var type in (InputsHotkeyType[])Enum.GetValues(typeof(InputsHotkeyType)))
-            HotkeyTypeCreated?.Invoke(type);
+        // process existing hotkeys
+        string[] fileEntries = Directory.GetFiles(HotkeysPath, "*.json", SearchOption.AllDirectories);
+        foreach (string fileName in fileEntries)
+            ProcessHotkey(fileName);
 
-        // process hotkeys
-        foreach (var pair in InputsHotkeys)
+        // get latest known version
+        Version LastVersion = Version.Parse(SettingsManager.Get<string>("LastVersion"));
+        if (LastVersion < Version.Parse(Settings.VersionHotkeyManager))
         {
-            var Id = pair.Key;
-            var inputsHotkey = pair.Value;
+            // create a few defaults hotkeys
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is QuickToolsCommands quickToolsCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new QuickToolsCommands() });
 
-            Hotkey? hotkey = null;
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is MainWindowCommands mainWindowCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new MainWindowCommands() });
 
-            var fileName = Path.Combine(InstallPath, $"{inputsHotkey.Listener}.json");
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is OverlayGamepadCommands overlayGamepadCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new OverlayGamepadCommands(), IsPinned = true });
 
-            // check for existing hotkey
-            if (File.Exists(fileName))
-                hotkey = ProcessHotkey(fileName);
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is OverlayTrackpadCommands overlayTrackpadCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new OverlayTrackpadCommands(), IsPinned = true });
 
-            // no hotkey found or failed parsing
-            hotkey ??= new Hotkey(Id)
-            {
-                IsPinned = inputsHotkey.DefaultPinned
-            };
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is DesktopLayoutCommands desktopLayoutCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new DesktopLayoutCommands(), IsPinned = true });
 
-            // hotkey is outdated and using an unknown inputs hotkey
-            if (!InputsHotkeys.TryGetValue(hotkey.hotkeyId, out var foundHotkey))
-                continue;
-
-            // pull inputs hotkey
-            hotkey.SetInputsHotkey(foundHotkey);
-            hotkey.Draw();
-
-            if (!Hotkeys.ContainsKey(hotkey.hotkeyId))
-                Hotkeys.TryAdd(hotkey.hotkeyId, hotkey);
-        }
-
-        foreach (Hotkey? hotkey in Hotkeys.Values)
-        {
-            hotkey.Listening += StartListening;
-            hotkey.Pinning += PinOrUnpinHotkey;
-            hotkey.Summoned += hotkey => InvokeTrigger(hotkey, true, true);
-            hotkey.Updated += hotkey => SerializeHotkey(hotkey, true);
-
-            if (!string.IsNullOrEmpty(hotkey.inputsHotkey.Settings))
-                hotkey.IsEnabled = SettingsManager.Get<bool>(hotkey.inputsHotkey.Settings);
-
-            HotkeyCreated?.Invoke(hotkey);
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is OnScreenKeyboardCommands onScreenKeyboardCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new OnScreenKeyboardCommands(), IsPinned = true });
         }
 
         IsInitialized = true;
         Initialized?.Invoke();
+    }
 
-        LogManager.LogInformation("{0} has started", "HotkeysManager");
+    private static void ProcessHotkey(string fileName)
+    {
+        Hotkey? hotkey = null;
+
+        try
+        {
+            string rawName = Path.GetFileNameWithoutExtension(fileName);
+            if (string.IsNullOrEmpty(rawName))
+                throw new Exception("Profile has an incorrect file name.");
+
+            string json = File.ReadAllText(fileName);
+            JObject? dictionary = JObject.Parse(json);
+
+            Version version = new();
+            if (dictionary.ContainsKey("Version"))
+                version = Version.Parse((string)dictionary["Version"]);
+
+            // this is the first version where we added the Version field to Hotkey
+            if (version <= Version.Parse("0.21.5.2"))
+            {
+                // this goes back to 0.21.4.1
+                if (dictionary.ContainsKey("hotkeyId"))
+                {
+                    try
+                    {
+                        hotkey = MigrateFrom0_21_4_1(fileName, dictionary);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogManager.LogError("Could not migrate old hotkey {0}. {1}", fileName, ex.Message);
+                        return;
+                    }
+                }
+                else if (dictionary.ContainsKey("ButtonFlags"))
+                {
+                    // this is 0.21.5.1
+                }
+            }
+            else
+            {
+                try
+                {
+                    string outputraw = File.ReadAllText(fileName);
+                    hotkey = JsonConvert.DeserializeObject<Hotkey>(outputraw, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All
+                    });
+                }
+                catch (Exception ex)
+                {
+                    LogManager.LogError("Could not parse hotkey {0}. {1}", fileName, ex.Message);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Could not parse profile {0}. {1}", fileName, ex.Message);
+            return;
+        }
+
+        if (hotkey is null)
+            return;
+
+        if (CheckAvailableButtonFlag(hotkey.ButtonFlags))
+            hotkey.ButtonFlags = GetAvailableButtonFlag();
+
+        if (hotkey.ButtonFlags == ButtonFlags.None)
+            return;
+
+        hotkeys[hotkey.ButtonFlags] = hotkey;
+        Updated?.Invoke(hotkey);
+    }
+
+    private static Hotkey? MigrateFrom0_21_4_1(string fileName, JObject? dictionary)
+    {
+        ICommands command = new EmptyCommands();
+
+        // This hotkey is from old format, need migrate to new hotkey
+        ushort hotkeyId = (ushort)dictionary["hotkeyId"];
+        if (hotkeyId > 0)
+        {
+            switch (hotkeyId)
+            {
+                case 01:
+                    command = new OverlayGamepadCommands();
+                    break;
+                case 02:
+                    command = new OverlayTrackpadCommands();
+                    break;
+                case 03:
+                    // "OnScreenDisplayToggle"
+                    break;
+                case 10:
+                    command = new QuickToolsCommands();
+                    break;
+                case 11:
+                    // "increaseTDP"
+                    break;
+                case 12:
+                    // "decreaseTDP"
+                    break;
+                case 13:
+                    // "suspendResumeTask"
+                    break;
+                case 20:
+                    command = new OnScreenKeyboardCommands();
+                    break;
+                case 26:
+                    command = new KillForegroundCommands();
+                    break;
+                //case 21-28:
+                // "shortcutDesktop", "shortcutESC", "shortcutExpand", "shortcutTaskView", "shortcutTaskManager", "shortcutControlCenter", "shortcutPrintScreen"
+                //break;
+                case 30:
+                    command = new MainWindowCommands();
+                    break;
+                case 31:
+                    command = new DesktopLayoutCommands();
+                    break;
+                case 32:
+                    command = new HIDModeCommands();
+                    break;
+                case 33:
+                case 34:
+                    command = new CycleSubProfileCommands();
+                    break;
+                case 41:
+                    command = new BrightnessIncrease();
+                    break;
+                case 42:
+                    command = new BrightnessDecrease();
+                    break;
+                case 43:
+                    command = new VolumeIncrease();
+                    break;
+                case 44:
+                    command = new VolumeDecrease();
+                    break;
+            }
+
+            // Check if the above switch is handled, migrate to new hotkey and delete old file
+            if (command is not EmptyCommands)
+            {
+                Hotkey hotkey = new Hotkey();
+                hotkey.command = command;
+
+                // Migrate InputsType
+                var oldInputsType = (int)dictionary["inputsChord"]["InputsType"];
+                if (Enum.TryParse(oldInputsType.ToString(), out InputsChordType oldType))
+                {
+                    hotkey.inputsChord.chordType = oldType;
+                }
+
+                // Migrate Old State
+                var oldState = (JObject)dictionary["inputsChord"]["State"]["State"];
+                foreach (var keyValuePair in oldState)
+                {
+                    if (Enum.TryParse(keyValuePair.Key, out ButtonFlags flag))
+                    {
+                        hotkey.inputsChord.ButtonState.State[flag] = (bool)keyValuePair.Value;
+                    }
+                }
+
+                // Migrate IsPinned
+                var isPinned = (bool)dictionary["IsPinned"];
+                hotkey.IsPinned = isPinned;
+
+                // Common ButtonFlags check
+                if (CheckAvailableButtonFlag(hotkey.ButtonFlags))
+                    hotkey.ButtonFlags = GetAvailableButtonFlag();
+
+                if (hotkey.ButtonFlags == ButtonFlags.None)
+                    return null;
+
+                // Delete the old file
+                File.Delete(fileName);
+
+                // Save new hotkey json
+                SerializeHotkey(hotkey);
+
+                return hotkey;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool CheckAvailableButtonFlag(ButtonFlags buttonFlags)
+    {
+        HashSet<ButtonFlags> usedFlags = hotkeys.Values.Select(h => h.ButtonFlags).ToHashSet();
+        return usedFlags.Contains(buttonFlags);
+    }
+
+    public static ButtonFlags GetAvailableButtonFlag()
+    {
+        HashSet<ButtonFlags> usedFlags = hotkeys.Values.Select(h => h.ButtonFlags).ToHashSet();
+        foreach (byte flagValue in Enumerable.Range((int)ButtonFlags.HOTKEY_START + 1, (int)ButtonFlags.HOTKEY_END - (int)ButtonFlags.HOTKEY_START + 2))
+        {
+            ButtonFlags flag = (ButtonFlags)flagValue;
+            if (!usedFlags.Contains(flag))
+            {
+                return flag;
+            }
+        }
+
+        return ButtonFlags.None;
+    }
+
+    public static void UpdateOrCreateHotkey(Hotkey hotkey)
+    {
+        hotkeys[hotkey.ButtonFlags] = hotkey;
+        Updated?.Invoke(hotkey);
+
+        // serialize profile
+        if (!hotkey.IsInternal)
+            SerializeHotkey(hotkey);
+    }
+
+    public static void SerializeHotkey(Hotkey hotkey)
+    {
+        string hotkeyPath = Path.Combine(HotkeysPath, $"{hotkey.ButtonFlags}.json");
+
+        // update profile version to current build
+        hotkey.Version = new Version(MainWindow.fileVersionInfo.FileVersion);
+
+        string jsonString = JsonConvert.SerializeObject(hotkey, Formatting.Indented, new JsonSerializerSettings
+        {
+            TypeNameHandling = TypeNameHandling.All
+        });
+        if (FileUtils.IsFileWritable(hotkeyPath))
+            File.WriteAllText(hotkeyPath, jsonString);
+    }
+
+    public static void DeleteHotkey(Hotkey hotkey)
+    {
+        var hotkeyPath = Path.Combine(HotkeysPath, $"{hotkey.ButtonFlags}.json");
+
+        if (hotkeys.ContainsKey(hotkey.ButtonFlags))
+        {
+            _ = hotkeys.TryRemove(hotkey.ButtonFlags, out Hotkey removedValue);
+
+            // raise event(s)
+            Deleted?.Invoke(hotkey);
+        }
+
+        FileUtils.FileDelete(hotkeyPath);
     }
 
     public static void Stop()
     {
-        if (!IsInitialized)
-            return;
-
         IsInitialized = false;
-
-        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
-        ProfileManager.Applied -= ProfileManager_Applied;
-        VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
-
-        LogManager.LogInformation("{0} has stopped", "HotkeysManager");
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
-    {
-        // manage toggle type hotkeys
-        foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals(name)))
-        {
-            if (!hotkey.inputsHotkey.IsToggle)
-                continue;
+    #region events
 
-            var toggle = Convert.ToBoolean(value);
-            hotkey.SetToggle(toggle);
-        }
+    public static event InitializedEventHandler Initialized;
+    public delegate void InitializedEventHandler();
 
-        // manage settings type hotkeys
-        foreach (Hotkey? hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Settings.Contains(name)))
-        {
-            var enabled = SettingsManager.Get<bool>(hotkey.inputsHotkey.Settings);
-            hotkey.IsEnabled = enabled;
-        }
-    }
+    public static event DeletedEventHandler Deleted;
+    public delegate void DeletedEventHandler(Hotkey hotkey);
 
-    private static void StartListening(Hotkey hotkey, ListenerType type)
-    {
-        InputsManager.StartListening(hotkey, type);
-        hotkey.StartListening(type);
-    }
+    public static event UpdatedEventHandler Updated;
+    public delegate void UpdatedEventHandler(Hotkey hotkey);
 
-    private static void PinOrUnpinHotkey(Hotkey hotkey)
-    {
-        switch (hotkey.IsPinned)
-        {
-            case false:
-                {
-                    var count = CountPinned();
-
-                    if (count >= PIN_LIMIT)
-                    {
-                        // UI thread
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            // todo: translate me
-                            _ = new Dialog(MainWindow.GetCurrent())
-                            {
-                                Title = Resources.SettingsPage_UpdateWarning,
-                                Content = $"You can't pin more than {PIN_LIMIT} hotkeys",
-                                PrimaryButtonText = Resources.ProfilesPage_OK
-                            }.ShowAsync();
-                        });
-
-                        return;
-                    }
-
-                    hotkey.IsPinned = true;
-                }
-                break;
-            case true:
-                hotkey.IsPinned = false;
-                break;
-        }
-
-        // overwrite current file
-        SerializeHotkey(hotkey, true);
-    }
-
-    private static int CountPinned()
-    {
-        return Hotkeys.Values.Count(item => item.IsPinned);
-    }
-
-    private static void TriggerUpdated(string listener, InputsChord inputs, ListenerType type)
-    {
-        IEnumerable<Hotkey> hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals(listener)).ToList();
-
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            foreach (Hotkey hotkey in hotkeys)
-            {
-                // stop recording and update UI
-                hotkey.StopListening(inputs, type);
-                SerializeHotkey(hotkey, true);
-            }
-        });
-    }
-
-    private static Hotkey ProcessHotkey(string fileName)
-    {
-        Hotkey hotkey = null;
-        try
-        {
-            var outputraw = File.ReadAllText(fileName);
-            hotkey = JsonConvert.DeserializeObject<Hotkey>(outputraw);
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Could not parse hotkey {0}. {1}", fileName, ex.Message);
-        }
-
-        return hotkey;
-    }
-
-    public static void SerializeHotkey(Hotkey hotkey, bool overwrite = false)
-    {
-        var listener = hotkey.inputsHotkey.Listener;
-
-        var settingsPath = Path.Combine(InstallPath, $"{listener}.json");
-        if (!File.Exists(settingsPath) || overwrite)
-        {
-            var jsonString = JsonConvert.SerializeObject(hotkey, Formatting.Indented);
-            if (FileUtils.IsFileWritable(settingsPath))
-                File.WriteAllText(settingsPath, jsonString);
-        }
-
-        // raise event
-        HotkeyUpdated?.Invoke(hotkey);
-    }
-
-    public static void TriggerRaised(string listener, InputsChord input, InputsHotkeyType type, bool IsKeyDown, bool IsKeyUp)
-    {
-        List<Hotkey> hotkeys = Hotkeys.Values.Where(item => item.inputsChord.State.Equals(input.State) && (item.inputsHotkey.OnKeyDown == IsKeyDown || item.inputsHotkey.OnKeyUp == IsKeyUp)).ToList();
-
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            foreach (Hotkey hotkey in hotkeys)
-                hotkey.Highlight();
-        });
-
-        // These are special shortcut keys with no related events
-        switch (type)
-        {
-            case InputsHotkeyType.Embedded:
-                return;
-        }
-
-        // get current foreground process
-        ProcessEx? fProcess = ProcessManager.GetForegroundProcess();
-
-        try
-        {
-            switch (listener)
-            {
-                case "shortcutKeyboard":
-                    {
-                        var uiHostNoLaunch = new ProcessUtils.UIHostNoLaunch();
-                        var tipInvocation = (ProcessUtils.ITipInvocation)uiHostNoLaunch;
-                        tipInvocation.Toggle(ProcessUtils.GetDesktopWindow());
-                        Marshal.ReleaseComObject(uiHostNoLaunch);
-                    }
-                    break;
-                case "shortcutDesktop":
-                    KeyboardSimulator.KeyPress(new[] { VirtualKeyCode.LWIN, VirtualKeyCode.VK_D });
-                    break;
-                case "shortcutESC":
-                    if (fProcess is not null)
-                    {
-                        ProcessUtils.SetForegroundWindow(fProcess.MainWindowHandle);
-                        KeyboardSimulator.KeyPress(VirtualKeyCode.ESCAPE);
-                    }
-
-                    break;
-                case "shortcutExpand":
-                    if (fProcess is not null)
-                    {
-                        var Placement = ProcessUtils.GetPlacement(fProcess.MainWindowHandle);
-
-                        switch (Placement.showCmd)
-                        {
-                            case ProcessUtils.ShowWindowCommands.Normal:
-                            case ProcessUtils.ShowWindowCommands.Minimized:
-                                ProcessUtils.ShowWindow(fProcess.MainWindowHandle,
-                                    (int)ProcessUtils.ShowWindowCommands.Maximized);
-                                break;
-                            case ProcessUtils.ShowWindowCommands.Maximized:
-                                ProcessUtils.ShowWindow(fProcess.MainWindowHandle,
-                                    (int)ProcessUtils.ShowWindowCommands.Restored);
-                                break;
-                        }
-                    }
-
-                    break;
-                case "shortcutTaskview":
-                    KeyboardSimulator.KeyPress(new[] { VirtualKeyCode.LWIN, VirtualKeyCode.TAB });
-                    break;
-                case "shortcutTaskManager":
-                    KeyboardSimulator.KeyPress(new[]
-                        { VirtualKeyCode.LCONTROL, VirtualKeyCode.LSHIFT, VirtualKeyCode.ESCAPE });
-                    break;
-                case "shortcutActionCenter":
-                    {
-                        var uri = new Uri("ms-actioncenter");
-                        var success = Launcher.LaunchUriAsync(uri);
-                    }
-                    break;
-                case "shortcutControlCenter":
-                    {
-                        var uri = new Uri(
-                            "ms-actioncenter:controlcenter/&suppressAnimations=false&showFooter=true&allowPageNavigation=true");
-                        var success = Launcher.LaunchUriAsync(uri);
-                    }
-                    break;
-                case "shortcutPrintScreen":
-                    KeyboardSimulator.KeyPress(
-                        new[] { VirtualKeyCode.LWIN, VirtualKeyCode.LSHIFT, VirtualKeyCode.VK_S });
-                    break;
-                case "suspendResumeTask":
-                    {
-                        var sProcess = ProcessManager.GetLastSuspendedProcess();
-
-                        if (sProcess is null || sProcess.Filter != ProcessEx.ProcessFilter.Allowed)
-                            break;
-
-                        if (sProcess.IsSuspended)
-                            ProcessManager.ResumeProcess(sProcess);
-                        else
-                            ProcessManager.SuspendProcess(fProcess);
-                    }
-                    break;
-                case "touchscreenToggle":
-                    {
-                        var touchscreenStatus = DeviceManager.ToggleTouchscreen();
-                        if (touchscreenStatus is not null)
-                            ToastManager.RunToast($"{Resources.InputsHotkey_touchscreenToggle} {((bool)touchscreenStatus ? Resources.On : Resources.Off)}",
-                                ToastIcons.Touchscreen);
-                    }
-                    break;
-                case "touchpadToggle":
-                    {
-                        var touchpadStatus = DeviceManager.ToggleTouchpad();
-                        if (touchpadStatus is not null)
-                            ToastManager.RunToast($"{Resources.InputsHotkey_touchpadToggle} {((bool)touchpadStatus ? Resources.On : Resources.Off)}",
-                                ToastIcons.Touchpad);
-                    }
-                    break;
-                case "shortcutKillApp":
-                    fProcess?.Process.Kill();
-                    break;
-                case "OnScreenDisplayToggle":
-                    {
-                        // check current OSD level
-                        // .. if 0 (disabled) -> set OSD level to LastOnScreenDisplayLevel
-                        // .. else (enabled) -> set OSD level to 0
-                        int currentOSDLevel = SettingsManager.Get<int>("OnScreenDisplayLevel");
-                        int lastOSDLevel = SettingsManager.Get<int>("LastOnScreenDisplayLevel");
-
-                        switch (currentOSDLevel)
-                        {
-                            case 0:
-                                if (lastOSDLevel == 0)
-                                    lastOSDLevel = (int)OverlayDisplayLevel.Full;
-                                SettingsManager.Set("OnScreenDisplayLevel", lastOSDLevel);
-                                break;
-                            default:
-                                SettingsManager.Set("OnScreenDisplayLevel", 0);
-                                break;
-                        }
-                    }
-                    break;
-                case "OnScreenDisplayLevel":
-                    {
-                        var value = !SettingsManager.Get<bool>(listener);
-                        SettingsManager.Set(listener, value);
-                    }
-                    break;
-
-                // temporary settings
-                case "DesktopLayoutEnabled":
-                    {
-                        var value = !SettingsManager.Get<bool>(listener);
-                        SettingsManager.Set("DesktopLayoutEnabled", value, false);
-                        ToastManager.SendToast("Desktop layout", $"is now {(value ? "enabled" : "disabled")}");
-                    }
-                    break;
-
-                case "shortcutChangeHIDMode":
-                    {
-                        var currentHIDmode = (HIDmode)SettingsManager.Get<int>("HIDmode");
-                        switch (currentHIDmode)
-                        {
-                            case HIDmode.Xbox360Controller:
-                                SettingsManager.Set("HIDmode", (int)HIDmode.DualShock4Controller);
-                                break;
-                            case HIDmode.DualShock4Controller:
-                                SettingsManager.Set("HIDmode", (int)HIDmode.Xbox360Controller);
-                                break;
-                            default:
-                                break;
-                        }
-                        break;
-                    }
-
-                // Profiles
-                case "previousSubProfile":
-                    {
-                        ProfileManager.CycleSubProfiles(true);
-                        break;
-                    }
-                case "nextSubProfile":
-                    {
-                        ProfileManager.CycleSubProfiles(false);
-                        break;
-                    }
-
-                default:
-                    {
-                        List<OutputKey> ouput = new(input.OutputKeys.Where(k => k.IsKeyDown == IsKeyDown && k.IsKeyUp == IsKeyUp));
-                        KeyboardSimulator.KeyPress(ouput.ToArray());
-                    }
-                    break;
-            }
-
-            LogManager.LogDebug("Executed Hotkey: {0}", listener);
-
-            // play a tune to notify a command was executed
-            MultimediaManager.PlayWindowsMedia("Windows Navigation Start.wav");
-
-            // raise an event
-            CommandExecuted?.Invoke(listener);
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Failed to parse trigger {0}, {1}", listener, ex.Message);
-        }
-    }
-
-    internal static void ClearHotkey(Hotkey hotkey)
-    {
-        // do something
-    }
+    #endregion
 }

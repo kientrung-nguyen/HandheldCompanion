@@ -1,5 +1,4 @@
-﻿using HandheldCompanion.Managers;
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -12,7 +11,6 @@ public class OverlayWindow : Window
 {
     public HorizontalAlignment _HorizontalAlignment;
     public VerticalAlignment _VerticalAlignment;
-    protected ushort _hotkeyId;
 
     private const int WM_MOUSEACTIVATE = 0x0021;
     private const int MA_NOACTIVATE = 0x0003;
@@ -38,11 +36,7 @@ public class OverlayWindow : Window
 
     private void OverlayWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (_hotkeyId == 0)
-            return;
-
-        if (HotkeysManager.Hotkeys.TryGetValue(_hotkeyId, out var hotkey))
-            hotkey.SetToggle(Visibility == Visibility.Visible);
+        // TODO, IMPLEMENT ME
     }
 
     public new HorizontalAlignment HorizontalAlignment

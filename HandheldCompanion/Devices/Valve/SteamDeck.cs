@@ -1,9 +1,7 @@
 ﻿using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using WindowsInput.Events;
 
 namespace HandheldCompanion.Devices;
 
@@ -92,8 +90,8 @@ public class SteamDeck : IDevice
         GfxClock = new double[] { 200, 2500 };
         CpuClock = 3500;
 
-        OEMChords.Add(new DeviceChord("...",
-            new List<KeyCode>(), new List<KeyCode>(),
+        OEMChords.Add(new KeyboardChord("...",
+            [], [],
             false, ButtonFlags.OEM1
         ));
 

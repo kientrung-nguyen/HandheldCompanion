@@ -270,7 +270,6 @@ public partial class MainWindow : GamepadWindow
         loadPages();
 
         // manage events
-        InputsManager.TriggerRaised += InputsManager_TriggerRaised;
         SystemManager.SystemStatusChanged += OnSystemStatusChanged;
         DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
@@ -640,26 +639,6 @@ public partial class MainWindow : GamepadWindow
     {
         // todo: improve me
         currentDevice.PullSensors();
-    }
-
-    private void InputsManager_TriggerRaised(string listener, InputsChord input, InputsHotkeyType type, bool IsKeyDown,
-        bool IsKeyUp)
-    {
-        switch (listener)
-        {
-            case "quickTools":
-                overlayquickTools.ToggleVisibility();
-                break;
-            case "overlayGamepad":
-                overlayModel.ToggleVisibility();
-                break;
-            case "overlayTrackpads":
-                overlayTrackpad.ToggleVisibility();
-                break;
-            case "shortcutMainwindow":
-                SwapWindowState();
-                break;
-        }
     }
 
     private void MenuItem_Click(object? sender, EventArgs e)

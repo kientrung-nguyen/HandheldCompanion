@@ -36,15 +36,15 @@ public class AYANEONEXT : IDevice
             { 'Z', 'Y' }
         };
 
-        this.OEMChords.Add(new DeviceChord("Custom key BIG",
-            new List<KeyCode> { KeyCode.RControlKey, KeyCode.LWin, KeyCode.F12 },
-            new List<KeyCode> { KeyCode.F12, KeyCode.LWin, KeyCode.RControlKey },
+        this.OEMChords.Add(new KeyboardChord("Custom key BIG",
+            [KeyCode.RControlKey, KeyCode.LWin, KeyCode.F12],
+            [KeyCode.F12, KeyCode.LWin, KeyCode.RControlKey],
             false, ButtonFlags.OEM1
         ));
 
-        this.OEMChords.Add(new DeviceChord("Custom key Small",
-            new List<KeyCode> { KeyCode.LWin, KeyCode.D },
-            new List<KeyCode> { KeyCode.LWin, KeyCode.D },
+        this.OEMChords.Add(new KeyboardChord("Custom key Small",
+            [KeyCode.LWin, KeyCode.D],
+            [KeyCode.LWin, KeyCode.D],
             false, ButtonFlags.OEM2
         ));
     }

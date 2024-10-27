@@ -144,11 +144,7 @@ namespace HandheldCompanion.ViewModels
 
         public double TDPMinimum
         {
-            get
-            {
-                return SettingsManager.Get<double>(Settings.ConfigurableTDPOverrideDown);
-            }
-
+            get => SettingsManager.Get<double>(Settings.ConfigurableTDPOverrideDown);
             set
             {
                 if (value != TDPMinimum)
@@ -161,10 +157,7 @@ namespace HandheldCompanion.ViewModels
 
         public double TDPMaximum
         {
-            get
-            {
-                return SettingsManager.Get<double>(Settings.ConfigurableTDPOverrideUp);
-            }
+            get => SettingsManager.Get<double>(Settings.ConfigurableTDPOverrideUp);
 
             set
             {

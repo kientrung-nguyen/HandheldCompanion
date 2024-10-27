@@ -134,7 +134,7 @@ public abstract class IDevice
     };
 
     // trigger specific settings
-    public List<DeviceChord> OEMChords = new();
+    public List<KeyboardChord> OEMChords = [];
 
     // UI
     protected FontFamily GlyphFontFamily = new("PromptFont");
@@ -949,7 +949,7 @@ public abstract class IDevice
 
     public bool HasKey()
     {
-        foreach (DeviceChord pair in OEMChords.Where(a => !a.silenced))
+        foreach (KeyboardChord pair in OEMChords.Where(a => !a.silenced))
         {
             IEnumerable<KeyCode> chords = pair.chords.SelectMany(chord => chord.Value);
             if (chords.Any())
@@ -965,7 +965,7 @@ public abstract class IDevice
 
         var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedDevices");
 
-        deviceInstanceIds ??= new List<string>();
+        deviceInstanceIds ??= [];
 
         foreach (string InstanceId in deviceInstanceIds)
         {

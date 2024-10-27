@@ -1,8 +1,6 @@
 ﻿using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views.Windows;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +8,6 @@ using System.Linq;
 using System.Management;
 using System.Media;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using WindowsDisplayAPI;
 using WindowsDisplayAPI.DisplayConfig;
 
@@ -36,7 +33,6 @@ public static class MultimediaManager
         BrightnessSupport = ScreenBrightness.Get() != -1;
         NightLightSupport = NightLight.Get() != -1;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        HotkeysManager.CommandExecuted += HotkeysManager_CommandExecuted;
     }
 
     private static void SettingsManager_SettingValueChanged(string name, object value)
@@ -57,25 +53,6 @@ public static class MultimediaManager
                     if (oldOrientation != screenOrientation.rotation)
                         DisplayOrientationChanged?.Invoke(screenOrientation);
                 }
-                break;
-        }
-    }
-
-    private static void HotkeysManager_CommandExecuted(string listener)
-    {
-        switch (listener)
-        {
-            case "increaseBrightness":
-                ToastManager.RunToast($"{AdjustBrightness(5)}%", ToastIcons.BrightnessUp);
-                break;
-            case "decreaseBrightness":
-                ToastManager.RunToast($"{AdjustBrightness(-5)}%", ToastIcons.BrightnessDown);
-                break;
-            case "increaseVolume":
-                ToastManager.RunToast($"{AdjustVolume(5)}%", ToastIcons.VolumeUp);
-                break;
-            case "decreaseVolume":
-                ToastManager.RunToast($"{AdjustVolume(-5)}%", ToastIcons.VolumeDown);
                 break;
         }
     }

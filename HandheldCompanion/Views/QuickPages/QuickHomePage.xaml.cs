@@ -1,10 +1,9 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Windows;
 using System;
-using System.Linq;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using Page = System.Windows.Controls.Page;
@@ -26,9 +25,6 @@ public partial class QuickHomePage : Page
     {
         this.Tag = Tag;
 
-        HotkeysManager.HotkeyCreated += HotkeysManager_HotkeyCreated;
-        HotkeysManager.HotkeyUpdated += HotkeysManager_HotkeyUpdated;
-
         MultimediaManager.VolumeNotification += MultimediaManager_VolumeNotification;
         MultimediaManager.BrightnessNotification += MultimediaManager_BrightnessNotification;
         MultimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
@@ -43,30 +39,15 @@ public partial class QuickHomePage : Page
 
     public QuickHomePage()
     {
+        DataContext = new QuickHomePageViewModel();
         InitializeComponent();
     }
 
-    private void HotkeysManager_HotkeyUpdated(Hotkey hotkey)
+    private void QuickButton_Click(object sender, RoutedEventArgs e)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(UpdatePins);
+        Button button = (Button)sender;
+        MainWindow.overlayquickTools.NavView_Navigate(button.Name);
     }
-
-    private void HotkeysManager_HotkeyCreated(Hotkey hotkey)
-    {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(UpdatePins);
-    }
-
-    private void UpdatePins()
-    {
-        // todo, implement quick hotkey order
-        QuickHotkeys.Children.Clear();
-
-        foreach (var hotkey in HotkeysManager.Hotkeys.Values.Where(item => item.IsPinned))
-            QuickHotkeys.Children.Add(hotkey.GetPin());
-    }
-
 
     private void MultimediaManager_Initialized()
     {
@@ -99,6 +80,7 @@ public partial class QuickHomePage : Page
         {
             lock (volumeLock)
             {
+                // UI thread
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     SliderVolume.IsEnabled = true;
@@ -146,7 +128,8 @@ public partial class QuickHomePage : Page
                 // UI thread
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    SliderBrightness.Value = brightness;
+                    if (SliderBrightness.Value != brightness)
+                        SliderBrightness.Value = brightness;
                 });
             }
             finally
@@ -208,7 +191,8 @@ public partial class QuickHomePage : Page
         if (brightnessLock.IsEntered())
             return;
 
-        MultimediaManager.SetBrightness(SliderBrightness.Value);
+        lock (brightnessLock)
+            MultimediaManager.SetBrightness(SliderBrightness.Value);
     }
 
     private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -220,7 +204,8 @@ public partial class QuickHomePage : Page
         if (volumeLock.IsEntered())
             return;
 
-        MultimediaManager.SetVolume(SliderVolume.Value);
+        lock (volumeLock)
+            MultimediaManager.SetVolume(SliderVolume.Value);
     }
 
     private void UpdateVolumeIcon(float volume, bool mute = false)

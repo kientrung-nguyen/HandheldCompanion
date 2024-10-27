@@ -35,25 +35,25 @@ public class AYANEO2021 : IDevice
             { 'Z', 'Y' }
         };
 
-        this.OEMChords.Add(new DeviceChord("WIN key",
-            new List<KeyCode> { KeyCode.LWin },
-            new List<KeyCode> { KeyCode.LWin },
+        this.OEMChords.Add(new KeyboardChord("WIN key",
+            [KeyCode.LWin],
+            [KeyCode.LWin],
             false, ButtonFlags.OEM1
         ));
 
         // Conflicts with OS
         //listeners.Add("TM key", new ChordClick(KeyCode.RAlt, KeyCode.RControlKey, KeyCode.Delete));
 
-        this.OEMChords.Add(new DeviceChord("ESC key",
-            new List<KeyCode> { KeyCode.Escape },
-            new List<KeyCode> { KeyCode.Escape },
+        this.OEMChords.Add(new KeyboardChord("ESC key",
+            [KeyCode.Escape],
+            [KeyCode.Escape],
             false, ButtonFlags.OEM2
         ));
 
         // Conflicts with Ayaspace when installed
-        this.OEMChords.Add(new DeviceChord("KB key",
-            new List<KeyCode> { KeyCode.RControlKey, KeyCode.LWin, KeyCode.O },
-            new List<KeyCode> { KeyCode.O, KeyCode.LWin, KeyCode.RControlKey },
+        this.OEMChords.Add(new KeyboardChord("KB key",
+            [KeyCode.RControlKey, KeyCode.LWin, KeyCode.O],
+            [KeyCode.O, KeyCode.LWin, KeyCode.RControlKey],
             false, ButtonFlags.OEM3
         ));
     }

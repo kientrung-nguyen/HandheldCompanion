@@ -8,10 +8,12 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
+    xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickHome"
     Title="{l:Static resx:Resources.QuickHomePage_Title}"
     Margin="15,0,0,6"
     d:Background="White"
+    d:DataContext="{d:DesignInstance Type=viewmodels:QuickHomePageViewModel}"
     d:DesignHeight="1200"
     d:DesignWidth="640"
     KeepAlive="True"
@@ -25,17 +27,49 @@
 
         <ikw:SimpleStackPanel VerticalAlignment="Top" Spacing="6">
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Visibility="Collapsed" Text="{l:Static resx:Resources.QuickSettingsPage_Title}" />
+
             <!--  Shortcuts  -->
-            <UniformGrid
-                Name="QuickHotkeys"
-                VerticalAlignment="Top"
-                Columns="4">
-                <UniformGrid.Resources>
-                    <Style TargetType="{x:Type ikw:SimpleStackPanel}">
-                        <Setter Property="Margin" Value="0,0,6,6" />
-                    </Style>
-                </UniformGrid.Resources>
-            </UniformGrid>
+            <ui:ItemsRepeater ItemsSource="{Binding HotkeysList}">
+                <ui:ItemsRepeater.Layout>
+                    <ui:UniformGridLayout
+                        ItemsStretch="Fill"
+                        MaximumRowsOrColumns="4"
+                        MinColumnSpacing="6"
+                        MinRowSpacing="6"
+                        Orientation="Horizontal" />
+                </ui:ItemsRepeater.Layout>
+
+                <ui:ItemsRepeater.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <ToggleButton
+                                Height="70"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Command="{Binding ExecuteCommand}"
+                                IsChecked="{Binding IsToggled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+
+                                <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical">
+                                    <ui:FontIcon
+                                        Width="24"
+                                        Height="24"
+                                        HorizontalAlignment="Center"
+                                        FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Glyph="{Binding LiveGlyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                    <TextBlock
+                                        Width="110"
+                                        FontSize="12"
+                                        Text="{Binding Name, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                        TextAlignment="Center"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ToggleButton>
+                        </Grid>
+                    </DataTemplate>
+                </ui:ItemsRepeater.ItemTemplate>
+            </ui:ItemsRepeater>
         </ikw:SimpleStackPanel>
 
         <ikw:SimpleStackPanel

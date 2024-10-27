@@ -156,26 +156,26 @@ public class ROGAlly : IDevice
             TDPOverrideValues = new[] { 25.0d, 25.0d, 25.0d }
         });
 
-        OEMChords.Add(new DeviceChord("CC",
-            new List<KeyCode>(), new List<KeyCode>(),
+        OEMChords.Add(new KeyboardChord("CC",
+            [], [],
             false, ButtonFlags.OEM1
         ));
 
-        OEMChords.Add(new DeviceChord("AC",
-            new List<KeyCode>(), new List<KeyCode>(),
+        OEMChords.Add(new KeyboardChord("AC",
+            [], [],
             false, ButtonFlags.OEM2
         ));
 
         // M1 and M2 do a repeating input when holding the button
-        OEMChords.Add(new DeviceChord("M1",
-            new List<KeyCode> { KeyCode.F18 },
-            new List<KeyCode> { KeyCode.F18 },
+        OEMChords.Add(new KeyboardChord("M1",
+            [KeyCode.F18],
+            [KeyCode.F18],
             false, ButtonFlags.OEM3
         ));
 
-        OEMChords.Add(new DeviceChord("M2",
-            new List<KeyCode> { KeyCode.F17 },
-            new List<KeyCode> { KeyCode.F17 },
+        OEMChords.Add(new KeyboardChord("M2",
+            [KeyCode.F17],
+            [KeyCode.F17],
             false, ButtonFlags.OEM4
         ));
 
@@ -711,7 +711,6 @@ public class ROGAlly : IDevice
             if (device.IsConnected)
                 device.WriteFeatureData(data);
         }
-
     }
 
     public void SetBatteryChargeLimit(int chargeLimit)
@@ -722,7 +721,7 @@ public class ROGAlly : IDevice
         if (chargeLimit < 0 || chargeLimit > 100)
             return;
 
-        asusACPI.DeviceSet(AsusACPI.BatteryLimit, chargeLimit);
+        asusACPI?.DeviceSet(AsusACPI.BatteryLimit, chargeLimit);
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value)

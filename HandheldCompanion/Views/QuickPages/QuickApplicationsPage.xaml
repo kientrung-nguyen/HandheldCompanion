@@ -228,6 +228,10 @@
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Processes" Visibility="Collapsed" />
 
                 <ui:ItemsRepeater ItemsSource="{Binding Processes}">
+                    <ui:ItemsRepeater.Layout>
+                        <ui:StackLayout Spacing="6" />
+                    </ui:ItemsRepeater.Layout>
+
                     <ui:ItemsRepeater.ItemTemplate>
                         <DataTemplate>
                             <Expander

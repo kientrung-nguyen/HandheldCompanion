@@ -43,21 +43,21 @@ public class OneXPlayerMini : IDevice
             FanValueMax = 255
         };
 
-        OEMChords.Add(new DeviceChord("Orange",
-            new List<KeyCode> { KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu },
-            new List<KeyCode> { KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu },
+        OEMChords.Add(new KeyboardChord("Orange",
+            [KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu],
+            [KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu],
             false, ButtonFlags.OEM1
         ));
 
-        OEMChords.Add(new DeviceChord("Keyboard",
-            new List<KeyCode> { KeyCode.LWin, KeyCode.RControlKey, KeyCode.O },
-            new List<KeyCode> { KeyCode.O, KeyCode.RControlKey, KeyCode.LWin },
+        OEMChords.Add(new KeyboardChord("Keyboard",
+            [KeyCode.LWin, KeyCode.RControlKey, KeyCode.O],
+            [KeyCode.O, KeyCode.RControlKey, KeyCode.LWin],
             false, ButtonFlags.OEM2
         ));
 
-        OEMChords.Add(new DeviceChord("Function",
-            new List<KeyCode> { KeyCode.LWin, KeyCode.D },
-            new List<KeyCode> { KeyCode.LWin, KeyCode.D },
+        OEMChords.Add(new KeyboardChord("Function",
+            [KeyCode.LWin, KeyCode.D],
+            [KeyCode.LWin, KeyCode.D],
             false, ButtonFlags.OEM3
         ));
     }

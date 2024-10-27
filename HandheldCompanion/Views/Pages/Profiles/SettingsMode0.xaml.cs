@@ -1,16 +1,16 @@
+using HandheldCompanion.Actions;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
 
 namespace HandheldCompanion.Views.Pages.Profiles;
 
@@ -19,11 +19,14 @@ namespace HandheldCompanion.Views.Pages.Profiles;
 /// </summary>
 public partial class SettingsMode0 : Page
 {
-    private Hotkey ProfilesPageHotkey;
     private CrossThreadLock updateLock = new();
+
+    private const ButtonFlags gyroButtonFlags = ButtonFlags.HOTKEY_GYRO_AIMING;
+    private Hotkey GyroHotkey = new(gyroButtonFlags) { IsInternal = true };
 
     public SettingsMode0()
     {
+        DataContext = new SettingsMode0ViewModel();
         InitializeComponent();
     }
 
@@ -32,9 +35,10 @@ public partial class SettingsMode0 : Page
         this.Tag = Tag;
 
         MotionManager.SettingsMode0Update += MotionManager_SettingsMode0Update;
+        HotkeysManager.Updated += HotkeysManager_Updated;
 
-        HotkeysManager.HotkeyCreated += TriggerCreated;
-        InputsManager.TriggerUpdated += TriggerUpdated;
+        // store hotkey to manager
+        HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
     }
 
     public void SetProfile()
@@ -53,9 +57,8 @@ public partial class SettingsMode0 : Page
                     tb_ProfileFlickDuration.Value = ProfilesPage.selectedProfile.FlickstickDuration * 1000;
                     tb_ProfileStickSensitivity.Value = ProfilesPage.selectedProfile.FlickstickSensivity;
 
-                    // todo: improve me ?
-                    ProfilesPageHotkey.inputsChord.State = ProfilesPage.selectedProfile.AimingSightsTrigger.Clone() as ButtonState;
-                    ProfilesPageHotkey.DrawInput();
+                    GyroHotkey.inputsChord.ButtonState = ProfilesPage.selectedProfile.AimingSightsTrigger.Clone() as ButtonState;
+                    HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
 
                     // temp
                     StackCurve.Children.Clear();
@@ -288,35 +291,21 @@ public partial class SettingsMode0 : Page
         ProfilesPage.UpdateProfile();
     }
 
-    private void TriggerCreated(Hotkey hotkey)
+    private void HotkeysManager_Updated(Hotkey hotkey)
     {
-        switch (hotkey.inputsHotkey.Listener)
-        {
-            case "shortcutProfilesSettingsMode0":
-                {
-                    // pull hotkey
-                    ProfilesPageHotkey = hotkey;
+        if (ProfilesPage.selectedProfile is null)
+            return;
 
-                    // add to UI
-                    var hotkeyBorder = ProfilesPageHotkey.GetControl();
-                    if (hotkeyBorder is null || hotkeyBorder.Parent is not null)
-                        return;
+        if (!ProfilesPage.selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
+            return;
 
-                    if (UMC_Activator.Children.Count == 0)
-                        UMC_Activator.Children.Add(hotkeyBorder);
-                }
-                break;
-        }
-    }
+        if (hotkey.ButtonFlags != gyroButtonFlags)
+            return;
 
-    private void TriggerUpdated(string listener, InputsChord inputs, InputsManager.ListenerType type)
-    {
-        switch (listener)
-        {
-            case "shortcutProfilesSettingsMode0":
-                ProfilesPage.selectedProfile.AimingSightsTrigger = inputs.State.Clone() as ButtonState;
-                ProfilesPage.UpdateProfile();
-                break;
-        }
+        // update gyro hotkey
+        GyroHotkey = hotkey;
+
+        ProfilesPage.selectedProfile.AimingSightsTrigger = hotkey.inputsChord.ButtonState.Clone() as ButtonState;
+        ProfilesPage.UpdateProfile();
     }
 }

@@ -24,7 +24,6 @@ using static HandheldCompanion.Commands.ICommands;
 
 namespace HandheldCompanion.ViewModels
 {
-    /*
     public class HotkeyViewModel : BaseViewModel
     {
         public ObservableCollection<FontIconViewModel> ButtonGlyphs { get; set; } = [];
@@ -609,5 +608,4 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(Glyph));
         }
     }
-    */
 }

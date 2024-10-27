@@ -9,10 +9,13 @@ using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -39,7 +42,10 @@ public partial class QuickProfilesPage : Page
     private CrossThreadLock foregroundLock = new();
     private CrossThreadLock graphicLock = new();
 
-    private Hotkey GyroHotkey = new(61);
+    private const ButtonFlags gyroButtonFlags = ButtonFlags.HOTKEY_GYRO_ACTIVATION_QP;
+    private Hotkey GyroHotkey = new(gyroButtonFlags) { IsInternal = true };
+
+    public ObservableCollection<HotkeyViewModel> HotkeysList { get; set; } = [];
 
     private Profile realProfile;
 
@@ -59,10 +65,12 @@ public partial class QuickProfilesPage : Page
         PowerProfileManager.Applied += PowerProfileManager_Applied;
         PowerProfileManager.Updated += PowerProfileManager_Updated;
         PowerProfileManager.Deleted += PowerProfileManager_Deleted;
+
         MultimediaManager.Initialized += MultimediaManager_Initialized;
         MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
-        HotkeysManager.HotkeyCreated += TriggerCreated;
-        InputsManager.TriggerUpdated += TriggerUpdated;
+        HotkeysManager.Updated += HotkeysManager_Updated;
+        InputsManager.StartedListening += InputsManager_StartedListening;
+        InputsManager.StoppedListening += InputsManager_StoppedListening;
         PlatformManager.RTSS.Updated += RTSS_Updated;
         GPUManager.Hooked += GPUManager_Hooked;
         GPUManager.Unhooked += GPUManager_Unhooked;
@@ -139,6 +147,9 @@ public partial class QuickProfilesPage : Page
 
         // force call
         RTSS_Updated(PlatformManager.RTSS.Status);
+
+        // store hotkey to manager
+        HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
     }
 
     private void PowerProfileManager_Applied(PowerProfile powerProfile, UpdateSource source)
@@ -510,7 +521,7 @@ public partial class QuickProfilesPage : Page
         MainWindow.overlayquickTools.NavView_Navigate("QuickPerformancePage");
     }
 
-    private void PowerProfile_Selected(PowerProfile powerProfile, bool isPlugged = true)
+    public void PowerProfile_Selected(PowerProfile powerProfile, bool isPlugged = true)
     {
         if (selectedProfile is null)
             return;
@@ -643,9 +654,8 @@ public partial class QuickProfilesPage : Page
                         SliderSensitivityX.Value = selectedProfile.MotionSensivityX;
                         SliderSensitivityY.Value = selectedProfile.MotionSensivityY;
 
-                        // todo: improve me ?
-                        GyroHotkey.inputsChord.State = ((GyroActions)currentAction).MotionTrigger.Clone() as ButtonState;
-                        GyroHotkey.DrawInput();
+                        GyroHotkey.inputsChord.ButtonState = ((GyroActions)currentAction).MotionTrigger.Clone() as ButtonState;
+                        HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
                     }
 
                     // Framerate limit
@@ -798,7 +808,7 @@ public partial class QuickProfilesPage : Page
         // create profile
         selectedProfile = new Profile(currentProcess.Path)
         {
-            Layout = (Layout)(ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone(),
+            Layout = (ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone() as Layout,
             LayoutTitle = LayoutTemplate.DesktopLayout.Name
         };
 
@@ -863,7 +873,8 @@ public partial class QuickProfilesPage : Page
                     }
 
                     ((AxisActions)gyroActions).Axis = motionOuput == MotionOutput.LeftStick ? AxisLayoutFlags.LeftStick : AxisLayoutFlags.RightStick;
-                    ((AxisActions)gyroActions).MotionTrigger = GyroHotkey.inputsChord.State.Clone() as ButtonState;
+
+                    ((AxisActions)gyroActions).MotionTrigger = GyroHotkey.inputsChord.ButtonState.Clone() as ButtonState;
                 }
                 break;
 
@@ -880,7 +891,7 @@ public partial class QuickProfilesPage : Page
                         };
                     }
 
-                    ((MouseActions)gyroActions).MotionTrigger = GyroHotkey.inputsChord.State.Clone() as ButtonState;
+                    ((MouseActions)gyroActions).MotionTrigger = GyroHotkey.inputsChord.ButtonState.Clone() as ButtonState;
                 }
                 break;
         }
@@ -919,7 +930,7 @@ public partial class QuickProfilesPage : Page
         if (profileLock.IsEntered())
             return;
 
-        if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
+        if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out var currentAction))
             return;
 
         if (currentAction is AxisActions)
@@ -954,40 +965,52 @@ public partial class QuickProfilesPage : Page
         UpdateProfile();
     }
 
-    private void TriggerCreated(Hotkey hotkey)
-    {
-        switch (hotkey.inputsHotkey.Listener)
-        {
-            case "shortcutProfilesPage@@":
-                {
-                    var hotkeyBorder = hotkey.GetControl();
-                    if (hotkeyBorder is null || hotkeyBorder.Parent is not null)
-                        return;
 
-                    // pull hotkey
-                    GyroHotkey = hotkey;
-
-                    UMC_Activator.Children.Add(hotkeyBorder);
-                }
-                break;
-        }
-    }
-
-    private void TriggerUpdated(string listener, InputsChord inputs, InputsManager.ListenerType type)
+    private void HotkeysManager_Updated(Hotkey hotkey)
     {
         if (selectedProfile is null)
             return;
 
-        if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out IActions currentAction))
+        if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out var currentAction))
             return;
 
-        switch (listener)
-        {
-            case "shortcutProfilesPage@@":
-                ((GyroActions)currentAction).MotionTrigger = inputs.State.Clone() as ButtonState;
-                UpdateProfile();
-                break;
-        }
+        if (hotkey.ButtonFlags != gyroButtonFlags)
+            return;
+
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
+        // update gyro hotkey
+        GyroHotkey = hotkey;
+
+        ((GyroActions)currentAction).MotionTrigger = hotkey.inputsChord.ButtonState.Clone() as ButtonState;
+        UpdateProfile();
+
+        if (hotkey.ButtonFlags != gyroButtonFlags)
+            return;
+
+        HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+        if (foundHotkey is null)
+            HotkeysList.SafeAdd(new HotkeyViewModel(hotkey));
+        else
+            foundHotkey.Hotkey = hotkey;
+    }
+
+
+
+    private void InputsManager_StartedListening(ButtonFlags buttonFlags, InputsChordTarget chordTarget)
+    {
+        HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
+        if (hotkeyViewModel != null)
+            hotkeyViewModel.SetListening(true, chordTarget);
+    }
+
+    private void InputsManager_StoppedListening(ButtonFlags buttonFlags, InputsChord storedChord)
+    {
+        HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
+        if (hotkeyViewModel != null)
+            hotkeyViewModel.SetListening(false, storedChord.chordTarget);
     }
 
     private void cB_UMC_MotionDefaultOffOn_SelectionChanged(object sender, RoutedEventArgs e)

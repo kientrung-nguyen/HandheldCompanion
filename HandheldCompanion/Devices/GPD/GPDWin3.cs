@@ -1,5 +1,4 @@
 ﻿using HandheldCompanion.Inputs;
-using System.Collections.Generic;
 using WindowsInput.Events;
 
 namespace HandheldCompanion.Devices;
@@ -18,15 +17,15 @@ public class GPDWin3 : IDevice
         CpuClock = 5000;
 
         // note, need to manually configured in GPD app
-        OEMChords.Add(new DeviceChord("Bottom button left",
-            new List<KeyCode> { KeyCode.F11, KeyCode.L },
-            new List<KeyCode> { KeyCode.F11, KeyCode.L },
+        OEMChords.Add(new KeyboardChord("Bottom button left",
+            [KeyCode.F11, KeyCode.L],
+            [KeyCode.F11, KeyCode.L],
             false, ButtonFlags.OEM1
         ));
 
-        OEMChords.Add(new DeviceChord("Bottom button right",
-            new List<KeyCode> { KeyCode.F12, KeyCode.R },
-            new List<KeyCode> { KeyCode.F12, KeyCode.R },
+        OEMChords.Add(new KeyboardChord("Bottom button right",
+            [KeyCode.F12, KeyCode.R],
+            [KeyCode.F12, KeyCode.R],
             false, ButtonFlags.OEM2
         ));
     }

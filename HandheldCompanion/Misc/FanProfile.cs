@@ -13,10 +13,10 @@ namespace HandheldCompanion.Misc
     [Serializable]
     public class FanProfile
     {
-        public FanMode FanMode { get; set; } = FanMode.Hardware;
+        public FanMode FanMode = FanMode.Hardware;
 
         //                            00, 10, 20, 30, 40, 50, 60, 70, 80, 90,  100°C
-        public double[] FanSpeeds { get; set; } = [20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100];
+        public double[] FanSpeeds = [20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100];
 
         // A private variable to store the average temperature
         private ConcurrentList<double> avgTemp;
@@ -28,7 +28,7 @@ namespace HandheldCompanion.Misc
         public FanProfile()
         {
             // Initialize the average temperature to zero
-            this.avgTemp = new();
+            this.avgTemp = [];
         }
 
         // A public constructor that takes an array of fan speed values as a parameter

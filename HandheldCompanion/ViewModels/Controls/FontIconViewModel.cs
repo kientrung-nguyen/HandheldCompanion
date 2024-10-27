@@ -2,7 +2,6 @@
 
 namespace HandheldCompanion.ViewModels.Controls
 {
-    /*
     public class FontIconViewModel : BaseViewModel
     {
         private Hotkey Hotkey { get; set; }
@@ -47,5 +46,4 @@ namespace HandheldCompanion.ViewModels.Controls
                 Foreground = glyphColor;
         }
     }
-    */
 }
