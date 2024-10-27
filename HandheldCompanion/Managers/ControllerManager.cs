@@ -55,6 +55,8 @@ public static class ControllerManager
     private static object targetLock = new object();
     public static ControllerManagerStatus managerStatus = ControllerManagerStatus.Pending;
 
+    private static Timer scenarioTimer = new(1000) { AutoReset = true };
+
     public static bool IsInitialized;
 
     public enum ControllerManagerStatus
@@ -71,6 +73,9 @@ public static class ControllerManager
         {
             IsBackground = true
         };
+
+        // prepare timer
+        scenarioTimer.Elapsed += ScenarioTimer_Elapsed;
     }
 
     public static Task Start()
@@ -90,8 +95,10 @@ public static class ControllerManager
 
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
+        /*
         UIGamepad.GotFocus += GamepadFocusManager_GotFocus;
         UIGamepad.LostFocus += GamepadFocusManager_LostFocus;
+        */
 
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
 
@@ -102,15 +109,16 @@ public static class ControllerManager
 
         MainWindow.uiSettings.ColorValuesChanged += OnColorValuesChanged;
 
+        // enable timer
+        scenarioTimer.Start();
+
         // enable HidHide
         HidHide.SetCloaking(true);
 
         IsInitialized = true;
         Initialized?.Invoke();
 
-        // summon an empty controller, used to feed Layout UI
-        // todo: improve me
-        ControllerSelected?.Invoke(GetEmulatedController());
+        HasTargetController();
 
         LogManager.LogInformation("{0} has started", "ControllerManager");
 
@@ -134,6 +142,9 @@ public static class ControllerManager
         DeviceManager.HidDeviceRemoved -= HidDeviceRemoved;
 
         SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+
+        // stop timer
+        scenarioTimer.Stop();
 
         // uncloak on close, if requested
         if (SettingsManager.Get<bool>("HIDuncloakonclose"))
@@ -162,6 +173,7 @@ public static class ControllerManager
         Quicktools
     }
 
+    /*
     private static void GamepadFocusManager_LostFocus(string Name)
     {
         switch (Name)
@@ -195,6 +207,7 @@ public static class ControllerManager
         // check applicable scenarios
         CheckControllerScenario();
     }
+    */
 
     private static void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
     {
@@ -217,7 +230,7 @@ public static class ControllerManager
         targetController?.InjectButton(button, true, false);
     }
 
-    private static void CheckControllerScenario()
+    private static void ScenarioTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
         // set flag
         ControllerMuted = false;
@@ -264,14 +277,22 @@ public static class ControllerManager
                 }
 
                 // halt timer
-                //scenarioTimer.Stop();
+                scenarioTimer.Stop();
             }
         }
 
+        /*
         // either main window or quicktools are focused
-        // set flag
         if (focusedWindows != FocusedWindow.None)
             ControllerMuted = true;
+        */
+    }
+
+    private static void CheckControllerScenario()
+    {
+        // reset timer
+        scenarioTimer.Stop();
+        scenarioTimer.Start();
     }
 
     private static void SettingsManager_SettingValueChanged(string name, object value)
@@ -705,9 +726,7 @@ public static class ControllerManager
                         if (ControllerManagementAttempts == ControllerManagementMaxAttempts)
                         {
                             // resume all physical controllers
-                            var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedControllers");
-                            if (deviceInstanceIds is not null && deviceInstanceIds.Count != 0)
-                                ResumeControllers();
+                            ResumeControllers();
 
                             UpdateStatus(ControllerManagerStatus.Failed);
                             ControllerManagementAttempts = 0;

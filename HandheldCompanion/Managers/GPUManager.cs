@@ -68,6 +68,7 @@ namespace HandheldCompanion.Managers
             if (gpu is AmdGpu amdGpu)
             {
                 amdGpu.RSRStateChanged -= CurrentGPU_RSRStateChanged;
+                amdGpu.AFMFStateChanged -= CurrentGPU_AFMFStateChanged;
             }
             else if (gpu is IntelGpu)
             {
@@ -162,7 +163,6 @@ namespace HandheldCompanion.Managers
 
             if (currentGPU is AmdGpu amdGpu)
             {
-
                 if (Enabled != profile.RSREnabled)
                     profile.RSREnabled = Enabled;
                 if (Sharpness != profile.RSRSharpness)
@@ -171,18 +171,18 @@ namespace HandheldCompanion.Managers
             }
 
         }
-		
-		private static void CurrentGPU_AFMFStateChanged(bool Supported, bool Enabled)
+
+        private static void CurrentGPU_AFMFStateChanged(bool Supported, bool Enabled)
         {
             if (!IsInitialized)
                 return;
 
             // todo: use ProfileMager events
             Profile profile = ProfileManager.GetCurrent();
-            var amdGPU = (AmdGpu)currentGPU;
 
-            if (Enabled != profile.AFMFEnabled)
-                amdGPU.SetAFMF(profile.AFMFEnabled);
+            if (profile.AFMFEnabled)
+                profile.AFMFEnabled = Enabled;
+            ProfileManager.UpdateOrCreateProfile(profile);
         }
 
 

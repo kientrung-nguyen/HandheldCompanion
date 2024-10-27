@@ -12,7 +12,7 @@
     <StartupObject>HandheldCompanion.App</StartupObject>
     <OutputPath>$(SolutionDir)bin\$(Configuration)</OutputPath>
     <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
-    <Version>0.21.5.4</Version>
+    <Version>0.21.6.1</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>AnyCPU;x64;x86</Platforms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -62,6 +62,8 @@
     <None Remove="Resources\controller_1_0.png" />
     <None Remove="Resources\controller_1_1.png" />
     <None Remove="Resources\controller_2_0.png" />
+    <None Remove="Resources\DeviceImages\device_minisforum_v3.png" />
+    <None Remove="Resources\DeviceImages\device_rog_ally_x.png" />
     <None Remove="Resources\device_aokzoe_a1.png" />
     <None Remove="Resources\device_aya_2.png" />
     <None Remove="Resources\device_aya_2021.png" />
@@ -155,12 +157,14 @@
     <Resource Include="Resources\DeviceImages\device_gpd4.png" />
     <Resource Include="Resources\DeviceImages\device_gpd_win2.png" />
     <Resource Include="Resources\DeviceImages\device_gpd_winmax2.png" />
+    <Resource Include="Resources\DeviceImages\device_minisforum_v3.png" />
     <Resource Include="Resources\DeviceImages\device_msi_claw.png" />
     <Resource Include="Resources\DeviceImages\device_onexplayer_2.png" />
     <Resource Include="Resources\DeviceImages\device_onexplayer_mini.png" />
     <Resource Include="Resources\DeviceImages\device_onexplayer_onexfly.png" />
     <Resource Include="Resources\DeviceImages\device_onexplayer_x1.png" />
     <Resource Include="Resources\DeviceImages\device_rog_ally.png" />
+    <Resource Include="Resources\DeviceImages\device_rog_ally_x.png" />
     <Resource Include="Resources\DeviceImages\device_valve_jupiter.png" />
     <Resource Include="Resources\droix.png" />
     <Resource Include="Resources\Fonts\FluentSystemIcons-Filled.ttf">
@@ -187,10 +191,10 @@
     <PackageReference Include="Crc32.NET" Version="1.2.0" />
     <PackageReference Include="Fastenshtein" Version="1.0.10" />
     <PackageReference Include="GregsStack.InputSimulatorStandard" Version="1.3.5" />
-    <PackageReference Include="iNKORE.UI.WPF" Version="1.2.6" />
-    <PackageReference Include="iNKORE.UI.WPF.Modern" Version="0.9.29" />
     <PackageReference Include="HelixToolkit.Core.Wpf" Version="2.25.0" />
-    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4-pre298" />
+    <PackageReference Include="iNKORE.UI.WPF" Version="1.2.7.1" />
+    <PackageReference Include="iNKORE.UI.WPF.Modern" Version="0.9.30" />
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4-pre348" />
     <PackageReference Include="LiveCharts.Wpf.Core" Version="0.9.8" />
     <PackageReference Include="MathConverter" Version="2.2.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
@@ -201,13 +205,12 @@
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <PackageReference Include="Nefarius.Drivers.HidHide" Version="2.2.0" />
     <PackageReference Include="Nefarius.Utilities.DeviceManagement" Version="3.22.0" />
-    <PackageReference Include="Nefarius.ViGEm.Client" Version="1.21.256" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="PInvoke.Kernel32" Version="0.7.124" />
-    <PackageReference Include="PixiEditor.ColorPicker" Version="3.4.1" />
+    <PackageReference Include="PixiEditor.ColorPicker" Version="3.3.1" />
     <PackageReference Include="PrecisionTimer.NET" Version="3.0.0.7" />
-    <PackageReference Include="Sentry" Version="4.9.0" />
-    <PackageReference Include="Sentry.Profiling" Version="4.9.0" />
+    <PackageReference Include="Sentry" Version="4.8.1" />
+    <PackageReference Include="Sentry.Profiling" Version="4.8.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.1" />
@@ -223,7 +226,7 @@
     <PackageReference Include="System.Text.Json" Version="8.0.4" />
     <PackageReference Include="WindowsAPICodePack" Version="8.0.4" />
     <PackageReference Include="WindowsInput" Version="6.4.1" />
-    <PackageReference Include="WpfScreenHelper" Version="2.1.0" />
+    <PackageReference Include="WpfScreenHelper" Version="2.1.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -278,6 +281,9 @@
     </None>
     <None Update="3DModels\8BitDoLite2\RightStickClick.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="minisforum.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Models\AYANEO 2021\LeftStickClick.obj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -2358,6 +2364,9 @@
     </Reference>
     <Reference Include="Nefarius.Utilities.DeviceManagement">
       <HintPath>..\Resources\Nefarius.Utilities.DeviceManagement.dll</HintPath>
+    </Reference>
+    <Reference Include="Nefarius.ViGEm.Client">
+      <HintPath>..\Resources\Nefarius.ViGEm.Client.dll</HintPath>
     </Reference>
     <Reference Include="PowerManagerAPI">
       <HintPath>Resources\Power\PowerManagerAPI.dll</HintPath>

@@ -37,7 +37,7 @@ public class OutputKey
 }
 
 [Serializable]
-public class InputsChord
+public class InputsChord : ICloneable
 {
     public InputsChord(ButtonState State, List<OutputKey> OutputKeys, InputsChordType InputsType)
     {
@@ -68,5 +68,10 @@ public class InputsChord
         };
 
         OutputKeys.Add(key);
+    }
+
+    public object Clone()
+    {
+        throw new NotImplementedException();
     }
 }

@@ -3,6 +3,7 @@ using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Models;
 using HandheldCompanion.Sensors;
 using HandheldCompanion.Utils;
 using HidLibrary;
@@ -11,12 +12,10 @@ using Nefarius.Utilities.DeviceManagement.PnP;
 using Sentry;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Numerics;
 using System.Windows.Media;
 using Windows.Devices.Sensors;
-using HandheldCompanion.Models;
 using WindowsInput.Events;
 using static HandheldCompanion.OpenLibSys;
 using static HandheldCompanion.Utils.DeviceUtils;
@@ -163,16 +162,16 @@ public abstract class IDevice
         DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileDefaultName, Properties.Resources.PowerProfileDefaultDescription)
         {
             Default = true,
-            Guid = Guid.Empty,
+            Guid = new("00000000-0000-0000-0000-010000000000"),
             OSPowerMode = OSPowerMode.BetterPerformance,
-            TDPOverrideValues = [this.nTDP[2], this.nTDP[2], this.nTDP[2]]
+            TDPOverrideValues = new double[] { this.nTDP[0], this.nTDP[1], this.nTDP[2] }
         });
 
         // add default power profile
         DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileBatteryDefaultName, Properties.Resources.PowerProfileDefaultDescription)
         {
             Default = true,
-            Guid = new("00000000-0000-0000-0000-010000000000"),
+            Guid = Guid.Empty,
             OSPowerMode = OSPowerMode.BetterBattery,
             TDPOverrideValues = [nTDP[0], nTDP[0], nTDP[0]]
         });
@@ -254,6 +253,17 @@ public abstract class IDevice
 
         switch (ManufacturerName)
         {
+            case "SHENZHEN MEIGAO ELECTRONIC EQUIPMENT CO.,LTD":
+                {
+                    switch (ProductName)
+                    {
+                        case "HPPAC":
+                            device = new MinisforumV3();
+                            break;
+                    }
+                }
+                break;
+
             case "AYN":
                 {
                     switch (ProductName)
@@ -514,6 +524,9 @@ public abstract class IDevice
                         case "RC71L":
                             device = new ROGAlly();
                             break;
+                        case "RC72LA":
+                            device = new ROGAllyX();
+                            break;
                     }
                 }
                 break;
@@ -546,7 +559,7 @@ public abstract class IDevice
                                     case "83E1":
                                         device = new LegionGo();
                                         break;
-                                }    
+                                }
                             }
                             break;
                     }

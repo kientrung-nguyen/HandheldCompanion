@@ -81,7 +81,7 @@ namespace HandheldCompanion.Managers
                 quickTools.GotGamepadWindowFocus += (sender) => _currentWindow_GotFocus(sender, new RoutedEventArgs());
                 quickTools.LostGamepadWindowFocus += (sender) => _currentWindow_LostFocus(sender, new RoutedEventArgs());
             }
-            
+
             _currentWindow.ContentDialogOpened += _currentWindow_ContentDialogOpened;
             _currentWindow.ContentDialogClosed += _currentWindow_ContentDialogClosed;
             _currentWindow.Activated += (sender, e) => _currentWindow_GotFocus(sender, new RoutedEventArgs());
@@ -181,7 +181,7 @@ namespace HandheldCompanion.Managers
                     continue;
 
                 GamepadWindow gamepadWindow;
-                switch(window)
+                switch (window)
                 {
                     default:
                     case "Main":
@@ -284,7 +284,7 @@ namespace HandheldCompanion.Managers
                         }
 
                     }
-					else if (prevNavigation is null && _currentWindow.IsVisible && _currentWindow.WindowState != WindowState.Minimized)
+                    else if (prevNavigation is null && _currentWindow.IsVisible && _currentWindow.WindowState != WindowState.Minimized)
                     {
                         NavigationViewItem currentNavigationViewItem = (NavigationViewItem)WPFUtils.GetTopLeftControl<NavigationViewItem>(_currentWindow.controlElements);
                         prevNavigation = currentNavigationViewItem;
@@ -623,7 +623,7 @@ namespace HandheldCompanion.Managers
                         if (ItemsControl.ItemsControlFromItemContainer(focusedElement) is ComboBox itemComboBox)
                         {
                             comboBox = itemComboBox;
-                            if (comboBox.IsDropDownOpen)
+                            if (comboBox.IsDropDownOpen && comboBoxItem.IsEnabled)
                             {
                                 int idx = comboBox.Items.IndexOf(comboBoxItem);
                                 if (idx == -1)

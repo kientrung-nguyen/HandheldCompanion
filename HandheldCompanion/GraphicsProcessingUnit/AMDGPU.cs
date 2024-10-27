@@ -300,8 +300,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         public AmdGpu(AdapterInformation adapterInformation) : base(adapterInformation)
         {
             ADLX_RESULT result = ADLX_RESULT.ADLX_FAIL;
-            int adapterCount = 0;
-            int uniqueId = 0;
+            var adapterCount = 0;
+            var uniqueId = 0;
             var friendlyName = Display.GetDisplays()
                 .FirstOrDefault(v => v.DisplayScreen.ToPathDisplaySource().DisplayName.Equals(adapterInformation.Details.DeviceName))?
                 .ToPathDisplayTarget().FriendlyName ?? string.Empty;
@@ -314,22 +314,22 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                 displayIdx = 0;
             else
             {
-            for (int idx = 0; idx < adapterCount; idx++)
-            {
-                var displayName = new StringBuilder(256); // Assume display name won't exceed 255 characters
+	            for (int idx = 0; idx < adapterCount; idx++)
+	            {
+	                var displayName = new StringBuilder(256); // Assume display name won't exceed 255 characters
 
-                // skip if failed to retrieve display
-                result = GetDisplayName(idx, displayName, displayName.Capacity);
-                if (result != ADLX_RESULT.ADLX_OK)
-                    continue;
+	                // skip if failed to retrieve display
+	                result = GetDisplayName(idx, displayName, displayName.Capacity);
+	                if (result != ADLX_RESULT.ADLX_OK)
+	                    continue;
 
-                // skip if display is not the one we're looking for
-                if (!displayName.ToString().Equals(friendlyName))
-                    continue;
+	                // skip if display is not the one we're looking for
+	                if (!displayName.ToString().Equals(friendlyName))
+	                    continue;
 
-                // update displayIdx
-                displayIdx = idx;
-                break;
+	                // update displayIdx
+	                displayIdx = idx;
+	                break;
                 }
             }
 

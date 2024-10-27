@@ -178,7 +178,7 @@ public class DesktopScreen
 
     public override string ToString()
     {
-        return FriendlyName; 
+        return FriendlyName;
     }
 
     public bool HasResolution(ScreenResolution resolution)
@@ -216,7 +216,7 @@ public class DesktopScreen
 
         int lowestFPS = dmDisplayFrequency;
 
-        HashSet<int> fpsLimits = new();
+        HashSet<int> fpsLimits = [];
 
         // A loop to find the lowest possible fps limit option and limits from division
         do
@@ -281,10 +281,5 @@ public class DesktopScreen
             return num;
 
         return num + 1;
-    }
-
-    public void SortResolutions()
-    {
-        screenResolutions = screenResolutions.OrderByDescending(a => a.Width).ThenByDescending(b => b.Height).ToList();
     }
 }

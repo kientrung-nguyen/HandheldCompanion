@@ -232,6 +232,108 @@
   <data name="ControllerPage_VibrationStrengthExpl" xml:space="preserve">
     <value>Change controller vibration strength</value>
   </data>
+  <data name="Hotkey_decreaseTDP" xml:space="preserve">
+    <value>Decrease thermal power limit (TDP)</value>
+  </data>
+  <data name="Hotkey_decreaseTDPDesc" xml:space="preserve">
+    <value>Decrease system or currently applied profile TDP by one watt</value>
+  </data>
+  <data name="Hotkey_fallbackInput" xml:space="preserve">
+    <value>Press to define trigger</value>
+  </data>
+  <data name="Hotkey_fallbackOutput" xml:space="preserve">
+    <value>Press to define keyboard output</value>
+  </data>
+  <data name="Hotkey_increaseTDP" xml:space="preserve">
+    <value>Increase thermal power limit (TDP)</value>
+  </data>
+  <data name="Hotkey_increaseTDPDesc" xml:space="preserve">
+    <value>Increase system or currently applied profile TDP by one watt</value>
+  </data>
+  <data name="Hotkey_overlayGamepad" xml:space="preserve">
+    <value>Display 3D controller</value>
+  </data>
+  <data name="Hotkey_overlayGamepadDesc" xml:space="preserve">
+    <value>Change 3D hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_overlayTrackpads" xml:space="preserve">
+    <value>Display virtual trackpads</value>
+  </data>
+  <data name="Hotkey_overlayTrackpadsDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_quickTools" xml:space="preserve">
+    <value>Summon quick tools window</value>
+  </data>
+  <data name="Hotkey_quickToolsDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_Custom" xml:space="preserve">
+    <value>Custom shortcut</value>
+  </data>
+  <data name="Hotkey_CustomDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_Desktop" xml:space="preserve">
+    <value>Display and hide the desktop</value>
+  </data>
+  <data name="Hotkey_DesktopDesc" xml:space="preserve">
+    <value>Press this key: Windows + D</value>
+  </data>
+  <data name="Hotkey_ESC" xml:space="preserve">
+    <value>Escape</value>
+  </data>
+  <data name="Hotkey_ESCDesc" xml:space="preserve">
+    <value>Press this key: Escape</value>
+  </data>
+  <data name="Hotkey_Expand" xml:space="preserve">
+    <value>Switches between window and full screen</value>
+  </data>
+  <data name="Hotkey_ExpandDesc" xml:space="preserve">
+    <value>Press this key: Alt + Enter</value>
+  </data>
+  <data name="Hotkey_Guide" xml:space="preserve">
+    <value>Guide or PS button</value>
+  </data>
+  <data name="Hotkey_GuideDesc" xml:space="preserve">
+    <value>Simulate a Xbox Guide or Sony PS button input</value>
+  </data>
+  <data name="Hotkey_Keyboard" xml:space="preserve">
+    <value>Display touch keyboard</value>
+  </data>
+  <data name="Hotkey_KeyboardDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_KillApp" xml:space="preserve">
+    <value>Force application shutdown</value>
+  </data>
+  <data name="Hotkey_KillAppDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_Mainwindow" xml:space="preserve">
+    <value>Display and hide main window</value>
+  </data>
+  <data name="Hotkey_MainwindowDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_TaskManager" xml:space="preserve">
+    <value>Open Task Manager</value>
+  </data>
+  <data name="Hotkey_TaskManagerDesc" xml:space="preserve">
+    <value>Press this key: Ctrl + Shift + Esc</value>
+  </data>
+  <data name="Hotkey_Taskview" xml:space="preserve">
+    <value>Open Task view</value>
+  </data>
+  <data name="Hotkey_TaskviewDesc" xml:space="preserve">
+    <value>Press this key: Windows + Tab</value>
+  </data>
+  <data name="Hotkey_suspendResumeTask" xml:space="preserve">
+    <value>Toggle Applications</value>
+  </data>
+  <data name="Hotkey_suspendResumeTaskDesc" xml:space="preserve">
+    <value>Suspend or resume the foreground application</value>
+  </data>
   <data name="InputsHotkey_decreaseTDP" xml:space="preserve">
     <value>Decrease thermal power limit (TDP)</value>
   </data>
@@ -1110,6 +1212,54 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="ControllerPage_VibrateDeviceDesc" xml:space="preserve">
     <value>Vibrate physical controller when connected</value>
   </data>
+  <data name="Hotkey_DesktopLayoutEnabled" xml:space="preserve">
+    <value>Desktop layout</value>
+  </data>
+  <data name="Hotkey_DesktopLayoutEnabledDesc" xml:space="preserve">
+    <value>Toggle Desktop controller layout</value>
+  </data>
+  <data name="Hotkey_ControlCenter" xml:space="preserve">
+    <value>Display Action center</value>
+  </data>
+  <data name="Hotkey_ControlCenterDesc" xml:space="preserve">
+    <value>Display and hide Windows Action center</value>
+  </data>
+  <data name="ProfilesPage_ControllerLayout" xml:space="preserve">
+    <value>Controller layout</value>
+  </data>
+  <data name="Hotkey_QuietModeToggled" xml:space="preserve">
+    <value>Fan override</value>
+  </data>
+  <data name="Hotkey_QuietModeToggledDesc" xml:space="preserve">
+    <value>Set the fan duty cycle to user-defined value</value>
+  </data>
+  <data name="Hotkey_OnScreenDisplayDesc" xml:space="preserve">
+    <value>Enable on-screen display support</value>
+  </data>
+  <data name="Hotkey_decreaseBrightness" xml:space="preserve">
+    <value>Decrease brightness</value>
+  </data>
+  <data name="Hotkey_decreaseBrightnessDesc" xml:space="preserve">
+    <value>Decrease the current display brightness by 2%</value>
+  </data>
+  <data name="Hotkey_decreaseVolume" xml:space="preserve">
+    <value>Decrease volume</value>
+  </data>
+  <data name="Hotkey_decreaseVolumeDesc" xml:space="preserve">
+    <value>Decrease the system volume by 2%</value>
+  </data>
+  <data name="Hotkey_increaseBrightness" xml:space="preserve">
+    <value>Increase brightness</value>
+  </data>
+  <data name="Hotkey_increaseBrightnessDesc" xml:space="preserve">
+    <value>Increase the current display brightness by 2%</value>
+  </data>
+  <data name="Hotkey_increaseVolume" xml:space="preserve">
+    <value>Increase volume</value>
+  </data>
+  <data name="Hotkey_increaseVolumeDesc" xml:space="preserve">
+    <value>Increase the system volume by 2%</value>
+  </data>
   <data name="InputsHotkey_DesktopLayoutEnabled" xml:space="preserve">
     <value>Desktop layout</value>
   </data>
@@ -1199,6 +1349,12 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   </data>
   <data name="ProfilesPage_FramerateLimitDesc" xml:space="preserve">
     <value>Limits framerate for 3D applications</value>
+  </data>
+  <data name="Hotkey_PrintScreen" xml:space="preserve">
+    <value>Open Snipping tool</value>
+  </data>
+  <data name="Hotkey_PrintScreenDesc" xml:space="preserve">
+    <value>Press this key: Windows + Shift + S</value>
   </data>
   <data name="InputsHotkey_shortcutPrintScreen" xml:space="preserve">
     <value>Open Snipping tool</value>
@@ -2592,6 +2748,12 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="LayoutPage_SetAsDefault" xml:space="preserve">
     <value>Make this the default layout</value>
   </data>
+  <data name="Hotkey_ChangeHIDMode" xml:space="preserve">
+    <value>Toggle emulated controller type</value>
+  </data>
+  <data name="Hotkey_ChangeHIDModeDesc" xml:space="preserve">
+    <value>Toggle between Xbox 360 and Dualshock 4 emulated controllers</value>
+  </data>
   <data name="InputsHotkey_shortcutChangeHIDMode" xml:space="preserve">
     <value>Toggle emulated controller type</value>
   </data>
@@ -2684,6 +2846,12 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   </data>
   <data name="QuickProfilesPage_SubProfilesDesc" xml:space="preserve">
     <value>Select a sub profile to apply</value>
+  </data>
+  <data name="Hotkey_CycleSubProfile" xml:space="preserve">
+    <value>Cycle sub profiles</value>
+  </data>
+  <data name="Hotkey_CycleSubProfileDesc" xml:space="preserve">
+    <value>Cycle through the sub profiles for the current game</value>
   </data>
   <data name="InputsHotkey_nextSubProfile" xml:space="preserve">
     <value>Select next sub profile</value>
@@ -2789,6 +2957,12 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   </data>
   <data name="SettingsPage_QuickToolsWindowLocationRight" xml:space="preserve">
     <value>Right</value>
+  </data>
+  <data name="Hotkey_OnScreenDisplayToggle" xml:space="preserve">
+    <value>On Screen Overlay</value>
+  </data>
+  <data name="Hotkey_OnScreenDisplayToggleDesc" xml:space="preserve">
+    <value>Toggle on screen overlay</value>
   </data>
   <data name="InputsHotkey_OnScreenDisplayToggle" xml:space="preserve">
     <value>On Screen Overlay</value>
@@ -2910,8 +3084,8 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="DevicePage_Lenovo_ControllerTriggerMargin" xml:space="preserve">
     <value>Trigger Margin</value>
   </data>
-  <data name="DevicePage_Lenovo_Settings" xml:space="preserve">
-    <value>Lenovo Legion Go settings</value>
+  <data name="DevicePage_DeviceSettings" xml:space="preserve">
+    <value>Device settings</value>
   </data>
   <data name="AboutPage_UnsupportedDevice" xml:space="preserve">
     <value>Oups, it appears your device is not supported yet. The software might not run as expected.</value>
@@ -3228,6 +3402,66 @@ Thank you for using HC and helping us make it better.</value>
   <data name="ProfilesPage_ProfileArguments" xml:space="preserve">
     <value>Arguments</value>
   </data>
+  <data name="Enum_InputsChordType_Click" xml:space="preserve">
+    <value>Click</value>
+  </data>
+  <data name="Enum_InputsChordType_Long" xml:space="preserve">
+    <value>Long</value>
+  </data>
+  <data name="Enum_InputsChordType_None" xml:space="preserve">
+    <value>Press to define hotkey input</value>
+  </data>
+  <data name="Hotkey_Keystrokes" xml:space="preserve">
+    <value>Key strokes</value>
+  </data>
+  <data name="Hotkey_KeystrokesDesc" xml:space="preserve">
+    <value>Send a customized sequence of keyboard inputs</value>
+  </data>
+  <data name="Hotkey_Executable" xml:space="preserve">
+    <value>Executable</value>
+  </data>
+  <data name="Hotkey_ExecutableDesc" xml:space="preserve">
+    <value>Execute an application with specified arguments</value>
+  </data>
+  <data name="Hotkey_Function" xml:space="preserve">
+    <value>Function</value>
+  </data>
+  <data name="Hotkey_FunctionDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Hotkey_NoneDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_ActionCenter" xml:space="preserve">
+    <value>Summon windows Action center</value>
+  </data>
+  <data name="Hotkey_ActionCenterDesc" xml:space="preserve">
+    <value>Toggle action center</value>
+  </data>
+  <data name="Hotkey_Settings" xml:space="preserve">
+    <value>Summon windows settings</value>
+  </data>
+  <data name="Hotkey_SettingsDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_KeyboardLegacy" xml:space="preserve">
+    <value>Display touch keyboard (Legacy)</value>
+  </data>
+  <data name="Hotkey_KeyboardLegacyDesc" xml:space="preserve">
+    <value>Change hotkey by pressing a button or a special key</value>
+  </data>
+  <data name="Hotkey_OnScreenDisplay" xml:space="preserve">
+    <value>On-screen display</value>
+  </data>
+  <data name="ControllerPage_SteamControllerModeHybrid" xml:space="preserve">
+    <value>Hybrid</value>
+  </data>
+  <data name="ControllerPage_SteamControllerModeExclusive" xml:space="preserve">
+    <value>Exclusive</value>
+  </data>
   <data name="InputsHotkey_touchscreenToggle" xml:space="preserve">
     <value>Touchscreen</value>
   </data>
@@ -3293,6 +3527,24 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="BatteryFullyCharged" xml:space="preserve">
     <value>Battery fully charged</value>
+  </data>
+  <data name="PowerProfileMinisforumV3BetterBattery" xml:space="preserve">
+    <value>Power save</value>
+  </data>
+  <data name="PowerProfileMinisforumV3BetterPerformance" xml:space="preserve">
+    <value>Power balance</value>
+  </data>
+  <data name="PowerProfileMinisforumV3BestPerformance" xml:space="preserve">
+    <value>Power premium</value>
+  </data>
+  <data name="PowerProfileMinisforumV3BestPerformanceDesc" xml:space="preserve">
+    <value>28W TDP</value>
+  </data>
+  <data name="PowerProfileMinisforumV3BetterBatteryDesc" xml:space="preserve">
+    <value>15W TDP</value>
+  </data>
+  <data name="PowerProfileMinisforumV3BetterPerformanceDesc" xml:space="preserve">
+    <value>22W TDP</value>
   </data>
   <data name="PowerProfileBatteryDefaultName" xml:space="preserve">
     <value>Default (On battery)</value>

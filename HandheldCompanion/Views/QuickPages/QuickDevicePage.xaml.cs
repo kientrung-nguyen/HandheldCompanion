@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
-using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -30,8 +29,8 @@ public partial class QuickDevicePage : Page
     {
         InitializeComponent();
 
-        MultimediaManager.PrimaryScreenChanged += DesktopManager_PrimaryScreenChanged;
-        MultimediaManager.DisplaySettingsChanged += DesktopManager_DisplaySettingsChanged;
+        MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
+        MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
         MultimediaManager.Initialized += MultimediaManager_Initialized;
         MultimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
@@ -186,7 +185,7 @@ public partial class QuickDevicePage : Page
         }).Start();
     }
 
-    private void DesktopManager_PrimaryScreenChanged(Display? screen)
+    private void MultimediaManager_PrimaryScreenChanged(Display? screen)
     {
         ComboBoxResolution.Items.Clear();
         if (screen is not null)
@@ -208,7 +207,7 @@ public partial class QuickDevicePage : Page
         }
     }
 
-    private void DesktopManager_DisplaySettingsChanged(Display? desktopScreen)
+    private void MultimediaManager_DisplaySettingsChanged(Display? desktopScreen)
     {
         // We don't want to change the combobox when it's changed from profile integer scaling
         var currentProfile = ProfileManager.GetCurrent();
@@ -395,8 +394,8 @@ public partial class QuickDevicePage : Page
         SettingsManager.Set("ScreenFrequencyAuto", AutoScreenToggle.IsOn);
 
     }
-	
-	private async void Toggle_AYANEOFlipScreen_Toggled(object sender, RoutedEventArgs e)
+
+    private async void Toggle_AYANEOFlipScreen_Toggled(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
             return;

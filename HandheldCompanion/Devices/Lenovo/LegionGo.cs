@@ -92,7 +92,7 @@ public class LegionGo : IDevice
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Error in SetFanFullSpeedAsync: {0}", ex.Message);
+            LogManager.LogError("Error in SetFanFullSpeedAsync: {0} with status: {1}", ex.Message, enabled);
         }
     }
 
@@ -107,7 +107,7 @@ public class LegionGo : IDevice
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Error in SetFanTable: {0}", ex.Message);
+            LogManager.LogError("Error in SetFanTable: {0} with fanTable: {1}", ex.Message, string.Join(',', fanTable.GetBytes()));
         }
     }
 
@@ -139,7 +139,7 @@ public class LegionGo : IDevice
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Error in SetSmartFanMode: {0}", ex.Message);
+            LogManager.LogError("Error in SetSmartFanMode: {0} with fanMode: {1}", ex.Message, fanMode);
         }
     }
 
@@ -158,7 +158,7 @@ public class LegionGo : IDevice
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Error in SetCPUPowerLimit: {0}", ex.Message);
+            LogManager.LogError("Error in SetCPUPowerLimit: {0} with capability: {1} and limit: {2}", ex.Message, capabilityID, limit);
         }
     }
 
@@ -179,7 +179,7 @@ public class LegionGo : IDevice
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Error in SetBatteryChargeLimit: {0}", ex.Message);
+            LogManager.LogError("Error in SetBatteryChargeLimit: {0} with status: {1}", ex.Message, enabled);
         }
     }
 

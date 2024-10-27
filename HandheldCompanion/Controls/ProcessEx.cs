@@ -46,7 +46,7 @@ public class ProcessWindow
 
                 Name = title;
             }
-            
+
             Refreshed?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception)
@@ -402,7 +402,8 @@ public class ProcessEx : IDisposable
     {
         Process?.Dispose();
         MainThread?.Dispose();
-        ChildrenProcessIds?.Dispose();
+        ChildrenProcessIds.Dispose();
+        ProcessWindows.Clear();
 
         GC.SuppressFinalize(this); //now, the finalizer won't be called
     }

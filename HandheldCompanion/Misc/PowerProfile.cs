@@ -280,7 +280,7 @@ namespace HandheldCompanion.Misc
 
         public override string ToString()
         {
-            return Name;
+            return $"{Name} - {Description}";
         }
     }
 }

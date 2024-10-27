@@ -11,18 +11,16 @@ using HandheldCompanion.Views.Pages.Profiles;
 using iNKORE.UI.WPF.Modern.Controls;
 using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Xml;
 using WindowsDisplayAPI;
+using static HandheldCompanion.GraphicsProcessingUnit.GPU;
 using static HandheldCompanion.Utils.XInputPlusUtils;
 using Page = System.Windows.Controls.Page;
 using Timer = System.Timers.Timer;
@@ -95,10 +93,15 @@ public partial class ProfilesPage : Page
     private void GPUManager_Hooked(GPU GPU)
     {
         bool HasRSRSupport = false;
+        bool HasAFMFSupport = false;
+
         if (GPU is AmdGpu amdGPU)
         {
             amdGPU.RSRStateChanged += OnRSRStateChanged;
             HasRSRSupport = amdGPU.HasRSRSupport();
+
+            amdGPU.AFMFStateChanged += OnAFMFStateChanged;
+            HasAFMFSupport = amdGPU.HasAFMFSupport();
         }
 
         GPU.IntegerScalingChanged += OnIntegerScalingChanged;
@@ -114,8 +117,11 @@ public partial class ProfilesPage : Page
         {
             // GPU-specific settings
             StackProfileRSR.Visibility = GPU is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
+            StackProfileAFMF.Visibility = GPU is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
 
             StackProfileRSR.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasRSRSupport;
+            StackProfileAFMF.IsEnabled = HasAFMFSupport;
+
             StackProfileIS.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasIntegerScalingSupport;
             GPUScalingToggle.IsEnabled = HasGPUScalingSupport;
             GPUScalingComboBox.IsEnabled = HasGPUScalingSupport && HasScalingModeSupport;
@@ -125,7 +131,10 @@ public partial class ProfilesPage : Page
     private void GPUManager_Unhooked(GPU GPU)
     {
         if (GPU is AmdGpu amdGPU)
+        {
             amdGPU.RSRStateChanged -= OnRSRStateChanged;
+            amdGPU.AFMFStateChanged -= OnAFMFStateChanged;
+        }
 
         GPU.IntegerScalingChanged -= OnIntegerScalingChanged;
         GPU.GPUScalingChanged -= OnGPUScalingChanged;
@@ -134,6 +143,7 @@ public partial class ProfilesPage : Page
         Application.Current.Dispatcher.Invoke(() =>
         {
             StackProfileRSR.IsEnabled = false;
+            StackProfileAFMF.IsEnabled = false;
             StackProfileIS.IsEnabled = false;
             GPUScalingToggle.IsEnabled = false;
             GPUScalingComboBox.IsEnabled = false;
@@ -146,6 +156,15 @@ public partial class ProfilesPage : Page
         Application.Current.Dispatcher.Invoke(() =>
         {
             StackProfileRSR.IsEnabled = Supported;
+        });
+    }
+
+    private void OnAFMFStateChanged(bool Supported, bool Enabled)
+    {
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            StackProfileAFMF.IsEnabled = Supported;
         });
     }
 
@@ -722,6 +741,9 @@ public partial class ProfilesPage : Page
                     RSRToggle.IsOn = selectedProfile.RSREnabled;
                     RSRSlider.Value = selectedProfile.RSRSharpness;
 
+                    // AFMF
+                    AFMFToggle.IsOn = selectedProfile.AFMFEnabled;
+
                     // Integer Scaling
                     IntegerScalingToggle.IsOn = selectedProfile.IntegerScalingEnabled;
 
@@ -1193,6 +1215,19 @@ public partial class ProfilesPage : Page
         UpdateProfile();
     }
 
+    private void AFMFToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (selectedProfile is null)
+            return;
+
+        // prevent update loop
+        if (profileLock.IsEntered() || graphicLock.IsEntered())
+            return;
+
+        UpdateGraphicsSettings(UpdateGraphicsSettingsSource.AFMF, AFMFToggle.IsOn);
+        UpdateProfile();
+    }
+
     private void RSRSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (selectedProfile is null)
@@ -1451,14 +1486,6 @@ public partial class ProfilesPage : Page
         }
     }
 
-    private enum UpdateGraphicsSettingsSource
-    {
-        GPUScaling,
-        RadeonSuperResolution,
-        RadeonImageSharpening,
-        IntegerScaling
-    }
-
     private void UpdateGraphicsSettings(UpdateGraphicsSettingsSource source, bool isEnabled)
     {
         if (graphicLock.TryEnter())
@@ -1480,6 +1507,7 @@ public partial class ProfilesPage : Page
                             }
                         }
                         break;
+
                     // RSR is incompatible with RIS and IS
                     case UpdateGraphicsSettingsSource.RadeonSuperResolution:
                         {
@@ -1501,6 +1529,7 @@ public partial class ProfilesPage : Page
                             }
                         }
                         break;
+
                     // Image Sharpening is incompatible with RSR
                     case UpdateGraphicsSettingsSource.RadeonImageSharpening:
                         {
@@ -1524,6 +1553,13 @@ public partial class ProfilesPage : Page
 
                                 RSRToggle.IsOn = false;
                             }
+                        }
+                        break;
+
+                    // AFMF
+                    case UpdateGraphicsSettingsSource.AFMF:
+                        {
+                            selectedProfile.AFMFEnabled = isEnabled;
                         }
                         break;
                 }

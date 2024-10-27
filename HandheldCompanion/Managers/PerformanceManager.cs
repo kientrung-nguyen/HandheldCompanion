@@ -20,7 +20,7 @@ public static class OSPowerMode
     /// <summary>
     ///     Better Battery mode.
     /// </summary>
-    public static Guid BetterBattery = new("961cc777-2547-4f9d-8174-7d86181b8a7a");
+    public static Guid BetterBattery = IDevice.BetterBatteryGuid;
 
     /// <summary>
     ///     Better Performance mode.
@@ -31,7 +31,7 @@ public static class OSPowerMode
     /// <summary>
     ///     Best Performance mode.
     /// </summary>
-    public static Guid BestPerformance = new("ded574b5-45a0-4f42-8737-46345c09c238");
+    public static Guid BestPerformance = IDevice.BestPerformanceGuid;
 }
 
 public enum CPUBoostLevel
@@ -203,6 +203,7 @@ public static class PerformanceManager
 
                 if (!cpuWatchdog.Enabled)
                     StartTDPWatchdog();
+
                 AutoTDPMax = SettingsManager.Get<int>("ConfigurableTDPOverrideUp");
             }
             else if (profile.TDPOverrideValues is not null)
@@ -740,7 +741,6 @@ public static class PerformanceManager
 
                 // todo: find a way to read TDP limits
                 var ReadTDP = currentTDP[idx];
-
                 if (ReadTDP != 0)
                     cpuWatchdog.Interval = INTERVAL_DEFAULT;
                 else

@@ -97,6 +97,14 @@ public partial class Profile : ICloneable, IComparable
     // power & graphics
     public Guid PowerProfile { get; set; } = new("00000000-0000-0000-0000-000000000000");
     public Guid BatteryProfile { get; set; } = new("00000000-0000-0000-0000-010000000000");
+
+    // power & graphics
+    public Guid[] PowerProfiles { get; set; } = 
+    [
+        new("00000000-0000-0000-0000-000000000000"), // PowerLineStatus.Offline
+        new("00000000-0000-0000-0000-010000000000") // PowerLineStatus.Online
+    ];
+
     public int FramerateValue { get; set; } = 0; // default RTSS value
     public bool GPUScaling { get; set; } = false;
     public int ScalingMode { get; set; } = 0; // default AMD value

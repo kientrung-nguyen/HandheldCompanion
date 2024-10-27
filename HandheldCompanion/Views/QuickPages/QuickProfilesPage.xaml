@@ -20,8 +20,6 @@
     <ikw:SimpleStackPanel Margin="0,6,0,6" Spacing="6">
 
         <!--  Header  -->
-
-
         <Grid Name="StackProfileToggle">
             <!--  Header  -->
             <Expander HorizontalAlignment="Stretch" d:IsExpanded="true" IsExpanded="True">
@@ -201,8 +199,7 @@
                     <ikw:SimpleStackPanel Spacing="12">
                         <Grid Margin="0,0,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="4*" />
-                                <ColumnDefinition Width="6*" />
+                                <ColumnDefinition />
                             </Grid.ColumnDefinitions>
                             <DockPanel>
                                 <ui:FontIcon
@@ -210,60 +207,54 @@
                                     VerticalAlignment="Center"
                                     FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                     Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                    Glyph="&#xe95f;"
-                                    RenderTransformOrigin="0.5,0.5">
-                                    <ui:FontIcon.RenderTransform>
-                                        <TransformGroup>
-                                            <ScaleTransform/>
-                                            <SkewTransform/>
-                                            <RotateTransform Angle="-135"/>
-                                            <TranslateTransform/>
-                                        </TransformGroup>
-                                    </ui:FontIcon.RenderTransform>
-                                </ui:FontIcon>
-                                <ikw:SimpleStackPanel Margin="12,0,0,0">
-                                    <TextBlock
-                                        Style="{StaticResource BodyTextBlockStyle}"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        VerticalAlignment="Center"
-                                        Text="Plugged In" />
+                                    Glyph="&#xe95f;" />
+                                <ikw:SimpleStackPanel Margin="12,0,0,0" Spacing="6">
+                                    <StackPanel>
+                                        <TextBlock
+                                            Style="{StaticResource BodyTextBlockStyle}"
+                                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                            VerticalAlignment="Center"
+                                            Text="Power preset (Plugged In)" />
+                                        <TextBlock
+                                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{l:Static resx:Resources.ProfilesPage_PowerPresetDesc}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <!--  Separator  -->
+                                    <Separator Margin="0,0,0,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
 
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_PowerPresetDesc}"
-                                        TextWrapping="Wrap" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="36" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            Margin="0,0,6,0"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
+                                            Name="ProfilePluggedIn" SelectionChanged="ProfilePluggedIn_SelectionChanged" Padding="6,5,0,5"></ComboBox>
+                                        <Button
+                                            Name="ProfilePluggedInButton"
+                                            Grid.Column="1"
+                                            Width="32"
+                                            Height="32"
+                                            Padding="5"
+                                            Style="{DynamicResource AccentButtonStyle}"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Click="ProfilePluggedInButton_Click">
+                                            <ui:FontIcon
+                                                VerticalAlignment="Center"
+                                                HorizontalAlignment="Center"
+                                                FontSize="12"
+                                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                                Glyph="&#xe712;">
+                                            </ui:FontIcon>
+                                        </Button>
+                                    </Grid>
                                 </ikw:SimpleStackPanel>
                             </DockPanel>
-                            <Grid Grid.Column="1">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition />
-                                    <ColumnDefinition Width="36" />
-                                </Grid.ColumnDefinitions>
-                                <ComboBox
-                                    Margin="0,0,6,0"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Center"
-                                    Name="ProfilePluggedIn" SelectionChanged="ProfilePluggedIn_SelectionChanged" Padding="6,5,0,5"></ComboBox>
-                                <Button
-                                    Name="ProfilePluggedInButton"
-                                    Grid.Column="1"
-                                    Width="32"
-                                    Height="32"
-                                    Padding="5"
-                                    Style="{DynamicResource AccentButtonStyle}"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Stretch"
-                                    Click="ProfilePluggedInButton_Click">
-                                    <ui:FontIcon
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        FontSize="12"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe712;">
-                                    </ui:FontIcon>
-                                </Button>
-                            </Grid>
                         </Grid>
 
                         <!--  Separator  -->
@@ -271,8 +262,7 @@
 
                         <Grid Margin="0,0,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="4*" />
-                                <ColumnDefinition Width="6*" />
+                                <ColumnDefinition  />
                             </Grid.ColumnDefinitions>
                             <DockPanel>
                                 <ui:FontIcon
@@ -280,51 +270,54 @@
                                     VerticalAlignment="Center"
                                     FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                     Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                    Glyph="&#xe83f;">
-                                </ui:FontIcon>
-                                <ikw:SimpleStackPanel Margin="12,0,0,0">
-                                    
-                                    <TextBlock
-                                        Style="{StaticResource BodyTextBlockStyle}"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        VerticalAlignment="Center"
-                                        Text="On Battery" />
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_PowerPresetDesc}"
-                                        TextWrapping="Wrap" />
+                                    Glyph="&#xf5f7;" />
+                                <ikw:SimpleStackPanel Margin="12,0,0,0" Spacing="6">
+                                    <StackPanel>
+                                        <TextBlock
+                                            Style="{StaticResource BodyTextBlockStyle}"
+                                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                            VerticalAlignment="Center"
+                                            Text="Power preset (On Battery)" />
+                                        <TextBlock
+                                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{l:Static resx:Resources.ProfilesPage_PowerPresetDesc}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <!--  Separator  -->
+                                    <Separator Margin="0,0,0,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="36" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            Margin="0,0,6,0"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
+                                            Name="ProfileOnBattery" SelectionChanged="ProfileOnBattery_SelectionChanged" Padding="6,5,0,5"></ComboBox>
+                                        <Button
+                                            Name="PorfileBatteryButton"
+                                            Grid.Column="1"
+                                            Width="32"
+                                            Height="32"
+                                            Padding="5"
+                                            Style="{DynamicResource AccentButtonStyle}"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Click="PorfileBatteryButton_Click">
+                                            <ui:FontIcon
+                                                VerticalAlignment="Center"
+                                                HorizontalAlignment="Center"
+                                                FontSize="12"
+                                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                                Glyph="&#xe712;">
+                                            </ui:FontIcon>
+                                        </Button>
+                                    </Grid>
                                 </ikw:SimpleStackPanel>
                             </DockPanel>
-                            <Grid Grid.Column="1">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition />
-                                    <ColumnDefinition Width="36" />
-                                </Grid.ColumnDefinitions>
-                                <ComboBox
-                                    Margin="0,0,6,0"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Center"
-                                    Name="ProfileOnBattery" SelectionChanged="ProfileOnBattery_SelectionChanged" Padding="6,5,0,5"></ComboBox>
-                                <Button
-                                    Name="PorfileBatteryButton"
-                                    Grid.Column="1"
-                                    Width="32"
-                                    Height="32"
-                                    Padding="5"
-                                    Style="{DynamicResource AccentButtonStyle}"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Stretch"
-                                    Click="PorfileBatteryButton_Click">
-                                    <ui:FontIcon
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        FontSize="12"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe712;">
-                                    </ui:FontIcon>
-                                </Button>
-                            </Grid>
                         </Grid>
 
                         <!--  Separator  -->

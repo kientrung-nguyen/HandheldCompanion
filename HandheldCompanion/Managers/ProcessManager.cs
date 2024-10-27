@@ -203,15 +203,22 @@ public static class ProcessManager
         if (foregroundWindow == hWnd || hWnd == IntPtr.Zero)
             return;
 
+        AutomationElement element = null;
+        int processId = 0;
+
         try
         {
-            //AutomationElement element = AutomationElement.FromHandle(hWnd);
-            if (AutomationElement.FromHandle(hWnd) is null)
-                return;
-        }
-        catch { return; }
+            element = AutomationElement.FromHandle(hWnd);
 
-        int processId = 0;
+            if (element is null)
+                return;
+
+            processId = element.Current.ProcessId;
+        }
+        catch
+        {
+            // Automation failed to retrieve process id
+        }
 
         // update current foreground window
         foregroundWindow = hWnd;
@@ -283,36 +290,26 @@ public static class ProcessManager
 
     private static void ProcessHalted(object? sender, EventArgs e)
     {
-        if (sender is not Process process) return;
+        int processId = ((Process)sender).Id;
 
-        try
+        if (!Processes.TryGetValue(processId, out var processEx))
+            return;
+
+        // stopped process can't have foreground
+        if (foregroundProcess == processEx)
         {
-            int processId = process.Id;
-
-            if (!Processes.TryGetValue(processId, out var processEx))
-                return;
-
-            // stopped process can't have foreground
-            if (foregroundProcess == processEx)
-            {
-                LogManager.LogDebug("{0} process {1} that had foreground has halted", foregroundProcess.Platform, foregroundProcess.Executable);
-                ForegroundChanged?.Invoke(null, foregroundProcess);
-            }
-
-            bool success = Processes.TryRemove(new KeyValuePair<int, ProcessEx>(processId, processEx));
-
-            // raise event
-            if (success)
-            {
-                ProcessStopped?.Invoke(processEx);
-
-                LogManager.LogDebug("Process halted: {0}", processEx.Executable);
-
-                processEx.Dispose();
-            }
+            LogManager.LogDebug("{0} process {1} that had foreground has halted", foregroundProcess.Platform, foregroundProcess.Executable);
+            ForegroundChanged?.Invoke(null, foregroundProcess);
         }
-        catch (Exception)
+
+        // raise event
+        if (Processes.TryRemove(processId, out _))
         {
+            ProcessStopped?.Invoke(processEx);
+
+            LogManager.LogDebug("Process halted: {0}", processEx.Executable);
+
+            processEx.Dispose();
         }
     }
 
@@ -518,7 +515,7 @@ public static class ProcessManager
             });
     }
 
-    public static void ResumeProcess(ProcessEx processEx)
+    public static async void ResumeProcess(ProcessEx processEx)
     {
         // process has exited
         if (processEx.Process.HasExited)
@@ -536,18 +533,26 @@ public static class ProcessManager
                 ProcessUtils.NtResumeProcess(process.Handle);
             });
 
-        Task.Delay(500);
+        await Task.Delay(500);
+
+        // restore process windows
         ProcessUtils.ShowWindow(processEx.MainWindowHandle, (int)ProcessUtils.ShowWindowCommands.Restored);
+        foreach (ProcessWindow processWindow in processEx.ProcessWindows.Values)
+            ProcessUtils.ShowWindow(processWindow.Hwnd, (int)ProcessUtils.ShowWindowCommands.Restored);
     }
 
-    public static void SuspendProcess(ProcessEx processEx)
+    public static async void SuspendProcess(ProcessEx processEx)
     {
         // process has exited
         if (processEx.Process.HasExited)
             return;
 
+		// hide process windows
         ProcessUtils.ShowWindow(processEx.MainWindowHandle, (int)ProcessUtils.ShowWindowCommands.Hide);
-        Task.Delay(500);
+        foreach (ProcessWindow processWindow in processEx.ProcessWindows.Values)
+            ProcessUtils.ShowWindow(processWindow.Hwnd, (int)ProcessUtils.ShowWindowCommands.Hide);
+
+        await Task.Delay(500);
 
         ProcessUtils.NtSuspendProcess(processEx.Process.Handle);
 

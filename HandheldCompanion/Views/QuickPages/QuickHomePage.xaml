@@ -37,6 +37,7 @@
                 </UniformGrid.Resources>
             </UniformGrid>
         </ikw:SimpleStackPanel>
+
         <ikw:SimpleStackPanel
             Grid.Row="1"
             VerticalAlignment="Bottom"

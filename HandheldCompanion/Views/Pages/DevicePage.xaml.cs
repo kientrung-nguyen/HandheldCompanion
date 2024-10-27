@@ -177,7 +177,8 @@ namespace HandheldCompanion.Views.Pages
                         break;
                     case "LEDPresetIndex":
                         int presetIndex = Convert.ToInt32(value);
-                        if (presetIndex < IDevice.GetCurrent().LEDPresets.Count) {
+                        if (presetIndex < IDevice.GetCurrent().LEDPresets.Count)
+                        {
                             LedPresetsComboBox.SelectedIndex = presetIndex;
                         }
                         break;

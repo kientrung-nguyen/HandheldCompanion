@@ -2,6 +2,7 @@ using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern;
 using iNKORE.UI.WPF.Modern.Controls.Helpers;
 using iNKORE.UI.WPF.Modern.Helpers.Styles;
@@ -439,23 +440,31 @@ public partial class SettingsPage : Page
         if (cB_Theme.SelectedIndex == -1)
             return;
 
-        ElementTheme theme = (ElementTheme)cB_Theme.SelectedIndex;
-        MainWindow mainWindow = MainWindow.GetCurrent();
-        ThemeManager.SetRequestedTheme(mainWindow, theme);
-        ThemeManager.SetRequestedTheme(MainWindow.overlayquickTools, theme);
-        ThemeManager.SetRequestedTheme(MainWindow.overlayToast, theme);
+        ElementTheme elementTheme = (ElementTheme)cB_Theme.SelectedIndex;
 
         // update default style
-        MainWindow.GetCurrent().UpdateDefaultStyle();
-        MainWindow.overlayquickTools.UpdateDefaultStyle();
-        MainWindow.overlayToast.UpdateDefaultStyle();
+        ThemeManager.SetRequestedTheme(MainWindow.GetCurrent(), elementTheme);
+        ThemeManager.SetRequestedTheme(OverlayQuickTools.GetCurrent(), elementTheme);
+
+        switch (elementTheme)
+        {
+            case ElementTheme.Default:
+                ThemeManager.Current.ApplicationTheme = null;
+                break;
+            case ElementTheme.Light:
+                ThemeManager.Current.ApplicationTheme = ApplicationTheme.Light;
+                break;
+            case ElementTheme.Dark:
+                ThemeManager.Current.ApplicationTheme = ApplicationTheme.Dark;
+                break;
+        }
 
         if (!IsLoaded)
             return;
 
         SettingsManager.Set("MainWindowTheme", cB_Theme.SelectedIndex);
     }
-    
+
     private void cB_QuickToolsBackdrop_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
     {
         if (cB_QuickToolsBackdrop.SelectedIndex == -1)
@@ -559,7 +568,7 @@ public partial class SettingsPage : Page
 
         SettingsManager.Set("TelemetryEnabled", Toggle_Telemetry.IsOn);
     }
-    
+
     private void cB_QuickToolsDevicePath_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded)

@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views.Windows;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
