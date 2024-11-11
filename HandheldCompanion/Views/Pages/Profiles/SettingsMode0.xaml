@@ -8,7 +8,9 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
+    xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Title="{l:Static resx:Resources.SettingsMode0_AdditionalSettings}"
+    d:DataContext="{d:DesignInstance Type=viewmodels:SettingsMode0ViewModel}"
     d:DesignHeight="1000"
     d:DesignWidth="1000"
     Loaded="Page_Loaded"
@@ -228,11 +230,131 @@
                                         Text="{l:Static resx:Resources.SettingsMode0_AimingDownSightsActivation}" />
                                 </StackPanel>
 
-                                <ikw:SimpleStackPanel
-                                    Name="UMC_Activator"
+                                <!--  Motion activator  -->
+                                <ui:ItemsRepeater
                                     Grid.Column="1"
                                     Margin="12,0,0,0"
-                                    Spacing="6" />
+                                    ItemsSource="{Binding HotkeysList}">
+                                    <ui:ItemsRepeater.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="10*" />
+                                                    <ColumnDefinition Width="45" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <ToggleButton
+                                                    Height="41"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    Command="{Binding DefineButtonCommand}"
+                                                    IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+
+                                                    <ToggleButton.Resources>
+                                                        <Style BasedOn="{StaticResource {x:Type ToggleButton}}" TargetType="ToggleButton">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsExecuted}" Value="True">
+                                                                    <DataTrigger.EnterActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation
+                                                                                    AutoReverse="True"
+                                                                                    RepeatBehavior="1x"
+                                                                                    Storyboard.TargetProperty="Opacity"
+                                                                                    From="1.0"
+                                                                                    To="0.0"
+                                                                                    Duration="0:0:0.125" />
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </DataTrigger.EnterActions>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ToggleButton.Resources>
+
+                                                    <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="6">
+                                                        <ui:ItemsRepeater ItemsSource="{Binding ButtonGlyphs}">
+                                                            <ui:ItemsRepeater.Style>
+                                                                <Style TargetType="ui:ItemsRepeater">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding ButtonGlyphs.Count}" Value="0">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding ButtonGlyphs.Count}">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </ui:ItemsRepeater.Style>
+
+                                                            <ui:ItemsRepeater.Layout>
+                                                                <ui:UniformGridLayout
+                                                                    ItemsJustification="Center"
+                                                                    ItemsStretch="Uniform"
+                                                                    MaximumRowsOrColumns="10"
+                                                                    MinColumnSpacing="3"
+                                                                    Orientation="Horizontal" />
+                                                            </ui:ItemsRepeater.Layout>
+
+                                                            <ui:ItemsRepeater.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <ui:FontIcon
+                                                                        FontFamily="PromptFont"
+                                                                        FontSize="20"
+                                                                        Glyph="{Binding Glyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                                        <ui:FontIcon.Style>
+                                                                            <Style TargetType="ui:FontIcon">
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Value="{x:Null}">
+                                                                                        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                                <Setter Property="Foreground" Value="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                            </Style>
+                                                                        </ui:FontIcon.Style>
+                                                                    </ui:FontIcon>
+                                                                </DataTemplate>
+                                                            </ui:ItemsRepeater.ItemTemplate>
+                                                        </ui:ItemsRepeater>
+
+                                                        <TextBlock VerticalAlignment="Center" Text="{Binding KeyboardChord, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding KeyboardChord}" Value="">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding KeyboardChord}">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                                            Text="{Binding InputsChordType, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    </ikw:SimpleStackPanel>
+                                                </ToggleButton>
+
+                                                <Button
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Stretch"
+                                                    Command="{Binding EraseButtonCommand}">
+                                                    <ui:FontIcon
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                                        Glyph="&#xe75c;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ui:ItemsRepeater.ItemTemplate>
+                                </ui:ItemsRepeater>
                             </Grid>
                         </ikw:SimpleStackPanel>
                     </Expander.Content>

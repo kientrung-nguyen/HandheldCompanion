@@ -161,7 +161,7 @@ public partial class QuickProfilesPage : Page
                 return;
         }
 
-        // UI thread
+        // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
             // power profile
@@ -732,9 +732,8 @@ public partial class QuickProfilesPage : Page
                 currentProcess = processEx;
 
                 // get path
-                var path = currentProcess != null ? currentProcess.Path : string.Empty;
-                var imageSource = currentProcess?.ProcessIcon;
-                nint handle = currentProcess != null ? currentProcess.MainWindowHandle : IntPtr.Zero;
+                string path = currentProcess != null ? currentProcess.Path : string.Empty;
+                ImageSource imageSource = currentProcess != null ? currentProcess.ProcessIcon : null;
 
                 // update real profile
                 realProfile = ProfileManager.GetProfileFromPath(path, true);
@@ -745,23 +744,21 @@ public partial class QuickProfilesPage : Page
                     ProfileToggle.IsOn = !realProfile.Default && realProfile.Enabled;
                     ProfileIcon.Source = imageSource;
 
-                    if (handle != IntPtr.Zero)
-                    {
-                        // string MainWindowTitle = ProcessUtils.GetWindowTitle(processEx.MainWindowHandle);
-
-                        ProfileToggle.IsEnabled = true;
-                        ProcessName.Text = currentProcess.Executable;
-                        ProcessPath.Text = currentProcess.Path;
-                        SubProfilesBorder.IsEnabled = true;
-                    }
-                    else
+                    if (processEx is null)
                     {
                         ProfileIcon.Source = null;
 
                         ProfileToggle.IsEnabled = false;
                         ProcessName.Text = Properties.Resources.QuickProfilesPage_Waiting;
                         ProcessPath.Text = string.Empty;
-                        SubProfilesBorder.IsEnabled = false;
+                        SubProfilesBorder.Visibility = Visibility.Collapsed;
+                    }
+                    else
+                    {
+                        ProfileToggle.IsEnabled = true;
+                        ProcessName.Text = currentProcess.Executable;
+                        ProcessPath.Text = currentProcess.Path;
+                        SubProfilesBorder.Visibility = Visibility.Visible;
                     }
                 });
             }
@@ -802,7 +799,7 @@ public partial class QuickProfilesPage : Page
 
     private void CreateProfile()
     {
-        if (currentProcess is null || currentProcess == ProcessManager.Empty)
+        if (currentProcess is null)
             return;
 
         // create profile
@@ -964,7 +961,6 @@ public partial class QuickProfilesPage : Page
         selectedProfile.MotionSensivityY = (float)SliderSensitivityY.Value;
         UpdateProfile();
     }
-
 
     private void HotkeysManager_Updated(Hotkey hotkey)
     {

@@ -82,26 +82,8 @@ public class ProcessEx : IDisposable
     public ConcurrentDictionary<int, ProcessWindow> ProcessWindows { get; private set; } = new();
     public ConcurrentList<int> ChildrenProcessIds = [];
 
-    public ProcessThread MainThread { get; set; }
+    private ProcessThread MainThread { get; set; }
     private ProcessThread _previousMainThread;
-
-    private IntPtr _MainWindowHandle;
-    public IntPtr MainWindowHandle
-    {
-        get
-        {
-            return _MainWindowHandle;
-        }
-        set
-        {
-            _MainWindowHandle = value;
-
-            string WindowTitle = ProcessUtils.GetWindowTitle(value);
-            MainWindowTitle = string.IsNullOrEmpty(WindowTitle) ? Executable : WindowTitle;
-        }
-    }
-
-
     private ThreadWaitReason prevThreadWaitReason = ThreadWaitReason.UserRequest;
 
     private static object registryLock = new();
@@ -116,30 +98,25 @@ public class ProcessEx : IDisposable
     public delegate void WindowDetachedEventHandler(ProcessWindow processWindow);
     #endregion
 
-    public ProcessEx() { }
     public ProcessEx(Process process, string path, string executable, ProcessFilter filter)
     {
         Process = process;
         ProcessId = process.Id;
         Path = path;
         Executable = executable;
-        MainWindowTitle = path;
         Filter = filter;
 
-        /*
         // get main thread
         MainThread = GetMainThread(process);
 
         // update main thread when disposed
         SubscribeToDisposedEvent(MainThread);
-        */
 
         // get executable icon
-        if (!string.IsNullOrEmpty(Path) && File.Exists(Path))
+        if (File.Exists(Path))
         {
             var icon = Icon.ExtractAssociatedIcon(Path);
-            if (icon is not null)
-                ProcessIcon = icon.ToImageSource();
+            ProcessIcon = icon?.ToImageSource();
         }
     }
 
@@ -189,8 +166,6 @@ public class ProcessEx : IDisposable
                 && valueStr.Split(' ').Any(s => s == HighDPIAwareValue);
         }
     }
-
-    public string MainWindowTitle { get; private set; }
 
     public string Executable { get; set; }
 
@@ -245,11 +220,9 @@ public class ProcessEx : IDisposable
                 break;
         }
 
-        // update main window handle
-        MainWindowHandle = Process.MainWindowHandle;
-		// refresh attached windows
-        //foreach (ProcessWindow processWindow in ProcessWindows.Values)
-        //    processWindow.Refresh();
+        // refresh attached windows
+        foreach (ProcessWindow processWindow in ProcessWindows.Values)
+            processWindow.Refresh();
 
         // raise event
         Refreshed?.Invoke(this, EventArgs.Empty);
@@ -406,10 +379,5 @@ public class ProcessEx : IDisposable
         ProcessWindows.Clear();
 
         GC.SuppressFinalize(this); //now, the finalizer won't be called
-    }
-
-    internal void MainThreadDisposed()
-    {
-        MainThread = ProcessManager.GetMainThread(Process);
     }
 }

@@ -75,8 +75,8 @@
                         MinWidth="200"
                         Margin="0,0,10,0"
                         HorizontalAlignment="Stretch"
-                        Content="{l:Static resx:Resources.InputsHotkey_fallbackInput}"
-                        ToolTip="{l:Static resx:Resources.InputsHotkey_fallbackInput}" />
+                        Content="{l:Static resx:Resources.Hotkey_fallbackInput}"
+                        ToolTip="{l:Static resx:Resources.Hotkey_fallbackInput}" />
                     <Button
                         Name="HotkeyOutput"
                         Height="40"
@@ -84,8 +84,8 @@
                         Margin="0,0,10,0"
                         HorizontalAlignment="Stretch"
                         d:Visibility="Visible"
-                        Content="{l:Static resx:Resources.InputsHotkey_fallbackOutput}"
-                        ToolTip="{l:Static resx:Resources.InputsHotkey_fallbackOutput}"
+                        Content="{l:Static resx:Resources.Hotkey_fallbackOutput}"
+                        ToolTip="{l:Static resx:Resources.Hotkey_fallbackOutput}"
                         Visibility="Collapsed" />
                 </ikw:SimpleStackPanel>
 

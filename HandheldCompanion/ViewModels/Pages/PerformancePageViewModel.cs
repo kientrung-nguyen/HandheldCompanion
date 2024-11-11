@@ -158,7 +158,6 @@ namespace HandheldCompanion.ViewModels
         public double TDPMaximum
         {
             get => SettingsManager.Get<double>(Settings.ConfigurableTDPOverrideUp);
-
             set
             {
                 if (value != TDPMaximum)
@@ -596,7 +595,7 @@ namespace HandheldCompanion.ViewModels
                     var index = ProfilePickerItems.IndexOf(preset.IsDefault() ? _devicePresetsPickerVM : _userPresetsPickerVM) + 1;
                     ProfilePickerItems.Insert(index, new ProfilesPickerViewModel { Text = preset.Name, LinkedPresetId = preset.Guid });
                 }
-                
+
                 // Reset Index to Default, 1 item before _userPresetsPickerVM
                 _selectedPresetIndex = ProfilePickerItems.IndexOf(_userPresetsPickerVM) - 1;
 

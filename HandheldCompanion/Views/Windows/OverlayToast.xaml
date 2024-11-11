@@ -42,7 +42,7 @@
                 </Border>
                 <Border Padding="10">
                     <ikw:SimpleStackPanel
-                        Orientation="Vertical"
+                        Orientation="Horizontal"
                         Spacing="10" Panel.ZIndex="1">
                         <Grid>
                             <Border

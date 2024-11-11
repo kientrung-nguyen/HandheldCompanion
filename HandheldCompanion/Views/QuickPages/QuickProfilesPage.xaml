@@ -168,8 +168,10 @@
                                             Margin="2,0,0,0"
                                             Name="SelectedPowerProfileName"
                                             TextWrapping="Wrap"
+		                            HorizontalAlignment="Right"
+		                            VerticalAlignment="Center"
                                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                	    Style="{StaticResource BodyTextBlockStyle}"
                                             Text="{l:Static resx:Resources.PowerProfileDefaultName}" />
                                     </DockPanel>
                                 </ikw:SimpleStackPanel>
@@ -326,7 +328,7 @@
 
                             <ikw:SimpleStackPanel Name="ProfileStack" Spacing="16" Visibility="Collapsed" />
                             <!--  Separator  -->
-                            <Separator Margin="-16,12,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                            <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="6*" />
