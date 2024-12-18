@@ -175,7 +175,7 @@ public partial class QuickProfilesPage : Page
         bool IsGPUScalingEnabled = GPU.GetGPUScaling();
 
         // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        Application.Current.Dispatcher.BeginInvoke(() =>
         {
             // GPU-specific settings
             StackProfileRSR.Visibility = GPU is AMDGPU ? Visibility.Visible : Visibility.Collapsed;
@@ -492,7 +492,7 @@ public partial class QuickProfilesPage : Page
 
                 // get path
                 string path = currentProcess != null ? currentProcess.Path : string.Empty;
-                ImageSource imageSource = currentProcess != null ? currentProcess.ProcessIcon : null;
+                ImageSource imageSource = currentProcess?.ProcessIcon;
 
                 // update real profile
                 realProfile = ProfileManager.GetProfileFromPath(path, true);

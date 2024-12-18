@@ -350,8 +350,7 @@ public class ROGAlly : IDevice
     public override void Close()
     {
         // close Asus ACPI
-        if (asusACPI is not null)
-            asusACPI.Close();
+        asusACPI?.Close();
 
         // restore default M1/M2 behavior
         ConfigureController(false);
@@ -505,10 +504,10 @@ public class ROGAlly : IDevice
             case 56:    // Armory crate: Click
             case 166:   // Command center: Click
                 {
-                    Task.Factory.StartNew(async () =>
+                    Task.Run(async () =>
                     {
                         KeyPress(button);
-                        await Task.Delay(KeyPressDelay);
+                        await Task.Delay(KeyPressDelay).ConfigureAwait(false); // Avoid blocking the synchronization context
                         KeyRelease(button);
                     });
                 }

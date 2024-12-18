@@ -30,6 +30,8 @@ public class PnPDetails
     public string EnumeratorName = string.Empty;
     public DateTimeOffset FirstInstallDate;
 
+    public Guid InterfaceGuid;
+
     public ushort ProductID;
     public ushort VendorID;
 
@@ -60,11 +62,6 @@ public class PnPDetails
             return number;
 
         return -1;
-    }
-
-    public string GetEnumerator()
-    {
-        return EnumeratorName;
     }
 
     public UsbPnPDevice GetUsbPnPDevice()

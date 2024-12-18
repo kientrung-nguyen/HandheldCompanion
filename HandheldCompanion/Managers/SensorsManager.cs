@@ -3,6 +3,7 @@ using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Sensors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
@@ -28,17 +29,61 @@ namespace HandheldCompanion.Managers
 
         static SensorsManager()
         {
+        }
+
+        public static async Task Start()
+        {
+            if (IsInitialized)
+                return;
+
+            // manage events
             DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceArrived;
             DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceRemoved;
-
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
             ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-
             SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+            if (DeviceManager.IsInitialized)
+            {
+                DeviceManager_UsbDeviceArrived(null, Guid.Empty);
+            }
+
+            if (ControllerManager.HasTargetController)
+            {
+                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
+            }
+
+            IsInitialized = true;
+            Initialized?.Invoke();
+
+            LogManager.LogInformation("{0} has started", "SensorsManager");
+            return;
+        }
+
+        public static void Stop()
+        {
+            if (!IsInitialized)
+                return;
+
+            StopListening();
+
+            // manage events
+            DeviceManager.UsbDeviceArrived -= DeviceManager_UsbDeviceArrived;
+            DeviceManager.UsbDeviceRemoved -= DeviceManager_UsbDeviceRemoved;
+            ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+            ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
+            SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+
+            IsInitialized = false;
+
+            LogManager.LogInformation("{0} has stopped", "SensorsManager");
         }
 
         private static void ControllerManager_ControllerSelected(IController Controller)
         {
+            if (Controller is null)
+                return;
+
             // select controller as current sensor if current sensor selection is none
             if (Controller.Capabilities.HasFlag(ControllerCapabilities.MotionSensor))
                 SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.Controller);
@@ -59,7 +104,7 @@ namespace HandheldCompanion.Managers
             PickNextSensor();
         }
 
-        private static void DeviceManager_UsbDeviceRemoved(PnPDevice device, DeviceEventArgs obj)
+        private static void DeviceManager_UsbDeviceRemoved(PnPDevice device, Guid IntefaceGuid)
         {
             if (USBSensor is null || sensorFamily != SensorFamily.SerialUSBIMU)
                 return;
@@ -86,7 +131,7 @@ namespace HandheldCompanion.Managers
                 SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.None);
         }
 
-        private static void DeviceManager_UsbDeviceArrived(PnPDevice device, DeviceEventArgs obj)
+        private static void DeviceManager_UsbDeviceArrived(PnPDevice device, Guid IntefaceGuid)
         {
             // If USB Gyro is plugged, hook into it
             USBSensor = SerialUSBIMU.GetCurrent();
@@ -174,26 +219,6 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        public static void Start()
-        {
-            IsInitialized = true;
-            Initialized?.Invoke();
-
-            LogManager.LogInformation("{0} has started", "SensorsManager");
-        }
-
-        public static void Stop()
-        {
-            if (!IsInitialized)
-                return;
-
-            StopListening();
-
-            IsInitialized = false;
-
-            LogManager.LogInformation("{0} has stopped", "SensorsManager");
-        }
-
         public static void Resume(bool OS)
         {
             Gyrometer?.UpdateSensor();
@@ -268,7 +293,7 @@ namespace HandheldCompanion.Managers
             for (int i = 4; i > 0; i--)
             {
                 dialog.UpdateContent($"Calibration will start in {i} seconds.");
-                await Task.Delay(1000);
+                await Task.Delay(1000); // Captures synchronization context
             }
 
             foreach (GamepadMotion gamepadMotion in gamepadMotions.Values)
@@ -281,7 +306,7 @@ namespace HandheldCompanion.Managers
                 // wait until device is steady
                 DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
                 while (DateTime.Now < timeout && !gamepadMotion.GetAutoCalibrationIsSteady())
-                    await Task.Delay(100);
+                    await Task.Delay(100); // Captures synchronization context
 
                 // device is either too shaky or stalled
                 bool IsSteady = gamepadMotion.GetAutoCalibrationIsSteady();
@@ -296,7 +321,7 @@ namespace HandheldCompanion.Managers
                         dialog.UpdateContent($"Calibration device is silent or unsteady.");
 
                     // wait a bit
-                    await Task.Delay(2000);
+                    await Task.Delay(2000); // Captures synchronization context
 
                     break;
                 }
@@ -307,7 +332,7 @@ namespace HandheldCompanion.Managers
                 // give gamepad motion 3 seconds to get values
                 timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
                 while (DateTime.Now < timeout)
-                    await Task.Delay(100);
+                    await Task.Delay(100); // Captures synchronization context
 
                 // halt continuous calibration
                 gamepadMotion.PauseContinuousCalibration();
@@ -352,7 +377,7 @@ namespace HandheldCompanion.Managers
                 dialog.UpdateContent($"Calibration succeeded: stationary sensor noise recorded. Drift correction found. Confidence: {confidence * 100.0f}%");
 
                 // wait a bit
-                await Task.Delay(2000);
+                await Task.Delay(2000); // Captures synchronization context
             }
 
         Close:

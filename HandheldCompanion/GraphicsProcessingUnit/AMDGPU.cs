@@ -299,9 +299,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (result != ADLX_RESULT.ADLX_OK)
                 return;
 
-            if (adapterCount == 1)
-                displayIdx = 0;
-            else
+            if (adapterCount > 1)
             {
                 for (int idx = 0; idx < adapterCount; idx++)
                 {
@@ -322,6 +320,11 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                 }
             }
 
+            // we couldn't pick a display by its name, pick first
+            // todo: improve me
+            if (displayIdx == -1)
+                displayIdx = 0;
+
             if (displayIdx != -1)
             {
                 // get the associated GPU UniqueId
@@ -338,7 +341,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                 return;
 
             // pull telemetry once
-            TelemetryData = GetTelemetry();
+            GetAdlxTelemetry(deviceIdx, ref TelemetryData);
 
             UpdateTimer = new Timer(UpdateInterval)
             {

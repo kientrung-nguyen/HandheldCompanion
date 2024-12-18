@@ -25,7 +25,7 @@ public partial class AxisState : ICloneable
 
     public short this[AxisFlags axis]
     {
-        get => !State.ContainsKey(axis) ? (short)0 : State[axis];
+        get => State.TryGetValue(axis, out short value) ? value : (short)0;
 
         set => State[axis] = value;
     }

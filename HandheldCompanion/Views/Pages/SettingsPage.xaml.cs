@@ -255,7 +255,6 @@ public partial class SettingsPage : Page
 
     private void Page_Loaded(object? sender, RoutedEventArgs? e)
     {
-        UpdateManager.Start();
     }
 
     public void Page_Closed()
@@ -411,7 +410,10 @@ public partial class SettingsPage : Page
 
     private void B_CheckUpdate_Click(object? sender, RoutedEventArgs? e)
     {
-        new Thread(() => { UpdateManager.StartProcess(); }).Start();
+        new Thread(() =>
+        {
+            UpdateManager.StartProcess();
+        }).Start();
     }
 
     private void cB_Language_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -580,8 +582,8 @@ public partial class SettingsPage : Page
 
         if (cB_QuickToolsDevicePath.SelectedItem is DesktopScreen desktopScreen)
         {
-            SettingsManager.SetProperty("QuickToolsDevicePath", desktopScreen.DevicePath);
             SettingsManager.SetProperty("QuickToolsDeviceName", desktopScreen.FriendlyName);
+            SettingsManager.SetProperty("QuickToolsDevicePath", desktopScreen.DevicePath);
         }
     }
 }

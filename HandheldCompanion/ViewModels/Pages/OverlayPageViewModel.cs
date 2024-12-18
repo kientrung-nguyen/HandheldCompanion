@@ -399,6 +399,7 @@ namespace HandheldCompanion.ViewModels
 
             CPUName = IDevice.GetCurrent().Processor;
 
+            // manage events
             SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
             PlatformManager.RTSS.Updated += PlatformManager_RTSS_Updated;
             PlatformManager.LibreHardwareMonitor.CPUPowerChanged += LibreHardwareMonitor_CPUPowerChanged;
@@ -407,9 +408,18 @@ namespace HandheldCompanion.ViewModels
             GPUManager.Hooked += GPUManager_Hooked;
             ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
 
-            // GPUManager is a synchronous manager, it started before this page was loaded, force raise an event
-            if (GPUManager.IsInitialized && GPUManager.GetCurrent() is not null)
-                GPUManager_Hooked(GPUManager.GetCurrent());
+            // raise events
+            if (GPUManager.IsInitialized)
+            {
+                GPU gpu = GPUManager.GetCurrent();
+                if (gpu is not null)
+                    GPUManager_Hooked(gpu);
+            }
+
+            if (ProcessManager.IsInitialized)
+            {
+                ProcessManager_ForegroundChanged(ProcessManager.GetForegroundProcess(), null);
+            }
         }
 
         private void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
@@ -419,7 +429,7 @@ namespace HandheldCompanion.ViewModels
 
             Application.Current.Dispatcher.Invoke(() =>
             {
-                ProcessIcon = processEx != null ? processEx.ProcessIcon : null;
+                ProcessIcon = processEx?.ProcessIcon;
 
                 if (processEx is null)
                 {
@@ -490,9 +500,9 @@ namespace HandheldCompanion.ViewModels
             // localize me
             GPUName = GPU is not null ? GPU.adapterInformation.Details.Description : "No GPU detected";
 
-            HasGPUPower = GPU is not null ? GPU.HasPower() : false;
-            HasGPUTemperature = GPU is not null ? GPU.HasTemperature() : false;
-            HasGPULoad = GPU is not null ? GPU.HasLoad() : false;
+            HasGPUPower = GPU is not null && GPU.HasPower();
+            HasGPUTemperature = GPU is not null && GPU.HasTemperature();
+            HasGPULoad = GPU is not null && GPU.HasLoad();
         }
 
         private void LibreHardwareMonitor_CPULoadChanged(float? value)

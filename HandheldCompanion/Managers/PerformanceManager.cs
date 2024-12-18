@@ -2,6 +2,7 @@ using HandheldCompanion.Devices;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
 using System.Linq;
@@ -113,11 +114,79 @@ public static class PerformanceManager
 
         autotdpWatchdog = new Timer { Interval = INTERVAL_AUTO, AutoReset = true, Enabled = false };
         autotdpWatchdog.Elapsed += autotdpWatchdog_Elapsed;
+    }
+
+    public static async Task Start()
+    {
+        if (IsInitialized)
+            return;
+
+        // initialize watchdog(s)
+        cpuWatchdog.Start();
+
+        // initialize processor
+        processor = Processor.GetCurrent();
+
+        if (processor is not null && processor.IsInitialized)
+        {
+            processor.StatusChanged += Processor_StatusChanged;
+            processor.Initialize();
+        }
+        else
+        {
+            ProcessorStatusChanged?.Invoke(false, false);
+        }
 
         // manage events
         PowerProfileManager.Applied += PowerProfileManager_Applied;
         PowerProfileManager.Discarded += PowerProfileManager_Discarded;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        if (PowerProfileManager.IsInitialized)
+        {
+            PowerProfileManager_Applied(PowerProfileManager.GetCurrent(), UpdateSource.Background);
+        }
+
+        // raise events
+        if (SettingsManager.IsInitialized)
+        {
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", SettingsManager.GetString("ConfigurableTDPOverrideDown"), false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", SettingsManager.GetString("ConfigurableTDPOverrideUp"), false);
+        }
+
+        IsInitialized = true;
+        Initialized?.Invoke();
+
+        LogManager.LogInformation("{0} has started", "PerformanceManager");
+    }
+
+    public static void Stop()
+    {
+        if (!IsInitialized)
+            return;
+
+        // halt processor
+        if (processor is not null && processor.IsInitialized)
+        {
+            processor.StatusChanged -= Processor_StatusChanged;
+            processor.Stop();
+        }
+
+        // halt watchdogs
+        autotdpWatchdog.Stop();
+        tdpWatchdog.Stop();
+        gfxWatchdog.Stop();
+        cpuWatchdog.Stop();
+
+        // manage events
+        PowerProfileManager.Applied -= PowerProfileManager_Applied;
+        PowerProfileManager.Discarded -= PowerProfileManager_Discarded;
+        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+
+        IsInitialized = false;
+
+        LogManager.LogInformation("{0} has stopped", "PerformanceManager");
     }
 
     public static double GetMinimumTDP()
@@ -595,7 +664,7 @@ public static class PerformanceManager
                     if (ReadTDP != TDP || forcedUpdate)
                         RequestTDP((PowerType)idx, TDP, true);
 
-                    await Task.Delay(20);
+                    await Task.Delay(20).ConfigureAwait(false); // Avoid blocking the synchronization context
                 }
 
                 // are we done ?
@@ -754,10 +823,15 @@ public static class PerformanceManager
         // make sure we're not trying to run below or above specs
         value = Math.Min(TDPMax, Math.Max(TDPMin, value));
 
+        // skip if value is invalid
+        if (value == 0 || double.IsNaN(value) || double.IsInfinity(value))
+            return;
+
         // update value read by timer
         int idx = (int)type;
         StoredTDP[idx] = value;
 
+        // skip if processor is not ready
         if (processor is null || !processor.IsInitialized)
             return;
 
@@ -784,7 +858,7 @@ public static class PerformanceManager
         for (int idx = (int)PowerType.Slow; idx <= (int)PowerType.Fast; idx++)
         {
             RequestTDP((PowerType)idx, values[idx], immediate);
-            await Task.Delay(20);
+            await Task.Delay(20).ConfigureAwait(false); // Avoid blocking the synchronization context
         }
     }
 
@@ -944,48 +1018,6 @@ public static class PerformanceManager
         currentClock = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PROCFREQMAX);
         if (currentClock[0] != cpuClock || currentClock[1] != cpuClock)
             LogManager.LogWarning("Failed to set requested PROCFREQMAX");
-    }
-
-    public static void Start()
-    {
-        // initialize watchdog(s)
-        cpuWatchdog.Start();
-
-        // initialize processor
-        processor = Processor.GetCurrent();
-
-        if (processor is not null && processor.IsInitialized)
-        {
-            processor.StatusChanged += Processor_StatusChanged;
-            processor.Initialize();
-        }
-        else
-        {
-            ProcessorStatusChanged?.Invoke(false, false);
-        }
-
-        IsInitialized = true;
-        Initialized?.Invoke();
-
-        LogManager.LogInformation("{0} has started", "PerformanceManager");
-    }
-
-    public static void Stop()
-    {
-        if (!IsInitialized)
-            return;
-
-        if (processor is not null && processor.IsInitialized)
-            processor.Stop();
-
-        autotdpWatchdog.Stop();
-        tdpWatchdog.Stop();
-        gfxWatchdog.Stop();
-        cpuWatchdog.Stop();
-
-        IsInitialized = false;
-
-        LogManager.LogInformation("{0} has stopped", "PerformanceManager");
     }
 
     public static void Resume(bool OS)

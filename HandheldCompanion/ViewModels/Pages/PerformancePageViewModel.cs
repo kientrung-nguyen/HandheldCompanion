@@ -16,6 +16,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using Resources = HandheldCompanion.Properties.Resources;
 
@@ -168,7 +169,16 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public double AutoTDPMaximum => MultimediaManager.PrimaryDesktop.devMode.dmDisplayFrequency;
+        public double AutoTDPMaximum
+        {
+            get
+            {
+                if (!MultimediaManager.IsInitialized)
+                    return 60.0d;
+
+                return MultimediaManager.PrimaryDesktop.devMode.dmDisplayFrequency;
+            }
+        }
 
         public bool TDPOverrideEnabled
         {
@@ -489,12 +499,22 @@ namespace HandheldCompanion.ViewModels
 
             #region General Setup
 
+            // manage events
             SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
             MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
             PerformanceManager.ProcessorStatusChanged += PerformanceManager_ProcessorStatusChanged;
             PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
             PowerProfileManager.Updated += PowerProfileManager_Updated;
             PowerProfileManager.Deleted += PowerProfileManager_Deleted;
+
+            // raise events
+            if (MultimediaManager.IsInitialized)
+            {
+                MultimediaManager_PrimaryScreenChanged(MultimediaManager.PrimaryDesktop);
+            }
+
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(ProfilePickerItems, new object());
 
             PropertyChanged += (sender, e) =>
             {

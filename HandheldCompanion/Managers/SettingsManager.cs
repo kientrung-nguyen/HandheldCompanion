@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Processors;
+using HandheldCompanion.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -117,7 +118,8 @@ public static class SettingsManager
             Settings[name] = value;
 
             // raise event
-            SettingValueChanged?.Invoke(name, value, temporary);
+            if (IsInitialized)
+                SettingValueChanged?.Invoke(name, value, temporary);
 
             LogManager.LogDebug("Settings {0} set to {1}", name, value);
         }

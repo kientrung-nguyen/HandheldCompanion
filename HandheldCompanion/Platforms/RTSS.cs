@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using RTSSSharedMemoryNET;
 using System;
@@ -99,16 +100,19 @@ public class RTSS : IPlatform
             // hook into current process
             Process.Exited += Process_Exited;
 
+        // manage events
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
         ProfileManager.Applied += ProfileManager_Applied;
 
-        // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
-        if (SettingsManager.IsInitialized)
+        // raise events
+        if (ProcessManager.IsInitialized)
         {
-            ProcessEx foregroundProcess = ProcessManager.GetForegroundProcess();
-            ProcessManager_ForegroundChanged(foregroundProcess, null);
+            ProcessManager_ForegroundChanged(ProcessManager.GetForegroundProcess(), null);
+        }
 
+        if (ProfileManager.IsInitialized)
+        {
             ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
         }
 
@@ -117,11 +121,17 @@ public class RTSS : IPlatform
 
     public override bool Stop(bool kill = false)
     {
+        // manage events
         ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
         ProfileManager.Applied -= ProfileManager_Applied;
 
         return base.Stop(kill);
+    }
+
+    public AppEntry GetAppEntry()
+    {
+        return appEntry;
     }
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
@@ -184,7 +194,7 @@ public class RTSS : IPlatform
             }
             catch { }
 
-            await Task.Delay(1000);
+            await Task.Delay(1000).ConfigureAwait(false); // Avoid blocking the synchronization context
         } while (appEntry is null && foregroundId == ProcessId && KeepAlive);
 
         if (appEntry is null)

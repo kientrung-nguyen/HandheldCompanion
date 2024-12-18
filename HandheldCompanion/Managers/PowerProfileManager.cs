@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using Newtonsoft.Json;
@@ -8,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace HandheldCompanion.Managers
@@ -24,22 +26,19 @@ namespace HandheldCompanion.Managers
 
         static PowerProfileManager()
         {
-            // initialiaze path(s)
+            // initialize path(s)
             ProfilesPath = Path.Combine(MainWindow.SettingsPath, "powerprofiles");
             if (!Directory.Exists(ProfilesPath))
                 Directory.CreateDirectory(ProfilesPath);
-
-            PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
-
-            ProfileManager.Applied += ProfileManager_Applied;
-            ProfileManager.Discarded += ProfileManager_Discarded;
-            SystemManager.PowerStatusChanged += SystemManager_PowerStatusChanged;
         }
 
-        public static void Start()
+        public static async Task Start()
         {
+            if (IsInitialized)
+                return;
+
             // process existing profiles
-            var fileEntries = Directory.GetFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
+            string[] fileEntries = Directory.GetFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
             foreach (var fileName in fileEntries)
                 ProcessProfile(fileName);
 
@@ -49,16 +48,35 @@ namespace HandheldCompanion.Managers
                     UpdateOrCreateProfile(devicePowerProfile, UpdateSource.Serializer);
             }
 
+            // manage events
+            PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
+            ProfileManager.Applied += ProfileManager_Applied;
+            ProfileManager.Discarded += ProfileManager_Discarded;
+            SystemManager.PowerLineStatusChanged += SystemManager_PowerLineStatusChanged;
+
+            // raise events
+            if (ProfileManager.IsInitialized)
+            {
+                ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+            }
+
             IsInitialized = true;
             Initialized?.Invoke();
 
             LogManager.LogInformation("{0} has started", "PowerProfileManager");
+            return;
         }
 
         public static void Stop()
         {
             if (!IsInitialized)
                 return;
+
+            // manage events
+            PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged -= LibreHardwareMonitor_CpuTemperatureChanged;
+            ProfileManager.Applied -= ProfileManager_Applied;
+            ProfileManager.Discarded -= ProfileManager_Discarded;
+            SystemManager.PowerLineStatusChanged -= SystemManager_PowerLineStatusChanged;
 
             IsInitialized = false;
 
@@ -85,7 +103,7 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        private static void SystemManager_PowerStatusChanged(PowerStatus status)
+        private static void SystemManager_PowerLineStatusChanged(PowerLineStatus powerLineStatus)
         {
             // Get current profile
             Profile profile = ProfileManager.GetCurrent();
@@ -152,13 +170,13 @@ namespace HandheldCompanion.Managers
             }
             catch (Exception ex)
             {
-                LogManager.LogError("Could not parse power profile {0}. {1}", fileName, ex.Message);
+                LogManager.LogError("Could not parse power profile: {0}. {1}", fileName, ex.Message);
             }
 
             // failed to parse
             if (profile is null || profile.Name is null)
             {
-                LogManager.LogError("Failed to parse power profile {0}", fileName);
+                LogManager.LogError("Failed to parse power profile: {0}", fileName);
                 return;
             }
 
@@ -167,6 +185,17 @@ namespace HandheldCompanion.Managers
 
         public static void UpdateOrCreateProfile(PowerProfile profile, UpdateSource source)
         {
+            switch (source)
+            {
+                case UpdateSource.Serializer:
+                    LogManager.LogInformation($"Loaded power profile: {profile.Name}");
+                    break;
+
+                default:
+                    LogManager.LogInformation($"Attempting to update/create power profile: {profile.Name}");
+                    break;
+            }
+
             // update database
             profiles[profile.Guid] = profile;
 

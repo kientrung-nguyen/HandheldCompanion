@@ -1,7 +1,9 @@
-﻿using Microsoft.Win32;
+﻿using HandheldCompanion.Shared;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using SystemPowerManager = Windows.System.Power.PowerManager;
 
@@ -22,11 +24,15 @@ public static class SystemManager
     #region Events
 
     public static event SystemStatusChangedEventHandler SystemStatusChanged;
-    public static event PowerStatusChangedEventHandler PowerStatusChanged;
-    public static event InitializedEventHandler Initialized;
-
     public delegate void SystemStatusChangedEventHandler(SystemStatus status, SystemStatus prevStatus);
+
+    public static event PowerStatusChangedEventHandler PowerStatusChanged;
     public delegate void PowerStatusChangedEventHandler(PowerStatus status);
+
+    public static event PowerLineStatusChangedEventHandler PowerLineStatusChanged;
+    public delegate void PowerLineStatusChangedEventHandler(PowerLineStatus powerLineStatus);
+
+    public static event InitializedEventHandler Initialized;
     public delegate void InitializedEventHandler();
 
     #endregion
@@ -46,6 +52,7 @@ public static class SystemManager
 
     private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
     private static SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
+    private static PowerLineStatus previousPowerLineStatus = PowerLineStatus.Offline;
 
     public static bool IsInitialized;
 
@@ -96,21 +103,24 @@ public static class SystemManager
 
     private static void SubscribeToSystemEvents()
     {
+        // manage events
         SystemEvents.PowerModeChanged += OnPowerChange;
         SystemEvents.SessionSwitch += OnSessionSwitch;
-
         SystemPowerManager.BatteryStatusChanged += BatteryStatusChanged;
         SystemPowerManager.EnergySaverStatusChanged += BatteryStatusChanged;
         SystemPowerManager.PowerSupplyStatusChanged += BatteryStatusChanged;
         SystemPowerManager.RemainingChargePercentChanged += BatteryStatusChanged;
         SystemPowerManager.RemainingDischargeTimeChanged += BatteryStatusChanged;
+
+        // raise events
+        BatteryStatusChanged(null, null);
     }
 
     private static void UnsubscribeFromSystemEvents()
     {
+        // manage events
         SystemEvents.PowerModeChanged -= OnPowerChange;
         SystemEvents.SessionSwitch -= OnSessionSwitch;
-
         SystemPowerManager.BatteryStatusChanged -= BatteryStatusChanged;
         SystemPowerManager.EnergySaverStatusChanged -= BatteryStatusChanged;
         SystemPowerManager.PowerSupplyStatusChanged -= BatteryStatusChanged;
@@ -123,7 +133,7 @@ public static class SystemManager
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
     }
 
-    public static void Start()
+    public static async Task Start()
     {
         if (IsInitialized)
             return;
@@ -139,6 +149,7 @@ public static class SystemManager
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
 
         LogManager.LogInformation("{0} has started", "PowerManager");
+        return;
     }
 
     public static void Stop()
@@ -173,7 +184,16 @@ public static class SystemManager
 
             default:
             case PowerModes.StatusChange:
-                PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
+                {
+                    if (previousPowerLineStatus != SystemInformation.PowerStatus.PowerLineStatus)
+                    {
+                        // raise event
+                        PowerLineStatusChanged?.Invoke(SystemInformation.PowerStatus.PowerLineStatus);
+
+                        // update status
+                        previousPowerLineStatus = SystemInformation.PowerStatus.PowerLineStatus;
+                    }
+                }
                 return;
         }
 

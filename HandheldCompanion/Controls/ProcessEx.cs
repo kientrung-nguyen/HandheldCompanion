@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
 using Microsoft.Win32;
@@ -15,43 +16,109 @@ using System.Windows.Media;
 
 namespace HandheldCompanion.Controls;
 
-public class ProcessWindow
+public class ProcessWindow : IDisposable
 {
     public AutomationElement Element;
     public readonly int Hwnd;
-    public string Name;
+
+    private string _Name;
+    public string Name
+    {
+        get
+        {
+            return _Name;
+        }
+
+        set
+        {
+            if (!value.Equals(_Name))
+            {
+                _Name = value;
+
+                // raise event
+                Refreshed?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
 
     public EventHandler Refreshed;
 
     public ProcessWindow(AutomationElement element, bool isPrimary)
     {
         this.Hwnd = element.Current.NativeWindowHandle;
-        Refresh();
+        this.Element = element;
+
+        if (element.TryGetCurrentPattern(WindowPattern.Pattern, out object patternObj))
+        {
+            Automation.AddAutomationPropertyChangedEventHandler(
+            Element,
+            TreeScope.Element,
+            new AutomationPropertyChangedEventHandler(OnPropertyChanged),
+            AutomationElement.NameProperty,
+            AutomationElement.BoundingRectangleProperty);
+        }
+
+        RefreshName(false);
     }
 
-    public void Refresh()
+    private void OnPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
+    {
+        // Handle the property change event
+        if (Element != null)
+        {
+            // Check if the Name property changed
+            if (e.Property == AutomationElement.NameProperty)
+            {
+                RefreshName(false);
+            }
+            // Check if the BoundingRectangle property changed
+            else if (e.Property == AutomationElement.BoundingRectangleProperty)
+            {
+                // raise event
+                Refreshed?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    public void RefreshName(bool queryCache)
     {
         try
         {
-            Element = AutomationElement.FromHandle(this.Hwnd);
-
-            if (!string.IsNullOrEmpty(Element.Current.Name))
-                Name = Element.Current.Name;
-            else
+            if (queryCache)
             {
-                // backup method
-                string title = ProcessUtils.GetWindowTitle(Hwnd);
-                if (string.IsNullOrEmpty(title))
-                    return;
-
-                Name = title;
+                CacheRequest cacheRequest = new CacheRequest();
+                cacheRequest.Add(ValuePattern.ValueProperty);
+                Element = Element.GetUpdatedCache(cacheRequest);
             }
 
-            Refreshed?.Invoke(this, EventArgs.Empty);
+            if (Element.TryGetCurrentPattern(InvokePattern.Pattern, out _))
+            {
+                string ElementName = Element.Current.Name;
+                if (!string.IsNullOrEmpty(ElementName))
+                {
+                    // preferred method
+                    Name = ElementName;
+                    return;
+                }
+            }
+
+            // backup method
+            string title = ProcessUtils.GetWindowTitle(Hwnd);
+            if (!string.IsNullOrEmpty(title))
+                Name = title;
         }
-        catch (Exception)
+        catch { }
+    }
+
+    public void Dispose()
+    {
+        try
         {
+            // Remove the event handler when done
+            Automation.RemoveAllEventHandlers();
         }
+        catch { }
+        GC.SuppressFinalize(this);
     }
 }
 
@@ -129,12 +196,19 @@ public class ProcessEx : IDisposable
             // create new window object
             window = new(automationElement, primary);
 
+            if (string.IsNullOrEmpty(window.Name))
+                return;
+
             // update window
             ProcessWindows[hwnd] = window;
         }
 
-        if (string.IsNullOrEmpty(window.Name))
-            return;
+        // listen for window closed event
+        WindowElement windowElement = new(ProcessId, automationElement);
+        windowElement.Closed += (sender) =>
+        {
+            DetachWindow((int)sender._hwnd);
+        };
 
         // raise event
         WindowAttached?.Invoke(window);
@@ -144,7 +218,10 @@ public class ProcessEx : IDisposable
     {
         // raise event
         if (ProcessWindows.TryRemove(hwnd, out ProcessWindow processWindow))
+        {
             WindowDetached?.Invoke(processWindow);
+            processWindow.Dispose();
+        }
     }
 
     public bool FullScreenOptimization
@@ -220,9 +297,9 @@ public class ProcessEx : IDisposable
                 break;
         }
 
-        // refresh attached windows
+        // refresh attached window names
         foreach (ProcessWindow processWindow in ProcessWindows.Values)
-            processWindow.Refresh();
+            processWindow.RefreshName(false);
 
         // raise event
         Refreshed?.Invoke(this, EventArgs.Empty);
@@ -377,6 +454,10 @@ public class ProcessEx : IDisposable
         Process?.Dispose();
         MainThread?.Dispose();
         ChildrenProcessIds.Dispose();
+
+        foreach (ProcessWindow window in ProcessWindows.Values)
+            window.Dispose();
+
         ProcessWindows.Clear();
 
         GC.SuppressFinalize(this); //now, the finalizer won't be called

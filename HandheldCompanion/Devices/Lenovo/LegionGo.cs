@@ -3,6 +3,7 @@ using HandheldCompanion.Devices.Lenovo;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HidLibrary;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
@@ -225,7 +226,6 @@ public class LegionGo : IDevice
         };
 
         // device specific capacities
-        Capabilities |= DeviceCapabilities.None;
         Capabilities |= DeviceCapabilities.FanControl;
         Capabilities |= DeviceCapabilities.DynamicLighting;
         Capabilities |= DeviceCapabilities.DynamicLightingBrightness;

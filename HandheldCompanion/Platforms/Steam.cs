@@ -1,4 +1,4 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Microsoft.Win32;
 using Nefarius.Utilities.DeviceManagement.Drivers;
@@ -97,7 +97,7 @@ public class Steam : IPlatform
 
     private async void ActiveFileWatch_Changed()
     {
-        await Task.Delay(1000);
+        await Task.Delay(1000).ConfigureAwait(false); // Avoid blocking the synchronization context
         int SteamInput = GetUseSteamControllerConfigValue();
         base.SettingsValueChaned("UseSteamControllerConfig", SteamInput);
     }
@@ -190,12 +190,9 @@ public class Steam : IPlatform
 
     public bool HasXboxDriversInstalled()
     {
-        return FilterDrivers
-            .GetDeviceClassUpperFilters(DeviceClassIds.XnaComposite)
-            .Any(f => f.Equals("steamxbox"));
-
-        // deprecated method
-        return RegistryUtils.SearchForKeyValue(@"SYSTEM\CurrentControlSet\Enum\ROOT\SYSTEM", "Service", "steamxbox");
+        bool driversCheck = FilterDrivers.GetDeviceClassUpperFilters(DeviceClassIds.XnaComposite).Any(f => f.Equals("steamxbox"));
+        bool registryCheck = RegistryUtils.SearchForKeyValue(@"SYSTEM\CurrentControlSet\Enum\ROOT\SYSTEM", "Service", "steamxbox");
+        return driversCheck || registryCheck;
     }
 
     public override bool StartProcess()

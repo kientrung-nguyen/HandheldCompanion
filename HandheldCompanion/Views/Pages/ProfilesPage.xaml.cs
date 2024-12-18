@@ -1,11 +1,11 @@
 using HandheldCompanion.Actions;
-using HandheldCompanion.Controls;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Pages.Profiles;
@@ -113,7 +113,7 @@ public partial class ProfilesPage : Page
         bool IsGPUScalingEnabled = GPU.GetGPUScaling();
 
         // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        Application.Current.Dispatcher.BeginInvoke(() =>
         {
             // GPU-specific settings
             StackProfileRSR.Visibility = GPU is AMDGPU ? Visibility.Visible : Visibility.Collapsed;
@@ -449,7 +449,7 @@ public partial class ProfilesPage : Page
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
         {
-            MotionControlAdditional.IsEnabled = MotionMapped ? true : false;
+            MotionControlAdditional.IsEnabled = MotionMapped;
         });
     }
 

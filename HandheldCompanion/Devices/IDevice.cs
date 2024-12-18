@@ -1,13 +1,12 @@
-using HandheldCompanion.Controls;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Models;
 using HandheldCompanion.Sensors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HidLibrary;
-using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using Sentry;
 using System;
@@ -174,7 +173,7 @@ public abstract class IDevice
         SetKeyPressDelay(mode);
     }
 
-    private void GenericDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
+    private void GenericDeviceUpdated(PnPDevice device, Guid IntefaceGuid)
     {
         // todo: improve me
         PullSensors();
@@ -914,24 +913,8 @@ public abstract class IDevice
             Glyph = glyph is not null ? glyph : defaultGlyph,
             FontSize = fontIconSize,
             FontFamily = GlyphFontFamily,
-            Foreground = null
+            Color = Colors.White
         };
-    }
-
-    [Obsolete("GetFontIcon has dependencies on UI and should be avoided. Use GetGlyphIconInfo instead.")]
-    public FontIcon GetFontIcon(ButtonFlags button, int FontIconSize = 14)
-    {
-        FontIcon FontIcon = new FontIcon
-        {
-            Glyph = GetGlyph(button),
-            FontSize = FontIconSize,
-            Foreground = null,
-        };
-
-        if (FontIcon.Glyph is not null)
-            FontIcon.FontFamily = GlyphFontFamily;
-
-        return FontIcon;
     }
 
     public virtual string GetGlyph(ButtonFlags button)

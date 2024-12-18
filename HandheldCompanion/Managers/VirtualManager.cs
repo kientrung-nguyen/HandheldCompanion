@@ -1,11 +1,11 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Helpers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Targets;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using Nefarius.ViGEm.Client;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using static HandheldCompanion.Managers.ControllerManager;
@@ -59,21 +59,27 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        public static void Start()
+        public static async Task Start()
         {
-            // todo: improve me !!
-            while (!ControllerManager.IsInitialized)
-                Thread.Sleep(250);
+            if (IsInitialized)
+                return;
 
+            // manage events
             SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
             ProfileManager.Applied += ProfileManager_Applied;
             ProfileManager.Discarded += ProfileManager_Discarded;
-            ControllerManager.StatusChanged += ControllerManager_StatusChanged;
+
+            // raise events
+            if (ProfileManager.IsInitialized)
+            {
+                ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+            }
 
             IsInitialized = true;
             Initialized?.Invoke();
 
             LogManager.LogInformation("{0} has started", "VirtualManager");
+            return;
         }
 
         public static void Stop()
@@ -83,7 +89,7 @@ namespace HandheldCompanion.Managers
 
             Suspend(true);
 
-            // unsubscrive events
+            // manage events
             SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
             ProfileManager.Applied -= ProfileManager_Applied;
             ProfileManager.Discarded -= ProfileManager_Discarded;
@@ -158,7 +164,7 @@ namespace HandheldCompanion.Managers
                 return;
 
             while (ControllerManager.managerStatus == ControllerManagerStatus.Busy)
-                await Task.Delay(1000);
+                await Task.Delay(1000).ConfigureAwait(false); // Avoid blocking the synchronization context
 
             switch (profile.HID)
             {
@@ -178,25 +184,11 @@ namespace HandheldCompanion.Managers
                 return;
 
             while (ControllerManager.managerStatus == ControllerManagerStatus.Busy)
-                await Task.Delay(1000);
+                await Task.Delay(1000).ConfigureAwait(false); // Avoid blocking the synchronization context
 
             // restore default HID mode
             if (profile.HID != HIDmode.NotSelected)
                 SetControllerMode(defaultHIDmode);
-        }
-
-        private static void ControllerManager_StatusChanged(ControllerManagerStatus status, int attempts)
-        {
-            switch (status)
-            {
-                // busy or pending
-                case ControllerManagerStatus.Pending:
-                case ControllerManagerStatus.Busy:
-                    break;
-
-                default:
-                    break;
-            }
         }
 
         private static void SetDSUStatus(bool started)

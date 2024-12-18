@@ -3,6 +3,7 @@ using HandheldCompanion.Controls;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.IGCL;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Shared;
 using SharpDX.Direct3D9;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -30,6 +31,107 @@ namespace HandheldCompanion.Managers
         private static GPU currentGPU = null;
         private static ConcurrentDictionary<AdapterInformation, GPU> DisplayGPU = new();
 
+        public static async Task Start()
+        {
+            if (IsInitialized)
+                return;
+
+            if (!IsLoaded_IGCL)
+            {
+                // try to initialized IGCL
+                IsLoaded_IGCL = IGCLBackend.Initialize();
+
+                if (IsLoaded_IGCL)
+                    LogManager.LogInformation("IGCL was successfully initialized", "GPUManager");
+                else
+                    LogManager.LogError("Failed to initialize IGCL", "GPUManager");
+            }
+
+            if (!IsLoaded_ADLX)
+            {
+                // try to initialized ADLX
+                IsLoaded_ADLX = ADLXBackend.SafeIntializeAdlx();
+
+                if (IsLoaded_ADLX)
+                    LogManager.LogInformation("ADLX was successfully initialized", "GPUManager");
+                else
+                    LogManager.LogError("Failed to initialize ADLX", "GPUManager");
+            }
+
+            // todo: check if usefull on resume
+            // it could be DeviceManager_DisplayAdapterArrived is called already, making this redundant
+            currentGPU?.Start();
+
+            // manage events
+            ProfileManager.Applied += ProfileManager_Applied;
+            ProfileManager.Discarded += ProfileManager_Discarded;
+            ProfileManager.Updated += ProfileManager_Updated;
+            DeviceManager.DisplayAdapterArrived += DeviceManager_DisplayAdapterArrived;
+            DeviceManager.DisplayAdapterRemoved += DeviceManager_DisplayAdapterRemoved;
+            MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
+            MultimediaManager.Initialized += MultimediaManager_Initialized;
+
+            // raise events
+            if (ProfileManager.IsInitialized)
+            {
+                ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+            }
+
+            if (DeviceManager.IsInitialized)
+            {
+                foreach (AdapterInformation displayAdapter in DeviceManager.displayAdapters.Values)
+                    DeviceManager_DisplayAdapterArrived(displayAdapter);
+            }
+
+            if (MultimediaManager.IsInitialized && MultimediaManager.PrimaryDesktop is not null)
+            {
+                MultimediaManager_PrimaryScreenChanged(MultimediaManager.PrimaryDesktop);
+            }
+
+            IsInitialized = true;
+            Initialized?.Invoke(IsLoaded_IGCL, IsLoaded_ADLX);
+
+            LogManager.LogInformation("{0} has started", "GPUManager");
+            return;
+        }
+
+        public static void Stop()
+        {
+            if (!IsInitialized)
+                return;
+
+            // manage events
+            ProfileManager.Applied -= ProfileManager_Applied;
+            ProfileManager.Discarded -= ProfileManager_Discarded;
+            ProfileManager.Updated -= ProfileManager_Updated;
+            DeviceManager.DisplayAdapterArrived -= DeviceManager_DisplayAdapterArrived;
+            DeviceManager.DisplayAdapterRemoved -= DeviceManager_DisplayAdapterRemoved;
+            MultimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
+            MultimediaManager.Initialized -= MultimediaManager_Initialized;
+
+            foreach (GPU gpu in DisplayGPU.Values)
+                gpu.Stop();
+
+            lock (GPU.functionLock)
+            {
+                if (IsLoaded_IGCL)
+                {
+                    IGCLBackend.Terminate();
+                    IsLoaded_IGCL = false;
+                }
+
+                if (IsLoaded_ADLX)
+                {
+                    ADLXBackend.CloseAdlx();
+                    IsLoaded_ADLX = false;
+                }
+            }
+
+            IsInitialized = false;
+
+            LogManager.LogInformation("{0} has stopped", "GPUManager");
+        }
+
         private static void GPUConnect(GPU GPU)
         {
             // update current GPU
@@ -50,10 +152,12 @@ namespace HandheldCompanion.Managers
             }
 
             if (GPU.IsInitialized)
+            {
                 GPU.Start();
-
-            if (IsInitialized && GPU.IsInitialized)
                 Hooked?.Invoke(GPU);
+
+                LogManager.LogInformation("Hooked DisplayAdapter: {0}", GPU.ToString());
+            }
         }
 
         private static void GPUDisconnect(GPU GPU)
@@ -78,35 +182,34 @@ namespace HandheldCompanion.Managers
             GPU.Stop();
         }
 
-        private static async void MultimediaManager_PrimaryScreenChanged(DesktopScreen screen)
+        private static void MultimediaManager_PrimaryScreenChanged(DesktopScreen screen)
         {
-            while (!DeviceManager.IsInitialized)
-                await Task.Delay(250);
-
-            try
+            AdapterInformation key = DisplayGPU.Keys.FirstOrDefault(GPU => GPU.Details.DeviceName == screen.screen.DeviceName);
+            if (key is not null && DisplayGPU.TryGetValue(key, out GPU gpu))
             {
-                AdapterInformation key = DisplayGPU.Keys.FirstOrDefault(GPU => GPU.Details.DeviceName == screen.screen.DeviceName);
-                if (DisplayGPU.TryGetValue(key, out GPU gpu))
-                {
-                    // a new GPU was connected, disconnect from current gpu
-                    if (currentGPU is not null && currentGPU != gpu)
-                        GPUDisconnect(currentGPU);
+                LogManager.LogError("Retrieved DisplayAdapter: {0} for screen: {1}", gpu.ToString(), screen.screen.DeviceName);
 
-                    // connect to new gpu
-                    GPUConnect(gpu);
-                }
+                // a new GPU was connected, disconnect from current gpu
+                if (currentGPU is not null && currentGPU != gpu)
+                    GPUDisconnect(currentGPU);
+
+                // connect to new gpu
+                GPUConnect(gpu);
             }
-            catch
+            else
             {
-                // AdapterInformation can't be null
+                LogManager.LogError("Failed to retrieve DisplayAdapter for screen: {0}", screen.screen.DeviceName);
             }
         }
 
-        private static async void DeviceManager_DisplayAdapterArrived(AdapterInformation adapterInformation)
+        private static void MultimediaManager_Initialized()
         {
-            while (!IsInitialized)
-                await Task.Delay(250);
+            if (MultimediaManager.PrimaryDesktop is not null)
+                MultimediaManager_PrimaryScreenChanged(MultimediaManager.PrimaryDesktop);
+        }
 
+        private static void DeviceManager_DisplayAdapterArrived(AdapterInformation adapterInformation)
+        {
             GPU newGPU = null;
 
             if ((adapterInformation.Details.Description.Contains("Advanced Micro Devices") || adapterInformation.Details.Description.Contains("AMD")) && IsLoaded_ADLX)
@@ -130,6 +233,9 @@ namespace HandheldCompanion.Managers
                 return;
             }
 
+            LogManager.LogInformation("Detected DisplayAdapter: {0}, VendorID:{1}, DeviceId:{2}", adapterInformation.Details.Description, adapterInformation.Details.VendorId, adapterInformation.Details.DeviceId);
+
+            // add to dictionary
             DisplayGPU.TryAdd(adapterInformation, newGPU);
         }
 
@@ -213,88 +319,6 @@ namespace HandheldCompanion.Managers
                 currentGPU.SetImageSharpening(profile.RISEnabled);
             if (Sharpness != profile.RISSharpness)
                 currentGPU.SetImageSharpeningSharpness(Sharpness);
-        }
-
-        public static void Start()
-        {
-            if (IsInitialized)
-                return;
-
-            if (!IsLoaded_IGCL)
-            {
-                // try to initialized IGCL
-                IsLoaded_IGCL = IGCLBackend.Initialize();
-
-                if (IsLoaded_IGCL)
-                    LogManager.LogInformation("IGCL was successfully initialized", "GPUManager");
-                else
-                    LogManager.LogError("Failed to initialize IGCL", "GPUManager");
-            }
-
-            if (!IsLoaded_ADLX)
-            {
-                // try to initialized ADLX
-                IsLoaded_ADLX = ADLXBackend.IntializeAdlx();
-
-                if (IsLoaded_ADLX)
-                    LogManager.LogInformation("ADLX was successfully initialized", "GPUManager");
-                else
-                    LogManager.LogError("Failed to initialize ADLX", "GPUManager");
-            }
-
-            // todo: check if usefull on resume
-            // it could be DeviceManager_DisplayAdapterArrived is called already, making this redundant
-            if (currentGPU is not null)
-                currentGPU.Start();
-
-            IsInitialized = true;
-            Initialized?.Invoke(IsLoaded_IGCL, IsLoaded_ADLX);
-
-            // manage events
-            ProfileManager.Applied += ProfileManager_Applied;
-            ProfileManager.Discarded += ProfileManager_Discarded;
-            ProfileManager.Updated += ProfileManager_Updated;
-            DeviceManager.DisplayAdapterArrived += DeviceManager_DisplayAdapterArrived;
-            DeviceManager.DisplayAdapterRemoved += DeviceManager_DisplayAdapterRemoved;
-            MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
-
-            LogManager.LogInformation("{0} has started", "GPUManager");
-        }
-
-        public static void Stop()
-        {
-            if (!IsInitialized)
-                return;
-
-            IsInitialized = false;
-
-            // manage events
-            ProfileManager.Applied -= ProfileManager_Applied;
-            ProfileManager.Discarded -= ProfileManager_Discarded;
-            ProfileManager.Updated -= ProfileManager_Updated;
-            DeviceManager.DisplayAdapterArrived -= DeviceManager_DisplayAdapterArrived;
-            DeviceManager.DisplayAdapterRemoved -= DeviceManager_DisplayAdapterRemoved;
-            MultimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
-
-            foreach (GPU gpu in DisplayGPU.Values)
-                gpu.Stop();
-
-            lock (GPU.functionLock)
-            {
-                if (IsLoaded_IGCL)
-                {
-                    IGCLBackend.Terminate();
-                    IsLoaded_IGCL = false;
-                }
-
-                if (IsLoaded_ADLX)
-                {
-                    ADLXBackend.CloseAdlx();
-                    IsLoaded_ADLX = false;
-                }
-            }
-
-            LogManager.LogInformation("{0} has stopped", "GPUManager");
         }
 
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)

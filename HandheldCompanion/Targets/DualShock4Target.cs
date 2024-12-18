@@ -3,6 +3,7 @@ using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Sensors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Nefarius.ViGEm.Client.Exceptions;
 using Nefarius.ViGEm.Client.Targets;
@@ -218,8 +219,7 @@ namespace HandheldCompanion.Targets
 
         public override void Dispose()
         {
-            if (virtualController is not null)
-                virtualController.Disconnect();
+            virtualController?.Disconnect();
 
             base.Dispose();
         }

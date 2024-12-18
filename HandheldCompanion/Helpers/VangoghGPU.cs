@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -138,8 +139,7 @@ namespace HandheldCompanion.Helpers
         public void Dispose()
         {
             GC.SuppressFinalize(this);
-            if (smu != null)
-                smu.Dispose();
+            smu?.Dispose();
         }
 
         private static VangoghGPU? OpenMMIO(IntPtr mmioAddress, uint mmioSize)

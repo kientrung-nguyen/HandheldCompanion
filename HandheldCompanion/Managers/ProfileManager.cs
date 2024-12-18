@@ -3,6 +3,7 @@ using HandheldCompanion.Controls;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Properties;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -29,6 +30,7 @@ public static class ProfileManager
 
     private static Profile currentProfile;
 
+    public static FileSystemWatcher profileWatcher { get; set; }
     private static string ProfilesPath;
 
     public static bool IsInitialized;
@@ -39,12 +41,7 @@ public static class ProfileManager
         ProfilesPath = Path.Combine(MainWindow.SettingsPath, "profiles");
         if (!Directory.Exists(ProfilesPath))
             Directory.CreateDirectory(ProfilesPath);
-    }
 
-    public static FileSystemWatcher profileWatcher { get; set; }
-
-    public static void Start()
-    {
         // monitor profile files
         profileWatcher = new FileSystemWatcher
         {
@@ -54,8 +51,12 @@ public static class ProfileManager
             Filter = "*.json",
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.Size
         };
-        profileWatcher.Created += ProfileCreated;
-        profileWatcher.Deleted += ProfileDeleted;
+    }
+
+    public static async Task Start()
+    {
+        if (IsInitialized)
+            return;
 
         // process existing profiles
         string[] fileEntries = Directory.GetFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
@@ -79,17 +80,33 @@ public static class ProfileManager
             UpdateOrCreateProfile(defaultProfile, UpdateSource.Creation);
         }
 
-        IsInitialized = true;
-        Initialized?.Invoke();
+        // profile watcher events
+        profileWatcher.Created += ProfileCreated;
+        profileWatcher.Deleted += ProfileDeleted;
 
-        // listen to external events when ready
+        // manage events
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
         ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
         PowerProfileManager.Deleted += PowerProfileManager_Deleted;
         ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
 
+        // raise events
+        if (ProcessManager.IsInitialized)
+        {
+            ProcessManager_ForegroundChanged(ProcessManager.GetForegroundProcess(), null);
+        }
+
+        if (ControllerManager.IsInitialized)
+        {
+            ControllerManager_ControllerPlugged(ControllerManager.GetTargetController(), false);
+        }
+
+        IsInitialized = true;
+        Initialized?.Invoke();
+
         LogManager.LogInformation("{0} has started", "ProfileManager");
+        return;
     }
 
     public static void Stop()
@@ -97,10 +114,18 @@ public static class ProfileManager
         if (!IsInitialized)
             return;
 
-        IsInitialized = false;
-
+        // profile watcher events
+        profileWatcher.Created -= ProfileCreated;
         profileWatcher.Deleted -= ProfileDeleted;
-        profileWatcher.Dispose();
+
+        // manage events
+        ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
+        ProcessManager.ProcessStarted -= ProcessManager_ProcessStarted;
+        ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
+        PowerProfileManager.Deleted -= PowerProfileManager_Deleted;
+        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
+
+        IsInitialized = false;
 
         LogManager.LogInformation("{0} has stopped", "ProfileManager");
     }
@@ -474,35 +499,36 @@ public static class ProfileManager
         {
             string rawName = Path.GetFileNameWithoutExtension(fileName);
             if (string.IsNullOrEmpty(rawName))
-                throw new Exception("Profile has an incorrect file name.");
+            {
+                LogManager.LogError("Could not parse profile: {0}. {1}", fileName, "Profile has an incorrect file name.");
+                return;
+            }
 
             string outputraw = File.ReadAllText(fileName);
             JObject jObject = JObject.Parse(outputraw);
 
             // latest pre-versionning release
-            Version version = new("0.15.0.4");
+            Version version = new();
             if (jObject.TryGetValue("Version", out var value))
                 version = new Version(value.ToString());
 
             // pre-parse manipulations
-            switch (version.ToString())
+            if (version == Version.Parse("0.0.0.0"))
             {
-                case "0.15.0.4":
-                    {
-                        outputraw = CommonUtils.RegexReplace(outputraw, "Generic.Dictionary(.*)System.Private.CoreLib\"",
-                            "Generic.SortedDictionary$1System.Collections\"");
-                        jObject = JObject.Parse(outputraw);
-                        jObject.Remove("MotionSensivityArray");
-                        outputraw = jObject.ToString();
-                    }
-                    break;
-                case "0.16.0.5":
-                    {
-                        outputraw = outputraw.Replace(
-                            "\"System.Collections.Generic.SortedDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections\"",
-                            "\"System.Collections.Concurrent.ConcurrentDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections.Concurrent\"");
-                    }
-                    break;
+                // too old
+                throw new Exception("Profile is outdated.");
+            }
+            else if (version <= Version.Parse("0.22.0.2"))
+            {
+                outputraw = outputraw.Replace(
+                    "\"System.Collections.Generic.Dictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Private.CoreLib\"",
+                    "\"System.Collections.Concurrent.ConcurrentDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections.Concurrent\"");
+            }
+            else if (version <= Version.Parse("0.21.7.0"))
+            {
+                outputraw = outputraw.Replace(
+                    "\"System.Collections.Concurrent.ConcurrentDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections.Concurrent\"",
+                    "\"System.Collections.Generic.Dictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Private.CoreLib\"");
             }
 
             // parse profile
@@ -531,14 +557,14 @@ public static class ProfileManager
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Could not parse profile {0}. {1}", fileName, ex.Message);
+            LogManager.LogError("Could not parse profile: {0}. {1}", fileName, ex.Message);
             return;
         }
 
         // failed to parse
         if (!profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
         {
-            LogManager.LogError("Corrupted profile {0}. Profile has an empty name or an empty path.", fileName);
+            LogManager.LogError("Corrupted profile: {0}. Profile has an empty name or an empty path.", fileName);
             return;
         }
 
@@ -629,7 +655,7 @@ public static class ProfileManager
             foreach (Profile subprofile in GetSubProfilesFromPath(profile.Path, false))
                 DeleteSubProfile(subprofile);
 
-            LogManager.LogInformation("Deleted subprofiles for profile {0}", profile);
+            LogManager.LogInformation("Deleted subprofiles for profile: {0}", profile);
 
             // Unregister application from HidHide
             HidHide.UnregisterApplication(profile.Path);
@@ -655,7 +681,7 @@ public static class ProfileManager
             // todo: localize me
             ToastManager.SendToast($"Profile {profile.Name} deleted");
 
-            LogManager.LogInformation("Deleted profile {0}", profilePath);
+            LogManager.LogInformation("Deleted profile: {0}", profilePath);
 
             // restore default profile
             if (isCurrent)
@@ -691,7 +717,7 @@ public static class ProfileManager
             // todo: localize me
             ToastManager.SendToast($"Subprofile {subProfile.Name} deleted");
 
-            LogManager.LogInformation("Deleted subprofile {0}", profilePath);
+            LogManager.LogInformation("Deleted subprofile: {0}", profilePath);
 
             // restore main profile as favorite
             if (isCurrent)
@@ -766,8 +792,6 @@ public static class ProfileManager
 
     public static void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)
     {
-        LogManager.LogInformation($"Attempting to update/create {(profile.IsSubProfile ? "subprofile" : "profile")} {profile.Name}");
-
         bool isCurrent = false;
         switch (source)
         {
@@ -780,7 +804,18 @@ public static class ProfileManager
                 break;
             default:
                 // check if this is current profile
-                isCurrent = currentProfile is null ? false : profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
+                isCurrent = currentProfile is not null && profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
+                break;
+        }
+
+        switch (source)
+        {
+            case UpdateSource.Serializer:
+                LogManager.LogInformation($"Loaded {(profile.IsSubProfile ? "subprofile" : "profile")}: {profile.Name}");
+                break;
+
+            default:
+                LogManager.LogInformation($"Attempting to update/create {(profile.IsSubProfile ? "subprofile" : "profile")}: {profile.Name}");
                 break;
         }
 
