@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
 using Microsoft.Win32;
@@ -13,7 +14,113 @@ using System.Linq;
 using System.Windows.Automation;
 using System.Windows.Media;
 
-namespace HandheldCompanion.Misc;
+namespace HandheldCompanion.Controls;
+
+public class ProcessWindow : IDisposable
+{
+    public AutomationElement Element;
+    public readonly int Hwnd;
+
+    private string _Name;
+    public string Name
+    {
+        get
+        {
+            return _Name;
+        }
+
+        set
+        {
+            if (!value.Equals(_Name))
+            {
+                _Name = value;
+
+                // raise event
+                Refreshed?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    public EventHandler Refreshed;
+
+    public ProcessWindow(AutomationElement element, bool isPrimary)
+    {
+        this.Hwnd = element.Current.NativeWindowHandle;
+        this.Element = element;
+
+        if (element.TryGetCurrentPattern(WindowPattern.Pattern, out object patternObj))
+        {
+            Automation.AddAutomationPropertyChangedEventHandler(
+            Element,
+            TreeScope.Element,
+            new AutomationPropertyChangedEventHandler(OnPropertyChanged),
+            AutomationElement.NameProperty,
+            AutomationElement.BoundingRectangleProperty);
+        }
+
+        RefreshName(false);
+    }
+
+    private void OnPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
+    {
+        // Handle the property change event
+        if (Element != null)
+        {
+            // Check if the Name property changed
+            if (e.Property == AutomationElement.NameProperty)
+            {
+                RefreshName(false);
+            }
+            // Check if the BoundingRectangle property changed
+            else if (e.Property == AutomationElement.BoundingRectangleProperty)
+            {
+                // raise event
+                Refreshed?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    public void RefreshName(bool queryCache)
+    {
+        try
+        {
+            if (queryCache)
+            {
+                CacheRequest cacheRequest = new CacheRequest();
+                cacheRequest.Add(ValuePattern.ValueProperty);
+                Element = Element.GetUpdatedCache(cacheRequest);
+            }
+
+            if (Element.TryGetCurrentPattern(InvokePattern.Pattern, out _))
+            {
+                string ElementName = Element.Current.Name;
+                if (!string.IsNullOrEmpty(ElementName))
+                {
+                    // preferred method
+                    Name = ElementName;
+                    return;
+                }
+            }
+
+            // backup method
+            string title = ProcessUtils.GetWindowTitle(Hwnd);
+            if (!string.IsNullOrEmpty(title))
+                Name = title;
+        }
+        catch { }
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            // Remove the event handler when done
+            Automation.RemoveAllEventHandlers();
+        }
+        catch { }
+        GC.SuppressFinalize(this);
+    }
+}
 
 public class ProcessEx : IDisposable
 {
@@ -42,12 +149,11 @@ public class ProcessEx : IDisposable
     public ConcurrentDictionary<int, ProcessWindow> ProcessWindows { get; private set; } = new();
     public ConcurrentList<int> ChildrenProcessIds = [];
 
-    private ProcessThread? MainThread { get; set; }
-    private ProcessThread? prevThread;
+    private ProcessThread MainThread { get; set; }
+    private ProcessThread _previousMainThread;
     private ThreadWaitReason prevThreadWaitReason = ThreadWaitReason.UserRequest;
 
     private static object registryLock = new();
-    private static bool IsDisposing = false;
 
     #region event
     public EventHandler Refreshed;
@@ -71,8 +177,7 @@ public class ProcessEx : IDisposable
         MainThread = GetMainThread(process);
 
         // update main thread when disposed
-        if (MainThread is not null)
-            SubscribeToDisposedEvent(MainThread);
+        SubscribeToDisposedEvent(MainThread);
 
         // get executable icon
         if (File.Exists(Path))
@@ -80,11 +185,6 @@ public class ProcessEx : IDisposable
             Icon? icon = Icon.ExtractAssociatedIcon(Path);
             ProcessIcon = icon?.ToImageSource();
         }
-    }
-
-    ~ProcessEx()
-    {
-        Dispose();
     }
 
     public void AttachWindow(AutomationElement automationElement, bool primary = false)
@@ -167,102 +267,82 @@ public class ProcessEx : IDisposable
         }
     }
 
-    public void Kill()
-    {
-        try
-        {
-            if (Process.HasExited)
-                return;
-
-            Process.Kill();
-        }
-        catch { }
-    }
-
     public void Refresh()
     {
-        try
+        if (Process.HasExited)
+            return;
+
+        if (MainThread is null)
+            return;
+
+        switch (MainThread.ThreadState)
         {
-            if (Process.HasExited)
-                return;
-
-            if (MainThread is null)
-                return;
-
-            switch (MainThread.ThreadState)
-            {
-                case ThreadState.Wait:
+            case ThreadState.Wait:
+                {
+                    // monitor if the process main thread was suspended or resumed
+                    if (MainThread.WaitReason != prevThreadWaitReason)
                     {
-                        // monitor if the process main thread was suspended or resumed
-                        if (MainThread.WaitReason != prevThreadWaitReason)
-                        {
-                            prevThreadWaitReason = MainThread.WaitReason;
-                            _isSuspended = prevThreadWaitReason == ThreadWaitReason.Suspended;
-                        }
+                        prevThreadWaitReason = MainThread.WaitReason;
+                        _isSuspended = prevThreadWaitReason == ThreadWaitReason.Suspended;
                     }
-                    break;
+                }
+                break;
 
-                case ThreadState.Terminated:
-                    {
-                        // dispose from MainThread
-                        MainThread.Dispose();
-                        MainThread = null;
-                    }
-                    break;
-            }
-
-            // refresh attached window names
-            foreach (ProcessWindow processWindow in ProcessWindows.Values)
-                processWindow.RefreshName();
-
-            // raise event
-            Refreshed?.Invoke(this, EventArgs.Empty);
+            case ThreadState.Terminated:
+                {
+                    // dispose from MainThread
+                    MainThread.Dispose();
+                    MainThread = null;
+                }
+                break;
         }
-        catch (InvalidOperationException) { } // No process is associated with this object
+
+        // refresh attached window names
+        foreach (ProcessWindow processWindow in ProcessWindows.Values)
+            processWindow.RefreshName(false);
+
+        // raise event
+        Refreshed?.Invoke(this, EventArgs.Empty);
     }
 
     public void RefreshChildProcesses()
     {
         // refresh all child processes
-        List<int> childs = ProcessUtils.GetChildIds(Process);
+        var childs = ProcessUtils.GetChildIds(Process);
 
         // remove exited children
-        foreach (int pid in childs)
+        foreach (var pid in childs)
             ChildrenProcessIds.Remove(pid);
 
         // raise event on new children
-        foreach (int pid in childs)
+        foreach (var pid in childs)
             ChildrenProcessIds.Add(pid);
     }
 
     private void SubscribeToDisposedEvent(ProcessThread newMainThread)
     {
+        if (newMainThread is null)
+            return;
+
         // Unsubscribe from the previous MainThread's Disposed event
-        if (prevThread != null)
+        if (_previousMainThread != null)
         {
-            prevThread.Disposed -= MainThread_Disposed;
-            prevThread.Dispose();
-            prevThread = null;
+            _previousMainThread.Disposed -= MainThread_Disposed;
         }
 
         // Subscribe to the new MainThread's Disposed event
         newMainThread.Disposed += MainThread_Disposed;
 
         // Update the previous MainThread reference
-        prevThread = newMainThread;
+        _previousMainThread = newMainThread;
     }
 
-    private void MainThread_Disposed(object? sender, EventArgs e)
+    private void MainThread_Disposed(object sender, EventArgs e)
     {
-        if (IsDisposing)
-            return;
-
         // Update MainThread when disposed
         MainThread = GetMainThread(Process);
-
         // Subscribe to the new MainThread's Disposed event
-        if (MainThread is not null)
-            SubscribeToDisposedEvent(MainThread);
+        SubscribeToDisposedEvent(MainThread);
     }
 
     public static string GetAppCompatFlags(string Path)
@@ -321,7 +401,7 @@ public class ProcessEx : IDisposable
         }
     }
 
-    private static ProcessThread? GetMainThread(Process process)
+    private static ProcessThread GetMainThread(Process process)
     {
         ProcessThread mainThread = null;
         var startTime = DateTime.MaxValue;
@@ -371,9 +451,6 @@ public class ProcessEx : IDisposable
 
     public void Dispose()
     {
-        // set flag
-        IsDisposing = true;
-
         Process?.Dispose();
         MainThread?.Dispose();
         ChildrenProcessIds.Dispose();

@@ -43,14 +43,14 @@ namespace HandheldCompanion.ViewModels
 
             if (ControllerManager.HasTargetController)
             {
-                ControllerManager_ControllerSelected(ControllerManager.GetTarget());
+                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
             }
         }
 
         private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
         {
             // UI thread
-            UIHelper.TryInvoke(() =>
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 switch (name)
                 {
@@ -85,8 +85,6 @@ namespace HandheldCompanion.ViewModels
                 index = LayoutList.IndexOf(layoutTemplate.IsInternal ? _layoutTemplates : _layoutCommunity) + 1;
                 LayoutList.Insert(index, new(layoutTemplate));
             }
-
-            RefreshLayoutList();
         }
 
         private void RefreshLayoutList()
@@ -95,7 +93,7 @@ namespace HandheldCompanion.ViewModels
             bool FilterOnDevice = SettingsManager.Get<bool>("LayoutFilterOnDevice");
 
             // Get current controller
-            IController? controller = ControllerManager.GetTarget();
+            IController? controller = ControllerManager.GetTargetController();
 
             foreach (LayoutTemplateViewModel layoutTemplate in LayoutList)
             {
@@ -110,17 +108,6 @@ namespace HandheldCompanion.ViewModels
 
                 layoutTemplate.Visibility = Visibility.Visible;
             }
-        }
-
-        public override void Dispose()
-        {
-            // manage events
-            ManagerFactory.layoutManager.Updated -= LayoutManager_Updated;
-            ManagerFactory.layoutManager.Initialized -= LayoutManager_Initialized;
-            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
-            ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
-
-            base.Dispose();
         }
     }
 }

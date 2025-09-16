@@ -257,7 +257,7 @@ namespace HandheldCompanion.ViewModels
 
             if (isInitialMapping)
             {
-                var controller = ControllerManager.GetTarget();
+                var controller = ControllerManager.GetTargetController();
                 if (controller is not null) UpdateController(controller);
             }
 
@@ -295,7 +295,7 @@ namespace HandheldCompanion.ViewModels
                     Action = new ButtonActions() { pressType = fallbackPressType };
 
                 // get current controller
-                var controller = ControllerManager.GetDefault();
+                var controller = ControllerManager.GetPlaceholderController();
 
                 // Build Targets
                 var targets = new List<MappingTargetViewModel>();
@@ -382,16 +382,6 @@ namespace HandheldCompanion.ViewModels
                 // Update list and selected target
                 Targets.ReplaceWith(targets);
                 if (matchingTargetVm != null) SelectedTarget = matchingTargetVm;
-            }
-            else if (actionType == ActionType.Inherit)
-            {
-                if (Action is null || Action is not InheritActions)
-                {
-                    Action = new InheritActions();
-                }
-
-                // Update list and selected target
-                Targets.Clear();
             }
 
             // Refresh mapping

@@ -4,7 +4,6 @@ using HandheldCompanion.Commands.Functions.Windows;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Extensions;
-using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
@@ -23,6 +22,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using WindowsInput.Events;
 using static HandheldCompanion.Commands.ICommands;
+using Application = System.Windows.Application;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -44,8 +44,6 @@ namespace HandheldCompanion.ViewModels
                 _Hotkey.command.Executed += Command_Executed;
                 _Hotkey.command.Updated += Command_Updated;
 
-                // refresh all properties
-                OnPropertyChanged(string.Empty);
                 OnPropertyChanged(nameof(Hotkey));
                 OnPropertyChanged(nameof(IsPinned));
                 OnPropertyChanged(nameof(CommandTypeIndex));
@@ -355,13 +353,10 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    if (executableCommand.Arguments != value)
-                    {
-                        executableCommand.Arguments = value;
-                        OnPropertyChanged(nameof(ExecutableArguments));
+                    executableCommand.Arguments = value;
+                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
 
-                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
-                    }
+                    // OnPropertyChanged(nameof(ExecutableArguments));
                 }
             }
         }
@@ -378,13 +373,10 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    if (executableCommand.windowStyle != (ProcessWindowStyle)value)
-                    {
-                        executableCommand.windowStyle = (ProcessWindowStyle)value;
-                        OnPropertyChanged(nameof(ExecutableWindowStyle));
+                    executableCommand.windowStyle = (ProcessWindowStyle)value;
+                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
 
-                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
-                    }
+                    // OnPropertyChanged(nameof(ExecutableWindowStyle));
                 }
             }
         }
@@ -401,13 +393,10 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    if (executableCommand.RunAs != value)
-                    {
-                        executableCommand.RunAs = value;
-                        OnPropertyChanged(nameof(ExecutableRunAs));
+                    executableCommand.RunAs = value;
+                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
 
-                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
-                    }
+                    // OnPropertyChanged(nameof(ExecutableRunAs));
                 }
             }
         }
@@ -424,13 +413,8 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is OnScreenKeyboardLegacyCommands keyboardCommands)
                 {
-                    if (keyboardCommands.KeyboardPosition != value)
-                    {
-                        keyboardCommands.KeyboardPosition = value;
-                        OnPropertyChanged(nameof(OnScreenKeyboardLegacyPosition));
-
-                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
-                    }
+                    keyboardCommands.KeyboardPosition = value;
+                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
                 }
             }
         }
@@ -548,10 +532,12 @@ namespace HandheldCompanion.ViewModels
             foreach (FontIconViewModel FontIconViewModel in ButtonGlyphs.ToList())
                 ButtonGlyphs.SafeRemove(FontIconViewModel);
 
-            IController controller = ControllerManager.GetTargetOrDefault();
+            IController? controller = ControllerManager.GetTargetController();
+            if (controller is null)
+                controller = ControllerManager.GetPlaceholderController();
 
             // UI thread
-            UIHelper.TryInvoke(() =>
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 foreach (ButtonFlags buttonFlags in Hotkey.inputsChord.ButtonState.Buttons)
                 {

@@ -27,7 +27,7 @@ namespace HandheldCompanion.ViewModels
             // send events
             if (ControllerManager.HasTargetController)
             {
-                UpdateController(ControllerManager.GetTarget());
+                UpdateController(ControllerManager.GetTargetController());
             }
         }
 

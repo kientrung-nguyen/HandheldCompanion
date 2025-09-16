@@ -65,6 +65,7 @@ public partial class Profile : ICloneable, IComparable
     public Version Version { get; set; } = new();
 
     public string LayoutTitle { get; set; } = string.Empty;
+    public bool LayoutEnabled { get; set; }
     public Layout Layout { get; set; } = new();
 
     public bool Whitelisted { get; set; } // if true, can see through the HidHide cloak
@@ -148,17 +149,16 @@ public partial class Profile : ICloneable, IComparable
             Path = path;
         }
 
-        // initialize layout
-        Layout.FillInherit();
-        LayoutTitle = LayoutTemplate.DefaultLayout.Name;
-
         // enable the below variables when profile is created
         Enabled = true;
     }
 
     public object Clone()
     {
-        return CloningHelper.DeepClone(this);
+        var jsonString = JsonConvert.SerializeObject(this, Formatting.Indented,
+            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+        return JsonConvert.DeserializeObject<Profile>(jsonString,
+            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
     }
 
     public int CompareTo(object obj)

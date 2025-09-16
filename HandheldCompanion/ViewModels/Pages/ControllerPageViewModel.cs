@@ -31,46 +31,39 @@ namespace HandheldCompanion.ViewModels
             // send events
             if (ControllerManager.HasTargetController)
             {
-                ControllerManager_ControllerSelected(ControllerManager.GetTarget());
+                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
             }
         }
 
-        private object lockcollection = new();
         private void ControllerPlugged(IController Controller, bool IsPowerCycling)
         {
-            lock (lockcollection)
+            ObservableCollection<ControllerViewModel> controllers = Controller.IsVirtual() ? VirtualControllers : PhysicalControllers;
+            ControllerViewModel? foundController = controllers.FirstOrDefault(controller => controller.Controller.GetInstancePath() == Controller.GetInstancePath());
+            if (foundController is null)
             {
-                ObservableCollection<ControllerViewModel> controllers = Controller.IsVirtual() ? VirtualControllers : PhysicalControllers;
-                ControllerViewModel? foundController = controllers.FirstOrDefault(controller => controller.Controller.GetInstanceId() == Controller.GetInstanceId());
-                if (foundController is null)
-                {
-                    controllers.SafeAdd(new ControllerViewModel(Controller));
-                }
-                else
-                {
-                    foundController.Controller = Controller;
-                }
-
-                controllerPage.ControllerRefresh();
+                controllers.SafeAdd(new ControllerViewModel(Controller));
             }
+            else
+            {
+                foundController.Controller = Controller;
+            }
+
+            controllerPage.ControllerRefresh();
         }
 
 
         private void ControllerUnplugged(IController Controller, bool IsPowerCycling, bool WasTarget)
         {
-            lock (lockcollection)
+            ObservableCollection<ControllerViewModel> controllers = Controller.IsVirtual() ? VirtualControllers : PhysicalControllers;
+            ControllerViewModel? foundController = controllers.ToList().FirstOrDefault(controller => controller.Controller.GetInstancePath() == Controller.GetInstancePath());
+            if (foundController is not null && !IsPowerCycling)
             {
-                ObservableCollection<ControllerViewModel> controllers = Controller.IsVirtual() ? VirtualControllers : PhysicalControllers;
-                ControllerViewModel? foundController = controllers.ToList().FirstOrDefault(controller => controller.Controller.GetInstanceId() == Controller.GetInstanceId());
-                if (foundController is not null && !IsPowerCycling)
-                {
-                    controllers.SafeRemove(foundController);
-                    foundController.Dispose();
-                }
-
-                // do something
-                controllerPage.ControllerRefresh();
+                controllers.SafeRemove(foundController);
+                foundController.Dispose();
             }
+
+            // do something
+            controllerPage.ControllerRefresh();
         }
 
         private void ControllerManager_ControllerSelected(IController Controller)
@@ -80,16 +73,6 @@ namespace HandheldCompanion.ViewModels
 
             // do something
             controllerPage.ControllerRefresh();
-        }
-
-        public override void Dispose()
-        {
-            // manage events
-            ControllerManager.ControllerPlugged -= ControllerPlugged;
-            ControllerManager.ControllerUnplugged -= ControllerUnplugged;
-            ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
-
-            base.Dispose();
         }
     }
 }

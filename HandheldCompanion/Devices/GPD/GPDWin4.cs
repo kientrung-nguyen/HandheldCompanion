@@ -14,7 +14,6 @@ public class GPDWin4 : IDevice
     {
         // device specific settings
         ProductIllustration = "device_gpd4";
-        UseOpenLib = true;
 
         // https://www.amd.com/fr/products/apu/amd-ryzen-7-6800u
         nTDP = new double[] { 15, 15, 28 };

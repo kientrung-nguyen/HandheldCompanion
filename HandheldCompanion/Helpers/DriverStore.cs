@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using static PInvoke.Kernel32;
 
 namespace HandheldCompanion.Helpers
 {
@@ -36,21 +37,20 @@ namespace HandheldCompanion.Helpers
 
         private static Dictionary<string, string> DeserializeDriverStore()
         {
-            Dictionary<string, string>? result = new();
             if (!File.Exists(DriversPath))
-                return result;
+                return [];
 
             try
             {
                 string json = File.ReadAllText(DriversPath);
-                result = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                return JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
             }
             catch (Exception ex)
             {
                 LogManager.LogError("Could not retrieve drivers store {0}", ex.Message);
             }
 
-            return result ?? new Dictionary<string, string>(); // Ensure it's never null
+            return [];
         }
 
         public static string GetDriverFromDriverStore(string path)
@@ -61,13 +61,13 @@ namespace HandheldCompanion.Helpers
             return "xusb22.inf";
         }
 
-        public static void AddOrUpdateDriverStore(string path, string driverName)
+        public static void AddOrUpdateDriverStore(string path, string calibration)
         {
             // upcase
             path = path.ToUpper();
 
             // update array
-            Drivers[path] = driverName;
+            Drivers[path] = calibration;
 
             // serialize store
             SerializeDriverStore();

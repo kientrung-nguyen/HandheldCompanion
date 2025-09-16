@@ -238,8 +238,8 @@ public partial class QuickProfilesPage : Page
         GPU.IntegerScalingChanged -= OnIntegerScalingChanged;
         GPU.GPUScalingChanged -= OnGPUScalingChanged;
 
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             StackProfileRSR.IsEnabled = false;
             StackProfileAFMF.IsEnabled = false;
@@ -251,8 +251,8 @@ public partial class QuickProfilesPage : Page
 
     private void OnRSRStateChanged(bool Supported, bool Enabled, int Sharpness)
     {
-        // UI thread (async)
-        UIHelper.TryInvoke(() =>
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
             StackProfileRSR.IsEnabled = Supported;
         });
@@ -290,8 +290,8 @@ public partial class QuickProfilesPage : Page
 
     private void RTSS_Updated(PlatformStatus status)
     {
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (status)
             {
@@ -311,8 +311,8 @@ public partial class QuickProfilesPage : Page
     {
         var frameLimits = ScreenControl.GetFramelimits(display);
 
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             cB_Framerate.Items.Clear();
 
@@ -375,8 +375,8 @@ public partial class QuickProfilesPage : Page
         if (profileLock.IsEntered())
             return;
 
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (AC)
             {
@@ -417,7 +417,7 @@ public partial class QuickProfilesPage : Page
                 selectedProfile = profile;
 
                 // UI thread
-                UIHelper.TryInvoke(() =>
+                Application.Current.Dispatcher.Invoke(() =>
                 {
                     // update profile name
                     CurrentProfileName.Text = selectedProfile.Name;

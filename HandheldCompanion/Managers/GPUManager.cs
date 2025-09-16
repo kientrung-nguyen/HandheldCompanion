@@ -37,7 +37,7 @@ namespace HandheldCompanion.Managers
             if (IsInitialized)
                 return;
 
-            if (!IsLoaded_IGCL && GPU.HasIntelGPU())
+            if (!IsLoaded_IGCL)
             {
                 // try to initialized IGCL
                 IsLoaded_IGCL = IGCLBackend.Initialize();
@@ -48,13 +48,13 @@ namespace HandheldCompanion.Managers
                     LogManager.LogError("Failed to initialize IGCL", "GPUManager");
             }
 
-            if (!IsLoaded_ADLX && GPU.HasAMDGPU())
+            if (!IsLoaded_ADLX)
             {
                 // try to initialized ADLX
                 IsLoaded_ADLX = ADLXBackend.SafeIntializeAdlx();
 
                 if (IsLoaded_ADLX)
-                    LogManager.LogInformation("ADLX {0} was successfully initialized", ADLXBackend.GetVersion(), "GPUManager");
+                    LogManager.LogInformation("ADLX was successfully initialized", "GPUManager");
                 else
                     LogManager.LogError("Failed to initialize ADLX", "GPUManager");
             }

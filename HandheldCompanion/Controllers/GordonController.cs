@@ -85,7 +85,7 @@ namespace HandheldCompanion.Controllers
 
         public override void UpdateInputs(long ticks, float delta)
         {
-            if (input is null || IsDisposing)
+            if (input is null)
                 return;
 
             ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);

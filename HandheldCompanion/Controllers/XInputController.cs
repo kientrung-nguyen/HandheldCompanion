@@ -32,23 +32,6 @@ public class XInputController : IController
         ColoredButtons.Add(ButtonFlags.B4, Color.FromArgb(255, 255, 200, 44));
     }
 
-    ~XInputController()
-    {
-        Dispose();
-    }
-
-    public override void Dispose()
-    {
-        Unplug();
-
-        // don't dispose our placeholders
-        if (isPlaceholder)
-            return;
-
-        Controller = null;
-        base.Dispose();
-    }
-
     public override string ToString()
     {
         var baseName = base.ToString();
@@ -59,8 +42,8 @@ public class XInputController : IController
 
     public virtual void UpdateInputs(long ticks, float delta, bool commit)
     {
-        if (Inputs is null || IsDisposing)
-            return;
+        // update secret state
+        XInputGetStateSecret14(UserIndex, out State);
 
         ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);
 
@@ -69,9 +52,6 @@ public class XInputController : IController
         {
             try
             {
-                // update secret state
-                XInputGetStateSecret14(UserIndex, out State);
-
                 // update gamepad state
                 Gamepad = Controller.GetState().Gamepad;
 
@@ -154,27 +134,15 @@ public class XInputController : IController
         catch { }
     }
 
-    private TickEventHandler _tickHandler;
     public override void Plug()
     {
-        // Assign a handler to the delegate
-        _tickHandler = (ticks, delta) => UpdateInputs(ticks, delta, true);
-
-        // Subscribe to the event
-        Tick += _tickHandler;
-
+        TimerManager.Tick += (ticks, delta) => UpdateInputs(ticks, delta, true);
         base.Plug();
     }
 
     public override void Unplug()
     {
-        if (_tickHandler != null)
-        {
-            // Unsubscribe from the event
-            Tick -= _tickHandler;
-            _tickHandler = null;
-        }
-
+        TimerManager.Tick -= (ticks, delta) => UpdateInputs(ticks, delta, true);
         base.Unplug();
     }
 
@@ -215,6 +183,21 @@ public class XInputController : IController
     public override void Unhide(bool powerCycle = true)
     {
         base.Unhide(powerCycle);
+    }
+
+    public virtual new bool IsWireless
+    {
+        get
+        {
+            string enumerator = Details.EnumeratorName;
+            switch (enumerator)
+            {
+                default:
+                    return false;
+                case "BTHENUM":
+                    return true;
+            }
+        }
     }
 
     public override string GetGlyph(ButtonFlags button)

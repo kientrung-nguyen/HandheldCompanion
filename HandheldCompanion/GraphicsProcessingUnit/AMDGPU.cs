@@ -35,13 +35,6 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
         protected new AdlxTelemetryData TelemetryData = new();
 
-        protected override void BusyTimer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            // Adrenaline Software is known to cause issues with the ADLX backend, so we kill it here
-            KillAdrenaline();
-
-            base.BusyTimer_Elapsed(sender, e);
-        }
 
         public static void KillAdrenaline()
         {

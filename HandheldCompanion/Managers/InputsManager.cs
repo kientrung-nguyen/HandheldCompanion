@@ -10,7 +10,6 @@ using PrecisionTiming;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using WindowsInput.Events;
 using ButtonState = HandheldCompanion.Inputs.ButtonState;
@@ -88,8 +87,6 @@ public static class InputsManager
     {
         BufferFlushTimer = new PrecisionTimer();
         BufferFlushTimer.SetInterval(new Action(ReleaseKeyboardBuffer), TIME_FLUSH, false, 0, TimerMode.OneShot, true);
-
-        InitGlobalHook();
 
         InputsChordHoldTimer = new Timer(TIME_LONG)
         {
@@ -263,7 +260,7 @@ public static class InputsManager
                     BufferKeys[args.IsKeyDown].Add(new KeyEventArgsExt((Keys)keyCode, args.ScanCode, args.Timestamp, args.IsKeyDown, args.IsKeyUp, false, args.Flags));
 
                 // calls current controller (if connected)
-                IController controller = ControllerManager.GetTarget();
+                IController controller = ControllerManager.GetTargetController();
                 controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                 // remove chord
@@ -395,7 +392,7 @@ public static class InputsManager
                             BufferKeys[args.IsKeyDown].Clear();
 
                             // calls current controller (if connected)
-                            IController controller = ControllerManager.GetTarget();
+                            IController controller = ControllerManager.GetTargetController();
                             controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                             return;
@@ -426,7 +423,7 @@ public static class InputsManager
                                 // store successful hotkey
                                 successkeyChords.Add(chord);
 
-                                IController controller = ControllerManager.GetTarget();
+                                IController controller = ControllerManager.GetTargetController();
                                 controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                                 return;
@@ -515,35 +512,28 @@ public static class InputsManager
         return args.Select(a => (KeyCode)a.KeyValue).OrderBy(key => key).ToList();
     }
 
-    public static async Task Start()
+    public static void Start()
     {
-        if (IsInitialized)
-            return;
+        InitGlobalHook();
 
         ControllerManager.InputsUpdated += UpdateInputs;
-        m_GlobalHook.KeyDown += M_GlobalHook_KeyEvent;
-        m_GlobalHook.KeyUp += M_GlobalHook_KeyEvent;
 
         IsInitialized = true;
         Initialized?.Invoke();
 
         LogManager.LogInformation("{0} has started", "InputsManager");
-        return;
     }
 
-    public static void Stop(bool OS)
+    public static void Stop()
     {
         if (!IsInitialized)
             return;
 
         ControllerManager.InputsUpdated -= UpdateInputs;
-        m_GlobalHook.KeyDown -= M_GlobalHook_KeyEvent;
-        m_GlobalHook.KeyUp -= M_GlobalHook_KeyEvent;
-
-        if (OS)
-            DisposeGlobalHook();
 
         IsInitialized = false;
+
+        DisposeGlobalHook();
 
         LogManager.LogInformation("{0} has stopped", "InputsManager");
     }
@@ -554,6 +544,8 @@ public static class InputsManager
             return;
 
         m_GlobalHook = Hook.GlobalEvents();
+        m_GlobalHook.KeyDown += M_GlobalHook_KeyEvent;
+        m_GlobalHook.KeyUp += M_GlobalHook_KeyEvent;
     }
 
     private static void DisposeGlobalHook()
@@ -561,6 +553,8 @@ public static class InputsManager
         if (m_GlobalHook is null)
             return;
 
+        m_GlobalHook.KeyDown -= M_GlobalHook_KeyEvent;
+        m_GlobalHook.KeyUp -= M_GlobalHook_KeyEvent;
         m_GlobalHook.Dispose();
         m_GlobalHook = null;
     }

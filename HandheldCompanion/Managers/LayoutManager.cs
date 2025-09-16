@@ -121,8 +121,6 @@ internal static class LayoutManager
         if (!IsInitialized)
             return;
 
-        base.PrepareStop();
-
         // manage desktop layout events
         desktopLayout.Updated -= DesktopLayout_Updated;
 
@@ -136,15 +134,15 @@ internal static class LayoutManager
         MultimediaManager.DisplayOrientationChanged -= MultimediaManager_DisplayOrientationChanged;
 
         IsInitialized = false;
-		base.Stop();
+
         LogManager.LogInformation("{0} has stopped", "LayoutManager");
     }
 
     // this event is called from non main thread and it creates LayoutTemplate which is a WPF element
     private static void LayoutWatcher_Template(object sender, FileSystemEventArgs e)
     {
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             ProcessLayoutTemplate(e.FullPath);
         });

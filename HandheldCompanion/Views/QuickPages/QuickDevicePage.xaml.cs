@@ -134,8 +134,8 @@ public partial class QuickDevicePage : Page
         if (swapped)
             return;
 
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             if (profile.IntegerScalingEnabled)
             {
@@ -152,7 +152,7 @@ public partial class QuickDevicePage : Page
     private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
     {
         // UI thread
-        UIHelper.TryInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (name)
             {
@@ -192,7 +192,7 @@ public partial class QuickDevicePage : Page
             radios = await Radio.GetRadiosAsync();
 
             // UI thread
-            UIHelper.TryInvoke(() =>
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 if (radios is null)
                 {

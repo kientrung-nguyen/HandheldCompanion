@@ -87,11 +87,14 @@ namespace HandheldCompanion.Controllers
             }
         }
 
-        public override bool IsWireless()
+        public override bool IsWireless
         {
-            byte LControllerState = GetStatus(LCONTROLLER_STATE_IDX);
-            byte RControllerState = GetStatus(RCONTROLLER_STATE_IDX);
-            return LControllerState == (byte)ControllerState.Wireless || RControllerState == (byte)ControllerState.Wireless;
+            get
+            {
+                byte LControllerState = GetStatus(LCONTROLLER_STATE_IDX);
+                byte RControllerState = GetStatus(RCONTROLLER_STATE_IDX);
+                return LControllerState == (byte)ControllerState.Wireless || RControllerState == (byte)ControllerState.Wireless;
+            }
         }
 
 
@@ -163,7 +166,7 @@ namespace HandheldCompanion.Controllers
             base.AttachDetails(details);
 
             // manage gamepad motion from right controller
-            gamepadMotions[1] = new($"{details.baseContainerDeviceInstanceId}\\{LegionGo.RightJoyconIndex}", CalibrationMode.Manual | CalibrationMode.SensorFusion);
+            gamepadMotions[1] = new($"{details.deviceInstanceId}\\{LegionGo.RightJoyconIndex}", CalibrationMode.Manual | CalibrationMode.SensorFusion);
 
             hidDevice = GetHidDevice();
             hidDevice?.OpenDevice();

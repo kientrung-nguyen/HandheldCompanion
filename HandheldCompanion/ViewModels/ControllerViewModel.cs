@@ -43,11 +43,10 @@ namespace HandheldCompanion.ViewModels
             Controller = controller;
             Controller.UserIndexChanged += Controller_UserIndexChanged;
             Controller.StateChanged += Controller_StateChanged;
-            Controller.VisibilityChanged += Controller_VisibilityChanged;
 
             ConnectCommand = new DelegateCommand(async () =>
             {
-                string path = Controller.GetContainerInstanceId();
+                string path = Controller.GetContainerInstancePath();
                 ControllerManager.SetTargetController(path, false);
             });
 
@@ -98,7 +97,6 @@ namespace HandheldCompanion.ViewModels
         {
             Controller.UserIndexChanged -= Controller_UserIndexChanged;
             Controller.StateChanged -= Controller_StateChanged;
-            Controller.VisibilityChanged -= Controller_VisibilityChanged;
 
             base.Dispose();
         }

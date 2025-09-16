@@ -83,8 +83,8 @@ public partial class ProfilesPage : Page
 
     private void MultimediaManager_Initialized()
     {
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             //DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
             //desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));

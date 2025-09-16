@@ -1,5 +1,6 @@
 ﻿using Force.Crc32;
 using HandheldCompanion.Controllers;
+using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Properties;

@@ -503,23 +503,23 @@ public partial class SettingsPage : Page
             {
                 case 0: // "None":
                     WindowHelper.SetSystemBackdropType(targetWindow, BackdropType.None);
-                    WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
-                    WindowHelper.SetUseAeroBackdrop(targetWindow, false);
+                    //WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
+                    //WindowHelper.SetUseAeroBackdrop(targetWindow, false);
                     break;
                 case 1: // "Mica":
                     WindowHelper.SetSystemBackdropType(targetWindow, BackdropType.Mica);
-                    WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
-                    WindowHelper.SetUseAeroBackdrop(targetWindow, false);
+                    //WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
+                    //WindowHelper.SetUseAeroBackdrop(targetWindow, false);
                     break;
                 case 2: // "Tabbed":
                     WindowHelper.SetSystemBackdropType(targetWindow, BackdropType.Tabbed);
-                    WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
-                    WindowHelper.SetUseAeroBackdrop(targetWindow, false);
+                    //WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
+                    //WindowHelper.SetUseAeroBackdrop(targetWindow, false);
                     break;
                 case 3: // "Acrylic":
                     WindowHelper.SetSystemBackdropType(targetWindow, BackdropType.Acrylic);
-                    WindowHelper.SetUseAcrylicBackdrop(targetWindow, true);
-                    WindowHelper.SetUseAeroBackdrop(MainWindow.GetCurrent(), true);
+                    //WindowHelper.SetUseAcrylicBackdrop(targetWindow, true);
+                    //WindowHelper.SetUseAeroBackdrop(MainWindow.GetCurrent(), true);
                     break;
             }
         }

@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
-using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
@@ -8,6 +7,7 @@ using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Windows;
 using System.Windows.Media;
 
 namespace HandheldCompanion.ViewModels
@@ -170,7 +170,7 @@ namespace HandheldCompanion.ViewModels
             // send events
             if (ControllerManager.HasTargetController)
             {
-                UpdateController(ControllerManager.GetTarget());
+                UpdateController(ControllerManager.GetTargetController());
             }
 
             // Send update event to Model
@@ -204,7 +204,7 @@ namespace HandheldCompanion.ViewModels
             GlyphFontSize = glyphIconInfo.FontSize;
 
             // UI thread
-            UIHelper.TryInvoke(() =>
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 GlyphForeground = new SolidColorBrush(glyphIconInfo.Color);
             });

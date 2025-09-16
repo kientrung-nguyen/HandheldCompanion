@@ -59,7 +59,7 @@ public partial class QuickHomePage : Page
             lock (brightnessLock)
             {
                 // UI thread
-                UIHelper.TryInvoke(() =>
+                Application.Current.Dispatcher.Invoke(() =>
                 {
                     SliderBrightness.IsEnabled = true;
                     SliderBrightness.Value = ScreenBrightness.Get();
@@ -129,7 +129,7 @@ public partial class QuickHomePage : Page
             try
             {
                 // UI thread
-                UIHelper.TryInvoke(() =>
+                Application.Current.Dispatcher.Invoke(() =>
                 {
                     if (SliderBrightness.Value != brightness)
                         SliderBrightness.Value = brightness;
@@ -152,7 +152,7 @@ public partial class QuickHomePage : Page
                     try
                     {
                         // UI thread
-                UIHelper.TryInvoke(() =>
+                Application.Current.Dispatcher.Invoke(() =>
                         {
                             UpdateVolumeIcon(volume, isMute);
                             SliderVolume.Value = Math.Round(volume);

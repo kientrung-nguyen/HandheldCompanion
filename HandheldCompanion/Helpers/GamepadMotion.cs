@@ -44,7 +44,7 @@ namespace HandheldCompanion.Helpers
 
         private const string DllName = "GamepadMotion.dll";
 
-        public GamepadMotion(string deviceInstanceId, CalibrationMode calibrationMode = CalibrationMode.SensorFusion | CalibrationMode.Stillness)
+        public GamepadMotion(string deviceInstanceId, CalibrationMode calibrationMode)
         {
             handle = CreateGamepadMotion();
 
@@ -52,22 +52,14 @@ namespace HandheldCompanion.Helpers
             this.deviceInstanceId = deviceInstanceId;
 
             // get previous calibration
-            string deviceId = deviceInstanceId.ToUpper();
-            if (IMUCalibration.HasCalibration(deviceId))
-            {
-                calibration = IMUCalibration.GetCalibration(deviceId);
-                SetCalibrationOffset(calibration.xOffset, calibration.yOffset, calibration.zOffset, calibration.weight);
-                SetCalibrationMode(calibrationMode);
-            }
-            else
-            {
-                calibration = new();
-            }
+            calibration = IMUCalibration.GetCalibration(deviceInstanceId.ToUpper());
+            SetCalibrationOffset(calibration.xOffset, calibration.yOffset, calibration.zOffset, calibration.weight);
+            SetCalibrationMode(calibrationMode);
         }
 
         ~GamepadMotion()
         {
-            Dispose();
+            Dispose(false);
         }
 
         public void Reset()
@@ -258,13 +250,17 @@ namespace HandheldCompanion.Helpers
 
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
             if (handle != IntPtr.Zero)
             {
                 DeleteGamepadMotion(handle);
                 handle = IntPtr.Zero;
             }
-
-            GC.SuppressFinalize(this);
         }
 
         [DllImport(DllName)]

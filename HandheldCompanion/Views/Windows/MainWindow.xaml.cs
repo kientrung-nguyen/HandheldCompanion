@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Input;
@@ -410,7 +411,7 @@ public partial class MainWindow : GamepadWindow
     private void ControllerManager_ControllerSelected(IController Controller)
     {
         // UI thread
-        UIHelper.TryInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             GamepadUISelectIcon.Glyph = Controller.GetGlyph(ButtonFlags.B1);
             GamepadUISelectIcon.Foreground = new SolidColorBrush(Controller.GetGlyphColor(ButtonFlags.B1));
@@ -426,7 +427,7 @@ public partial class MainWindow : GamepadWindow
     private void GamepadFocusManagerOnFocused(Control control)
     {
         // UI thread
-        UIHelper.TryInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             // todo : localize me
             string controlType = control.GetType().Name;
@@ -569,7 +570,7 @@ public partial class MainWindow : GamepadWindow
     public void SwapWindowState()
     {
         // UI thread
-        UIHelper.TryInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (WindowState)
             {
@@ -709,8 +710,7 @@ public partial class MainWindow : GamepadWindow
         });
     }
 
-    private DateTime pendingTime = DateTime.Now;
-    private DateTime resumeTime = DateTime.Now;
+    // no code from the cases inside this function will be called on program start
     private async void OnSystemStatusChanged(SystemManager.SystemStatus status, SystemManager.SystemStatus prevStatus)
     {
         if (status == prevStatus)
@@ -723,8 +723,6 @@ public partial class MainWindow : GamepadWindow
                     if (prevStatus == SystemManager.SystemStatus.SystemPending)
                     {
                         // when device resumes from sleep
-                        resumeTime = DateTime.Now;
-
                         // use device-specific delay
                         await Task.Delay(currentDevice.ResumeDelay);
 
@@ -738,14 +736,6 @@ public partial class MainWindow : GamepadWindow
 
                         // resume platform(s)
                         PlatformManager.LibreHardwareMonitor.Start();
-
-                        // wait a bit more if device went to sleep for at least 30 minutes (arbitrary)
-                        TimeSpan sleepDuration = resumeTime - pendingTime;
-                        if (sleepDuration.TotalMinutes > 30)
-                            await Task.Delay(CurrentDevice.ResumeDelay); // Captures synchronization context
-
-                        VirtualManager.Resume(true);
-                        ControllerManager.Resume(true);
                     }
 
                     // open device, when ready
@@ -753,7 +743,7 @@ public partial class MainWindow : GamepadWindow
                     {
                         // wait for all HIDs to be ready
                         while (!currentDevice.IsReady())
-                            Thread.Sleep(1000);
+                            Thread.Sleep(100);
 
                         // open current device (threaded to avoid device to hang)
                         currentDevice.Open();
@@ -763,32 +753,28 @@ public partial class MainWindow : GamepadWindow
 
             case SystemManager.SystemStatus.SystemPending:
                 {
-                    if (prevStatus == SystemManager.SystemStatus.SystemReady)
-                    {
-                        SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS | SystemManager.ES_SYSTEM_REQUIRED);
-                        LogManager.LogInformation("System is about to suspend. Performing tasks.");
+                    // when device goes to sleep
+                    // suspend manager(s)
+                    VirtualManager.Suspend(true);
+                    await Task.Delay(currentDevice.ResumeDelay); // Captures synchronization context
 
-                        // when device goes to sleep
-                        pendingTime = DateTime.Now;
+                    TimerManager.Stop();
+                    SensorsManager.Stop();
+                    InputsManager.Stop();
+                    GPUManager.Stop();
 
-                        // suspend manager(s)
-                        GPUManager.Stop();
-                        VirtualManager.Suspend(true);
-                        ControllerManager.Suspend(true);
-                        TimerManager.Stop();
-                        SensorsManager.Stop();
-                        InputsManager.Stop(false);
-                    	OSDManager.Stop();
-                        // suspend platform(s)
-                        PlatformManager.LibreHardwareMonitor.Stop();
+                    // suspend platform(s)
+                    PlatformManager.LibreHardwareMonitor.Stop();
 
-                        // close current device
-                        CurrentDevice.Close();
+                    // close current device
+                    currentDevice.Close();
 
-                        // Allow system to sleep
-                        SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
-                        LogManager.LogInformation("Tasks completed. System can now suspend.");
-                    }
+                    // free memory
+                    GC.Collect();
+
+                    // Allow system to sleep
+                    SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
+                    LogManager.LogDebug("Tasks completed. System can now suspend if needed.");
                 }
                 break;
         }
@@ -874,7 +860,7 @@ public partial class MainWindow : GamepadWindow
         MotionManager.Stop();
         SensorsManager.Stop();
         ControllerManager.Stop();
-        InputsManager.Stop(true);
+        InputsManager.Stop();
         DeviceManager.Stop();
         PlatformManager.Stop();
         OSDManager.Stop();

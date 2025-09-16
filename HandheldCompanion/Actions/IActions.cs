@@ -3,6 +3,7 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using System;
 using System.Collections.Generic;
+using System.Windows.Forms;
 using WindowsInput.Events;
 
 namespace HandheldCompanion.Actions
@@ -115,6 +116,9 @@ namespace HandheldCompanion.Actions
         public HapticMode HapticMode = HapticMode.Off;
         public HapticStrength HapticStrength = HapticStrength.Low;
 
+        protected ScreenOrientation Orientation = ScreenOrientation.Angle0;
+        public bool AutoRotate { get; set; } = false;
+
         public IActions()
         {
         }
@@ -125,7 +129,7 @@ namespace HandheldCompanion.Actions
             if (this.HapticMode == HapticMode.Down && up) return;
             if (this.HapticMode == HapticMode.Up && !up) return;
 
-            ControllerManager.GetTarget()?.SetHaptic(this.HapticStrength, button);
+            ControllerManager.GetTargetController()?.SetHaptic(this.HapticStrength, button);
         }
 
         public virtual void Execute(ButtonFlags button, bool value, ShiftSlot shiftSlot = Actions.ShiftSlot.None)
@@ -382,9 +386,15 @@ namespace HandheldCompanion.Actions
                 this.Value = value;
         }
 
+        public virtual void SetOrientation(ScreenOrientation orientation)
+        {
+            Orientation = orientation;
+        }
+
+        // Improve me !
         public object Clone()
         {
-            return CloningHelper.DeepClone(this);
+            return MemberwiseClone();
         }
     }
 }

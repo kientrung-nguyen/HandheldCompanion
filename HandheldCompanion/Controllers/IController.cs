@@ -14,7 +14,7 @@ using System.Windows.Media;
 
 namespace HandheldCompanion.Controllers
 {
-    public class IController : IDisposable
+    public class IController
     {
         #region events
         public event UserIndexChangedEventHandler UserIndexChanged;
@@ -22,9 +22,6 @@ namespace HandheldCompanion.Controllers
 
         public event StateChangedEventHandler StateChanged;
         public delegate void StateChangedEventHandler();
-
-        public event VisibilityChangedEventHandler VisibilityChanged;
-        public delegate void VisibilityChangedEventHandler();
 
         public event InputsUpdatedEventHandler InputsUpdated;
         public delegate void InputsUpdatedEventHandler(ControllerState Inputs, Dictionary<byte, GamepadMotion> gamepadMotions, float delta, byte gamepadIndex);
@@ -34,7 +31,7 @@ namespace HandheldCompanion.Controllers
         // When we have target controllers with different buttons (e.g. in VigEm) this will have to be moved elsewhere.
         protected readonly List<ButtonFlags> TargetButtons =
         [
-            ButtonFlags.B1, ButtonFlags.B2, ButtonFlags.B3, ButtonFlags.B4,
+            ButtonFlags.None, ButtonFlags.B1, ButtonFlags.B2, ButtonFlags.B3, ButtonFlags.B4,
             ButtonFlags.DPadUp, ButtonFlags.DPadDown, ButtonFlags.DPadLeft, ButtonFlags.DPadRight,
             ButtonFlags.Start, ButtonFlags.Back, ButtonFlags.Special,
             ButtonFlags.L1, ButtonFlags.R1,
@@ -77,7 +74,7 @@ namespace HandheldCompanion.Controllers
         protected SortedDictionary<AxisLayoutFlags, Color> ColoredAxis = [];
         protected SortedDictionary<ButtonFlags, Color> ColoredButtons = [];
 
-        protected PnPDetails? Details;
+        public PnPDetails Details;
 
         public ButtonState InjectedButtons = new();
         public ControllerState Inputs = new();
@@ -91,6 +88,10 @@ namespace HandheldCompanion.Controllers
         protected object hidLock = new();
 
         public virtual bool IsReady => true;
+
+        public virtual bool IsWireless => Details.isBluetooth;
+        public virtual bool IsDongle => Details.isDongle;
+        public string Enumerator => Details.EnumeratorName;
 
         public bool isPlaceholder;
 
@@ -148,10 +149,13 @@ namespace HandheldCompanion.Controllers
                 return;
 
             this.Details = details;
-            this.Details.isHooked = true;
+            Details.isHooked = true;
+
+            if (details.isVirtual)
+                return;
 
             // manage gamepad motion
-            gamepadMotions[gamepadIndex] = new(details.baseContainerDeviceInstanceId, CalibrationMode.Manual | CalibrationMode.SensorFusion);
+            gamepadMotions[gamepadIndex] = new(details.deviceInstanceId, CalibrationMode.Manual | CalibrationMode.SensorFusion);
         }
 
         public virtual void UpdateInputs(long ticks, float delta)
@@ -184,43 +188,10 @@ namespace HandheldCompanion.Controllers
             return true;
         }
 
-        public bool IsInternal()
-        {
-            return !IsExternal();
-        }
-
-        public bool IsExternal()
-        {
-            if (Details is not null)
-                return Details.isExternal;
-            return true;
-        }
-
-        public bool IsXInput()
-        {
-            if (Details is not null)
-                return Details.isXInput;
-            return false;
-        }
-
         public bool IsGaming()
         {
             if (Details is not null)
                 return Details.isGaming;
-            return false;
-        }
-
-        public virtual bool IsWireless()
-        {
-            if (Details is not null)
-                return Details.isBluetooth;
-            return false;
-        }
-
-        public bool IsDongle()
-        {
-            if (Details is not null)
-                return Details.isDongle;
             return false;
         }
 
@@ -229,46 +200,18 @@ namespace HandheldCompanion.Controllers
             return UserIndex;
         }
 
-        public string GetInstanceId()
+        public string GetInstancePath()
         {
             if (Details is not null)
                 return Details.deviceInstanceId;
             return string.Empty;
         }
 
-        public string GetPath()
-        {
-            if (Details is not null)
-                return Details.devicePath;
-            return string.Empty;
-        }
-
-        public string GetContainerInstanceId()
+        public string GetContainerInstancePath()
         {
             if (Details is not null)
                 return Details.baseContainerDeviceInstanceId;
             return string.Empty;
-        }
-
-        public string GetContainerPath()
-        {
-            if (Details is not null)
-                return Details.baseContainerDevicePath;
-            return string.Empty;
-        }
-
-        public string GetEnumerator()
-        {
-            if (Details is not null)
-                return Details.EnumeratorName;
-            return "USB";
-        }
-
-        public DateTimeOffset GetLastArrivalDate()
-        {
-            if (Details is not null)
-                return Details.GetLastArrivalDate();
-            return new();
         }
 
         public void InjectState(ButtonState State, bool IsKeyDown, bool IsKeyUp)
@@ -382,9 +325,9 @@ namespace HandheldCompanion.Controllers
 
         public bool IsHidden()
         {
-            if (Details is not null)
-                return HidHide.IsRegistered(Details.baseContainerDeviceInstanceId);
-            return false;
+            // bool hide_device = HidHide.IsRegistered(Details.deviceInstanceId);
+            bool hide_base = HidHide.IsRegistered(Details.baseContainerDeviceInstanceId);
+            return /* hide_device || */ hide_base;
         }
 
         public virtual void Hide(bool powerCycle = true)
@@ -393,7 +336,6 @@ namespace HandheldCompanion.Controllers
                 return;
 
             HideHID();
-            VisibilityChanged?.Invoke();
 
             if (powerCycle)
                 CyclePort();
@@ -405,7 +347,6 @@ namespace HandheldCompanion.Controllers
                 return;
 
             UnhideHID();
-            VisibilityChanged?.Invoke();
 
             if (powerCycle)
                 CyclePort();
@@ -413,17 +354,14 @@ namespace HandheldCompanion.Controllers
 
         public virtual void CyclePort()
         {
-            if (Details is null)
-                return;
-
             // set status
             IsBusy = true;
-            ControllerManager.PowerCyclers[GetContainerInstanceId()] = true;
+            ControllerManager.PowerCyclers[Details.baseContainerDeviceInstanceId] = true;
 
-            switch (GetEnumerator())
+            switch (Enumerator)
             {
+                default:
                 case "BTHENUM":
-                case "BTHLEDEVICE":
                     Task.Run(async () =>
                     {
                         Details.Uninstall(false);
@@ -431,7 +369,6 @@ namespace HandheldCompanion.Controllers
                         Devcon.Refresh();
                     });
                     break;
-                default:
                 case "USB":
                     Details.CyclePort();
                     break;
@@ -444,18 +381,12 @@ namespace HandheldCompanion.Controllers
 
         protected void HideHID()
         {
-            if (Details is null)
-                return;
-
             HidHide.HidePath(Details.baseContainerDeviceInstanceId);
             HidHide.HidePath(Details.deviceInstanceId);
         }
 
         protected void UnhideHID()
         {
-            if (Details is null)
-                return;
-
             HidHide.UnhidePath(Details.baseContainerDeviceInstanceId);
             HidHide.UnhidePath(Details.deviceInstanceId);
         }
@@ -700,23 +631,6 @@ namespace HandheldCompanion.Controllers
             if (Details is not null)
                 return Details.Name;
             return string.Empty;
-        }
-
-        protected bool IsDisposing = false;
-        public virtual void Dispose()
-        {
-            // set flag
-            IsDisposing = true;
-
-            Details?.Dispose();
-            Details = null;
-            Inputs?.Dispose();
-            Inputs = null;
-
-            foreach (GamepadMotion gamepadMotion in gamepadMotions.Values)
-                gamepadMotion.Dispose();
-
-            GC.SuppressFinalize(this);
         }
     }
 }

@@ -43,8 +43,8 @@ public partial class ControllerPage : Page
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             // disable emulated controller combobox if profile is not default or set to default controller
             if (!profile.Default && profile.HID != HIDmode.NotSelected)
@@ -62,7 +62,7 @@ public partial class ControllerPage : Page
     private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         // UI thread
-        UIHelper.TryInvoke(() =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
             switch (name)
             {
@@ -87,9 +87,6 @@ public partial class ControllerPage : Page
                 case "SteamControllerMode":
                     cB_SCModeController.SelectedIndex = Convert.ToInt32(value);
                     ControllerRefresh();
-                    break;
-                case "SteamControllerRumbleInterval":
-                    SliderInterval.Value = Convert.ToDouble(value);
                     break;
                 case "HIDmode":
                     cB_HidMode.SelectedIndex = Convert.ToInt32(value);
@@ -118,8 +115,8 @@ public partial class ControllerPage : Page
 
     private void ControllerManager_Working(ControllerManagerStatus status, int attempts)
     {
-        // UI thread
-        UIHelper.TryInvoke(async () =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(async () =>
         {
             switch (status)
             {
@@ -200,8 +197,8 @@ public partial class ControllerPage : Page
         bool isPlugged = hasPhysical && hasTarget;
         bool isHidden = targetController is not null && targetController.IsHidden();
 
-        // UI thread
-        UIHelper.TryInvoke(() =>
+        // UI thread (async)
+        Application.Current.Dispatcher.Invoke(() =>
         {
             PhysicalDevices.Visibility = hasPhysical ? Visibility.Visible : Visibility.Collapsed;
             WarningNoPhysical.Visibility = !hasPhysical ? Visibility.Visible : Visibility.Collapsed;
