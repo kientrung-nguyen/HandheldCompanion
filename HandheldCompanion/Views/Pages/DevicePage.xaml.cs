@@ -54,14 +54,21 @@ namespace HandheldCompanion.Views.Pages
         {
             this.Tag = Tag;
 
+            // manage events
             SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
             MainWindow.uiSettings.ColorValuesChanged += OnColorValuesChanged;
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
             DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
             DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
+
+            // raise events
+            if (ControllerManager.HasTargetController)
+            {
+                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
+            }
         }
 
-        private void GenericDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
+        private void GenericDeviceUpdated(PnPDevice device, Guid IntefaceGuid)
         {
             UpdateDevice(device);
         }
@@ -116,7 +123,7 @@ namespace HandheldCompanion.Views.Pages
         public void Page_Closed()
         { }
 
-        private void SettingsManager_SettingValueChanged(string? name, object value)
+        private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
         {
             // UI thread
             Application.Current.Dispatcher.Invoke(() =>

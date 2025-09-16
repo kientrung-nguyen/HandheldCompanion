@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Managers.Hid;
 using HandheldCompanion.Sensors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Microsoft.Win32.SafeHandles;
 using Nefarius.Utilities.DeviceManagement.PnP;

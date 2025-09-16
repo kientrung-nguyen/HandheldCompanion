@@ -6,11 +6,13 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
 using static HandheldCompanion.WinAPI;
 using System.IO;
+using HandheldCompanion.Shared;
 
 namespace HandheldCompanion;
 
@@ -20,7 +22,21 @@ namespace HandheldCompanion;
 public partial class App : Application
 {
     public static bool IsMultiThreaded { get; } = false;
+    public static string InstallPath = string.Empty;
+    public static string SettingsPath = string.Empty;
 
+    [return: MarshalAs(UnmanagedType.Bool)]
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool AllocConsole();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool FreeConsole();
     /// <summary>
     ///     Initializes the singleton application object.  This is the first line of authored code
     ///     executed, and as such is the logical equivalent of main() or WinMain().
@@ -29,6 +45,10 @@ public partial class App : Application
     {
         InitializeSentry();
         InitializeComponent();
+
+#if DEBUG
+        AllocConsole();
+#endif
     }
 
     /// <summary>
@@ -42,9 +62,10 @@ public partial class App : Application
         var CurrentAssembly = Assembly.GetExecutingAssembly();
         var fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
 
+        // Get the MyDocuments folder path
         // set environment variables
-        Environment.SetEnvironmentVariable("LOG_PATH",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion", "logs"));
+        Environment.SetEnvironmentVariable("LOG_PATH", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion", "logs"));
+        Environment.SetEnvironmentVariable("COMPlus_legacyCorruptedStateExceptionsPolicy", "1");
 
         // initialize log
         LogManager.Initialize("HandheldCompanion");
@@ -53,33 +74,24 @@ public partial class App : Application
 
         using (var process = Process.GetCurrentProcess())
         {
-            // force high priority
-            SetPriorityClass(process.Handle, (int)PriorityClass.HIGH_PRIORITY_CLASS);
-
             Process[] processes = Process.GetProcessesByName(process.ProcessName);
             if (processes.Length > 1)
             {
                 using (Process prevProcess = processes[0])
                 {
-                    nint handle = prevProcess.MainWindowHandle;
-
-                    // Bring the previous process window to the foreground if it's minimized
-                    if (ProcessUtils.IsIconic(handle))
-                        ProcessUtils.ShowWindow(handle, (int)ProcessUtils.ShowWindowCommands.Restored);
-
-                    // Check if the previous process is responding to user input
-                    bool isPrevProcessResponding = prevProcess.Responding;
-                    if (isPrevProcessResponding && ProcessUtils.SetForegroundWindow(handle))
+                    // Find the window by its title
+                    IntPtr hWnd = FindWindow(null, $"Handheld Companion ({fileVersionInfo.FileVersion})");
+                    if (hWnd == IntPtr.Zero || !prevProcess.Responding)
                     {
-                        // If the previous process is responding and was successfully brought to the foreground, kill the current process
+                        MessageBox.Show("Another instance of Handheld Companion is already running.\n\nPlease close the other instance and try again.", "Error");
                         process.Kill();
-                    }
-                    else
-                    {
-                        // If the previous process is not responding or cannot be brought to the foreground, assume it is stalled and kill it
-                        prevProcess.Kill();
+                        return;
                     }
 
+                    // Bring previous window to foreground, kill self
+                    ProcessUtils.ShowWindow(hWnd, (int)ProcessUtils.ShowWindowCommands.Normal);
+                    ProcessUtils.SetForegroundWindow(hWnd);
+                    process.Kill();
                     return;
                 }
             }
@@ -187,7 +199,7 @@ public partial class App : Application
         string url = SentryConfig.DSN_URL;
 
         if (!string.IsNullOrEmpty(url))
-        {            
+        {
             SentrySdk.Init(options =>
             {
                 // Tells which project in Sentry to send events to:

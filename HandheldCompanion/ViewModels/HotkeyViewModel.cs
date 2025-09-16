@@ -4,6 +4,7 @@ using HandheldCompanion.Commands.Functions.Windows;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Extensions;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
@@ -16,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -42,6 +44,8 @@ namespace HandheldCompanion.ViewModels
                 _Hotkey.command.Executed += Command_Executed;
                 _Hotkey.command.Updated += Command_Updated;
 
+                // refresh all properties
+                OnPropertyChanged(string.Empty);
                 OnPropertyChanged(nameof(Hotkey));
                 OnPropertyChanged(nameof(IsPinned));
                 OnPropertyChanged(nameof(CommandTypeIndex));
@@ -110,6 +114,7 @@ namespace HandheldCompanion.ViewModels
         {
             OnPropertyChanged(nameof(LiveGlyph));
             OnPropertyChanged(nameof(IsEnabled));
+            OnPropertyChanged(nameof(IsToggled));
         }
 
         public override void Dispose()
@@ -350,10 +355,13 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    executableCommand.Arguments = value;
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    if (executableCommand.Arguments != value)
+                    {
+                        executableCommand.Arguments = value;
+                        OnPropertyChanged(nameof(ExecutableArguments));
 
-                    // OnPropertyChanged(nameof(ExecutableArguments));
+                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    }
                 }
             }
         }
@@ -370,10 +378,13 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    executableCommand.windowStyle = (ProcessWindowStyle)value;
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    if (executableCommand.windowStyle != (ProcessWindowStyle)value)
+                    {
+                        executableCommand.windowStyle = (ProcessWindowStyle)value;
+                        OnPropertyChanged(nameof(ExecutableWindowStyle));
 
-                    // OnPropertyChanged(nameof(ExecutableWindowStyle));
+                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    }
                 }
             }
         }
@@ -390,10 +401,13 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    executableCommand.RunAs = value;
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    if (executableCommand.RunAs != value)
+                    {
+                        executableCommand.RunAs = value;
+                        OnPropertyChanged(nameof(ExecutableRunAs));
 
-                    // OnPropertyChanged(nameof(ExecutableRunAs));
+                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    }
                 }
             }
         }
@@ -410,8 +424,13 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is OnScreenKeyboardLegacyCommands keyboardCommands)
                 {
-                    keyboardCommands.KeyboardPosition = value;
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    if (keyboardCommands.KeyboardPosition != value)
+                    {
+                        keyboardCommands.KeyboardPosition = value;
+                        OnPropertyChanged(nameof(OnScreenKeyboardLegacyPosition));
+
+                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    }
                 }
             }
         }
@@ -431,6 +450,10 @@ namespace HandheldCompanion.ViewModels
         public HotkeyViewModel(Hotkey hotkey)
         {
             Hotkey = hotkey;
+
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(ButtonGlyphs, new object());
+            BindingOperations.EnableCollectionSynchronization(FunctionItems, new object());
 
             // Fill initial data
             foreach (object value in FunctionCommands.Functions)
@@ -459,7 +482,7 @@ namespace HandheldCompanion.ViewModels
             {
                 // todo: improve me
                 // we need to make sure the key that was pressed to trigger the listening event isn't recorded
-                await Task.Delay(100);
+                await Task.Delay(100).ConfigureAwait(false); // Avoid blocking the synchronization context
                 InputsManager.StartListening(hotkey.ButtonFlags, InputsChordTarget.Input);
             });
 
@@ -478,7 +501,7 @@ namespace HandheldCompanion.ViewModels
             {
                 // todo: improve me
                 // we need to make sure the key that was pressed to trigger the listening event isn't recorded
-                await Task.Delay(100);
+                await Task.Delay(100).ConfigureAwait(false); // Avoid blocking the synchronization context
                 InputsManager.StartListening(hotkey.ButtonFlags, InputsChordTarget.Output);
             });
 
@@ -501,8 +524,7 @@ namespace HandheldCompanion.ViewModels
 
             ExecuteCommand = new DelegateCommand(async () =>
             {
-                if (Hotkey.command is not null)
-                    Hotkey.command.Execute(Hotkey.command.OnKeyDown, Hotkey.command.OnKeyUp);
+                Hotkey.Execute(Hotkey.command.OnKeyDown, Hotkey.command.OnKeyUp, false);
             });
 
             EraseButtonCommand = new DelegateCommand(async () =>
@@ -526,36 +548,38 @@ namespace HandheldCompanion.ViewModels
             foreach (FontIconViewModel FontIconViewModel in ButtonGlyphs.ToList())
                 ButtonGlyphs.SafeRemove(FontIconViewModel);
 
-            IController? controller = ControllerManager.GetTargetController();
-            if (controller is null)
-                controller = ControllerManager.GetEmulatedController();
+            IController controller = ControllerManager.GetTargetOrDefault();
 
-            foreach (ButtonFlags buttonFlags in Hotkey.inputsChord.ButtonState.Buttons)
+            // UI thread
+            UIHelper.TryInvoke(() =>
             {
-                string glyphString = string.Empty;
-                Brush glyphColor = controller.GetGlyphColor(buttonFlags);
-
-                switch (buttonFlags)
+                foreach (ButtonFlags buttonFlags in Hotkey.inputsChord.ButtonState.Buttons)
                 {
-                    case ButtonFlags.OEM1:
-                    case ButtonFlags.OEM2:
-                    case ButtonFlags.OEM3:
-                    case ButtonFlags.OEM4:
-                    case ButtonFlags.OEM5:
-                    case ButtonFlags.OEM6:
-                    case ButtonFlags.OEM7:
-                    case ButtonFlags.OEM8:
-                    case ButtonFlags.OEM9:
-                    case ButtonFlags.OEM10:
-                        glyphString = IDevice.GetCurrent().GetGlyph(buttonFlags);
-                        break;
-                    default:
-                        glyphString = controller.GetGlyph(buttonFlags);
-                        break;
-                }
+                    string glyphString = string.Empty;
+                    Brush glyphColor = new SolidColorBrush(controller.GetGlyphColor(buttonFlags));
 
-                ButtonGlyphs.SafeAdd(new(Hotkey, this, glyphString, glyphColor));
-            }
+                    switch (buttonFlags)
+                    {
+                        case ButtonFlags.OEM1:
+                        case ButtonFlags.OEM2:
+                        case ButtonFlags.OEM3:
+                        case ButtonFlags.OEM4:
+                        case ButtonFlags.OEM5:
+                        case ButtonFlags.OEM6:
+                        case ButtonFlags.OEM7:
+                        case ButtonFlags.OEM8:
+                        case ButtonFlags.OEM9:
+                        case ButtonFlags.OEM10:
+                            glyphString = IDevice.GetCurrent().GetGlyph(buttonFlags);
+                            break;
+                        default:
+                            glyphString = controller.GetGlyph(buttonFlags);
+                            break;
+                    }
+
+                    ButtonGlyphs.SafeAdd(new(Hotkey, this, glyphString, glyphColor));
+                }
+            });
 
             switch (Hotkey.command.commandType)
             {

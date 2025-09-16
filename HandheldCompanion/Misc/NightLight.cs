@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using Microsoft.Win32;

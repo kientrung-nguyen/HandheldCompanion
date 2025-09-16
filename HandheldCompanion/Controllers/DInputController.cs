@@ -26,18 +26,14 @@ public class DInputController : IController
 
         // Set BufferSize in order to use buffered data.
         joystick.Properties.BufferSize = 128;
-
-        // UI
-        DrawUI();
-        UpdateUI();
     }
 
     public override string ToString()
     {
-        var baseName = base.ToString();
+        string baseName = base.ToString();
         if (!string.IsNullOrEmpty(baseName))
             return baseName;
-        if (!string.IsNullOrEmpty(joystick.Information.ProductName))
+        if (!string.IsNullOrEmpty(joystick?.Information.ProductName))
             return joystick.Information.ProductName;
         return $"DInput Controller {UserIndex}";
     }
@@ -54,8 +50,7 @@ public class DInputController : IController
 
     public override void Plug()
     {
-        if (joystick is not null)
-            joystick.Acquire();
+        joystick?.Acquire();
 
         base.Plug();
     }
@@ -63,8 +58,7 @@ public class DInputController : IController
     public override void Unplug()
     {
         // Unacquire the joystick
-        if (joystick is not null)
-            joystick.Unacquire();
+        joystick?.Unacquire();
 
         base.Unplug();
     }

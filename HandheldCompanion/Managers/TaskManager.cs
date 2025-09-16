@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32.TaskScheduler;
+﻿using HandheldCompanion.Shared;
+using Microsoft.Win32.TaskScheduler;
 using System;
 using System.Security.Principal;
 
@@ -21,21 +22,13 @@ public static class TaskManager
 
     static TaskManager()
     {
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
+    public static async System.Threading.Tasks.Task Start(string Executable)
     {
-        switch (name)
-        {
-            case "RunAtStartup":
-                UpdateTask(Convert.ToBoolean(value));
-                break;
-        }
-    }
+        if (IsInitialized)
+            return;
 
-    public static void Start(string Executable)
-    {
         TaskExecutable = Executable;
         taskService = new TaskService();
 
@@ -67,6 +60,15 @@ public static class TaskManager
         }
         catch { }
 
+        // manage events
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        if (SettingsManager.IsInitialized)
+        {
+            SettingsManager_SettingValueChanged("RunAtStartup", SettingsManager.Get<string>("RunAtStartup"), false);
+        }
+
         IsInitialized = true;
         Initialized?.Invoke();
 
@@ -78,11 +80,22 @@ public static class TaskManager
         if (!IsInitialized)
             return;
 
-        IsInitialized = false;
-
+        // manage events
         SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
 
+        IsInitialized = false;
+
         LogManager.LogInformation("{0} has stopped", "TaskManager");
+    }
+
+    private static void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
+    {
+        switch (name)
+        {
+            case "RunAtStartup":
+                UpdateTask(Convert.ToBoolean(value));
+                break;
+        }
     }
 
     private static void UpdateTask(bool value)

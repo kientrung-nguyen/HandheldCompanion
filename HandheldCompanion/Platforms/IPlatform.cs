@@ -1,4 +1,4 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.Generic;
@@ -45,6 +45,8 @@ public abstract class IPlatform : IDisposable
     protected string RunningName;
     protected string ExecutablePath;
     protected Version ExpectedVersion;
+
+    public List<string> Executables => new() { ExecutableName, RunningName };
 
     protected string InstallPath;
     protected bool IsStarting;
@@ -147,6 +149,11 @@ public abstract class IPlatform : IDisposable
         }
     }
 
+    ~IPlatform()
+    {
+        Dispose();
+    }
+
     public virtual void Dispose()
     {
         if (PlatformWatchdog is not null)
@@ -176,6 +183,8 @@ public abstract class IPlatform : IDisposable
 
         Status = status;
         Updated?.Invoke(status);
+
+        LogManager.LogInformation("Platform {0} is {1}", this.GetType().Name, Status);
     }
 
     protected void SettingsValueChaned(string name, object value)
@@ -203,20 +212,23 @@ public abstract class IPlatform : IDisposable
         return string.Empty;
     }
 
-    public virtual bool IsRelated(Process proc)
+    public virtual bool IsRelated(Process process)
     {
         try
         {
-            foreach (ProcessModule module in proc.Modules)
-                if (Modules.Contains(module.ModuleName))
-                    return true;
+            // Loop through the modules of the process
+            foreach (ProcessModule module in process.Modules)
+            {
+                try
+                {
+                    if (Modules.Contains(module.ModuleName, StringComparer.InvariantCultureIgnoreCase))
+                        return true;
+                }
+                catch (Win32Exception) { }
+                catch (InvalidOperationException) { }
+            }
         }
-        catch (Win32Exception)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
+        catch { }
 
         return false;
     }
@@ -259,7 +271,7 @@ public abstract class IPlatform : IDisposable
             }
             else
             {
-                LogManager.LogError("Something went wrong while trying to start {0}", GetType());
+                LogManager.LogError("Something wen't wrong while trying to start {0}", GetType());
                 Stop();
 
                 // reset tentative counter
@@ -297,7 +309,7 @@ public abstract class IPlatform : IDisposable
                     CreateNoWindow = true
                 });
 
-                Thread.Sleep(3000);
+                Thread.Sleep(500);
             }
 
             if (process is not null && !process.HasExited)

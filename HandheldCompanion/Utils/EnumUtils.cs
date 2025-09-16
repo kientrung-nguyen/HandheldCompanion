@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Properties;
+using HandheldCompanion.Shared;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

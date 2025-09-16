@@ -1,29 +1,26 @@
-using HandheldCompanion.Controls;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Misc;
-using HandheldCompanion.Platforms;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Automation;
 using Windows.System.Diagnostics;
-using static HandheldCompanion.Controls.ProcessEx;
+using static HandheldCompanion.Misc.ProcessEx;
 using static HandheldCompanion.WinAPI;
-using ThreadState = System.Diagnostics.ThreadState;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
 public static class ProcessManager
 {
+    #region imports
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool EnumWindows(WindowEnumCallback lpEnumFunc, int lParam);
@@ -34,12 +31,16 @@ public static class ProcessManager
 
     // Import the necessary user32.dll functions
     [DllImport("user32.dll")]
-    static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax,
-        IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc,
-        uint idProcess, uint idThread, uint dwFlags);
+    static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+    #endregion
 
     // Declare the WinEventDelegate
     private static WinEventDelegate winDelegate = null;
+    private static IntPtr m_hhook = IntPtr.Zero;
 
     // Define the WinEventDelegate
     delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
@@ -54,10 +55,12 @@ public static class ProcessManager
     private static readonly Timer ProcessWatcher;
 
     private static readonly ConcurrentDictionary<int, ProcessEx> Processes = new();
+    private static object processLock = new();
+
     private static ProcessEx foregroundProcess;
     private static IntPtr foregroundWindow;
 
-    private static bool IsInitialized;
+    public static bool IsInitialized;
 
     static ProcessManager()
     {
@@ -70,14 +73,52 @@ public static class ProcessManager
 
         // Set up the WinEvent hook
         winDelegate = new WinEventDelegate(WinEventProc);
-        IntPtr m_hhook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
-            IntPtr.Zero, winDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
+        m_hhook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, winDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
 
         ForegroundTimer = new Timer(2000);
         ForegroundTimer.Elapsed += (sender, e) => ForegroundCallback();
 
         ProcessWatcher = new Timer(2000);
         ProcessWatcher.Elapsed += (sender, e) => ProcessWatcher_Elapsed();
+    }
+
+    public static async Task Start()
+    {
+        if (IsInitialized)
+            return;
+
+        // list all current windows
+        EnumWindows(OnWindowDiscovered, 0);
+
+        // start processes monitor
+        ForegroundTimer.Start();
+        ProcessWatcher.Start();
+
+        IsInitialized = true;
+        Initialized?.Invoke();
+
+        LogManager.LogInformation("{0} has started", "ProcessManager");
+    }
+
+    public static void Stop()
+    {
+        if (!IsInitialized)
+            return;
+
+        // Unhook the event when no longer needed
+        if (m_hhook != IntPtr.Zero)
+        {
+            UnhookWinEvent(m_hhook);
+            m_hhook = IntPtr.Zero; // Reset handle to indicate it's unhooked
+        }
+
+        // stop processes monitor
+        ForegroundTimer.Stop();
+        ProcessWatcher.Stop();
+
+        IsInitialized = false;
+
+        LogManager.LogInformation("{0} has stopped", "ProcessManager");
     }
 
     private static void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
@@ -151,35 +192,6 @@ public static class ProcessManager
         return true;
     }
 
-    public static void Start()
-    {
-        // list all current windows
-        EnumWindows(OnWindowDiscovered, 0);
-
-        // start processes monitor
-        ForegroundTimer.Start();
-        ProcessWatcher.Start();
-
-        IsInitialized = true;
-        Initialized?.Invoke();
-
-        LogManager.LogInformation("{0} has started", "ProcessManager");
-    }
-
-    public static void Stop()
-    {
-        if (!IsInitialized)
-            return;
-
-        IsInitialized = false;
-
-        // stop processes monitor
-        ForegroundTimer.Stop();
-        ProcessWatcher.Stop();
-
-        LogManager.LogInformation("{0} has stopped", "ProcessManager");
-    }
-
     public static ProcessEx GetForegroundProcess()
     {
         return foregroundProcess;
@@ -215,7 +227,7 @@ public static class ProcessManager
 
     private static async void ForegroundCallback()
     {
-        var hWnd = GetforegroundWindow();
+        IntPtr hWnd = GetforegroundWindow();
 
         // skip if this window is already in foreground
         if (foregroundWindow == hWnd || hWnd == IntPtr.Zero)
@@ -323,84 +335,79 @@ public static class ProcessManager
 
     private static bool CreateOrUpdateProcess(int processID, AutomationElement automationElement, bool OnStartup = false)
     {
-        try
+        lock (processLock)
         {
-            // process has exited on arrival
-            Process proc = Process.GetProcessById(processID);
-            if (proc.HasExited)
-                return false;
-
-            if (!Processes.TryGetValue(proc.Id, out ProcessEx processEx))
+            try
             {
-                // hook exited event
-                try
-                {
-                    proc.EnableRaisingEvents = true;
-                }
-                catch (Exception)
-                {
-                    // access denied
-                }
-                proc.Exited += ProcessHalted;
-
-                // check process path
-                string path = ProcessUtils.GetPathToApp(proc.Id);
-                if (string.IsNullOrEmpty(path))
+                // process has exited on arrival
+                Process proc = Process.GetProcessById(processID);
+                if (proc.HasExited)
                     return false;
 
-                // get filter
-                string exec = Path.GetFileName(path);
-                ProcessFilter filter = GetFilter(exec, path);
+                if (!Processes.TryGetValue(proc.Id, out ProcessEx processEx))
+                {
+                    // hook exited event
+                    try
+                    {
+                        proc.EnableRaisingEvents = true;
+                    }
+                    catch (Exception)
+                    {
+                        // access denied
+                    }
+                    proc.Exited += ProcessHalted;
 
-                // create process 
-                // UI thread (synchronous)
-                Application.Current.Dispatcher.Invoke(() => { processEx = new ProcessEx(proc, path, exec, filter); });
+                    // check process path
+                    string path = ProcessUtils.GetPathToApp(proc.Id);
+                    if (string.IsNullOrEmpty(path))
+                        return false;
 
-                if (processEx is null)
-                    return false;
+                    // get filter
+                    string exec = Path.GetFileName(path);
+                    ProcessFilter filter = GetFilter(exec, path);
 
-                // attach current window
-                processEx.AttachWindow(automationElement);
+                    // create process 
+                    // UI thread (synchronous)
+                    UIHelper.TryInvoke(() => { processEx = new ProcessEx(proc, path, exec, filter); });
 
-                // get the proper platform
-                processEx.Platform = PlatformManager.GetPlatform(proc);
+                    if (processEx is null)
+                        return false;
 
-                // add to dictionary
-                Processes.TryAdd(processID, processEx);
+                    // attach current window
+                    processEx.AttachWindow(automationElement);
 
-                // todo: move me to event listeners
-                // we might want to treat this information differently depending on the location
-                if (processEx.Filter != ProcessFilter.Allowed)
-                    return true;
+                    // get the proper platform
+                    processEx.Platform = PlatformManager.GetPlatform(proc);
 
-                // raise event
-                ProcessStarted?.Invoke(processEx, OnStartup);
+                    // add to dictionary
+                    Processes.TryAdd(processID, processEx);
 
-                LogManager.LogDebug("Process detected: {0}", processEx.Executable);
+                    // todo: move me to event listeners
+                    // we might want to treat this information differently depending on the location
+                    if (processEx.Filter != ProcessFilter.Allowed)
+                        return true;
+
+                    // raise event
+                    ProcessStarted?.Invoke(processEx, OnStartup);
+
+                    LogManager.LogDebug("Process detected: {0}", processEx.Executable);
+                }
+                else
+                {
+                    // process already exist
+                    // attach current window
+                    processEx.AttachWindow(automationElement);
+                }
+
+                return true;
             }
-            else
+            catch (Exception)
             {
-                // process already exist
-                // attach current window
-                processEx.AttachWindow(automationElement);
+                // process has too high elevation
             }
 
-            // listen for window closed event
-            WindowElement windowElement = new(processID, automationElement);
-            windowElement.Closed += (sender) =>
-            {
-                if (Processes.TryGetValue(windowElement._processId, out var processEx))
-                    processEx.DetachWindow((int)sender._hwnd);
-            };
-
-            return true;
+            return false;
         }
-        catch (Exception)
-        {
-            // process has too high elevation
-        }
-
-        return false;
     }
 
     private static ProcessFilter GetFilter(string exec, string path, string MainWindowTitle = "")
@@ -515,7 +522,7 @@ public static class ProcessManager
                 ProcessUtils.NtResumeProcess(process.Handle);
             });
 
-        await Task.Delay(500);
+        await Task.Delay(500).ConfigureAwait(false); // Avoid blocking the synchronization context
 
         // restore process windows
         foreach (ProcessWindow processWindow in processEx.ProcessWindows.Values)
@@ -532,7 +539,7 @@ public static class ProcessManager
         foreach (ProcessWindow processWindow in processEx.ProcessWindows.Values)
             ProcessUtils.ShowWindow(processWindow.Hwnd, (int)ProcessUtils.ShowWindowCommands.Hide);
 
-        await Task.Delay(500);
+        await Task.Delay(500).ConfigureAwait(false); // Avoid blocking the synchronization context
 
         ProcessUtils.NtSuspendProcess(processEx.Process.Handle);
 

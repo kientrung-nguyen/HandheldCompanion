@@ -1,8 +1,11 @@
 ﻿using HandheldCompanion.ADLX;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using SharpDX.Direct3D9;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -31,8 +34,34 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         private bool prevAFMF = false;
 
         protected new AdlxTelemetryData TelemetryData = new();
-        //protected AmdGpuControl AmdGpuControl;
-        //protected ADLSingleSensorData[] AmdGpuSensorsData = [];
+
+        protected override void BusyTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            // Adrenaline Software is known to cause issues with the ADLX backend, so we kill it here
+            KillAdrenaline();
+
+            base.BusyTimer_Elapsed(sender, e);
+        }
+
+        public static void KillAdrenaline()
+        {
+            HashSet<string> targets = new HashSet<string> { "RadeonSoftware", "cncmd" };
+
+            foreach (Process proc in Process.GetProcesses())
+            {
+                if (targets.Contains(proc.ProcessName))
+                {
+                    proc.Kill();
+                    // Remove the target so we don't try killing it again.
+                    targets.Remove(proc.ProcessName);
+                    // If all targets are handled, exit early.
+                    if (targets.Count == 0)
+                        break;
+                }
+            }
+
+            LogManager.LogError("{0} has been shut down to restore {1} library", "AMD Software꞉ Adrenalin Edition", typeof(AmdGpu));
+        }
 
         public bool HasRSRSupport()
         {
@@ -259,7 +288,14 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
         public override bool HasLoad()
         {
-            return TelemetryData.gpuUsageSupported;
+            switch (adapterInformation.Details.Description)
+            {
+                case "AMD Custom GPU 0932":
+                case "AMD Custom GPU 0405":
+                    return false;
+                default:
+                    return TelemetryData.gpuUsageSupported;
+            }
         }
 
         public override float GetLoad()
@@ -269,7 +305,14 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
         public override bool HasPower()
         {
-            return TelemetryData.gpuPowerSupported;
+            switch (adapterInformation.Details.Description)
+            {
+                case "AMD Custom GPU 0932":
+                case "AMD Custom GPU 0405":
+                    return false;
+                default:
+                    return TelemetryData.gpuPowerSupported;
+            }
         }
 
         public override float GetPower()
@@ -279,7 +322,14 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
         public override bool HasTemperature()
         {
-            return TelemetryData.gpuTemperatureSupported;
+            switch (adapterInformation.Details.Description)
+            {
+                case "AMD Custom GPU 0932":
+                case "AMD Custom GPU 0405":
+                    return false;
+                default:
+                    return TelemetryData.gpuTemperatureSupported;
+            }
         }
 
         public override float GetTemperature()
@@ -310,9 +360,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (result != ADLX_RESULT.ADLX_OK)
                 return;
 
-            if (adapterCount == 1)
-                displayIdx = 0;
-            else
+            if (adapterCount > 1)
             {
 	            for (int idx = 0; idx < adapterCount; idx++)
 	            {
@@ -333,6 +381,11 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                 }
             }
 
+            // we couldn't pick a display by its name, pick first
+            // todo: improve me
+            if (displayIdx == -1)
+                displayIdx = 0;
+
             if (displayIdx != -1)
             {
                 // get the associated GPU UniqueId
@@ -350,7 +403,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
             //AmdGpuControl = new AmdGpuControl();
             // pull telemetry once
-            TelemetryData = GetTelemetry();
+            GetAdlxTelemetry(deviceIdx, ref TelemetryData);
 
             UpdateTimer = new Timer(UpdateInterval)
             {
@@ -458,7 +511,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         while (DateTime.Now < timeout && !RSRSupport)
                         {
                             RSRSupport = HasRSRSupport();
-                            Thread.Sleep(250);
+                            if (!RSRSupport) Thread.Sleep(1000);
                         }
                         RSR = GetRSR();
 
@@ -484,7 +537,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         while (DateTime.Now < timeout && !AFMFSupport)
                         {
                             AFMFSupport = HasAFMFSupport();
-                            Thread.Sleep(250);
+                            if (!AFMFSupport) Thread.Sleep(1000);
                         }
                         AFMF = GetAFMF();
 
@@ -506,10 +559,10 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         bool IntegerScaling = false;
 
                         DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(2));
-                        while (DateTime.Now < timeout && !IntegerScalingSupport)
+                        while (DateTime.Now < timeout && !IntegerScalingSupport && GPUScaling)
                         {
                             IntegerScalingSupport = HasIntegerScalingSupport();
-                            Thread.Sleep(250);
+                            if (!IntegerScalingSupport) Thread.Sleep(1000);
                         }
                         IntegerScaling = GetIntegerScaling();
 

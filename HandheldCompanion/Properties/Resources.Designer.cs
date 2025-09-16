@@ -430,6 +430,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Calibrate.
+        /// </summary>
+        public static string Controller_Calibrate {
+            get {
+                return ResourceManager.GetString("Controller_Calibrate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Controller_Connect {
@@ -1380,15 +1389,6 @@ namespace HandheldCompanion.Properties {
         public static string DevicePage_Lenovo_ControllerTriggerMargin {
             get {
                 return ResourceManager.GetString("DevicePage_Lenovo_ControllerTriggerMargin", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Lenovo Legion Go settings.
-        /// </summary>
-        public static string DevicePage_Lenovo_Settings {
-            get {
-                return ResourceManager.GetString("DevicePage_Lenovo_Settings", resourceCulture);
             }
         }
         
@@ -3382,6 +3382,78 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to T2.
+        /// </summary>
+        public static string Enum_TatantulaProController_ButtonFlags_B10 {
+            get {
+                return ResourceManager.GetString("Enum_TatantulaProController_ButtonFlags_B10", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to T3.
+        /// </summary>
+        public static string Enum_TatantulaProController_ButtonFlags_B11 {
+            get {
+                return ResourceManager.GetString("Enum_TatantulaProController_ButtonFlags_B11", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to C1.
+        /// </summary>
+        public static string Enum_TatantulaProController_ButtonFlags_B5 {
+            get {
+                return ResourceManager.GetString("Enum_TatantulaProController_ButtonFlags_B5", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to C2.
+        /// </summary>
+        public static string Enum_TatantulaProController_ButtonFlags_B6 {
+            get {
+                return ResourceManager.GetString("Enum_TatantulaProController_ButtonFlags_B6", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to C3.
+        /// </summary>
+        public static string Enum_TatantulaProController_ButtonFlags_B7 {
+            get {
+                return ResourceManager.GetString("Enum_TatantulaProController_ButtonFlags_B7", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to C4.
+        /// </summary>
+        public static string Enum_TatantulaProController_ButtonFlags_B8 {
+            get {
+                return ResourceManager.GetString("Enum_TatantulaProController_ButtonFlags_B8", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to T1.
+        /// </summary>
+        public static string Enum_TatantulaProController_ButtonFlags_B9 {
+            get {
+                return ResourceManager.GetString("Enum_TatantulaProController_ButtonFlags_B9", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to M.
+        /// </summary>
+        public static string Enum_TatantulaProController_ButtonFlags_L5 {
+            get {
+                return ResourceManager.GetString("Enum_TatantulaProController_ButtonFlags_L5", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Gyroscope.
         /// </summary>
         public static string Enum_XInputController_AxisLayoutFlags_Gyroscope {
@@ -4021,6 +4093,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Restart Steam.
+        /// </summary>
+        public static string Hint_SteamNeptuneAction {
+            get {
+                return ResourceManager.GetString("Hint_SteamNeptuneAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Steam Xbox Controller Enhanced Features Driver is installed.
         /// </summary>
         public static string Hint_SteamXboxDrivers {
@@ -4318,6 +4399,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Open Game Bar.
+        /// </summary>
+        public static string Hotkey_GameBar {
+            get {
+                return ResourceManager.GetString("Hotkey_GameBar", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Press this key: Windows + G.
+        /// </summary>
+        public static string Hotkey_GameBarDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_GameBarDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Guide or PS button.
         /// </summary>
         public static string Hotkey_Guide {
@@ -4476,6 +4575,24 @@ namespace HandheldCompanion.Properties {
         public static string Hotkey_MainwindowDesc {
             get {
                 return ResourceManager.GetString("Hotkey_MainwindowDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Mute volume.
+        /// </summary>
+        public static string Hotkey_muteVolume {
+            get {
+                return ResourceManager.GetString("Hotkey_muteVolume", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Mute/unmute volume.
+        /// </summary>
+        public static string Hotkey_muteVolumeDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_muteVolumeDesc", resourceCulture);
             }
         }
         
@@ -4660,6 +4777,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Swap foreground window.
+        /// </summary>
+        public static string Hotkey_SwapScreen {
+            get {
+                return ResourceManager.GetString("Hotkey_SwapScreen", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move the foreground window to next available screen.
+        /// </summary>
+        public static string Hotkey_SwapScreenDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_SwapScreenDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Open Task Manager.
         /// </summary>
         public static string Hotkey_TaskManager {
@@ -4692,6 +4827,42 @@ namespace HandheldCompanion.Properties {
         public static string Hotkey_TaskviewDesc {
             get {
                 return ResourceManager.GetString("Hotkey_TaskviewDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Touchpad.
+        /// </summary>
+        public static string Hotkey_touchpadToggle {
+            get {
+                return ResourceManager.GetString("Hotkey_touchpadToggle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toggle Touchpad.
+        /// </summary>
+        public static string Hotkey_touchpadToggleDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_touchpadToggleDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Touchscreen.
+        /// </summary>
+        public static string Hotkey_touchscreenToggle {
+            get {
+                return ResourceManager.GetString("Hotkey_touchscreenToggle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toggle Touchscreen.
+        /// </summary>
+        public static string Hotkey_touchscreenToggleDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_touchscreenToggleDesc", resourceCulture);
             }
         }
         
@@ -5251,42 +5422,6 @@ namespace HandheldCompanion.Properties {
         public static string InputsHotkey_suspendResumeTaskDesc {
             get {
                 return ResourceManager.GetString("InputsHotkey_suspendResumeTaskDesc", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Touchpad.
-        /// </summary>
-        public static string InputsHotkey_touchpadToggle {
-            get {
-                return ResourceManager.GetString("InputsHotkey_touchpadToggle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Toggle Touchpad.
-        /// </summary>
-        public static string InputsHotkey_touchpadToggleDesc {
-            get {
-                return ResourceManager.GetString("InputsHotkey_touchpadToggleDesc", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Touchscreen.
-        /// </summary>
-        public static string InputsHotkey_touchscreenToggle {
-            get {
-                return ResourceManager.GetString("InputsHotkey_touchscreenToggle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Toggle Touchscreen.
-        /// </summary>
-        public static string InputsHotkey_touchscreenToggleDesc {
-            get {
-                return ResourceManager.GetString("InputsHotkey_touchscreenToggleDesc", resourceCulture);
             }
         }
         
@@ -7892,6 +8027,15 @@ namespace HandheldCompanion.Properties {
         public static string ProfilesPage_OK {
             get {
                 return ResourceManager.GetString("ProfilesPage_OK", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Display the profile in Quick start section from the Quicktools Applications page.
+        /// </summary>
+        public static string ProfilesPage_Pinned {
+            get {
+                return ResourceManager.GetString("ProfilesPage_Pinned", resourceCulture);
             }
         }
         

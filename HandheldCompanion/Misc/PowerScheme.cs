@@ -127,9 +127,9 @@ public static class PowerScheme
         return false;
     }
 
-    public static bool SetAttribute(Guid SubGroupOfPowerSettingsGuid, Guid PowerSettingGuid, bool hide)
+    public static bool SetAttribute(Guid SubGroupOfPowerSettingsGuid, Guid PowerSettingGuid, uint value)
     {
-        return PowerWriteSettingAttributes(SubGroupOfPowerSettingsGuid, PowerSettingGuid, (uint)(hide ? 1 : 0)) == 0;
+        return PowerWriteSettingAttributes(SubGroupOfPowerSettingsGuid, PowerSettingGuid, value) == 0;
     }
 
     public static uint[] ReadPowerCfg(Guid SubGroup, Guid Settings)
@@ -153,7 +153,7 @@ public static class PowerScheme
         if (GetActiveScheme(out var currentScheme))
         {
             // unhide attribute
-            SetAttribute(SubGroup, Settings, false);
+            SetAttribute(SubGroup, Settings, 2);
 
             // set value(s)
             SetValue(PowerIndexType.AC, currentScheme, SubGroup, Settings, ACValue);

@@ -43,6 +43,23 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        // default mapping can't be shifted
+        public int ShiftIndex
+        {
+            get => IsInitialMapping ? 0 : Action is not null ? (int)Action.ShiftSlot : 0;
+            set
+            {
+                if (IsInitialMapping)
+                    return;
+
+                if (Action is not null && value != ShiftIndex)
+                {
+                    Action.ShiftSlot = (ShiftSlot)value;
+                    OnPropertyChanged(nameof(ShiftIndex));
+                }
+            }
+        }
+
         public int LongPressDelay
         {
             get => Action is not null ? Action.ActionTimer : 0;
@@ -84,9 +101,48 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        public bool HasTurbo
+        {
+            get => Action is not null && Action.HasTurbo;
+            set
+            {
+                if (Action is not null && value != HasTurbo)
+                {
+                    Action.HasTurbo = value;
+                    OnPropertyChanged(nameof(HasTurbo));
+                }
+            }
+        }
+
+        public bool HasInterruptable
+        {
+            get => Action is not null && Action.HasInterruptable;
+            set
+            {
+                if (Action is not null && value != HasInterruptable)
+                {
+                    Action.HasInterruptable = value;
+                    OnPropertyChanged(nameof(HasInterruptable));
+                }
+            }
+        }
+
+        public bool HasToggle
+        {
+            get => Action is not null && Action.HasToggle;
+            set
+            {
+                if (Action is not null && value != HasToggle)
+                {
+                    Action.HasToggle = value;
+                    OnPropertyChanged(nameof(HasToggle));
+                }
+            }
+        }
+
         public bool Turbo
         {
-            get => Action is not null ? Action.Turbo : false;
+            get => Action is not null && Action.Turbo;
             set
             {
                 if (Action is not null && value != Turbo)
@@ -112,7 +168,7 @@ namespace HandheldCompanion.ViewModels
 
         public bool Toggle
         {
-            get => Action is not null ? Action.Toggle : false;
+            get => Action is not null && Action.Toggle;
             set
             {
                 if (Action is not null && value != Toggle)
@@ -151,7 +207,7 @@ namespace HandheldCompanion.ViewModels
 
         public bool Interruptable
         {
-            get => Action is not null ? Action.Interruptable : false;
+            get => Action is not null && Action.Interruptable;
             set
             {
                 if (Action is not null && value != Interruptable)
@@ -166,7 +222,7 @@ namespace HandheldCompanion.ViewModels
 
         private ButtonStackViewModel _parentStack;
 
-        public bool IsInitialMapping { get; private set; } = false;
+        public bool IsInitialMapping { get; set; } = false;
 
         public ICommand ButtonCommand { get; private set; }
 
@@ -201,7 +257,7 @@ namespace HandheldCompanion.ViewModels
 
             if (isInitialMapping)
             {
-                var controller = ControllerManager.GetTargetController();
+                var controller = ControllerManager.GetTarget();
                 if (controller is not null) UpdateController(controller);
             }
 
@@ -239,7 +295,7 @@ namespace HandheldCompanion.ViewModels
                     Action = new ButtonActions() { pressType = fallbackPressType };
 
                 // get current controller
-                var controller = ControllerManager.GetEmulatedController();
+                var controller = ControllerManager.GetDefault();
 
                 // Build Targets
                 var targets = new List<MappingTargetViewModel>();
@@ -299,6 +355,44 @@ namespace HandheldCompanion.ViewModels
                 Targets.ReplaceWith(targets);
                 if (matchingTargetVm != null) SelectedTarget = matchingTargetVm;
             }
+            else if (actionType == ActionType.Shift)
+            {
+                if (Action is null || Action is not ShiftActions)
+                    Action = new ShiftActions(ShiftSlot.ShiftA);
+
+                // Build Targets
+                var targets = new List<MappingTargetViewModel>();
+
+                MappingTargetViewModel? matchingTargetVm = null;
+                foreach (var shiftSlot in Enum.GetValues<ShiftSlot>())
+                {
+                    var mappingTargetVm = new MappingTargetViewModel
+                    {
+                        Tag = shiftSlot,
+                        Content = EnumUtils.GetDescriptionFromEnumValue(shiftSlot)
+                    };
+                    targets.Add(mappingTargetVm);
+
+                    if (shiftSlot == ((ShiftActions)Action).ShiftSlot)
+                    {
+                        matchingTargetVm = mappingTargetVm;
+                    }
+                }
+
+                // Update list and selected target
+                Targets.ReplaceWith(targets);
+                if (matchingTargetVm != null) SelectedTarget = matchingTargetVm;
+            }
+            else if (actionType == ActionType.Inherit)
+            {
+                if (Action is null || Action is not InheritActions)
+                {
+                    Action = new InheritActions();
+                }
+
+                // Update list and selected target
+                Targets.Clear();
+            }
 
             // Refresh mapping
             OnPropertyChanged(string.Empty);
@@ -321,6 +415,10 @@ namespace HandheldCompanion.ViewModels
 
                 case ActionType.Mouse:
                     ((MouseActions)Action).MouseType = (MouseActionsType)SelectedTarget.Tag;
+                    break;
+
+                case ActionType.Shift:
+                    ((ShiftActions)Action).ShiftSlot = (ShiftSlot)SelectedTarget.Tag;
                     break;
             }
         }

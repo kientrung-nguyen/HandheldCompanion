@@ -17,7 +17,7 @@
     KeepAlive="True"
     mc:Ignorable="d">
 
-    <ikw:SimpleStackPanel>
+    <ikw:SimpleStackPanel Spacing="24">
 
         <!--  Device settings  -->
         <ikw:SimpleStackPanel Spacing="6">

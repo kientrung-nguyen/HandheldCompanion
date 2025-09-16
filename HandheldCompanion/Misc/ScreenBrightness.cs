@@ -2,15 +2,23 @@
 using System.Diagnostics;
 using System.Management;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 
 namespace HandheldCompanion.Misc;
 
 public static class ScreenBrightness
 {
-    private static ManagementScope scope = new(@"\\.\root\WMI");
-    private static ManagementEventWatcher watcher = new(
-        scope,
-        new EventQuery("SELECT * FROM WmiMonitorBrightnessEvent"));
+    private static readonly ManagementScope scope;
+    private static readonly ManagementEventWatcher watcher;
+    static ScreenBrightness()
+    {
+        scope = new(@"\\.\root\WMI");
+        scope.Connect();
+        watcher = new(
+            scope,
+            new EventQuery("SELECT * FROM WmiMonitorBrightnessEvent"));
+    }
+
 
     public static int Get()
     {
@@ -60,7 +68,6 @@ public static class ScreenBrightness
     {
         try
         {
-            scope.Connect();
             watcher.EventArrived += new EventArrivedEventHandler(EventHandler);
             watcher.Start();
         }

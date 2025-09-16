@@ -1,13 +1,15 @@
 ﻿using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
+using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Media;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using WindowsDisplayAPI;
 using WindowsDisplayAPI.DisplayConfig;
 
@@ -15,14 +17,14 @@ namespace HandheldCompanion.Managers;
 
 public static class MultimediaManager
 {
+
     private static ScreenRotation screenOrientation;
 
-    private static bool VolumeSupport;
-    private static bool MicrophoneSupport;
+    private static readonly bool VolumeSupport;
+    private static readonly bool MicrophoneSupport;
     private static readonly bool BrightnessSupport;
 
     private static readonly bool NightLightSupport;
-
 
     public static bool IsInitialized;
 
@@ -32,10 +34,79 @@ public static class MultimediaManager
         MicrophoneSupport = SoundControl.MicrophoneGet() != -1;
         BrightnessSupport = ScreenBrightness.Get() != -1;
         NightLightSupport = NightLight.Get() != -1;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
+    public static async Task Start()
+    {
+        if (IsInitialized)
+            return;
+
+        // manage events
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
+        ScreenControl.SubscribeToEvents();
+
+        SystemEvents_DisplaySettingsChanged(null, EventArgs.Empty);
+
+        // setup the multimedia device and get current volume value
+        SoundControl.SubscribeToEvents(VolumeNotificationEventArrived);
+        NightLight.SubscribeToEvents(NightLightNotificationEventArrived);
+        ScreenBrightness.SubscribeToEvents(BrightnessWatcherEventArrived);
+
+        IsInitialized = true;
+        Initialized?.Invoke();
+
+        LogManager.LogInformation("{0} has started", nameof(MultimediaManager));
+        return;
+    }
+
+    public static void Stop()
+    {
+        if (!IsInitialized)
+            return;
+
+        ScreenBrightness.Unsubscribe();
+        SoundControl.Unsubscribe();
+        NightLight.Unsubscribe();
+        ScreenControl.Unsubscribe();
+        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
+
+        IsInitialized = false;
+
+        LogManager.LogInformation("{0} has stopped", "SystemManager");
+    }
+
+
+    private static void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        var _allDisplays = Display.GetDisplays();
+        var _primaryDisplay = _allDisplays.FirstOrDefault(v => v.DisplayScreen.IsPrimary);
+        if (_primaryDisplay == null)
+            return;
+
+
+        LogManager.LogError($"Detect primary display {_primaryDisplay.ToPathDisplayTarget().FriendlyName}");
+        if (ScreenControl.PrimaryDisplay is null || !ScreenControl.PrimaryDisplay.ToPathDisplayTarget().FriendlyName.Equals(_primaryDisplay.ToPathDisplayTarget().FriendlyName))
+            PrimaryScreenChanged?.Invoke(_primaryDisplay);
+
+        ScreenControl.PrimaryDisplay = _primaryDisplay;
+
+        foreach (var _display in _allDisplays.Where(_v => !ScreenControl.AllDisplays.Any(v => v.DevicePath == _v.DevicePath)))
+            ScreenConnected?.Invoke(_display);
+
+        foreach (var _display in ScreenControl.AllDisplays.Where(v => !_allDisplays.Any(_v => _v.DevicePath == v.DevicePath)))
+            ScreenDisconnected?.Invoke(_display);
+
+        ScreenControl.AllDisplays = [];
+        ScreenControl.AllDisplays = _allDisplays;
+
+        if (ScreenControl.PrimaryDisplay is not null)
+            DisplaySettingsChanged?.Invoke(_primaryDisplay);
+
+    }
+
+    private static void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {
@@ -111,61 +182,6 @@ public static class MultimediaManager
     {
         return screenOrientation;
     }
-
-    public static void Start()
-    {
-        // manage events
-        ScreenControl.SubscribeToEvents(new Dictionary<string, Action<Display>>
-        {
-            ["PrimaryScreenChanged"] = (display) => PrimaryScreenChanged?.Invoke(display),
-            ["DisplaySettingsChanged"] = (display) => DisplaySettingsChanged?.Invoke(display),
-            ["ScreenConnected"] = (display) => ScreenConnected?.Invoke(display),
-            ["ScreenDisconnected"] = (display) => ScreenDisconnected?.Invoke(display)
-        });
-
-        // setup the multimedia device and get current volume value
-        SoundControl.SubscribeToEvents(VolumeNotificationEventArrived);
-        NightLight.SubscribeToEvents(NightLightNotificationEventArrived);
-        ScreenBrightness.SubscribeToEvents(BrightnessWatcherEventArrived);
-        /*
-        // get native resolution
-        ScreenResolution nativeResolution = PrimaryDesktop.screenResolutions.First();
-
-        // get integer scaling dividers
-        int idx = 1;
-
-        while (true)
-        {
-            int height = nativeResolution.Height / idx;
-            ScreenResolution? dividedRes = PrimaryDesktop.screenResolutions.FirstOrDefault(r => r.Height == height);
-            if (dividedRes is null)
-                break;
-
-            PrimaryDesktop.screenDividers.Add(new(idx, dividedRes));
-            idx++;
-        }
-        */
-        IsInitialized = true;
-        Initialized?.Invoke();
-
-        LogManager.LogInformation("{0} has started", nameof(MultimediaManager));
-    }
-
-    public static void Stop()
-    {
-        if (!IsInitialized)
-            return;
-
-        ScreenBrightness.Unsubscribe();
-        SoundControl.Unsubscribe();
-        NightLight.Unsubscribe();
-        ScreenControl.Unsubscribe();
-
-        IsInitialized = false;
-
-        LogManager.LogInformation("{0} has stopped", "SystemManager");
-    }
-
     public static DisplayDevice GetDisplay(string DeviceName)
     {
         DisplayDevice dm = new DisplayDevice();

@@ -1272,9 +1272,6 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="InputsHotkey_shortcutControlCenterDesc" xml:space="preserve">
     <value>Display and hide Windows Action center</value>
   </data>
-  <data name="ProfilesPage_ControllerLayout" xml:space="preserve">
-    <value>Controller layout</value>
-  </data>
   <data name="InputsHotkey_QuietModeToggled" xml:space="preserve">
     <value>Fan override</value>
   </data>
@@ -3462,10 +3459,10 @@ Thank you for using HC and helping us make it better.</value>
   <data name="ControllerPage_SteamControllerModeExclusive" xml:space="preserve">
     <value>Exclusive</value>
   </data>
-  <data name="InputsHotkey_touchscreenToggle" xml:space="preserve">
+  <data name="Hotkey_touchscreenToggle" xml:space="preserve">
     <value>Touchscreen</value>
   </data>
-  <data name="InputsHotkey_touchscreenToggleDesc" xml:space="preserve">
+  <data name="Hotkey_touchscreenToggleDesc" xml:space="preserve">
     <value>Toggle Touchscreen</value>
   </data>
   <data name="Off" xml:space="preserve">
@@ -3513,10 +3510,10 @@ Thank you for using HC and helping us make it better.</value>
   <data name="Fan" xml:space="preserve">
     <value>Fan</value>
   </data>
-  <data name="InputsHotkey_touchpadToggle" xml:space="preserve">
+  <data name="Hotkey_touchpadToggle" xml:space="preserve">
     <value>Touchpad</value>
   </data>
-  <data name="InputsHotkey_touchpadToggleDesc" xml:space="preserve">
+  <data name="Hotkey_touchpadToggleDesc" xml:space="preserve">
     <value>Toggle Touchpad</value>
   </data>
   <data name="Muted" xml:space="preserve">
@@ -3557,5 +3554,53 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="ProfilesPage_AFMFDesc" xml:space="preserve">
     <value>Enhance performance by utilizing frame generation technology to increase FPS beyond the in-game limit, resulting in a smoother experience</value>
+  </data>
+  <data name="Hotkey_muteVolume" xml:space="preserve">
+    <value>Mute volume</value>
+  </data>
+  <data name="Hotkey_muteVolumeDesc" xml:space="preserve">
+    <value>Mute/unmute volume</value>
+  </data>
+  <data name="Hotkey_GameBar" xml:space="preserve">
+    <value>Open Game Bar</value>
+  </data>
+  <data name="Hotkey_GameBarDesc" xml:space="preserve">
+    <value>Press this key: Windows + G</value>
+  </data>
+  <data name="Enum_TatantulaProController_ButtonFlags_B5" xml:space="preserve">
+    <value>C1</value>
+  </data>
+  <data name="Enum_TatantulaProController_ButtonFlags_B6" xml:space="preserve">
+    <value>C2</value>
+  </data>
+  <data name="Enum_TatantulaProController_ButtonFlags_B7" xml:space="preserve">
+    <value>C3</value>
+  </data>
+  <data name="Enum_TatantulaProController_ButtonFlags_B8" xml:space="preserve">
+    <value>C4</value>
+  </data>
+  <data name="Enum_TatantulaProController_ButtonFlags_B9" xml:space="preserve">
+    <value>T1</value>
+  </data>
+  <data name="Enum_TatantulaProController_ButtonFlags_B10" xml:space="preserve">
+    <value>T2</value>
+  </data>
+  <data name="Enum_TatantulaProController_ButtonFlags_B11" xml:space="preserve">
+    <value>T3</value>
+  </data>
+  <data name="Enum_TatantulaProController_ButtonFlags_L5" xml:space="preserve">
+    <value>M</value>
+  </data>
+  <data name="ProfilesPage_Pinned" xml:space="preserve">
+    <value>Display the profile in Quick start section from the Quicktools Applications page</value>
+  </data>
+  <data name="Hotkey_SwapScreen" xml:space="preserve">
+    <value>Swap foreground window</value>
+  </data>
+  <data name="Hotkey_SwapScreenDesc" xml:space="preserve">
+    <value>Move the foreground window to next available screen</value>
+  </data>
+  <data name="Controller_Calibrate" xml:space="preserve">
+    <value>Calibrate</value>
   </data>
 </root>

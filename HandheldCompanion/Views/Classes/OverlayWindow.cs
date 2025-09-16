@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HandheldCompanion.Helpers;
+using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -28,7 +29,7 @@ public class OverlayWindow : Window
         ShowActivated = false;
         FocusManager.SetIsFocusScope(this, false);
 
-        SizeChanged += (o, e) => UpdatePosition();
+        SizeChanged += (o, e) => { UpdatePosition(); };
 
         Loaded += OverlayWindow_Loaded;
         IsVisibleChanged += OverlayWindow_IsVisibleChanged;
@@ -45,8 +46,11 @@ public class OverlayWindow : Window
 
         set
         {
-            _HorizontalAlignment = value;
-            UpdatePosition();
+            if (_HorizontalAlignment != value)
+            {
+                _HorizontalAlignment = value;
+                UpdatePosition();
+            }
         }
     }
 
@@ -56,8 +60,11 @@ public class OverlayWindow : Window
 
         set
         {
-            _VerticalAlignment = value;
-            UpdatePosition();
+            if (_VerticalAlignment != value)
+            {
+                _VerticalAlignment = value;
+                UpdatePosition();
+            }
         }
     }
 
@@ -131,7 +138,7 @@ public class OverlayWindow : Window
     public virtual void ToggleVisibility()
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (Visibility)
             {

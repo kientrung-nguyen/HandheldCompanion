@@ -1,6 +1,8 @@
 ﻿using HandheldCompanion.Actions;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using SharpDX.XInput;
 using steam_hidapi.net;
@@ -27,13 +29,10 @@ namespace HandheldCompanion.Controllers
             AttachDetails(details);
 
             // UI
-            ColoredButtons.Add(ButtonFlags.B1, new SolidColorBrush(Color.FromArgb(255, 81, 191, 61)));
-            ColoredButtons.Add(ButtonFlags.B2, new SolidColorBrush(Color.FromArgb(255, 217, 65, 38)));
-            ColoredButtons.Add(ButtonFlags.B3, new SolidColorBrush(Color.FromArgb(255, 26, 159, 255)));
-            ColoredButtons.Add(ButtonFlags.B4, new SolidColorBrush(Color.FromArgb(255, 255, 200, 44)));
-
-            DrawUI();
-            UpdateUI();
+            ColoredButtons.Add(ButtonFlags.B1, Color.FromArgb(255, 81, 191, 61));
+            ColoredButtons.Add(ButtonFlags.B2, Color.FromArgb(255, 217, 65, 38));
+            ColoredButtons.Add(ButtonFlags.B3, Color.FromArgb(255, 26, 159, 255));
+            ColoredButtons.Add(ButtonFlags.B4, Color.FromArgb(255, 255, 200, 44));
         }
 
         protected override void InitializeInputOutput()
@@ -86,10 +85,10 @@ namespace HandheldCompanion.Controllers
 
         public override void UpdateInputs(long ticks, float delta)
         {
-            if (input is null)
+            if (input is null || IsDisposing)
                 return;
 
-            Inputs.ButtonState = InjectedButtons.Clone() as ButtonState;
+            ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);
 
             Inputs.ButtonState[ButtonFlags.B1] = input.State.ButtonState[GordonControllerButton.BtnA];
             Inputs.ButtonState[ButtonFlags.B2] = input.State.ButtonState[GordonControllerButton.BtnB];
@@ -217,20 +216,21 @@ namespace HandheldCompanion.Controllers
             Inputs.GyroState.SetAccelerometer(aX, aY, aZ);
 
             // process motion
-            gamepadMotion.ProcessMotion(gX, gY, gZ, aX, aY, aZ, delta);
+            if (gamepadMotions.TryGetValue(gamepadIndex, out GamepadMotion gamepadMotion))
+                gamepadMotion.ProcessMotion(gX, gY, gZ, aX, aY, aZ, delta);
 
             base.UpdateInputs(ticks, delta);
-        }
-        private async Task OnControllerInputReceived(GordonControllerInputEventArgs input)
-        {
-            this.input = input;
         }
 
         public override void Plug()
         {
             try
             {
-                Controller.OnControllerInputReceived = input => OnControllerInputReceived(input);
+                Controller.OnControllerInputReceived += input =>
+                {
+                    this.input = input;
+                    return Task.CompletedTask;
+                };
 
                 // open controller
                 Open();

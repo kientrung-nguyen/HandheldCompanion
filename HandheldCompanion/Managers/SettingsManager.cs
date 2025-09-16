@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Processors;
+using HandheldCompanion.Shared;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
@@ -8,6 +9,7 @@ using System.Collections.Immutable;
 using System.Configuration;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 
 namespace HandheldCompanion.Managers;
@@ -39,7 +41,7 @@ public static class SettingsManager
 
     public delegate void InitializedEventHandler();
 
-    public delegate void SettingValueChangedEventHandler(string name, object value);
+    public delegate void SettingValueChangedEventHandler(string name, object value, bool temporary);
 
     private static readonly Dictionary<string, object> Settings = new();
 
@@ -81,8 +83,11 @@ public static class SettingsManager
 
     public static event InitializedEventHandler Initialized;
 
-    public static void Start()
+    public static async Task Start()
     {
+        if (IsInitialized)
+            return;
+
         foreach (var property in Properties.Settings
             .Default
             .Properties
@@ -95,7 +100,7 @@ public static class SettingsManager
 
         foreach (var property in config.ToImmutableSortedDictionary())
         {
-            SettingValueChanged?.Invoke(property.Key, GetInternal(property.Key));
+            SettingValueChanged?.Invoke(property.Key, GetInternal(property.Key), false);
         }
 
         if (Get<bool>("FirstStart"))
@@ -108,6 +113,7 @@ public static class SettingsManager
         Initialized?.Invoke();
 
         LogManager.LogInformation("{0} has started", "SettingsManager");
+        return;
     }
 
     private static void Timer_Elapsed(object? sender, ElapsedEventArgs e)
@@ -163,8 +169,12 @@ public static class SettingsManager
                 config[name] = value;
                 timer.Start();
             }
-            // raise event
-            SettingValueChanged?.Invoke(name, value);
+            if (IsInitialized)
+            {
+                LogManager.LogInformation($"SettingValueChanged {name} {value}");
+                // raise event
+                SettingValueChanged?.Invoke(name, value, !save);
+            }
         }
         catch (Exception ex)
         {

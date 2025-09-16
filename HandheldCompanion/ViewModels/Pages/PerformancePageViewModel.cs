@@ -15,6 +15,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using WindowsDisplayAPI;
 using Resources = HandheldCompanion.Properties.Resources;
@@ -489,12 +490,22 @@ namespace HandheldCompanion.ViewModels
 
             #region General Setup
 
-            SettingsManager.SettingValueChanged += SettingsManager_SettingsValueChanged;
-            MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+            // manage events
+            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
             PerformanceManager.ProcessorStatusChanged += PerformanceManager_ProcessorStatusChanged;
             PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
             PowerProfileManager.Updated += PowerProfileManager_Updated;
             PowerProfileManager.Deleted += PowerProfileManager_Deleted;
+
+            // raise events
+            if (MultimediaManager.IsInitialized)
+            {
+                MultimediaManager_PrimaryScreenChanged(ScreenControl.PrimaryDisplay);
+            }
+
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(ProfilePickerItems, new object());
 
             PropertyChanged += (sender, e) =>
             {
@@ -515,7 +526,7 @@ namespace HandheldCompanion.ViewModels
                     });
 
                     // No need to update 
-                    if (e.PropertyName is null || _skipPropertyChangedUpdate.Contains(e.PropertyName))
+                    if (_skipPropertyChangedUpdate.Contains(e.PropertyName))
                         return;
                 }
 
@@ -668,8 +679,8 @@ namespace HandheldCompanion.ViewModels
 
         public override void Dispose()
         {
-            SettingsManager.SettingValueChanged -= SettingsManager_SettingsValueChanged;
-            MultimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
+            SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+            MultimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
             PerformanceManager.ProcessorStatusChanged -= PerformanceManager_ProcessorStatusChanged;
             PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
             PowerProfileManager.Updated -= PowerProfileManager_Updated;
@@ -690,7 +701,7 @@ namespace HandheldCompanion.ViewModels
 
         #region Events
 
-        private void SettingsManager_SettingsValueChanged(string name, object value)
+        private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
         {
             switch (name)
             {
@@ -702,7 +713,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private void MultimediaManager_DisplaySettingsChanged(Display screen)
+        private void MultimediaManager_PrimaryScreenChanged(Display screen)
         {
             OnPropertyChanged(nameof(AutoTDPMaximum));
         }

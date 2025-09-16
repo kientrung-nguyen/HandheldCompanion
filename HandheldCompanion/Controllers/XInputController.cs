@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Media;
+using static HandheldCompanion.Managers.TimerManager;
 
 namespace HandheldCompanion.Controllers;
 
@@ -25,25 +26,27 @@ public class XInputController : IController
         AttachDetails(details);
 
         // UI
-        ColoredButtons.Add(ButtonFlags.B1, new SolidColorBrush(Color.FromArgb(255, 81, 191, 61)));
-        ColoredButtons.Add(ButtonFlags.B2, new SolidColorBrush(Color.FromArgb(255, 217, 65, 38)));
-        ColoredButtons.Add(ButtonFlags.B3, new SolidColorBrush(Color.FromArgb(255, 26, 159, 255)));
-        ColoredButtons.Add(ButtonFlags.B4, new SolidColorBrush(Color.FromArgb(255, 255, 200, 44)));
+        ColoredButtons.Add(ButtonFlags.B1, Color.FromArgb(255, 81, 191, 61));
+        ColoredButtons.Add(ButtonFlags.B2, Color.FromArgb(255, 217, 65, 38));
+        ColoredButtons.Add(ButtonFlags.B3, Color.FromArgb(255, 26, 159, 255));
+        ColoredButtons.Add(ButtonFlags.B4, Color.FromArgb(255, 255, 200, 44));
+    }
 
-        DrawUI();
-        UpdateUI();
+    ~XInputController()
+    {
+        Dispose();
+    }
 
-        string enumerator = Details.GetEnumerator();
-        switch (enumerator)
-        {
-            default:
-            case "BTHENUM":
-                ProgressBarWarning.Text = Properties.Resources.XInputController_Warning_BTH;
-                break;
-            case "USB":
-                ProgressBarWarning.Text = Properties.Resources.XInputController_Warning_USB;
-                break;
-        }
+    public override void Dispose()
+    {
+        Unplug();
+
+        // don't dispose our placeholders
+        if (isPlaceholder)
+            return;
+
+        Controller = null;
+        base.Dispose();
     }
 
     public override string ToString()
@@ -56,16 +59,19 @@ public class XInputController : IController
 
     public virtual void UpdateInputs(long ticks, float delta, bool commit)
     {
-        // update secret state
-        XInputGetStateSecret14(UserIndex, out State);
+        if (Inputs is null || IsDisposing)
+            return;
 
-        Inputs.ButtonState = InjectedButtons.Clone() as ButtonState;
+        ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);
 
         // skip if controller isn't connected
         if (IsConnected())
         {
             try
             {
+                // update secret state
+                XInputGetStateSecret14(UserIndex, out State);
+
                 // update gamepad state
                 Gamepad = Controller.GetState().Gamepad;
 
@@ -128,6 +134,7 @@ public class XInputController : IController
     {
         if (Controller is not null)
             return Controller.IsConnected;
+
         return false;
     }
 
@@ -147,15 +154,27 @@ public class XInputController : IController
         catch { }
     }
 
+    private TickEventHandler _tickHandler;
     public override void Plug()
     {
-        TimerManager.Tick += (ticks, delta) => UpdateInputs(ticks, delta, true);
+        // Assign a handler to the delegate
+        _tickHandler = (ticks, delta) => UpdateInputs(ticks, delta, true);
+
+        // Subscribe to the event
+        Tick += _tickHandler;
+
         base.Plug();
     }
 
     public override void Unplug()
     {
-        TimerManager.Tick -= (ticks, delta) => UpdateInputs(ticks, delta, true);
+        if (_tickHandler != null)
+        {
+            // Unsubscribe from the event
+            Tick -= _tickHandler;
+            _tickHandler = null;
+        }
+
         base.Unplug();
     }
 
@@ -196,54 +215,6 @@ public class XInputController : IController
     public override void Unhide(bool powerCycle = true)
     {
         base.Unhide(powerCycle);
-    }
-
-    public virtual new bool IsWireless
-    {
-        get
-        {
-            string enumerator = Details.GetEnumerator();
-            switch (enumerator)
-            {
-                default:
-                    return false;
-                case "BTHENUM":
-                    return true;
-            }
-        }
-    }
-
-    public override void CyclePort()
-    {
-        string enumerator = Details.GetEnumerator();
-        switch (enumerator)
-        {
-            default:
-            case "BTHENUM":
-                Task.Run(async () =>
-                {
-                    /*
-                    // Bluetooth HID Device
-                    Details.InstallNullDrivers(false);
-                    Details.InstallCustomDriver("hidbth.inf", false);
-
-                    // Bluetooth XINPUT compatible input device
-                    Details.InstallNullDrivers(true);
-                    Details.InstallCustomDriver("xinputhid.inf", true);
-                    */
-
-                    /*
-                    Details.Uninstall(false);   // Bluetooth HID Device
-                    Details.Uninstall(true);    // Bluetooth XINPUT compatible input device
-                    await Task.Delay(1000);
-                    Devcon.Refresh();
-                    */
-                });
-                break;
-            case "USB":
-                base.CyclePort();
-                break;
-        }
     }
 
     public override string GetGlyph(ButtonFlags button)

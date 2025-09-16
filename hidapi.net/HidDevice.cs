@@ -1,5 +1,7 @@
 ﻿using hidapi.Native;
 using System;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,10 +10,12 @@ namespace hidapi
     public class HidDevice : IDisposable
     {
         private ushort _vid, _pid, _inputBufferLen;
+        private byte[] _buffer;
         private short _mi;
         private IntPtr _deviceHandle;
         private object _lock = new object();
         private bool _reading = false;
+        private bool _halting = false;
         private Thread _readThread;
         private long MillisecondsSinceEpoch => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         public bool IsDeviceValid => _deviceHandle != IntPtr.Zero;
@@ -23,6 +27,7 @@ namespace hidapi
             _vid = vendorId;
             _pid = productId;
             _inputBufferLen = inputBufferLen;
+            _buffer = new byte[inputBufferLen];
             _mi = mi;
         }
 
@@ -62,14 +67,55 @@ namespace hidapi
 
                     _deviceHandle = HidApiNative.hid_open_path(hidDeviceInfo.Path);
                     if (_deviceHandle != IntPtr.Zero)
-                        break;
+                    {
+                        ushort inputReportLength = GetInputReportByteLength(hidDeviceInfo.Path);
+                        if (inputReportLength == _inputBufferLen)
+                            break;
+                    }
 
-                    next:
+                next:
                     deviceInfo = hidDeviceInfo.NextDevicePtr;
                 }
 
                 HidApiNative.hid_free_enumeration(deviceInfo);
                 return _deviceHandle != IntPtr.Zero;
+            }
+        }
+
+        public static ushort GetInputReportByteLength(string devicePath)
+        {
+            IntPtr deviceHandle = HidApiNative.CreateFile(devicePath, 0, 3, IntPtr.Zero, 3, 0, IntPtr.Zero);
+            if (deviceHandle == IntPtr.Zero)
+            {
+                throw new IOException("Unable to open HID device", Marshal.GetLastWin32Error());
+            }
+
+            try
+            {
+                if (!HidApiNative.HidD_GetPreparsedData(deviceHandle, out IntPtr preparsedData))
+                {
+                    throw new IOException("Unable to get preparsed data", Marshal.GetLastWin32Error());
+                }
+
+                try
+                {
+                    if (HidApiNative.HidP_GetCaps(preparsedData, out HIDP_CAPS caps) != 0)
+                    {
+                        return caps.InputReportByteLength;
+                    }
+                    else
+                    {
+                        throw new IOException("Unable to get HID capabilities");
+                    }
+                }
+                finally
+                {
+                    HidApiNative.HidD_FreePreparsedData(preparsedData);
+                }
+            }
+            finally
+            {
+                HidApiNative.CloseHandle(deviceHandle);
             }
         }
 
@@ -79,9 +125,8 @@ namespace hidapi
             ThrowIfDeviceInvalid();
             lock (_lock)
             {
-                byte[] buffer = new byte[_inputBufferLen];
-                int length = HidApiNative.hid_read_timeout(_deviceHandle, buffer, (uint)buffer.Length, timeout);
-                return buffer;
+                int length = HidApiNative.hid_read_timeout(_deviceHandle, _buffer, (uint)_buffer.Length, timeout);
+                return _buffer;
             }
         }
 
@@ -139,10 +184,9 @@ namespace hidapi
 
             lock (_lock)
             {
-                byte[] buffer = new byte[_inputBufferLen];
-                Array.Copy(data, buffer, data.Length);
+                Array.Copy(data, _buffer, data.Length);
 
-                int err = HidApiNative.hid_write(_deviceHandle, buffer, (uint)buffer.Length);
+                int err = HidApiNative.hid_write(_deviceHandle, _buffer, (uint)_buffer.Length);
                 if (err < 0)
                     throw new Exception($"Failed to write to HID device. Error: {err}");
             }
@@ -150,31 +194,35 @@ namespace hidapi
 
         private void ReadLoop()
         {
-            byte[] buffer = new byte[_inputBufferLen];
-            while (_reading)
-                if (Read(buffer) > 0 && OnInputReceived != null)
-                    _ = OnInputReceived(new HidDeviceInputReceivedEventArgs(this, buffer));
+            while (_reading && !_halting)
+                if (Read(_buffer) > 0 && OnInputReceived != null)
+                    _ = OnInputReceived(new HidDeviceInputReceivedEventArgs(this, _buffer));
         }
 
         public void BeginRead()
         {
             _reading = true;
+            _halting = false;
+
             _readThread = new Thread(new ThreadStart(ReadLoop))
             {
-                IsBackground = true
+                IsBackground = true,
+                Priority = ThreadPriority.Highest
             };
             _readThread.Start();
         }
 
         public void EndRead()
         {
+            _halting = true;
+
             // kill read thread
             if (_readThread != null)
             {
                 _reading = false;
                 // Ensure the thread has finished execution
                 if (_readThread.IsAlive)
-                    _readThread.Join();
+                    _readThread.Join(3000);
                 _readThread = null;
             }
         }
@@ -182,10 +230,12 @@ namespace hidapi
         public void Close()
         {
             HidApiNative.hid_close(_deviceHandle);
+            _deviceHandle = IntPtr.Zero;
         }
 
         public void Dispose()
         {
+            EndRead();
             Close();
         }
     }

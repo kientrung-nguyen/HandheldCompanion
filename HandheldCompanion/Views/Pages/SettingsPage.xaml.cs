@@ -15,6 +15,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using WindowsDisplayAPI;
+using static HandheldCompanion.Managers.UpdateManager;
 using Application = System.Windows.Application;
 using Page = System.Windows.Controls.Page;
 
@@ -57,7 +58,6 @@ public partial class SettingsPage : Page
 
     private void MultimediaManager_ScreenConnected(Display screen)
     {
-        if (screen is null) return;
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
@@ -75,7 +75,6 @@ public partial class SettingsPage : Page
 
     private void MultimediaManager_ScreenDisconnected(Display screen)
     {
-        if (screen is null) return;
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
@@ -125,7 +124,7 @@ public partial class SettingsPage : Page
         });
     }
 
-    private void SettingsManager_SettingValueChanged(string? name, object value)
+    private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
     {
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
@@ -300,7 +299,7 @@ public partial class SettingsPage : Page
         SettingsManager.Set("NativeDisplayOrientation", (int)rotation.rotationNativeBase);
     }
 
-    private void UpdateManager_Updated(UpdateStatus status, UpdateFile updateFile, object value)
+    private void UpdateManager_Updated(UpdateStatus status, UpdateFile? updateFile, object? value)
     {
         // UI thread (async)
         Application.Current.Dispatcher.Invoke(() =>
@@ -423,7 +422,7 @@ public partial class SettingsPage : Page
         SettingsManager.Set("CurrentCulture", culture.Name);
 
         Localization.TranslationSource.Instance.CurrentCulture = CultureInfo.GetCultureInfo(culture.Name);
-        
+
         NavigationService?.Refresh();
     }
 

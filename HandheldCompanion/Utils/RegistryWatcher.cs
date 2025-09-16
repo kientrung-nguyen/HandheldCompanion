@@ -1,4 +1,4 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Shared;
 using Microsoft.Win32;
 using System;
 using System.Management;
@@ -70,6 +70,11 @@ namespace HandheldCompanion.Utils
             };
 
             _query = new WqlEventQuery(queryString);
+        }
+
+        ~RegistryWatcher()
+        {
+            Dispose();
         }
 
         private static bool RegistryKeyExists(RegistryKey baseKey, string subKey, string valueName)

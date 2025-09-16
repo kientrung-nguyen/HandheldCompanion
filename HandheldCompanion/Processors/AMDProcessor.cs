@@ -34,8 +34,9 @@ public class AMDProcessor : Processor
                 case RyzenFamily.FAM_CEZANNE:
                 case RyzenFamily.FAM_REMBRANDT:
                 case RyzenFamily.FAM_MENDOCINO:
-                case RyzenFamily.FAM_PHEONIX:
+                case RyzenFamily.FAM_PHOENIX:
                 case RyzenFamily.FAM_HAWKPOINT:
+                    // case RyzenFamily.FAM_STRIXPOINT:
                     CanChangeGPU = true;
                     break;
                 case RyzenFamily.FAM_VANGOGH:
@@ -58,8 +59,9 @@ public class AMDProcessor : Processor
                 case RyzenFamily.FAM_VANGOGH:
                 case RyzenFamily.FAM_REMBRANDT:
                 case RyzenFamily.FAM_MENDOCINO:
-                case RyzenFamily.FAM_PHEONIX:
+                case RyzenFamily.FAM_PHOENIX:
                 case RyzenFamily.FAM_HAWKPOINT:
+                case RyzenFamily.FAM_STRIXPOINT:
                     CanChangeTDP = true;
                     break;
             }
@@ -81,11 +83,11 @@ public class AMDProcessor : Processor
                 switch (type)
                 {
                     case PowerType.Fast:
-                        legion.SetCPUPowerLimit(CapabilityID.CPUShortTermPowerLimit, (int)limit).GetAwaiter().GetResult();
-                        legion.SetCPUPowerLimit(CapabilityID.CPUPeakPowerLimit, (int)limit).GetAwaiter().GetResult();
+                        legion.SetCPUPowerLimit(CapabilityID.CPUShortTermPowerLimit, (int)limit).Wait(250);
+                        legion.SetCPUPowerLimit(CapabilityID.CPUPeakPowerLimit, (int)limit).Wait(250);
                         break;
                     case PowerType.Slow:
-                        legion.SetCPUPowerLimit(CapabilityID.CPULongTermPowerLimit, (int)limit).GetAwaiter().GetResult();
+                        legion.SetCPUPowerLimit(CapabilityID.CPULongTermPowerLimit, (int)limit).Wait(250);
                         break;
                 }
             }
@@ -119,6 +121,10 @@ public class AMDProcessor : Processor
     {
         lock (updateLock)
         {
+            bool restore = false;
+            if (clock == 12750)
+                restore = true;
+
             switch (family)
             {
                 case RyzenFamily.FAM_VANGOGH:
@@ -128,24 +134,26 @@ public class AMDProcessor : Processor
                             if (sd is null)
                                 return;
 
-                            if (clock == 12750)
-                            {
-                                sd.HardMinGfxClock = (uint)IDevice.GetCurrent().GfxClock[0]; //hardMin
-                                sd.SoftMaxGfxClock = (uint)IDevice.GetCurrent().GfxClock[1]; //softMax
-                            }
-                            else
-                            {
-                                sd.HardMinGfxClock = (uint)clock; //hardMin
-                                sd.SoftMaxGfxClock = (uint)clock; //softMax
-                            }
+                            sd.HardMinGfxClock = (uint)(restore ? IDevice.GetCurrent().GfxClock[0] : clock);
+                            sd.SoftMaxGfxClock = (uint)(restore ? IDevice.GetCurrent().GfxClock[1] : clock);
                         }
+                    }
+                    break;
+
+                case RyzenFamily.FAM_RAVEN:
+                case RyzenFamily.FAM_PICASSO:
+                case RyzenFamily.FAM_DALI:
+                case RyzenFamily.FAM_LUCIENNE:
+                    {
+                        result = RyzenAdj.set_min_gfxclk_freq(ry, (uint)(restore ? IDevice.GetCurrent().GfxClock[0] : clock));
+                        result = RyzenAdj.set_max_gfxclk_freq(ry, (uint)(restore ? IDevice.GetCurrent().GfxClock[1] : clock));
                     }
                     break;
 
                 default:
                     {
                         // you can't restore default frequency on AMD GPUs
-                        if (clock == 12750)
+                        if (restore)
                             return;
 
                         int error = RyzenAdj.set_gfx_clk(ry, (uint)clock);

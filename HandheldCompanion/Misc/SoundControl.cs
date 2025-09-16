@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views.Windows;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
@@ -103,7 +104,7 @@ public static class SoundControl
             {
                 mmDevice.AudioEndpointVolume.OnVolumeNotification += (data) =>
                 {
-                    EventHandler(
+                    EventHandler?.Invoke(
                         SoundDirections.Output,
                         (float)Math.Round(data.MasterVolume * 100f),
                         data.Muted);
@@ -114,7 +115,7 @@ public static class SoundControl
             {
                 commDevice.AudioEndpointVolume.OnVolumeNotification += (data) =>
                 {
-                    EventHandler(
+                    EventHandler?.Invoke(
                         SoundDirections.Input,
                         (float)Math.Round(data.MasterVolume * 100f),
                         data.Muted);

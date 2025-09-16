@@ -1,8 +1,10 @@
 ﻿using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Devices;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Properties;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -22,13 +24,14 @@ namespace HandheldCompanion.Managers;
 
 public static class ProfileManager
 {
-    private const string DefaultName = "Default";
+    public const string DefaultName = "Default";
 
     public static ConcurrentDictionary<string, Profile> profiles = new(StringComparer.InvariantCultureIgnoreCase);
     public static List<Profile> subProfiles = [];
 
     private static Profile currentProfile;
 
+    public static FileSystemWatcher profileWatcher { get; set; }
     private static string profilesPath;
 
     public static bool IsInitialized;
@@ -39,12 +42,7 @@ public static class ProfileManager
         profilesPath = Path.Combine(MainWindow.SettingsPath, "profiles");
         if (!Directory.Exists(profilesPath))
             Directory.CreateDirectory(profilesPath);
-    }
 
-    public static FileSystemWatcher profileWatcher { get; set; }
-
-    public static void Start()
-    {
         // monitor profile files
         profileWatcher = new FileSystemWatcher
         {
@@ -54,8 +52,12 @@ public static class ProfileManager
             Filter = "*.json",
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.Size
         };
-        profileWatcher.Created += ProfileCreated;
-        profileWatcher.Deleted += ProfileDeleted;
+    }
+
+    public static async Task Start()
+    {
+        if (IsInitialized)
+            return;
 
         // process existing profiles
         var fileEntries = Directory.GetFiles(profilesPath, "*.json", SearchOption.AllDirectories);
@@ -65,31 +67,48 @@ public static class ProfileManager
         // check for default profile
         if (!HasDefault())
         {
-            Layout deviceLayout = (Layout)IDevice.GetCurrent().DefaultLayout.Clone();
+            // get default layout
+            Layout defaultLayout = IDevice.GetCurrent().DefaultLayout.Clone() as Layout;
+
             Profile defaultProfile = new()
             {
                 Name = DefaultName,
                 Default = true,
                 Enabled = false,
-                Layout = deviceLayout,
+                Layout = defaultLayout,
                 LayoutTitle = LayoutTemplate.DefaultLayout.Name,
-                LayoutEnabled = true
             };
 
             UpdateOrCreateProfile(defaultProfile, UpdateSource.Creation);
         }
 
-        IsInitialized = true;
-        Initialized?.Invoke();
+        // profile watcher events
+        profileWatcher.Created += ProfileCreated;
+        profileWatcher.Deleted += ProfileDeleted;
 
-        // listen to external events when ready
+        // manage events
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
         ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
         PowerProfileManager.Deleted += PowerProfileManager_Deleted;
         ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
 
+        // raise events
+        if (ProcessManager.IsInitialized)
+        {
+            ProcessManager_ForegroundChanged(ProcessManager.GetForegroundProcess(), null);
+        }
+
+        if (ControllerManager.IsInitialized)
+        {
+            ControllerManager_ControllerPlugged(ControllerManager.GetTargetController(), false);
+        }
+
+        IsInitialized = true;
+        Initialized?.Invoke();
+
         LogManager.LogInformation("{0} has started", "ProfileManager");
+        return;
     }
 
     public static void Stop()
@@ -97,10 +116,18 @@ public static class ProfileManager
         if (!IsInitialized)
             return;
 
-        IsInitialized = false;
-
+        // profile watcher events
+        profileWatcher.Created -= ProfileCreated;
         profileWatcher.Deleted -= ProfileDeleted;
-        profileWatcher.Dispose();
+
+        // manage events
+        ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
+        ProcessManager.ProcessStarted -= ProcessManager_ProcessStarted;
+        ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
+        PowerProfileManager.Deleted -= PowerProfileManager_Deleted;
+        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
+
+        IsInitialized = false;
 
         LogManager.LogInformation("{0} has stopped", "ProfileManager");
     }
@@ -150,7 +177,7 @@ public static class ProfileManager
 
     public static Profile GetProfileFromGuid(Guid Guid, bool ignoreStatus, bool isSubProfile = false)
     {
-        Profile profile = null;
+        Profile? profile = null;
 
         if (isSubProfile)
             profile = subProfiles.FirstOrDefault(pr => pr.Guid == Guid);
@@ -172,7 +199,7 @@ public static class ProfileManager
     {
         // get subprofile corresponding to path
         List<Profile> filteredSubProfiles = subProfiles.Where(pr => pr.Path == path).ToList();
-        return filteredSubProfiles.OrderBy(pr => pr.Name).ToArray();
+        return [.. filteredSubProfiles.OrderBy(pr => pr.Name)];
     }
 
     public static Profile GetProfileForSubProfile(Profile subProfile)
@@ -242,44 +269,38 @@ public static class ProfileManager
 
     private static void ApplyProfile(Profile profile, UpdateSource source = UpdateSource.Background, bool announce = true)
     {
-        try
+        // might not be the same anymore if disabled
+        profile = GetProfileFromGuid(profile.Guid, false, profile.IsSubProfile);
+
+        // we've already announced this profile
+        if (currentProfile is not null)
+            if (currentProfile.Guid == profile.Guid)
+                announce = false;
+
+        // update current profile before invoking event
+        currentProfile = profile;
+
+        // raise event
+        Applied?.Invoke(profile, source);
+
+        // todo: localize me
+        if (announce)
         {
-            // might not be the same anymore if disabled
-            profile = GetProfileFromGuid(profile.Guid, false, profile.IsSubProfile);
-
-            // we've already announced this profile
-            if (currentProfile is not null)
-                if (currentProfile.Guid == profile.Guid)
-                    announce = false;
-
-            // update current profile before invoking event
-            currentProfile = profile;
-
-            // raise event
-            Applied?.Invoke(profile, source);
-
-            // todo: localize me
-            if (announce)
+            string announcement = string.Empty;
+            switch (profile.IsSubProfile)
             {
-                string announcement = string.Empty;
-                switch (profile.IsSubProfile)
-                {
-                    case false:
-                        announcement = $"Profile {profile.Name} applied";
-                        break;
-                    case true:
-                        string mainProfileName = GetProfileForSubProfile(profile).Name;
-                        announcement = $"Subprofile {mainProfileName} {profile.Name} applied";
-                        break;
-                }
-
-                // push announcement
-                LogManager.LogInformation(announcement);
-            	ToastManager.SendToast(announcement);
+                case false:
+                    announcement = $"Profile {profile.Name} applied";
+                    break;
+                case true:
+                    string mainProfileName = GetProfileForSubProfile(profile).Name;
+                    announcement = $"Subprofile {mainProfileName} {profile.Name} applied";
+                    break;
             }
-        }
-        catch
-        {
+
+            // push announcement
+            LogManager.LogInformation(announcement);
+            ToastManager.SendToast(announcement);
         }
     }
 
@@ -290,7 +311,7 @@ public static class ProfileManager
         // update main profiles
         foreach (var profile in profiles.Values)
         {
-            bool isCurrent = profile.PowerProfile == powerProfile.Guid;
+            bool isCurrent = profile.PowerProfiles[(int)PowerLineStatus.Online] == powerProfile.Guid || profile.PowerProfiles[(int)PowerLineStatus.Offline] == powerProfile.Guid;
             if (isCurrent)
             {
                 // sanitize profile
@@ -307,7 +328,7 @@ public static class ProfileManager
         // update sub profiles
         foreach (var profile in subProfiles)
         {
-            bool isCurrent = profile.PowerProfile == powerProfile.Guid;
+            bool isCurrent = profile.PowerProfiles[(int)PowerLineStatus.Offline] == powerProfile.Guid || profile.PowerProfiles[(int)PowerLineStatus.Online] == powerProfile.Guid;
             if (isCurrent)
             {
                 // sanitize profile
@@ -341,7 +362,7 @@ public static class ProfileManager
             bool isCurrent = profile.ErrorCode.HasFlag(ProfileErrorCode.Running);
 
             // raise event
-            Discarded?.Invoke(profile);
+            Discarded?.Invoke(profile, isCurrent);
 
             if (isCurrent)
             {
@@ -351,7 +372,6 @@ public static class ProfileManager
                 // restore default profile
                 ApplyProfile(GetDefault());
             }
-
             LogManager.LogInformation($"Profile {profile.Name} discarded");
         }
         catch
@@ -404,7 +424,7 @@ public static class ProfileManager
                 var backProfile = GetProfileFromPath(backgroundEx.Path, false);
 
                 if (!backProfile.Guid.Equals(profile.Guid))
-                    Discarded?.Invoke(backProfile);
+                    Discarded?.Invoke(backProfile, true);
             }
 
             ApplyProfile(profile);
@@ -481,50 +501,66 @@ public static class ProfileManager
         {
             string rawName = Path.GetFileNameWithoutExtension(fileName);
             if (string.IsNullOrEmpty(rawName))
-                throw new Exception("Profile has an incorrect file name.");
+            {
+                LogManager.LogError("Could not parse profile: {0}. {1}", fileName, "Profile has an incorrect file name.");
+                return;
+            }
 
             string outputraw = File.ReadAllText(fileName);
             JObject jObject = JObject.Parse(outputraw);
 
             // latest pre-versionning release
-            Version version = new("0.15.0.4");
+            Version version = new();
             if (jObject.TryGetValue("Version", out var value))
                 version = new Version(value.ToString());
 
             // pre-parse manipulations
-            switch (version.ToString())
+            if (version == Version.Parse("0.0.0.0"))
             {
-                case "0.15.0.4":
-                    {
-                        outputraw = CommonUtils.RegexReplace(outputraw, "Generic.Dictionary(.*)System.Private.CoreLib\"",
-                            "Generic.SortedDictionary$1System.Collections\"");
-                        jObject = JObject.Parse(outputraw);
-                        jObject.Remove("MotionSensivityArray");
-                        outputraw = jObject.ToString();
-                    }
-                    break;
-                case "0.16.0.5":
-                    {
-                        outputraw = outputraw.Replace(
-                            "\"System.Collections.Generic.SortedDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections\"",
-                            "\"System.Collections.Concurrent.ConcurrentDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections.Concurrent\"");
-                    }
-                    break;
+                // too old
+                throw new Exception("Profile is outdated.");
             }
+
+            // we've been doing back and forth on ButtonState State type
+            // let's make sure we get a ConcurrentDictionary
+            outputraw = outputraw.Replace(
+                    "\"System.Collections.Generic.Dictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Private.CoreLib\"",
+                    "\"System.Collections.Concurrent.ConcurrentDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections.Concurrent\"");
 
             // parse profile
             profile = JsonConvert.DeserializeObject<Profile>(outputraw, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+
+            // post-parse manipulations
+            switch (version.ToString())
+            {
+                default:
+                case "0.21.5.4":
+                    {
+                        // Access the PowerProfile value
+                        string oldPowerProfile = jObject["PowerProfile"]?.ToString();
+                        if (!string.IsNullOrEmpty(oldPowerProfile))
+                        {
+                            for (int idx = 0; idx < 2; idx++)
+                            {
+                                Guid powerProfile = profile.PowerProfiles[idx];
+                                if (powerProfile == Guid.Empty)
+                                    profile.PowerProfiles[idx] = new Guid(oldPowerProfile);
+                            }
+                        }
+                    }
+                    break;
+            }
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Could not parse profile {0}. {1}", fileName, ex.Message);
+            LogManager.LogError("Could not parse profile: {0}. {1}", fileName, ex.Message);
             return;
         }
 
         // failed to parse
-        if (profile is null || !profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
+        if (!profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
         {
-            LogManager.LogError("Corrupted profile {0}. Profile has an empty name or an empty path.", fileName);
+            LogManager.LogError("Corrupted profile: {0}. Profile has an empty name or an empty path.", fileName);
             return;
         }
 
@@ -534,13 +570,13 @@ public static class ProfileManager
             ManualResetEventSlim waitHandle = new ManualResetEventSlim(false);
 
             // UI thread
-            Application.Current.Dispatcher.Invoke(async () =>
+            UIHelper.TryInvoke(async () =>
             {
                 // todo: localize me
                 Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
                 {
                     Title = $"Importing profile for {profile.Name}",
-                    Content = $"Would you like to import this profile to your database?",
+                    Content = $"Would you like to import this profile to your database ?",
                     PrimaryButtonText = Resources.ProfilesPage_OK,
                     CloseButtonText = Resources.ProfilesPage_Cancel
                 }.ShowAsync();
@@ -615,7 +651,7 @@ public static class ProfileManager
             foreach (Profile subprofile in GetSubProfilesFromPath(profile.Path, false))
                 DeleteSubProfile(subprofile);
 
-            LogManager.LogInformation("Deleted subprofiles for profile {0}", profile);
+            LogManager.LogInformation("Deleted subprofiles for profile: {0}", profile);
 
             // Unregister application from HidHide
             HidHide.UnregisterApplication(profile.Path);
@@ -632,16 +668,16 @@ public static class ProfileManager
                 isCurrent = profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
 
             // raise event
-            Discarded?.Invoke(profile);
+            Discarded?.Invoke(profile, isCurrent);
 
             // raise event(s)
             Deleted?.Invoke(profile);
 
             // send toast
             // todo: localize me
-            ToastManager.SendToast("Profile", $"Profile {profile.Name} deleted");
+            ToastManager.SendToast($"Profile {profile.Name} deleted");
 
-            LogManager.LogInformation("Deleted profile {0}", profilePath);
+            LogManager.LogInformation("Deleted profile: {0}", profilePath);
 
             // restore default profile
             if (isCurrent)
@@ -668,7 +704,7 @@ public static class ProfileManager
                 isCurrent = subProfile.Guid == currentProfile.Guid;
 
             // raise event
-            Discarded?.Invoke(subProfile);
+            Discarded?.Invoke(subProfile, isCurrent);
 
             // raise event(s)
             Deleted?.Invoke(subProfile);
@@ -677,7 +713,7 @@ public static class ProfileManager
             // todo: localize me
             ToastManager.SendToast($"Subprofile {subProfile.Name} deleted");
 
-            LogManager.LogInformation("Deleted subprofile {0}", profilePath);
+            LogManager.LogInformation("Deleted subprofile: {0}", profilePath);
 
             // restore main profile as favorite
             if (isCurrent)
@@ -739,14 +775,19 @@ public static class ProfileManager
         }
 
         // looks like profile power profile was deleted, restore balanced
-        if (!PowerProfileManager.Contains(profile.PowerProfile))
-            profile.PowerProfile = OSPowerMode.BetterPerformance;
+        for (int idx = 0; idx < 2; idx++)
+        {
+            Guid powerProfile = profile.PowerProfiles[idx];
+            if (powerProfile == Guid.Empty)
+                continue;
+
+            if (!PowerProfileManager.Contains(powerProfile))
+                profile.PowerProfiles[idx] = Guid.Empty;
+        }
     }
 
     public static void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)
     {
-        LogManager.LogInformation($"Attempting to update/create {(profile.IsSubProfile ? "subprofile" : "profile")} {profile.Name} ({source})");
-
         bool isCurrent = false;
         switch (source)
         {
@@ -760,6 +801,17 @@ public static class ProfileManager
             default:
                 // check if this is current profile
                 isCurrent = currentProfile is not null && profile.Path.Equals(currentProfile.Path, StringComparison.InvariantCultureIgnoreCase);
+                break;
+        }
+
+        switch (source)
+        {
+            case UpdateSource.Serializer:
+                LogManager.LogInformation($"Loaded {(profile.IsSubProfile ? "subprofile" : "profile")}: {profile.Name}");
+                break;
+
+            default:
+                LogManager.LogInformation($"Attempting to update/create {(profile.IsSubProfile ? "subprofile" : "profile")}: {profile.Name}");
                 break;
         }
 
@@ -891,7 +943,7 @@ public static class ProfileManager
 
     public static event DiscardedEventHandler Discarded;
 
-    public delegate void DiscardedEventHandler(Profile profile);
+    public delegate void DiscardedEventHandler(Profile profile, bool swapped);
 
     public static event InitializedEventHandler Initialized;
 

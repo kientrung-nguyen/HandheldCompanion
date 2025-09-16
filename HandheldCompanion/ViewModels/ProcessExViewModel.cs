@@ -1,5 +1,4 @@
-﻿using HandheldCompanion.Controls;
-using HandheldCompanion.Extensions;
+﻿using HandheldCompanion.Extensions;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -28,7 +27,9 @@ namespace HandheldCompanion.ViewModels
                 // I've implemented all required Clone() functions but not sure where to call them
 
                 UpdateProcess(_process, value);
-                OnPropertyChanged(nameof(Process));
+
+                // refresh all properties
+                OnPropertyChanged(string.Empty);
             }
         }
 
@@ -42,23 +43,14 @@ namespace HandheldCompanion.ViewModels
                 if (value != IsSuspended)
                 {
                     Process.IsSuspended = value;
+                    OnPropertyChanged(nameof(IsSuspended));
                 }
             }
         }
 
         public string Executable => Process.Executable;
-
-        public bool FullScreenOptimization
-        {
-            get => !Process.FullScreenOptimization;
-            set { } // empty set to allow binding to ToggleSwitch.IsOn
-        }
-
-        public bool HighDPIAware
-        {
-            get => !Process.HighDPIAware;
-            set { } // empty set to allow binding to ToggleSwitch.IsOn
-        }
+        public bool FullScreenOptimization => !Process.FullScreenOptimization;
+        public bool HighDPIAware => !Process.HighDPIAware;
 
         public ICommand KillProcessCommand { get; private set; }
 
@@ -95,7 +87,7 @@ namespace HandheldCompanion.ViewModels
                 switch (dialogTask.Result)
                 {
                     case ContentDialogResult.Primary:
-                        Process.Process?.Kill();
+                        Process.Kill();
                         break;
                     default:
                         dialog.Hide();

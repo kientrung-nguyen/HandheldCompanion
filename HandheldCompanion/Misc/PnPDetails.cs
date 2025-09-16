@@ -20,6 +20,7 @@ public class PnPDetails
     public bool isPhysical => !isVirtual;
     public bool isBluetooth => EnumeratorName.Equals("BTHENUM");
     public bool isUSB => EnumeratorName.Equals("USB");
+    public bool isDongle = false;
 
     public string devicePath = string.Empty;
     public string baseContainerDevicePath = string.Empty;
@@ -28,6 +29,8 @@ public class PnPDetails
     public string SymLink = string.Empty;
     public string EnumeratorName = string.Empty;
     public DateTimeOffset FirstInstallDate;
+
+    public Guid InterfaceGuid;
 
     public ushort ProductID;
     public ushort VendorID;
@@ -59,11 +62,6 @@ public class PnPDetails
             return number;
 
         return -1;
-    }
-
-    public string GetEnumerator()
-    {
-        return EnumeratorName;
     }
 
     public UsbPnPDevice GetUsbPnPDevice()

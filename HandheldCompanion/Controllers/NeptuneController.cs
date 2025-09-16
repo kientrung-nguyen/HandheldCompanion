@@ -1,6 +1,8 @@
 ﻿using HandheldCompanion.Actions;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using SharpDX.XInput;
 using steam_hidapi.net;
 using steam_hidapi.net.Hid;
@@ -26,6 +28,7 @@ public class NeptuneController : SteamController
     // TODO: why not use TimerManager.Tick?
     private Thread rumbleThread;
     private bool rumbleThreadRunning;
+    private int rumbleThreadInterval = 10;
 
     public NeptuneController()
     { }
@@ -33,10 +36,6 @@ public class NeptuneController : SteamController
     public NeptuneController(PnPDetails details) : base()
     {
         AttachDetails(details);
-
-        // UI
-        DrawUI();
-        UpdateUI();
     }
 
     protected override void InitializeInputOutput()
@@ -78,10 +77,10 @@ public class NeptuneController : SteamController
 
     public override void UpdateInputs(long ticks, float delta)
     {
-        if (input is null)
+        if (Inputs is null || IsDisposing)
             return;
 
-        Inputs.ButtonState = InjectedButtons.Clone() as ButtonState;
+        ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);
 
         Inputs.ButtonState[ButtonFlags.B1] = input.State.ButtonState[NeptuneControllerButton.BtnA];
         Inputs.ButtonState[ButtonFlags.B2] = input.State.ButtonState[NeptuneControllerButton.BtnB];
@@ -245,7 +244,8 @@ public class NeptuneController : SteamController
         Inputs.GyroState.SetAccelerometer(aX, aY, aZ);
 
         // process motion
-        gamepadMotion.ProcessMotion(gX, gY, gZ, aX, aY, aZ, delta);
+        if (gamepadMotions.TryGetValue(gamepadIndex, out GamepadMotion gamepadMotion))
+            gamepadMotion.ProcessMotion(gX, gY, gZ, aX, aY, aZ, delta);
 
         base.UpdateInputs(ticks, delta);
     }
@@ -261,14 +261,13 @@ public class NeptuneController : SteamController
             Controller.RequestLizardMode(false);
 
             // create handler
-            Controller.OnControllerInputReceived += input => OnControllerInputReceived(input);
+            Controller.OnControllerInputReceived += input =>
+            {
+                this.input = input;
+                return Task.CompletedTask;
+            };
         }
         catch { }
-    }
-
-    private async Task OnControllerInputReceived(NeptuneControllerInputEventArgs input)
-    {
-        this.input = input;
     }
 
     private void Close()
@@ -336,6 +335,7 @@ public class NeptuneController : SteamController
         };
         rumbleThread.Start();
 
+        // manage events
         TimerManager.Tick += UpdateInputs;
 
         base.Plug();
@@ -395,7 +395,7 @@ public class NeptuneController : SteamController
             if (GetHapticIntensity(FeedbackSmallMotor, MinIntensity, MaxIntensity, out var rightIntensity))
                 Controller.SetHaptic2(SCHapticMotor.Right, NCHapticStyle.Weak, rightIntensity);
 
-            await Task.Delay(TimerManager.GetPeriod() * 2);
+            Thread.Sleep(rumbleThreadInterval);
         }
     }
 

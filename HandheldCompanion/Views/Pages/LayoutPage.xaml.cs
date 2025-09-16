@@ -1,14 +1,11 @@
 using HandheldCompanion.Controllers;
-using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
-using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
 using iNKORE.UI.WPF.Modern.Controls;
-using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -43,6 +40,7 @@ public partial class LayoutPage : Page
 
     public LayoutPage()
     {
+        DataContext = new LayoutPageViewModel(this);
         InitializeComponent();
     }
 
@@ -80,19 +78,16 @@ public partial class LayoutPage : Page
             { "GyroPage", ( gyroPage, navGyro ) },
         };
 
-        // TODO: Temporary until conversion to MVVM
-        foreach (var template in LayoutManager.Templates)
-        {
-            LayoutManager_Updated(template);
-        }
-
-        LayoutManager.Updated += LayoutManager_Updated;
-        LayoutManager.Initialized += LayoutManager_Initialized;
+        // manage events
         ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceUpdated;
-        DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceUpdated;
         ProfileManager.Updated += ProfileManager_Updated;
+
+        // raise events
+        if (ControllerManager.HasTargetController)
+        {
+            ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
+        }
     }
 
     private void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
@@ -116,11 +111,9 @@ public partial class LayoutPage : Page
 
     private void ControllerManager_ControllerSelected(IController controller)
     {
-        // UI thread (async)
+        // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
-            RefreshLayoutList();
-
             // cascade update to (sub)pages
             foreach (var page in pages.Values)
             {
@@ -129,73 +122,7 @@ public partial class LayoutPage : Page
         });
     }
 
-    private void DeviceManager_UsbDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
-    {
-        IController controller = ControllerManager.GetTargetController();
-
-        // lazy
-        if (controller is not null)
-            ControllerManager_ControllerSelected(controller);
-    }
-
-    private void LayoutManager_Initialized()
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            RefreshLayoutList();
-        });
-    }
-
-    private void LayoutManager_Updated(LayoutTemplate layoutTemplate)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            // Get template separator index
-            var idx = -1;
-
-            // search if we already have this template listed
-            foreach (var item in cB_Layouts.Items)
-            {
-                if (item is not ComboBoxItem)
-                    continue;
-
-                // get template
-                var parent = (ComboBoxItem)item;
-                if (parent.Content is not LayoutTemplate)
-                    continue;
-
-                var template = (LayoutTemplate)parent.Content;
-                if (template.Guid.Equals(layoutTemplate.Guid))
-                {
-                    idx = cB_Layouts.Items.IndexOf(parent);
-                    break;
-                }
-            }
-
-            if (idx != -1)
-            {
-                // found it
-                cB_Layouts.Items[idx] = new ComboBoxItem { Content = layoutTemplate };
-            }
-            else
-            {
-                // new entry
-                if (layoutTemplate.IsInternal)
-                    idx = cB_Layouts.Items.IndexOf(cB_LayoutsSplitterTemplates) + 1;
-                else
-                    idx = cB_Layouts.Items.IndexOf(cB_LayoutsSplitterCommunity) + 1;
-
-                cB_Layouts.Items.Insert(idx, new ComboBoxItem { Content = layoutTemplate });
-            }
-
-            cB_Layouts.Items.Refresh();
-            cB_Layouts.InvalidateVisual();
-        });
-    }
-
-    private void SettingsManager_SettingValueChanged(string? name, object value)
+    private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
     {
         // UI thread
         Application.Current.Dispatcher.Invoke(() =>
@@ -204,35 +131,9 @@ public partial class LayoutPage : Page
             {
                 case "LayoutFilterOnDevice":
                     CheckBoxDeviceLayouts.IsChecked = Convert.ToBoolean(value);
-                    RefreshLayoutList();
                     break;
             }
         });
-    }
-
-    private void RefreshLayoutList()
-    {
-        // Get filter settings
-        var FilterOnDevice = SettingsManager.Get<bool>("LayoutFilterOnDevice");
-
-        // Get current controller
-        var controller = ControllerManager.GetTargetController();
-
-        foreach (var layoutTemplate in LayoutManager.Templates)
-        {
-            // get parent
-            if (layoutTemplate.Parent is not ComboBoxItem parent)
-                continue;
-
-            if (layoutTemplate.ControllerType is not null && FilterOnDevice)
-                if (layoutTemplate.ControllerType != controller?.GetType())
-                {
-                    parent.Visibility = Visibility.Collapsed;
-                    continue;
-                }
-
-            parent.Visibility = Visibility.Visible;
-        }
     }
 
     private void Page_Loaded(object sender, RoutedEventArgs e)
@@ -285,20 +186,6 @@ public partial class LayoutPage : Page
                 CheckBoxDefaultLayout.IsChecked = currentTemplate.Layout.IsDefaultLayout;
                 CheckBoxDefaultLayout.IsEnabled = currentTemplate.Layout != LayoutManager.GetDesktop();
             });
-        }
-    }
-
-    private void cB_Layouts_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        var comboBox = (ComboBox)sender;
-        foreach (var item in comboBox.Items)
-        {
-            if (item is not ComboBoxItem)
-                continue;
-
-            var layoutTemplate = (ComboBoxItem)item;
-            layoutTemplate.Width = comboBox.ActualWidth;
-            layoutTemplate.InvalidateVisual();
         }
     }
 

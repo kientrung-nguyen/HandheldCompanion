@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using System;
 using System.Linq;
 
@@ -246,7 +247,7 @@ public class SteamDeck : IDevice
         inpOut?.WriteMemory(MCBL, data);
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {

@@ -241,7 +241,7 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("20")]
         public double OverlayControllerRestingPitch {
             get {
                 return ((double)(this["OverlayControllerRestingPitch"]));
@@ -404,18 +404,6 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["MainWindowPrevState"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool FirstStart {
-            get {
-                return ((bool)(this["FirstStart"]));
-            }
-            set {
-                this["FirstStart"] = value;
             }
         }
         
@@ -697,18 +685,6 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool PlatformHWiNFOEnabled {
-            get {
-                return ((bool)(this["PlatformHWiNFOEnabled"]));
-            }
-            set {
-                this["PlatformHWiNFOEnabled"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1")]
         public int QuickToolsLocation {
             get {
@@ -752,17 +728,6 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["ControllerManagement"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public global::System.Collections.Specialized.StringCollection SuspendedControllers {
-            get {
-                return ((global::System.Collections.Specialized.StringCollection)(this["SuspendedControllers"]));
-            }
-            set {
-                this["SuspendedControllers"] = value;
             }
         }
         
@@ -955,17 +920,6 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["LEDPresetIndex"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public global::System.Collections.Specialized.StringCollection SuspendedDevices {
-            get {
-                return ((global::System.Collections.Specialized.StringCollection)(this["SuspendedDevices"]));
-            }
-            set {
-                this["SuspendedDevices"] = value;
             }
         }
         
@@ -1219,6 +1173,42 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["QuickToolsDeviceName"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AYANEOFlipScreenEnabled {
+            get {
+                return ((bool)(this["AYANEOFlipScreenEnabled"]));
+            }
+            set {
+                this["AYANEOFlipScreenEnabled"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public double AYANEOFlipScreenBrightness {
+            get {
+                return ((double)(this["AYANEOFlipScreenBrightness"]));
+            }
+            set {
+                this["AYANEOFlipScreenBrightness"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool HotkeyRumbleOnExecution {
+            get {
+                return ((bool)(this["HotkeyRumbleOnExecution"]));
+            }
+            set {
+                this["HotkeyRumbleOnExecution"] = value;
             }
         }
     }

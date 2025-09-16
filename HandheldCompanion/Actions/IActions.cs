@@ -1,8 +1,8 @@
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
 using WindowsInput.Events;
 
 namespace HandheldCompanion.Actions
@@ -16,7 +16,8 @@ namespace HandheldCompanion.Actions
         Keyboard = 3,
         Mouse = 4,
         Trigger = 5,
-        Special = 6,
+        Shift = 6,
+        Inherit = 7,
     }
 
     [Serializable]
@@ -96,6 +97,10 @@ namespace HandheldCompanion.Actions
 
         private int pressCount = 0; // used to store previous press value for double tap
 
+        public bool HasTurbo = true;
+        public bool HasToggle = true;
+        public bool HasInterruptable = true;
+
         public bool Turbo;
         public int TurboDelay = 30;
         protected int TurboIdx;
@@ -105,12 +110,10 @@ namespace HandheldCompanion.Actions
         protected bool IsToggled;
 
         public bool Interruptable = true;
+        public ShiftSlot ShiftSlot = 0;
 
         public HapticMode HapticMode = HapticMode.Off;
         public HapticStrength HapticStrength = HapticStrength.Low;
-
-        protected ScreenOrientation Orientation = ScreenOrientation.Angle0;
-        public bool AutoRotate { get; set; } = false;
 
         public IActions()
         {
@@ -122,10 +125,10 @@ namespace HandheldCompanion.Actions
             if (this.HapticMode == HapticMode.Down && up) return;
             if (this.HapticMode == HapticMode.Up && !up) return;
 
-            ControllerManager.GetTargetController()?.SetHaptic(this.HapticStrength, button);
+            ControllerManager.GetTarget()?.SetHaptic(this.HapticStrength, button);
         }
 
-        public virtual void Execute(ButtonFlags button, bool value)
+        public virtual void Execute(ButtonFlags button, bool value, ShiftSlot shiftSlot = Actions.ShiftSlot.None)
         {
             if (actionState == ActionState.Suspended)
             {
@@ -138,6 +141,19 @@ namespace HandheldCompanion.Actions
             {
                 // bypass output
                 value = true;
+            }
+
+            switch (ShiftSlot)
+            {
+                case ShiftSlot.None:
+                    if (shiftSlot != ShiftSlot.None)
+                        value = false;
+                    break;
+
+                default:
+                    if (!shiftSlot.HasFlag(ShiftSlot))
+                        value = false;
+                    break;
             }
 
             switch (pressType)
@@ -366,15 +382,9 @@ namespace HandheldCompanion.Actions
                 this.Value = value;
         }
 
-        public virtual void SetOrientation(ScreenOrientation orientation)
-        {
-            Orientation = orientation;
-        }
-
-        // Improve me !
         public object Clone()
         {
-            return MemberwiseClone();
+            return CloningHelper.DeepClone(this);
         }
     }
 }

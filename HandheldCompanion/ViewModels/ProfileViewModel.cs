@@ -30,7 +30,8 @@ namespace HandheldCompanion.ViewModels
 
                 _Profile = value;
 
-                OnPropertyChanged(nameof(Profile));
+                // refresh all properties
+                OnPropertyChanged(string.Empty);
                 OnPropertyChanged(nameof(Name));
             }
         }
@@ -106,7 +107,7 @@ namespace HandheldCompanion.ViewModels
                 await Task.Run(() =>
                 {
                     process.Start();
-                    process.WaitForInputIdle();
+                    process.WaitForInputIdle(4000);
                 });
 
                 dialog.Hide();

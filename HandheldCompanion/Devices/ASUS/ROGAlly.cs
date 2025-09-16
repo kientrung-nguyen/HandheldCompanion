@@ -30,6 +30,8 @@ public class ROGAlly : IDevice
 
     private AsusACPI? asusACPI;
 
+    private static bool customFanControl = false;
+
     private const byte INPUT_HID_ID = 0x5a;
     private const byte AURA_HID_ID = 0x5d;
     private const int ASUS_ID = 0x0b05;
@@ -348,8 +350,7 @@ public class ROGAlly : IDevice
     public override void Close()
     {
         // close Asus ACPI
-        if (asusACPI is not null)
-            asusACPI.Close();
+        asusACPI?.Close();
 
         // restore default M1/M2 behavior
         ConfigureController(false);
@@ -430,8 +431,17 @@ public class ROGAlly : IDevice
         switch (enable)
         {
             case false:
-                asusACPI?.DeviceSet(AsusACPI.PerformanceMode, mode);
-                return;
+                {
+                    if (customFanControl)
+                    {
+                        customFanControl = false;
+                        asusACPI?.DeviceSet(AsusACPI.PerformanceMode, mode);
+                    }
+                }
+                break;
+            case true:
+                customFanControl = true;
+                break;
         }
     }
 
@@ -494,10 +504,10 @@ public class ROGAlly : IDevice
             case 56:    // Armory crate: Click
             case 166:   // Command center: Click
                 {
-                    Task.Factory.StartNew(async () =>
+                    Task.Run(async () =>
                     {
                         KeyPress(button);
-                        await Task.Delay(KeyPressDelay);
+                        await Task.Delay(KeyPressDelay).ConfigureAwait(false); // Avoid blocking the synchronization context
                         KeyRelease(button);
                     });
                 }
@@ -724,7 +734,7 @@ public class ROGAlly : IDevice
         asusACPI?.DeviceSet(AsusACPI.BatteryLimit, chargeLimit);
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {

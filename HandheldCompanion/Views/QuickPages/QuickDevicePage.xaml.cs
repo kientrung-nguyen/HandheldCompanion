@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
@@ -84,21 +85,38 @@ public partial class QuickDevicePage : Page
         // Go to profile integer scaling resolution
         if (profile.IntegerScalingEnabled)
         {
-            //DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
-            //var profileResolution = desktopScreen?.screenDividers.FirstOrDefault(d => d.divider == profile.IntegerScalingDivider);
-            //if (profileResolution is not null)
-            //{
-            //    SetResolution(profileResolution.resolution);
-            //}
-        }
-        else
-        {
-            // UI thread (async)
-            Application.Current.Dispatcher.Invoke(() =>
+            var primaryDisplay = ScreenControl.PrimaryDisplay;
+            var index = 1;
+            var possibleResolutions = ScreenControl.PrimaryDisplay.DisplayScreen.GetPossibleSettings()
+                .DistinctBy(setting => new
+                {
+                    setting.Resolution.Width,
+                    setting.Resolution.Height
+                })
+                .OrderByDescending(setting => (ulong)setting.Resolution.Height * (ulong)setting.Resolution.Width);
+            if (possibleResolutions.Any())
             {
-                // Revert back to resolution in device settings
-                SetResolution();
-            });
+                var nativeResolution = possibleResolutions.First();
+                while (possibleResolutions.FirstOrDefault(r => r.Resolution.Height == (nativeResolution.Resolution.Height / index)) is DisplayPossibleSetting possibleSetting && possibleSetting is not null)
+                {
+                    if (index == profile.IntegerScalingDivider)
+                    {
+                        LogManager.LogError($"1/{index} {possibleSetting.Resolution.Width} x {possibleSetting.Resolution.Height}");
+                        var currSetting = ScreenControl.PrimaryDisplay.DisplayScreen.CurrentSetting;
+                        if (currSetting.Resolution.Width == possibleSetting.Resolution.Width &&
+                            currSetting.Resolution.Height == possibleSetting.Resolution.Height)
+                            return;
+                        ScreenControl.Set(primaryDisplay, primaryDisplay.DisplayScreen.GetPossibleSettings().First(setting =>
+                            setting.Resolution.Width == possibleSetting.Resolution.Width &&
+                            setting.Resolution.Height == possibleSetting.Resolution.Height &&
+                            setting.Frequency == currSetting.Frequency &&
+                            setting.ColorDepth == currSetting.ColorDepth
+                        ));
+                        break;
+                    }
+                    index++;
+                }
+            }
         }
 
         // UI thread (async)
@@ -110,25 +128,31 @@ public partial class QuickDevicePage : Page
         });
     }
 
-    private void ProfileManager_Discarded(Profile profile)
+    private void ProfileManager_Discarded(Profile profile, bool swapped)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            SetResolution();
+        // don't bother discarding settings, new one will be enforce shortly
+        if (swapped)
+            return;
 
+        // UI thread
+        UIHelper.TryInvoke(() =>
+        {
             if (profile.IntegerScalingEnabled)
             {
                 DisplayStack.IsEnabled = true;
                 ResolutionOverrideStack.Visibility = Visibility.Collapsed;
+
+                // restore default resolution
+                if (profile.IntegerScalingDivider != 1)
+                    SetResolution();
             }
         });
     }
 
-    private void SettingsManager_SettingValueChanged(string? name, object value)
+    private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (name)
             {
@@ -147,6 +171,12 @@ public partial class QuickDevicePage : Page
                 case "LEDSettingsEnabled":
                     UseDynamicLightingToggle.IsOn = Convert.ToBoolean(value);
                     break;
+                case "AYANEOFlipScreenEnabled":
+                    Toggle_AYANEOFlipScreen.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "AYANEOFlipScreenBrightness":
+                    Slider_AYANEOFlipScreenBrightness.Value = Convert.ToDouble(value);
+                    break;
             }
         });
     }
@@ -162,7 +192,7 @@ public partial class QuickDevicePage : Page
             radios = await Radio.GetRadiosAsync();
 
             // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 if (radios is null)
                 {
@@ -185,62 +215,69 @@ public partial class QuickDevicePage : Page
         }).Start();
     }
 
-    private void MultimediaManager_PrimaryScreenChanged(Display? screen)
+    private void MultimediaManager_PrimaryScreenChanged(Display screen)
     {
-        ComboBoxResolution.Items.Clear();
-        if (screen is not null)
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
-            foreach (var setting in screen.DisplayScreen.GetPossibleSettings()
-                .DistinctBy(setting => new
-                {
-                    setting.Resolution.Width,
-                    setting.Resolution.Height
-                })
-                .OrderByDescending(setting => (ulong)setting.Resolution.Height * (ulong)setting.Resolution.Width))
+            ComboBoxResolution.Items.Clear();
+            if (screen is not null)
             {
-                ComboBoxResolution.Items.Add(new ComboBoxItem
+                foreach (var setting in screen.DisplayScreen.GetPossibleSettings()
+                    .DistinctBy(setting => new
+                    {
+                        setting.Resolution.Width,
+                        setting.Resolution.Height
+                    })
+                    .OrderByDescending(setting => (ulong)setting.Resolution.Height * (ulong)setting.Resolution.Width))
                 {
-                    Tag = setting,
-                    Content = $"{setting.Resolution.Width} x {setting.Resolution.Height}"
-                });
+                    ComboBoxResolution.Items.Add(new ComboBoxItem
+                    {
+                        Tag = setting,
+                        Content = $"{setting.Resolution.Width} x {setting.Resolution.Height}"
+                    });
+                }
             }
-        }
+        });
     }
 
-    private void MultimediaManager_DisplaySettingsChanged(Display? desktopScreen)
+    private void MultimediaManager_DisplaySettingsChanged(Display desktopScreen)
     {
         // We don't want to change the combobox when it's changed from profile integer scaling
         var currentProfile = ProfileManager.GetCurrent();
-        if (ComboBoxResolution.SelectedItem is not null && currentProfile is not null && currentProfile.IntegerScalingEnabled)
-            return;
-
-        if (desktopScreen is null)
-            return;
-
-        foreach (ComboBoxItem item in ComboBoxResolution.Items)
+        if (currentProfile is not null && currentProfile.IntegerScalingEnabled)
         {
-            if (item.Tag is DisplayPossibleSetting resolution &&
-                resolution.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width &&
-                resolution.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height)
-            {
-                ComboBoxResolution.SelectedItem = item;
-                break;
-            }
+            ProfileManager_Applied(currentProfile, UpdateSource.Background);
+            return;
         }
 
-        foreach (ComboBoxItem item in ComboBoxFrequency.Items)
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
-            if (item.Tag is DisplayPossibleSetting frequency &&
-                frequency.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width &&
-                frequency.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height &&
-                frequency.Frequency == desktopScreen.DisplayScreen.CurrentSetting.Frequency
-                )
+            foreach (ComboBoxItem item in ComboBoxResolution.Items)
             {
-                ComboBoxFrequency.SelectedItem = item;
-                break;
+                if (item.Tag is DisplayPossibleSetting resolution &&
+                    resolution.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width &&
+                    resolution.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height)
+                {
+                    ComboBoxResolution.SelectedItem = item;
+                    break;
+                }
             }
-        }
 
+            foreach (ComboBoxItem item in ComboBoxFrequency.Items)
+            {
+                if (item.Tag is DisplayPossibleSetting frequency &&
+                    frequency.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width &&
+                    frequency.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height &&
+                    frequency.Frequency == desktopScreen.DisplayScreen.CurrentSetting.Frequency
+                    )
+                {
+                    ComboBoxFrequency.SelectedItem = item;
+                    break;
+                }
+            }
+        });
     }
 
     private void ComboBoxResolution_SelectionChanged(object sender, SelectionChangedEventArgs e)

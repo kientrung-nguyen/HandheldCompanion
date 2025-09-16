@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Controllers;
 using HandheldCompanion.Managers;
-using Nefarius.Utilities.DeviceManagement.PnP;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -22,23 +21,20 @@ namespace HandheldCompanion.ViewModels
 
         public ILayoutPageViewModel()
         {
+            // manage events
             ControllerManager.ControllerSelected += UpdateController;
-            DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceUpdated;
-            DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceUpdated;
+
+            // send events
+            if (ControllerManager.HasTargetController)
+            {
+                UpdateController(ControllerManager.GetTarget());
+            }
         }
 
         public override void Dispose()
         {
             ControllerManager.ControllerSelected -= UpdateController;
-            DeviceManager.UsbDeviceArrived -= DeviceManager_UsbDeviceUpdated;
-            DeviceManager.UsbDeviceRemoved -= DeviceManager_UsbDeviceUpdated;
             base.Dispose();
-        }
-
-        private void DeviceManager_UsbDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
-        {
-            IController controller = ControllerManager.GetTargetController();
-            if (controller is not null) UpdateController(controller);
         }
 
         protected abstract void UpdateController(IController controller);

@@ -1,6 +1,8 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Models;
+using HandheldCompanion.Shared;
 using SharpDX;
 using SharpDX.Direct3D9;
 using System;
@@ -9,7 +11,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
-using HandheldCompanion.Models;
 using static HandheldCompanion.Utils.DeviceUtils;
 using Timer = System.Timers.Timer;
 using WindowsDisplayAPI;
@@ -45,15 +46,14 @@ public static class DynamicLightingManager
 
     private static bool VerticalBlackBarDetectionEnabled;
 
+    private static bool OSAmbientLightingEnabled = false;
+    private const string OSAmbientLightingEnabledKey = "AmbientLightingEnabled";
+
     static DynamicLightingManager()
     {
         // Keep track of left and right LEDs history
         leftLedTracker = new ColorTracker();
         rightLedTracker = new ColorTracker();
-
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
-        IDevice.GetCurrent().PowerStatusChanged += CurrentDevice_PowerStatusChanged;
 
         ambilightThread = new Thread(ambilightThreadLoop)
         {
@@ -67,12 +67,27 @@ public static class DynamicLightingManager
         DynamicLightingTimer.Elapsed += (sender, e) => UpdateLED();
     }
 
-    public static void Start()
+    public static async Task Start()
     {
+        if (IsInitialized)
+            return;
+
         IsInitialized = true;
         Initialized?.Invoke();
 
+        // manage events
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+        IDevice.GetCurrent().PowerStatusChanged += CurrentDevice_PowerStatusChanged;
+
+        // raise events
+        if (MultimediaManager.IsInitialized)
+        {
+            MultimediaManager_DisplaySettingsChanged(ScreenControl.PrimaryDisplay);
+        }
+
         LogManager.LogInformation("{0} has started", "DynamicLightingManager");
+        return;
     }
 
     public static void Stop()
@@ -83,6 +98,11 @@ public static class DynamicLightingManager
         StopAmbilight();
 
         ReleaseDirect3DDevice();
+
+        // manage events
+        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        MultimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
+        IDevice.GetCurrent().PowerStatusChanged -= CurrentDevice_PowerStatusChanged;
 
         IsInitialized = false;
 
@@ -131,7 +151,7 @@ public static class DynamicLightingManager
             if (ex.ResultCode == ResultCode.DeviceLost)
             {
                 while (device is not null && device.TestCooperativeLevel() == ResultCode.DeviceLost)
-                    await Task.Delay(100);
+                    await Task.Delay(100).ConfigureAwait(false); // Avoid blocking the synchronization context
 
                 // Recreate the device and resources
                 ReleaseDirect3DDevice();
@@ -146,12 +166,11 @@ public static class DynamicLightingManager
 
     private static void ReleaseDirect3DDevice()
     {
-        if (device is not null)
-            device.Dispose();
+        device?.Dispose();
         device = null;
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
+    private static void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {

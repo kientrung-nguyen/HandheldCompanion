@@ -4,11 +4,13 @@ using HandheldCompanion.Commands;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Simulators;
 using PrecisionTiming;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using WindowsInput.Events;
 using ButtonState = HandheldCompanion.Inputs.ButtonState;
@@ -49,6 +51,7 @@ public static class InputsManager
     private static readonly Timer ListenerTimer;
     private static readonly Timer InputsChordHoldTimer;
 
+    private static ButtonState buttonState = new();
     private static ButtonState prevState = new();
 
     // InputsChord variables
@@ -86,6 +89,8 @@ public static class InputsManager
         BufferFlushTimer = new PrecisionTimer();
         BufferFlushTimer.SetInterval(new Action(ReleaseKeyboardBuffer), TIME_FLUSH, false, 0, TimerMode.OneShot, true);
 
+        InitGlobalHook();
+
         InputsChordHoldTimer = new Timer(TIME_LONG)
         {
             AutoReset = false
@@ -119,11 +124,11 @@ public static class InputsManager
             // set flag
             bool existsCheck = false;
 
-            var chord = currentChord.KeyState.Select(key => (KeyCode)key.KeyValue).ToList();
+            List<KeyCode> chord = currentChord.KeyState.Select(key => (KeyCode)key.KeyValue).ToList();
             foreach (KeyboardChord OEMChord in IDevice.GetCurrent().OEMChords)
             {
                 // compare ordered enumerable
-                var chord_keys = OEMChord.GetChord(IsKeyDown);
+                List<KeyCode> chord_keys = OEMChord.GetChord(IsKeyDown);
                 if (chord_keys.Count == 0)
                     continue;
 
@@ -180,7 +185,7 @@ public static class InputsManager
                 }
 
                 // execute command
-                hotkey.command.Execute(IsKeyDown, IsKeyUp);
+                hotkey.Execute(IsKeyDown, IsKeyUp, false);
 
                 // raise event
                 CommandExecuted?.Invoke(hotkey, hotkey.command);
@@ -258,7 +263,7 @@ public static class InputsManager
                     BufferKeys[args.IsKeyDown].Add(new KeyEventArgsExt((Keys)keyCode, args.ScanCode, args.Timestamp, args.IsKeyDown, args.IsKeyUp, false, args.Flags));
 
                 // calls current controller (if connected)
-                IController controller = ControllerManager.GetTargetController();
+                IController controller = ControllerManager.GetTarget();
                 controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                 // remove chord
@@ -390,7 +395,7 @@ public static class InputsManager
                             BufferKeys[args.IsKeyDown].Clear();
 
                             // calls current controller (if connected)
-                            IController controller = ControllerManager.GetTargetController();
+                            IController controller = ControllerManager.GetTarget();
                             controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                             return;
@@ -421,7 +426,7 @@ public static class InputsManager
                                 // store successful hotkey
                                 successkeyChords.Add(chord);
 
-                                IController controller = ControllerManager.GetTargetController();
+                                IController controller = ControllerManager.GetTarget();
                                 controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                                 return;
@@ -510,28 +515,35 @@ public static class InputsManager
         return args.Select(a => (KeyCode)a.KeyValue).OrderBy(key => key).ToList();
     }
 
-    public static void Start()
+    public static async Task Start()
     {
-        InitGlobalHook();
+        if (IsInitialized)
+            return;
 
         ControllerManager.InputsUpdated += UpdateInputs;
+        m_GlobalHook.KeyDown += M_GlobalHook_KeyEvent;
+        m_GlobalHook.KeyUp += M_GlobalHook_KeyEvent;
 
         IsInitialized = true;
         Initialized?.Invoke();
 
         LogManager.LogInformation("{0} has started", "InputsManager");
+        return;
     }
 
-    public static void Stop()
+    public static void Stop(bool OS)
     {
         if (!IsInitialized)
             return;
 
         ControllerManager.InputsUpdated -= UpdateInputs;
+        m_GlobalHook.KeyDown -= M_GlobalHook_KeyEvent;
+        m_GlobalHook.KeyUp -= M_GlobalHook_KeyEvent;
+
+        if (OS)
+            DisposeGlobalHook();
 
         IsInitialized = false;
-
-        DisposeGlobalHook();
 
         LogManager.LogInformation("{0} has stopped", "InputsManager");
     }
@@ -542,8 +554,6 @@ public static class InputsManager
             return;
 
         m_GlobalHook = Hook.GlobalEvents();
-        m_GlobalHook.KeyDown += M_GlobalHook_KeyEvent;
-        m_GlobalHook.KeyUp += M_GlobalHook_KeyEvent;
     }
 
     private static void DisposeGlobalHook()
@@ -551,8 +561,6 @@ public static class InputsManager
         if (m_GlobalHook is null)
             return;
 
-        m_GlobalHook.KeyDown -= M_GlobalHook_KeyEvent;
-        m_GlobalHook.KeyUp -= M_GlobalHook_KeyEvent;
         m_GlobalHook.Dispose();
         m_GlobalHook = null;
     }
@@ -560,18 +568,17 @@ public static class InputsManager
     private static void UpdateInputs(ControllerState controllerState)
     {
         // prepare button state
-        ButtonState buttonState = controllerState.ButtonState.Clone() as ButtonState;
-
+        ButtonState.Overwrite(controllerState.ButtonState, buttonState);
         if (prevState.Equals(buttonState))
             return;
 
         // half-press should be removed if full-press is also present
-        RemoveHalfPressIfFullPress(buttonState, ButtonFlags.L2Full, ButtonFlags.L2Soft);
-        RemoveHalfPressIfFullPress(buttonState, ButtonFlags.R2Full, ButtonFlags.R2Soft);
-        RemoveHalfPressIfFullPress(buttonState, ButtonFlags.LeftStickClick, ButtonFlags.LeftStickTouch);
-        RemoveHalfPressIfFullPress(buttonState, ButtonFlags.RightStickClick, ButtonFlags.RightStickTouch);
-        RemoveHalfPressIfFullPress(buttonState, ButtonFlags.LeftPadClick, ButtonFlags.LeftPadTouch);
-        RemoveHalfPressIfFullPress(buttonState, ButtonFlags.RightPadClick, ButtonFlags.RightPadTouch);
+        RemoveHalfPressIfFullPress(ButtonFlags.L2Full, ButtonFlags.L2Soft);
+        RemoveHalfPressIfFullPress(ButtonFlags.R2Full, ButtonFlags.R2Soft);
+        RemoveHalfPressIfFullPress(ButtonFlags.LeftStickClick, ButtonFlags.LeftStickTouch);
+        RemoveHalfPressIfFullPress(ButtonFlags.RightStickClick, ButtonFlags.RightStickTouch);
+        RemoveHalfPressIfFullPress(ButtonFlags.LeftPadClick, ButtonFlags.LeftPadTouch);
+        RemoveHalfPressIfFullPress(ButtonFlags.RightPadClick, ButtonFlags.RightPadTouch);
 
         // reset hold timer
         InputsChordHoldTimer.Stop();
@@ -619,15 +626,12 @@ public static class InputsManager
         }
 
     Done:
-        currentChord.ButtonState = bufferChord.ButtonState.Clone() as ButtonState;
+        ButtonState.Overwrite(bufferChord.ButtonState, currentChord.ButtonState);
 
         if (CheckForSequence(IsKeyDown, IsKeyUp))
         {
-            successChord = new()
-            {
-                ButtonState = currentChord.ButtonState.Clone() as ButtonState,
-                chordType = currentChord.chordType
-            };
+            successChord = new() { chordType = currentChord.chordType };
+            ButtonState.Overwrite(currentChord.ButtonState, successChord.ButtonState);
         }
 
         if ((buttonState.IsEmpty() || !successChord.ButtonState.IsEmpty()) && IsKeyUp)
@@ -637,12 +641,11 @@ public static class InputsManager
             successChord.ButtonState.Clear();
         }
 
-        prevState = buttonState.Clone() as ButtonState;
-
-        // GamepadResetTimer.Start();
+        // update previous state
+        ButtonState.Overwrite(buttonState, prevState);
     }
 
-    private static void RemoveHalfPressIfFullPress(ButtonState buttonState, ButtonFlags fullPress, ButtonFlags halfPress)
+    private static void RemoveHalfPressIfFullPress(ButtonFlags fullPress, ButtonFlags halfPress)
     {
         if (currentChord.ButtonState[fullPress])
         {

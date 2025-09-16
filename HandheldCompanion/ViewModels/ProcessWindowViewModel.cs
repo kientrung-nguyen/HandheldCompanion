@@ -1,5 +1,5 @@
-﻿using HandheldCompanion.Controls;
-using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
@@ -30,7 +30,9 @@ namespace HandheldCompanion.ViewModels
             set
             {
                 _ProcessWindow = value;
-                OnPropertyChanged(nameof(ProcessWindow));
+
+                // refresh all properties
+                OnPropertyChanged(string.Empty);
             }
         }
 
@@ -67,6 +69,9 @@ namespace HandheldCompanion.ViewModels
             SwapScreenCommand = new DelegateCommand(async () =>
             {
                 Screen screen = Screen.AllScreens.Where(screen => screen.DeviceName != CurrentScreen.DeviceName).FirstOrDefault();
+                if (screen is null)
+                    return;
+
                 WinAPI.MoveWindow(ProcessWindow.Hwnd, screen, WpfScreenHelper.Enum.WindowPositions.Maximize);
                 WinAPI.SetForegroundWindow(ProcessWindow.Hwnd);
 
@@ -74,7 +79,7 @@ namespace HandheldCompanion.ViewModels
             });
         }
 
-        private void MultimediaManager_DisplaySettingsChanged(Display display)
+        private void MultimediaManager_DisplaySettingsChanged(Display? display)
         {
             // update current screen
             CurrentScreen = Screen.FromHandle(ProcessWindow.Hwnd);

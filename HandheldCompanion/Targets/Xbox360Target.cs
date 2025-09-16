@@ -2,68 +2,30 @@
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Nefarius.ViGEm.Client.Exceptions;
 using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
-using System;
-using System.Threading;
 
 namespace HandheldCompanion.Targets
 {
     internal partial class Xbox360Target : ViGEmTarget
     {
-        private new IXbox360Controller virtualController;
-
+        private IXbox360Controller? xboxController;
         public Xbox360Target(ushort vendorId, ushort productId) : base()
         {
             // initialize controller
+            virtualController = VirtualManager.vClient.CreateXbox360Controller(vendorId, productId);
+
+            // update HID
             HID = HIDmode.Xbox360Controller;
 
-            virtualController = VirtualManager.vClient.CreateXbox360Controller(vendorId, productId);
-            virtualController.AutoSubmitReport = false;
-            virtualController.FeedbackReceived += FeedbackReceived;
+            xboxController = (IXbox360Controller)virtualController;
+            xboxController.AutoSubmitReport = false;
+            xboxController.FeedbackReceived += FeedbackReceived;
 
             LogManager.LogInformation("{0} initialized, {1}", ToString(), virtualController);
-        }
-
-        public override bool Connect()
-        {
-            if (IsConnected)
-                return true;
-
-            try
-            {
-                virtualController.Connect();
-                return base.Connect();
-            }
-            catch (Exception ex)
-            {
-                LogManager.LogWarning("Failed to connect {0}. {1}", this.ToString(), ex.Message);
-
-                // give controller manager enough time to mount the controller
-                Thread.Sleep(2000);
-
-                virtualController?.Disconnect();
-                return false;
-            }
-        }
-
-        public override bool Disconnect()
-        {
-            if (!IsConnected)
-                return true;
-
-            try
-            {
-                virtualController?.Disconnect();
-                return base.Disconnect();
-            }
-            catch (Exception ex)
-            {
-                LogManager.LogWarning("Failed to disconnect {0}. {1}", this.ToString(), ex.Message);
-                return false;
-            }
         }
 
         public void FeedbackReceived(object sender, Xbox360FeedbackReceivedEventArgs e)
@@ -76,38 +38,41 @@ namespace HandheldCompanion.Targets
             if (!IsConnected)
                 return;
 
-            virtualController.SetAxisValue(Xbox360Axis.LeftThumbX, Inputs.AxisState[AxisFlags.LeftStickX]);
-            virtualController.SetAxisValue(Xbox360Axis.LeftThumbY, Inputs.AxisState[AxisFlags.LeftStickY]);
-            virtualController.SetAxisValue(Xbox360Axis.RightThumbX, Inputs.AxisState[AxisFlags.RightStickX]);
-            virtualController.SetAxisValue(Xbox360Axis.RightThumbY, Inputs.AxisState[AxisFlags.RightStickY]);
+            ushort tempButtons = 0;
+            if (Inputs.ButtonState[ButtonFlags.B1]) tempButtons |= Xbox360Button.A.Value;
+            if (Inputs.ButtonState[ButtonFlags.B2]) tempButtons |= Xbox360Button.B.Value;
+            if (Inputs.ButtonState[ButtonFlags.B3]) tempButtons |= Xbox360Button.X.Value;
+            if (Inputs.ButtonState[ButtonFlags.B4]) tempButtons |= Xbox360Button.Y.Value;
 
-            virtualController.SetSliderValue(Xbox360Slider.LeftTrigger, (byte)Inputs.AxisState[AxisFlags.L2]);
-            virtualController.SetSliderValue(Xbox360Slider.RightTrigger, (byte)Inputs.AxisState[AxisFlags.R2]);
+            if (Inputs.ButtonState[ButtonFlags.DPadUp]) tempButtons |= Xbox360Button.Up.Value;
+            if (Inputs.ButtonState[ButtonFlags.DPadDown]) tempButtons |= Xbox360Button.Down.Value;
+            if (Inputs.ButtonState[ButtonFlags.DPadLeft]) tempButtons |= Xbox360Button.Left.Value;
+            if (Inputs.ButtonState[ButtonFlags.DPadRight]) tempButtons |= Xbox360Button.Right.Value;
 
-            virtualController.SetButtonState(Xbox360Button.A, Inputs.ButtonState[ButtonFlags.B1]);
-            virtualController.SetButtonState(Xbox360Button.B, Inputs.ButtonState[ButtonFlags.B2]);
-            virtualController.SetButtonState(Xbox360Button.X, Inputs.ButtonState[ButtonFlags.B3]);
-            virtualController.SetButtonState(Xbox360Button.Y, Inputs.ButtonState[ButtonFlags.B4]);
+            if (Inputs.ButtonState[ButtonFlags.Back]) tempButtons |= Xbox360Button.Back.Value;
+            if (Inputs.ButtonState[ButtonFlags.Start]) tempButtons |= Xbox360Button.Start.Value;
 
-            virtualController.SetButtonState(Xbox360Button.Up, Inputs.ButtonState[ButtonFlags.DPadUp]);
-            virtualController.SetButtonState(Xbox360Button.Down, Inputs.ButtonState[ButtonFlags.DPadDown]);
-            virtualController.SetButtonState(Xbox360Button.Left, Inputs.ButtonState[ButtonFlags.DPadLeft]);
-            virtualController.SetButtonState(Xbox360Button.Right, Inputs.ButtonState[ButtonFlags.DPadRight]);
+            if (Inputs.ButtonState[ButtonFlags.L1]) tempButtons |= Xbox360Button.LeftShoulder.Value;
+            if (Inputs.ButtonState[ButtonFlags.R1]) tempButtons |= Xbox360Button.RightShoulder.Value;
 
-            virtualController.SetButtonState(Xbox360Button.Back, Inputs.ButtonState[ButtonFlags.Back]);
-            virtualController.SetButtonState(Xbox360Button.Start, Inputs.ButtonState[ButtonFlags.Start]);
+            if (Inputs.ButtonState[ButtonFlags.LeftStickClick]) tempButtons |= Xbox360Button.LeftThumb.Value;
+            if (Inputs.ButtonState[ButtonFlags.RightStickClick]) tempButtons |= Xbox360Button.RightThumb.Value;
 
-            virtualController.SetButtonState(Xbox360Button.LeftShoulder, Inputs.ButtonState[ButtonFlags.L1]);
-            virtualController.SetButtonState(Xbox360Button.RightShoulder, Inputs.ButtonState[ButtonFlags.R1]);
-
-            virtualController.SetButtonState(Xbox360Button.LeftThumb, Inputs.ButtonState[ButtonFlags.LeftStickClick]);
-            virtualController.SetButtonState(Xbox360Button.RightThumb, Inputs.ButtonState[ButtonFlags.RightStickClick]);
-
-            virtualController.SetButtonState(Xbox360Button.Guide, Inputs.ButtonState[ButtonFlags.Special]);
+            if (Inputs.ButtonState[ButtonFlags.Special]) tempButtons |= Xbox360Button.Guide.Value;
 
             try
             {
-                virtualController.SubmitReport();
+                if (xboxController is null)
+                    return;
+
+                xboxController.SetAxisValue(Xbox360Axis.LeftThumbX, Inputs.AxisState[AxisFlags.LeftStickX]);
+                xboxController.SetAxisValue(Xbox360Axis.LeftThumbY, Inputs.AxisState[AxisFlags.LeftStickY]);
+                xboxController.SetAxisValue(Xbox360Axis.RightThumbX, Inputs.AxisState[AxisFlags.RightStickX]);
+                xboxController.SetAxisValue(Xbox360Axis.RightThumbY, Inputs.AxisState[AxisFlags.RightStickY]);
+                xboxController.SetSliderValue(Xbox360Slider.LeftTrigger, (byte)Inputs.AxisState[AxisFlags.L2]);
+                xboxController.SetSliderValue(Xbox360Slider.RightTrigger, (byte)Inputs.AxisState[AxisFlags.R2]);
+                xboxController.SetButtonsFull(tempButtons);
+                xboxController.SubmitReport();
             }
             catch (VigemBusNotFoundException ex)
             {
@@ -121,11 +86,8 @@ namespace HandheldCompanion.Targets
 
         public override void Dispose()
         {
-            if (virtualController is not null)
-            {
-                virtualController.Disconnect();
-                virtualController = null;
-            }
+            try { xboxController?.Disconnect(); } catch { }
+            xboxController = null;
 
             base.Dispose();
         }

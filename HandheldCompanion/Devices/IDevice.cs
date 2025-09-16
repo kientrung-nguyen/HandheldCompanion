@@ -5,6 +5,7 @@ using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Models;
 using HandheldCompanion.Sensors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HidLibrary;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -434,12 +435,29 @@ public abstract class IDevice
                             device = new GPDWinMax2Intel();
                             break;
                         case "G1619-04":
-                            device = Processor switch
+                        case "G1619-05":
+                            switch (Processor)
                             {
-                                "AMD Ryzen 5 7640U w/ Radeon 760M Graphics" => new GPDWinMax2_2023_7640U(),
-                                "AMD Ryzen 7 7840U w/ Radeon 780M Graphics" => new GPDWinMax2_2023_7840U(),
-                                _ => new GPDWinMax2AMD(),
-                            };
+                                case "AMD Ryzen 7 6800U with Radeon Graphics":
+                                    device = new GPDWinMax2_2022_6800U();
+                                    break;
+                                case "AMD Ryzen 5 7640U w/ Radeon 760M Graphics":
+                                    device = new GPDWinMax2_2023_7640U();
+                                    break;
+                                case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
+                                    device = new GPDWinMax2_2023_7840U();
+                                    break;
+                                case "AMD Ryzen 5 8640U w/ Radeon 760M Graphics":
+                                    device = new GPDWinMax2_2024_8640U();
+                                    break;
+                                default:
+                                case "AMD Ryzen 7 8840U w/ Radeon 780M Graphics":
+                                    device = new GPDWinMax2_2024_8840U();
+                                    break;
+                                case "AMD Ryzen AI 9 HX 370 w/ Radeon 890M":
+                                    device = new GPDWinMax2_2024_HX370();
+                                    break;
+                            }
                             break;
                     }
                 }
@@ -1021,8 +1039,7 @@ public abstract class IDevice
             Name = GetButtonName(button),
             Glyph = glyph is not null ? glyph : defaultGlyph,
             FontSize = fontIconSize,
-            FontFamily = GlyphFontFamily,
-            Foreground = null
+            FontFamily = GlyphFontFamily
         };
     }
 

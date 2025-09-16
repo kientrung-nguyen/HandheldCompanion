@@ -1,8 +1,11 @@
 ﻿using HandheldCompanion.Commands;
 using HandheldCompanion.Commands.Functions.HC;
 using HandheldCompanion.Commands.Functions.Multimedia;
+using HandheldCompanion.Commands.Functions.Multitasking;
+using HandheldCompanion.Commands.Functions.Performance;
 using HandheldCompanion.Commands.Functions.Windows;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using Newtonsoft.Json;
@@ -12,6 +15,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace HandheldCompanion.Managers;
 
@@ -21,7 +25,7 @@ public static class HotkeysManager
 
     private static readonly string HotkeysPath;
 
-    private static bool IsInitialized;
+    public static bool IsInitialized;
 
     static HotkeysManager()
     {
@@ -29,8 +33,64 @@ public static class HotkeysManager
         HotkeysPath = Path.Combine(MainWindow.SettingsPath, "hotkeys");
         if (!Directory.Exists(HotkeysPath))
             Directory.CreateDirectory(HotkeysPath);
+    }
 
+    public static async Task Start()
+    {
+        if (IsInitialized)
+            return;
+
+        // process existing hotkeys
+        string[] fileEntries = Directory.GetFiles(HotkeysPath, "*.json", SearchOption.AllDirectories);
+        foreach (string fileName in fileEntries)
+            ProcessHotkey(fileName);
+
+        // get latest known version
+        // if last time HC version used old hotkey engine and user has no defined hotkeys
+        Version LastVersion = Version.Parse(SettingsManager.Get<string>("LastVersion"));
+        if (LastVersion < Version.Parse(Settings.VersionHotkeyManager) && hotkeys.Count == 0)
+        {
+            // create a few defaults hotkeys
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is QuickToolsCommands quickToolsCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new QuickToolsCommands() });
+
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is MainWindowCommands mainWindowCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new MainWindowCommands() });
+
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is OverlayGamepadCommands overlayGamepadCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new OverlayGamepadCommands(), IsPinned = true });
+
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is OverlayTrackpadCommands overlayTrackpadCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new OverlayTrackpadCommands(), IsPinned = true });
+
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is DesktopLayoutCommands desktopLayoutCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new DesktopLayoutCommands(), IsPinned = true });
+
+            if (!hotkeys.Values.Any(hotkey => hotkey.command is OnScreenKeyboardCommands onScreenKeyboardCommands))
+                UpdateOrCreateHotkey(new Hotkey() { command = new OnScreenKeyboardCommands(), IsPinned = true });
+        }
+
+        // manage events
         InputsManager.StoppedListening += InputsManager_StoppedListening;
+
+        IsInitialized = true;
+        Initialized?.Invoke();
+
+        LogManager.LogInformation("{0} has started", "HotkeysManager");
+        return;
+    }
+
+    public static void Stop()
+    {
+        if (!IsInitialized)
+            return;
+
+        // manage events
+        InputsManager.StoppedListening -= InputsManager_StoppedListening;
+
+        IsInitialized = false;
+
+        LogManager.LogInformation("{0} has stopped", "HotkeysManager");
     }
 
     private static void InputsManager_StoppedListening(ButtonFlags buttonFlags, InputsChord storedChord)
@@ -61,41 +121,6 @@ public static class HotkeysManager
         return hotkeys.Values;
     }
 
-    public static void Start()
-    {
-        // process existing hotkeys
-        string[] fileEntries = Directory.GetFiles(HotkeysPath, "*.json", SearchOption.AllDirectories);
-        foreach (string fileName in fileEntries)
-            ProcessHotkey(fileName);
-
-        // get latest known version
-        Version LastVersion = Version.Parse(SettingsManager.Get<string>("LastVersion"));
-        if (LastVersion < Version.Parse(Settings.VersionHotkeyManager))
-        {
-            // create a few defaults hotkeys
-            if (!hotkeys.Values.Any(hotkey => hotkey.command is QuickToolsCommands quickToolsCommands))
-                UpdateOrCreateHotkey(new Hotkey() { command = new QuickToolsCommands() });
-
-            if (!hotkeys.Values.Any(hotkey => hotkey.command is MainWindowCommands mainWindowCommands))
-                UpdateOrCreateHotkey(new Hotkey() { command = new MainWindowCommands() });
-
-            if (!hotkeys.Values.Any(hotkey => hotkey.command is OverlayGamepadCommands overlayGamepadCommands))
-                UpdateOrCreateHotkey(new Hotkey() { command = new OverlayGamepadCommands(), IsPinned = true });
-
-            if (!hotkeys.Values.Any(hotkey => hotkey.command is OverlayTrackpadCommands overlayTrackpadCommands))
-                UpdateOrCreateHotkey(new Hotkey() { command = new OverlayTrackpadCommands(), IsPinned = true });
-
-            if (!hotkeys.Values.Any(hotkey => hotkey.command is DesktopLayoutCommands desktopLayoutCommands))
-                UpdateOrCreateHotkey(new Hotkey() { command = new DesktopLayoutCommands(), IsPinned = true });
-
-            if (!hotkeys.Values.Any(hotkey => hotkey.command is OnScreenKeyboardCommands onScreenKeyboardCommands))
-                UpdateOrCreateHotkey(new Hotkey() { command = new OnScreenKeyboardCommands(), IsPinned = true });
-        }
-
-        IsInitialized = true;
-        Initialized?.Invoke();
-    }
-
     private static void ProcessHotkey(string fileName)
     {
         Hotkey? hotkey = null;
@@ -104,50 +129,45 @@ public static class HotkeysManager
         {
             string rawName = Path.GetFileNameWithoutExtension(fileName);
             if (string.IsNullOrEmpty(rawName))
-                throw new Exception("Profile has an incorrect file name.");
+            {
+                LogManager.LogError("Could not parse profile {0}. {1}", fileName, "Profile has an incorrect file name.");
+                return;
+            }
 
-            string json = File.ReadAllText(fileName);
-            JObject? dictionary = JObject.Parse(json);
+            string outputraw = File.ReadAllText(fileName);
+            JObject? jObject = JObject.Parse(outputraw);
 
             Version version = new();
-            if (dictionary.ContainsKey("Version"))
-                version = Version.Parse((string)dictionary["Version"]);
+            if (jObject.ContainsKey("Version"))
+                version = Version.Parse((string)jObject["Version"]);
 
-            // this is the first version where we added the Version field to Hotkey
-            if (version <= Version.Parse("0.21.5.2"))
+            try
             {
-                // this goes back to 0.21.4.1
-                if (dictionary.ContainsKey("hotkeyId"))
+                if (jObject.ContainsKey("hotkeyId"))
                 {
-                    try
-                    {
-                        hotkey = MigrateFrom0_21_4_1(fileName, dictionary);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogManager.LogError("Could not migrate old hotkey {0}. {1}", fileName, ex.Message);
-                        return;
-                    }
+                    // this goes back to 0.21.4.1 ?
+                    hotkey = MigrateFrom0_21_4_1(fileName, jObject);
                 }
-                else if (dictionary.ContainsKey("ButtonFlags"))
+                else if (version == Version.Parse("0.0.0.0"))
                 {
-                    // this is 0.21.5.1
+                    // too old
+                    throw new Exception("Hotkey is outdated.");
                 }
+
+                // we've been doing back and forth on ButtonState State type
+                // let's make sure we get a ConcurrentDictionary
+                outputraw = outputraw.Replace(
+                        "\"System.Collections.Generic.Dictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Private.CoreLib\"",
+                        "\"System.Collections.Concurrent.ConcurrentDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections.Concurrent\"");
+
+                // parse profile
+                if (hotkey is null)
+                    hotkey = JsonConvert.DeserializeObject<Hotkey>(outputraw, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
             }
-            else
+            catch (Exception ex)
             {
-                try
-                {
-                    string outputraw = File.ReadAllText(fileName);
-                    hotkey = JsonConvert.DeserializeObject<Hotkey>(outputraw, new JsonSerializerSettings
-                    {
-                        TypeNameHandling = TypeNameHandling.All
-                    });
-                }
-                catch (Exception ex)
-                {
-                    LogManager.LogError("Could not parse hotkey {0}. {1}", fileName, ex.Message);
-                }
+                LogManager.LogError("Could not parse hotkey {0}. {1}", fileName, ex.Message);
+                return;
             }
         }
         catch (Exception ex)
@@ -159,14 +179,20 @@ public static class HotkeysManager
         if (hotkey is null)
             return;
 
-        if (CheckAvailableButtonFlag(hotkey.ButtonFlags))
+        // check if button flags is already used
+        if (IsUsedButtonFlag(hotkey.ButtonFlags))
+        {
+            // update button flags
             hotkey.ButtonFlags = GetAvailableButtonFlag();
+
+            // Delete the old file
+            File.Delete(fileName);
+        }
 
         if (hotkey.ButtonFlags == ButtonFlags.None)
             return;
 
-        hotkeys[hotkey.ButtonFlags] = hotkey;
-        Updated?.Invoke(hotkey);
+        UpdateOrCreateHotkey(hotkey);
     }
 
     private static Hotkey? MigrateFrom0_21_4_1(string fileName, JObject? dictionary)
@@ -186,16 +212,16 @@ public static class HotkeysManager
                     command = new OverlayTrackpadCommands();
                     break;
                 case 03:
-                    // "OnScreenDisplayToggle"
+                    command = new QuickOverlayCommands();
                     break;
                 case 10:
                     command = new QuickToolsCommands();
                     break;
                 case 11:
-                    // "increaseTDP"
+                    command = new TDPIncrease();
                     break;
                 case 12:
-                    // "decreaseTDP"
+                    command = new TDPDecrease();
                     break;
                 case 13:
                     // "suspendResumeTask"
@@ -263,15 +289,18 @@ public static class HotkeysManager
                 var isPinned = (bool)dictionary["IsPinned"];
                 hotkey.IsPinned = isPinned;
 
-                // Common ButtonFlags check
-                if (CheckAvailableButtonFlag(hotkey.ButtonFlags))
+                // check if button flags is already used
+                if (IsUsedButtonFlag(hotkey.ButtonFlags))
+                {
+                    // update button flags
                     hotkey.ButtonFlags = GetAvailableButtonFlag();
+
+                    // Delete the old file
+                    File.Delete(fileName);
+                }
 
                 if (hotkey.ButtonFlags == ButtonFlags.None)
                     return null;
-
-                // Delete the old file
-                File.Delete(fileName);
 
                 // Save new hotkey json
                 SerializeHotkey(hotkey);
@@ -283,7 +312,7 @@ public static class HotkeysManager
         return null;
     }
 
-    private static bool CheckAvailableButtonFlag(ButtonFlags buttonFlags)
+    private static bool IsUsedButtonFlag(ButtonFlags buttonFlags)
     {
         HashSet<ButtonFlags> usedFlags = hotkeys.Values.Select(h => h.ButtonFlags).ToHashSet();
         return usedFlags.Contains(buttonFlags);
@@ -342,11 +371,6 @@ public static class HotkeysManager
         }
 
         FileUtils.FileDelete(hotkeyPath);
-    }
-
-    public static void Stop()
-    {
-        IsInitialized = false;
     }
 
     #region events

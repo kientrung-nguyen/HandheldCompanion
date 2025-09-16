@@ -2,6 +2,7 @@
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using RTSSSharedMemoryNET;
 using System;
@@ -101,14 +102,19 @@ public class RTSS : IPlatform
             // hook into current process
             Process.Exited += Process_Exited;
 
+        // manage events
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
         ProfileManager.Applied += ProfileManager_Applied;
 
-        // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
-        if (SettingsManager.IsInitialized)
+        // raise events
+        if (ProcessManager.IsInitialized)
         {
             ProcessManager_ForegroundChanged(ProcessManager.GetForegroundProcess(), null);
+        }
+
+        if (ProfileManager.IsInitialized)
+        {
             ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
         }
 
@@ -117,11 +123,17 @@ public class RTSS : IPlatform
 
     public override bool Stop(bool kill = false)
     {
+        // manage events
         ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
         ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
         ProfileManager.Applied -= ProfileManager_Applied;
 
         return base.Stop(kill);
+    }
+
+    public AppEntry GetAppEntry()
+    {
+        return appEntry;
     }
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
@@ -162,7 +174,7 @@ public class RTSS : IPlatform
 
     private async void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
     {
-        if (processEx is null)
+        if (processEx is null || processEx.ProcessId == 0)
             return;
 
         // hook new process
@@ -195,7 +207,8 @@ public class RTSS : IPlatform
             }
             catch (FileNotFoundException) { return; }
             catch { }
-            await Task.Delay(1000);
+
+            await Task.Delay(1000).ConfigureAwait(false); // Avoid blocking the synchronization context
         } while (appEntry is null && foregroundId == processId && KeepAlive);
 
         OnHook();
@@ -231,6 +244,8 @@ public class RTSS : IPlatform
 
     private void ProcessManager_ProcessStopped(ProcessEx processEx)
     {
+        if (processEx is null || processEx.ProcessId == 0)
+            return;
         OnUnhook(processEx);
     }
 
@@ -266,8 +281,12 @@ public class RTSS : IPlatform
     public void RefreshAppEntry()
     {
         // refresh appEntry
-        appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == (appEntry is not null ? appEntry.ProcessId : 0));
-        lastOsdFrameId = appEntry is null || appEntry.OSDFrameId == lastOsdFrameId ? 0 : appEntry.OSDFrameId;
+		try
+		{
+        	appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == (appEntry is not null ? appEntry.ProcessId : 0));
+        	lastOsdFrameId = appEntry is null || appEntry.OSDFrameId == lastOsdFrameId ? 0 : appEntry.OSDFrameId;
+		}
+		catch (FileNotFoundException) {}
     }
 
     public double GetFramerate(bool refresh = false)

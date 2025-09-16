@@ -15,7 +15,6 @@ namespace HandheldCompanion.Views.QuickPages;
 /// </summary>
 public partial class QuickHomePage : Page
 {
-
     private CrossThreadLock brightnessLock = new();
     private CrossThreadLock volumeLock = new();
     private CrossThreadLock microphoneLock = new();
@@ -30,11 +29,15 @@ public partial class QuickHomePage : Page
         MultimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
         MultimediaManager.Initialized += MultimediaManager_Initialized;
 
-
         VolumeSupport.IsEnabled = MultimediaManager.HasVolumeSupport();
         BrightnessSupport.IsEnabled = MultimediaManager.HasBrightnessSupport();
         NightLightSupport.IsEnabled = MultimediaManager.HasNightLightSupport();
+        GPUManager.Hooked += GPUManager_Hooked;
+    }
 
+    private void GPUManager_Hooked(GraphicsProcessingUnit.GPU GPU)
+    {
+        // do something
     }
 
     public QuickHomePage()
@@ -56,7 +59,7 @@ public partial class QuickHomePage : Page
             lock (brightnessLock)
             {
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     SliderBrightness.IsEnabled = true;
                     SliderBrightness.Value = ScreenBrightness.Get();
@@ -126,7 +129,7 @@ public partial class QuickHomePage : Page
             try
             {
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     if (SliderBrightness.Value != brightness)
                         SliderBrightness.Value = brightness;
@@ -149,7 +152,7 @@ public partial class QuickHomePage : Page
                     try
                     {
                         // UI thread
-                        Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                         {
                             UpdateVolumeIcon(volume, isMute);
                             SliderVolume.Value = Math.Round(volume);

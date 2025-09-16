@@ -7,7 +7,7 @@ using System.Linq;
 namespace HandheldCompanion.Inputs;
 
 [Serializable]
-public partial class ButtonState : ICloneable
+public partial class ButtonState : ICloneable, IDisposable
 {
     public ConcurrentDictionary<ButtonFlags, bool> State = new();
 
@@ -25,13 +25,13 @@ public partial class ButtonState : ICloneable
 
     public bool this[ButtonFlags button]
     {
-        get => State.ContainsKey(button) && State[button];
+        get => State.TryGetValue(button, out bool value) && value;
 
         set => State[button] = value;
     }
 
     [JsonIgnore]
-    public IEnumerable<ButtonFlags> Buttons => State.Where(a => a.Value).Select(a => a.Key).ToList();
+    public IEnumerable<ButtonFlags> Buttons => State.Where(a => a.Value).Select(a => a.Key);
 
     public object Clone()
     {
@@ -64,15 +64,39 @@ public partial class ButtonState : ICloneable
     public void AddRange(ButtonState buttonState)
     {
         // only add pressed button
-        foreach (var state in buttonState.State.Where(a => a.Value))
+        foreach (KeyValuePair<ButtonFlags, bool> state in buttonState.State.Where(a => a.Value))
             this[state.Key] = state.Value;
+    }
+
+    public static void Overwrite(ButtonState origin, ButtonState target)
+    {
+        foreach (KeyValuePair<ButtonFlags, bool> state in origin.State)
+            target[state.Key] = origin[state.Key];
     }
 
     public override bool Equals(object obj)
     {
         if (obj is ButtonState buttonState)
-            return Enumerable.SequenceEqual(Buttons.OrderBy(e => e), buttonState.Buttons.OrderBy(e => e));
+        {
+            if (Buttons.Count() != buttonState.Buttons.Count())
+                return false;
+
+            // Use a simple sequence comparison if ordering is irrelevant
+            foreach (var button in Buttons)
+                if (!buttonState.Buttons.Contains(button))
+                    return false;
+
+            return true;
+        }
 
         return false;
+    }
+
+    public void Dispose()
+    {
+        State.Clear();
+        State = null;
+
+        GC.SuppressFinalize(this);
     }
 }

@@ -1,9 +1,11 @@
 ﻿using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using SystemPowerManager = Windows.System.Power.PowerManager;
 
@@ -11,14 +13,29 @@ namespace HandheldCompanion.Managers;
 
 public static class SystemManager
 {
+    #region PInvoke
 
-    #region import
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    public static extern uint SetThreadExecutionState(uint esFlags);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
-    // Import SetThreadExecutionState Win32 API and define flags
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    public static extern uint SetThreadExecutionState(uint esFlags);
+
+    #endregion
+
+    #region Events
+
+    public static event SystemStatusChangedEventHandler SystemStatusChanged;
+    public delegate void SystemStatusChangedEventHandler(SystemStatus status, SystemStatus prevStatus);
+
+    public static event PowerStatusChangedEventHandler PowerStatusChanged;
+    public delegate void PowerStatusChangedEventHandler(PowerStatus status);
+
+    public static event PowerLineStatusChangedEventHandler PowerLineStatusChanged;
+    public delegate void PowerLineStatusChangedEventHandler(PowerLineStatus powerLineStatus);
+
+    public static event InitializedEventHandler Initialized;
+    public delegate void InitializedEventHandler();
 
     #endregion
 
@@ -39,8 +56,7 @@ public static class SystemManager
 
     private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
     private static SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
-
-    private static PowerLineStatus isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
+    private static PowerLineStatus previousPowerLineStatus = PowerLineStatus.Offline;
 
     public static bool IsInitialized;
 
@@ -97,15 +113,34 @@ public static class SystemManager
 
     static SystemManager()
     {
-        // listen to system events
+        SubscribeToSystemEvents();
+    }
+
+    private static void SubscribeToSystemEvents()
+    {
+        // manage events
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
-
         SystemPowerManager.BatteryStatusChanged += BatteryStatusChanged;
         SystemPowerManager.EnergySaverStatusChanged += BatteryStatusChanged;
         SystemPowerManager.PowerSupplyStatusChanged += BatteryStatusChanged;
         SystemPowerManager.RemainingChargePercentChanged += BatteryStatusChanged;
         SystemPowerManager.RemainingDischargeTimeChanged += BatteryStatusChanged;
+
+        // raise events
+        BatteryStatusChanged(null, null);
+    }
+
+    private static void UnsubscribeFromSystemEvents()
+    {
+        // manage events
+        SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
+        SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
+        SystemPowerManager.BatteryStatusChanged -= BatteryStatusChanged;
+        SystemPowerManager.EnergySaverStatusChanged -= BatteryStatusChanged;
+        SystemPowerManager.PowerSupplyStatusChanged -= BatteryStatusChanged;
+        SystemPowerManager.RemainingChargePercentChanged -= BatteryStatusChanged;
+        SystemPowerManager.RemainingDischargeTimeChanged -= BatteryStatusChanged;
     }
 
     private static void BatteryStatusChanged(object? sender, object e)
@@ -114,13 +149,18 @@ public static class SystemManager
         AutoRoutine();
     }
 
-    public static void Start()
+    public static async Task Start()
     {
-        // check if current session is locked
-        var handle = OpenInputDesktop(0, false, 0);
-        IsSessionLocked = handle == IntPtr.Zero;
-        isPlugged = SystemInformation.PowerStatus.PowerLineStatus;
-        SystemRoutine();
+        if (IsInitialized)
+            return;
+
+        // listen to system events
+        SubscribeToSystemEvents();
+
+        // Check if current session is locked
+        IsSessionLocked = OpenInputDesktop(0, false, 0) == IntPtr.Zero;
+
+        PerformSystemRoutine();
 
         IsInitialized = true;
         Initialized?.Invoke();
@@ -128,6 +168,7 @@ public static class SystemManager
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
 
         LogManager.LogInformation("{0} has started", "PowerManager");
+        return;
     }
 
     public static void Stop()
@@ -135,11 +176,10 @@ public static class SystemManager
         if (!IsInitialized)
             return;
 
-        IsInitialized = false;
-
         // stop listening to system events
-        SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
-        SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
+        UnsubscribeFromSystemEvents();
+
+        IsInitialized = false;
 
         LogManager.LogInformation("{0} has stopped", "PowerManager");
     }
@@ -154,19 +194,31 @@ public static class SystemManager
                 break;
             case PowerModes.Suspend:
                 IsPowerSuspended = true;
+
                 // Prevent system sleep
                 _ = SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+
                 LogManager.LogDebug("System is trying to suspend. Performing tasks...");
                 break;
+
             default:
             case PowerModes.StatusChange:
-                PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
-                break;
+                {
+                    if (previousPowerLineStatus != SystemInformation.PowerStatus.PowerLineStatus)
+                    {
+                        // raise event
+                        PowerLineStatusChanged?.Invoke(SystemInformation.PowerStatus.PowerLineStatus);
+
+                        // update status
+                        previousPowerLineStatus = SystemInformation.PowerStatus.PowerLineStatus;
+                    }
+                }
+                return;
         }
 
         LogManager.LogDebug("Device power mode set to {0}", e.Mode);
 
-        SystemRoutine();
+        PerformSystemRoutine();
     }
 
     private static void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
@@ -183,11 +235,13 @@ public static class SystemManager
             default:
                 return;
         }
+
         LogManager.LogDebug("Session switched to {0}", e.Reason);
-        SystemRoutine();
+
+        PerformSystemRoutine();
     }
 
-    private static void SystemRoutine()
+    private static void PerformSystemRoutine()
     {
         if (!IsPowerSuspended && !IsSessionLocked)
         {
@@ -199,12 +253,13 @@ public static class SystemManager
             currentSystemStatus = SystemStatus.SystemPending;
         }
 
+        // only raise event is system status has changed
         if (previousSystemStatus == currentSystemStatus)
             return;
 
-        // only raise event is system status has changed
         LogManager.LogInformation("System status set to {0} {1}", currentSystemStatus, previousSystemStatus);
         SystemStatusChanged?.Invoke(currentSystemStatus, previousSystemStatus);
+
         previousSystemStatus = currentSystemStatus;
     }
 
@@ -222,16 +277,6 @@ public static class SystemManager
             {
                 NightLight.Auto();
                 ScreenControl.Auto();
-                var powerLineStatus = SystemInformation.PowerStatus.PowerLineStatus;
-                if (isPlugged != powerLineStatus)
-                {
-                    isPlugged = powerLineStatus;
-                    var currentProfile = ProfileManager.GetCurrent();
-                    var powerProfile = PowerProfileManager.GetProfile(isPlugged == PowerLineStatus.Online
-                            ? currentProfile.PowerProfile
-                            : currentProfile.BatteryProfile);
-                    PowerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.PowerStatusChange);
-                }
             }
             finally
             {
@@ -239,20 +284,4 @@ public static class SystemManager
             }
         }
     }
-
-    #region events
-
-    public static event SystemStatusChangedEventHandler SystemStatusChanged;
-
-    public delegate void SystemStatusChangedEventHandler(SystemStatus status, SystemStatus prevStatus);
-
-    public static event PowerStatusChangedEventHandler PowerStatusChanged;
-
-    public delegate void PowerStatusChangedEventHandler(PowerStatus status);
-
-    public static event InitializedEventHandler Initialized;
-
-    public delegate void InitializedEventHandler();
-
-    #endregion
 }

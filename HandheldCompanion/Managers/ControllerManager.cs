@@ -3,7 +3,9 @@ using HandheldCompanion.Controls;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using HandheldCompanion.Views.Pages;
@@ -383,7 +385,7 @@ public static class ControllerManager
         if (!details.isGaming)
             return;
 
-        Controllers.TryGetValue(details.baseContainerDeviceInstanceId, out IController controller);
+        Controllers.TryGetValue(details.baseContainerDeviceInstanceId, out var controller);
 
         // are we power cycling ?
         PowerCyclers.TryGetValue(details.baseContainerDeviceInstanceId, out bool IsPowerCycling);

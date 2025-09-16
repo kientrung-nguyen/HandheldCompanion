@@ -2,6 +2,7 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
@@ -23,10 +24,10 @@ using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Navigation;
 using System.Windows.Threading;
 using Windows.UI.ViewManagement;
-using static HandheldCompanion.Inputs.InputsHotkey;
 using Application = System.Windows.Application;
 using Control = System.Windows.Controls.Control;
 using MessageBox = iNKORE.UI.WPF.Modern.Controls.MessageBox;
@@ -144,7 +145,7 @@ public partial class MainWindow : GamepadWindow
         SettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             "HandheldCompanion");
 
-        // initialiaze path
+        // initialize path
         if (!Directory.Exists(SettingsPath))
             Directory.CreateDirectory(SettingsPath);
 
@@ -267,6 +268,7 @@ public partial class MainWindow : GamepadWindow
         loadWindows();
 
         // load page(s)
+        overlayquickTools.loadPages();
         loadPages();
 
         // manage events
@@ -274,11 +276,12 @@ public partial class MainWindow : GamepadWindow
         DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
         ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         ToastManager.Start();
         ToastManager.IsEnabled = SettingsManager.Get<bool>("ToastEnable");
 
-        // start static managers in sequence
+        // start static managers
         GPUManager.Start();
         PowerProfileManager.Start();
         ProfileManager.Start();
@@ -291,19 +294,21 @@ public partial class MainWindow : GamepadWindow
         DynamicLightingManager.Start();
         MultimediaManager.Start();
         VirtualManager.Start();
-        InputsManager.Start();
         SensorsManager.Start();
         TimerManager.Start();
 
-        // todo: improve overall threading logic
-        new Thread(() => { PlatformManager.Start(); }).Start();
-        new Thread(() => { ProcessManager.Start(); }).Start();
-        new Thread(() => { TaskManager.Start(CurrentExe); }).Start();
-        new Thread(() => { PerformanceManager.Start(); }).Start();
-        new Thread(() => { UpdateManager.Start(); }).Start();
+        // non-STA threads
+        List<Task> tasks = new List<Task>
+        {
+            Task.Run(() => PlatformManager.Start()),
+            Task.Run(() => ProcessManager.Start()),
+            Task.Run(() => TaskManager.Start(CurrentExe)),
+            Task.Run(() => PerformanceManager.Start()),
+            Task.Run(() => UpdateManager.Start())
+        };
 
-        // start setting last
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        // those managers can't be threaded
+        InputsManager.Start();
         SettingsManager.Start();
 
         // Load MVVM pages after the Models / data have been created.
@@ -404,24 +409,24 @@ public partial class MainWindow : GamepadWindow
 
     private void ControllerManager_ControllerSelected(IController Controller)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             GamepadUISelectIcon.Glyph = Controller.GetGlyph(ButtonFlags.B1);
-            GamepadUISelectIcon.Foreground = Controller.GetGlyphColor(ButtonFlags.B1);
+            GamepadUISelectIcon.Foreground = new SolidColorBrush(Controller.GetGlyphColor(ButtonFlags.B1));
 
             GamepadUIBackIcon.Glyph = Controller.GetGlyph(ButtonFlags.B2);
-            GamepadUIBackIcon.Foreground = Controller.GetGlyphColor(ButtonFlags.B2);
+            GamepadUIBackIcon.Foreground = new SolidColorBrush(Controller.GetGlyphColor(ButtonFlags.B2));
 
             GamepadUIToggleIcon.Glyph = Controller.GetGlyph(ButtonFlags.B4);
-            GamepadUIToggleIcon.Foreground = Controller.GetGlyphColor(ButtonFlags.B4);
+            GamepadUIToggleIcon.Foreground = new SolidColorBrush(Controller.GetGlyphColor(ButtonFlags.B4));
         });
     }
 
     private void GamepadFocusManagerOnFocused(Control control)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             // todo : localize me
             string controlType = control.GetType().Name;
@@ -543,7 +548,7 @@ public partial class MainWindow : GamepadWindow
         //notifyIcon.ContextMenuStrip.Items.Add("-");
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {
@@ -564,7 +569,7 @@ public partial class MainWindow : GamepadWindow
     public void SwapWindowState()
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (WindowState)
             {
@@ -588,16 +593,15 @@ public partial class MainWindow : GamepadWindow
     {
         // initialize pages
         controllerPage = new ControllerPage("controller");
-        controllerPage.Loaded += ControllerPage_Loaded;
-
         devicePage = new DevicePage("device");
         profilesPage = new ProfilesPage("profiles");
         settingsPage = new SettingsPage("settings");
-
         overlayPage = new OverlayPage("overlay");
         hotkeysPage = new HotkeysPage("hotkeys");
-
         notificationsPage = new NotificationsPage("notifications");
+
+        // manage events
+        controllerPage.Loaded += ControllerPage_Loaded;
         notificationsPage.StatusChanged += NotificationsPage_LayoutUpdated;
 
         // store pages
@@ -616,11 +620,12 @@ public partial class MainWindow : GamepadWindow
     private void LoadPages_MVVM()
     {
         layoutPage = new LayoutPage("layout", navView);
-        layoutPage.Initialize();
-
         performancePage = new PerformancePage();
         aboutPage = new AboutPage();
 
+        layoutPage.Initialize();
+
+        // storage pages
         _pages.Add("LayoutPage", layoutPage);
         _pages.Add("PerformancePage", performancePage);
         _pages.Add("AboutPage", aboutPage);
@@ -635,7 +640,7 @@ public partial class MainWindow : GamepadWindow
         overlayToast = new OverlayToast();
     }
 
-    private void GenericDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
+    private void GenericDeviceUpdated(PnPDevice device, Guid IntefaceGuid)
     {
         // todo: improve me
         currentDevice.PullSensors();
@@ -694,18 +699,18 @@ public partial class MainWindow : GamepadWindow
         }
     }
 
-    private void NotificationsPage_LayoutUpdated(int status)
+    private void NotificationsPage_LayoutUpdated(int notifications)
     {
-        bool hasNotification = Convert.ToBoolean(status);
-
         // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            HasNotifications.Visibility = hasNotification ? Visibility.Visible : Visibility.Collapsed;
+            HasNotifications.Visibility = notifications != 0 ? Visibility.Visible : Visibility.Collapsed;
+            HasNotifications.Value = notifications;
         });
     }
 
-    // no code from the cases inside this function will be called on program start
+    private DateTime pendingTime = DateTime.Now;
+    private DateTime resumeTime = DateTime.Now;
     private async void OnSystemStatusChanged(SystemManager.SystemStatus status, SystemManager.SystemStatus prevStatus)
     {
         if (status == prevStatus)
@@ -718,13 +723,14 @@ public partial class MainWindow : GamepadWindow
                     if (prevStatus == SystemManager.SystemStatus.SystemPending)
                     {
                         // when device resumes from sleep
+                        resumeTime = DateTime.Now;
+
                         // use device-specific delay
                         await Task.Delay(currentDevice.ResumeDelay);
 
                         // resume manager(s)
                         InputsManager.Start();
                         TimerManager.Start();
-                        VirtualManager.Resume(true);
                         SensorsManager.Resume(true);
                         GPUManager.Start();
                         OSDManager.Start();
@@ -732,6 +738,14 @@ public partial class MainWindow : GamepadWindow
 
                         // resume platform(s)
                         PlatformManager.LibreHardwareMonitor.Start();
+
+                        // wait a bit more if device went to sleep for at least 30 minutes (arbitrary)
+                        TimeSpan sleepDuration = resumeTime - pendingTime;
+                        if (sleepDuration.TotalMinutes > 30)
+                            await Task.Delay(CurrentDevice.ResumeDelay); // Captures synchronization context
+
+                        VirtualManager.Resume(true);
+                        ControllerManager.Resume(true);
                     }
 
                     // open device, when ready
@@ -739,36 +753,42 @@ public partial class MainWindow : GamepadWindow
                     {
                         // wait for all HIDs to be ready
                         while (!currentDevice.IsReady())
-                            Thread.Sleep(100);
+                            Thread.Sleep(1000);
 
                         // open current device (threaded to avoid device to hang)
                         currentDevice.Open();
                     }).Start();
                 }
                 break;
+
             case SystemManager.SystemStatus.SystemPending:
                 {
-                    // when device goes to sleep
-                    // suspend manager(s)
-                    VirtualManager.Suspend(true);
-                    TimerManager.Stop();
-                    SensorsManager.Stop();
-                    InputsManager.Stop();
-                    GPUManager.Stop();
-                    OSDManager.Stop();
+                    if (prevStatus == SystemManager.SystemStatus.SystemReady)
+                    {
+                        SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS | SystemManager.ES_SYSTEM_REQUIRED);
+                        LogManager.LogInformation("System is about to suspend. Performing tasks.");
 
-                    // suspend platform(s)
-                    PlatformManager.LibreHardwareMonitor.Stop();
+                        // when device goes to sleep
+                        pendingTime = DateTime.Now;
 
-                    // close current device
-                    currentDevice.Close();
+                        // suspend manager(s)
+                        GPUManager.Stop();
+                        VirtualManager.Suspend(true);
+                        ControllerManager.Suspend(true);
+                        TimerManager.Stop();
+                        SensorsManager.Stop();
+                        InputsManager.Stop(false);
+                    	OSDManager.Stop();
+                        // suspend platform(s)
+                        PlatformManager.LibreHardwareMonitor.Stop();
 
-                    // free memory
-                    GC.Collect();
+                        // close current device
+                        CurrentDevice.Close();
 
-                    // Allow system to sleep
-                    SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
-                    LogManager.LogDebug("Tasks completed. System can now suspend if needed.");
+                        // Allow system to sleep
+                        SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
+                        LogManager.LogInformation("Tasks completed. System can now suspend.");
+                    }
                 }
                 break;
         }
@@ -830,31 +850,12 @@ public partial class MainWindow : GamepadWindow
 
         UnloadNotifyIcon();
 
+        // stop windows
         overlayModel.Close();
         overlayTrackpad.Close();
         overlayquickTools.Close(true);
 
-        VirtualManager.Stop();
-        MultimediaManager.Stop();
-        GPUManager.Stop();
-        MotionManager.Stop();
-        SensorsManager.Stop();
-        ControllerManager.Stop();
-        InputsManager.Stop();
-        DeviceManager.Stop();
-        PlatformManager.Stop();
-        OSDManager.Stop();
-        PowerProfileManager.Stop();
-        ProfileManager.Stop();
-        LayoutManager.Stop();
-        SystemManager.Stop();
-        ProcessManager.Stop();
-        ToastManager.Stop();
-        TaskManager.Stop();
-        PerformanceManager.Stop();
-        UpdateManager.Stop();
-
-        // closing page(s)
+        // stop pages
         controllerPage.Page_Closed();
         profilesPage.Page_Closed();
         settingsPage.Page_Closed();
@@ -863,8 +864,30 @@ public partial class MainWindow : GamepadWindow
         layoutPage.Page_Closed();
         notificationsPage.Page_Closed();
 
-        // force kill application
-        Environment.Exit(0);
+        // remove all automation event handlers
+        Automation.RemoveAllEventHandlers();
+
+        // stop managers
+        VirtualManager.Stop();
+        MultimediaManager.Stop();
+        GPUManager.Stop();
+        MotionManager.Stop();
+        SensorsManager.Stop();
+        ControllerManager.Stop();
+        InputsManager.Stop(true);
+        DeviceManager.Stop();
+        PlatformManager.Stop();
+        OSDManager.Stop();
+        PowerProfileManager.Stop();
+        ProfileManager.Stop();
+        LayoutManager.Stop();
+        SystemManager.Stop();
+        DynamicLightingManager.Stop();
+        ProcessManager.Stop();
+        ToastManager.Stop();
+        TaskManager.Stop();
+        PerformanceManager.Stop();
+        UpdateManager.Stop();
     }
 
     private async void Window_Closing(object sender, CancelEventArgs e)

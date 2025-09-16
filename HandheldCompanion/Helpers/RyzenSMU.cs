@@ -1,4 +1,4 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Shared;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -15,10 +15,6 @@ namespace HandheldCompanion.Helpers
         IntPtr mappedAddress;
         IntPtr physicalHandle;
         InpOut? inpOut;
-
-        public RyzenSMU()
-        {
-        }
 
         ~RyzenSMU()
         {

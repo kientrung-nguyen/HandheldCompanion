@@ -7,8 +7,26 @@ public class GPDWinMax2_2023_7640U : GPDWinMax2_2023_7840U
 {
     public GPDWinMax2_2023_7640U()
     {
-        // https://www.amd.com/en/products/apu/amd-ryzen-5-7640u
-        GfxClock = new double[] { 200, 2600 };
+        // https://www.amd.com/en/products/processors/laptop/ryzen/7000-series/amd-ryzen-5-7640u.html
+        nTDP = new double[] { 15, 15, 28 };
+        cTDP = new double[] { 3, 28 };
+        GfxClock = new double[] { 100, 2600 };
         CpuClock = 4900;
+
+        GyrometerAxis = new Vector3(1.0f, -1.0f, -1.0f);
+        GyrometerAxisSwap = new SortedDictionary<char, char>
+        {
+            { 'X', 'Y' },
+            { 'Y', 'Z' },
+            { 'Z', 'X' }
+        };
+
+        AccelerometerAxis = new Vector3(-1.0f, -1.0f, 1.0f);
+        AccelerometerAxisSwap = new SortedDictionary<char, char>
+        {
+            { 'X', 'X' },
+            { 'Y', 'Z' },
+            { 'Z', 'Y' }
+        };
     }
 }

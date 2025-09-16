@@ -1,6 +1,7 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views.Windows;
 using LibreHardwareMonitor.Hardware;
 using System;
@@ -14,11 +15,10 @@ namespace HandheldCompanion.Platforms;
 public class LibreHardwareMonitor : IPlatform
 {
     private Computer computer;
-    private string ProductName;
 
     private Timer sensorTimer;
     private int updateInterval = 500;
-    private new object updateLock = new();
+    private object updateLock = new();
 
     public float? CPULoad;
     public float? CPUClock;
@@ -61,8 +61,6 @@ public class LibreHardwareMonitor : IPlatform
         Name = "LibreHardwareMonitor";
         IsInstalled = true;
 
-        ProductName = MotherboardInfo.Product;
-
         // watchdog to populate sensors
         sensorTimer = new Timer(updateInterval) { Enabled = false };
         sensorTimer.Elapsed += sensorTimer_Elapsed;
@@ -78,7 +76,7 @@ public class LibreHardwareMonitor : IPlatform
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {
@@ -93,7 +91,6 @@ public class LibreHardwareMonitor : IPlatform
     {
         // open computer, slow
         computer?.Open();
-
         sensorTimer?.Start();
         return base.Start();
     }
@@ -138,7 +135,7 @@ public class LibreHardwareMonitor : IPlatform
             if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) > 500)
             {
                 lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                HandleGPU(GPUManager.GetCurrent());
+                HandleGPU();
             }
 
 
@@ -225,7 +222,7 @@ public class LibreHardwareMonitor : IPlatform
                     {
                         HandleCPU_Temp(sensor);
                     }
-					
+
                     break;
             }
         }
@@ -279,14 +276,6 @@ public class LibreHardwareMonitor : IPlatform
             case "CPU Package":
             case "Core (Tctl/Tdie)":
                 CPUTemp = sensor.Value;
-
-                // dirty
-                switch (ProductName)
-                {
-                    case "Galileo":
-                        CPUTemp /= 2.0f;
-                        break;
-                }
                 CPUTemperatureChanged?.Invoke(CPUTemp);
                 break;
         }
@@ -298,8 +287,12 @@ public class LibreHardwareMonitor : IPlatform
 
     #region GPU updates
 
-    private void HandleGPU(GPU gpu)
+    private void HandleGPU()
     {
+        var gpu = GPUManager.GetCurrent();
+        if (gpu is null || !gpu.IsInitialized)
+            return;
+
         if (gpu.HasLoad())
             GPULoad = gpu.GetLoad();
         if (gpu.HasClock())

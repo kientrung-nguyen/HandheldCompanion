@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Controllers;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
@@ -96,7 +97,7 @@ namespace HandheldCompanion.Managers
             tooltipTimer = new Timer(2000) { AutoReset = false };
             tooltipTimer.Elapsed += TooltipTimer_Elapsed;
 
-            ControllerManager.InputsUpdated += InputsUpdated;
+            ControllerManager.InputsUpdated2 += InputsUpdated;
         }
 
         private void _currentWindow_ContentDialogClosed(ContentDialog contentDialog)
@@ -145,6 +146,7 @@ namespace HandheldCompanion.Managers
                     _focused[window] = false;
 
                     // raise event
+
                     LostFocus?.Invoke(window);
                 }
             }
@@ -208,6 +210,10 @@ namespace HandheldCompanion.Managers
                 if (_focused[window])
                     GotFocus?.Invoke(window);
             }
+
+            // hide tooltip
+            tooltip.PlacementTarget = null;
+            tooltip.IsOpen = false;
         }
 
         private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
@@ -246,8 +252,8 @@ namespace HandheldCompanion.Managers
             // stop listening for render events
             _gamepadFrame.ContentRendered -= _gamepadFrame_ContentRendered;
 
-            // UI thread (async)
-            Application.Current.Dispatcher.Invoke(() =>
+            // UI thread
+            UIHelper.TryInvoke(() =>
             {
                 // store top left navigation view item
                 if (prevNavigation is null)
@@ -312,8 +318,9 @@ namespace HandheldCompanion.Managers
         private void TooltipTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
+                tooltip.PlacementTarget = null;
                 tooltip.IsOpen = false;
             });
         }
@@ -467,8 +474,8 @@ namespace HandheldCompanion.Managers
                     // check if the button state has been the same for at least 600ms
                     if ((currentTime - lastChangeTime).TotalMilliseconds >= 600)
                     {
-                        // check if the function has been called within the last 100ms
-                        if ((currentTime - lastCallTime).TotalMilliseconds >= 100)
+                        // check if the function has been called within the last 25ms
+                        if ((currentTime - lastCallTime).TotalMilliseconds >= 25)
                         {
                             // update the last call time
                             lastCallTime = currentTime;
@@ -493,11 +500,11 @@ namespace HandheldCompanion.Managers
                 // update the last change time and the last call time
                 lastChangeTime = currentTime;
                 lastCallTime = currentTime;
-                prevButtonState = controllerState.ButtonState.Clone() as ButtonState;
+                ButtonState.Overwrite(controllerState.ButtonState, prevButtonState);
             }
 
             // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 // get current focused element
                 Control focusedElement = GetFocusedElement();
@@ -570,12 +577,14 @@ namespace HandheldCompanion.Managers
                     {
                         // set state
                         radioButton.IsChecked = !radioButton.IsChecked;
+
                         radioButton.Command?.Execute(radioButton.CommandParameter);
                     }
                     else if (focusedElement is CheckBox checkBox)
                     {
                         // set state
                         checkBox.IsChecked = !checkBox.IsChecked;
+
                         checkBox.Command?.Execute(checkBox.CommandParameter);
                     }
                     else if (focusedElement is NavigationViewItem navigationViewItem)

@@ -1,5 +1,7 @@
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using Newtonsoft.Json;
 using System;
@@ -50,19 +52,19 @@ public partial class Profile : ICloneable, IComparable
     public string Path { get; set; } = string.Empty;
     public string Arguments { get; set; } = string.Empty;
 
-    public bool IsSubProfile { get; set; } = false;
-    public bool IsFavoriteSubProfile { get; set; } = false;
+    public bool IsSubProfile { get; set; }
+    public bool IsFavoriteSubProfile { get; set; }
 
     public Guid Guid { get; set; } = Guid.NewGuid();
     public string Executable { get; set; } = string.Empty;
 
     public bool Enabled { get; set; }
+    public bool IsPinned { get; set; } = true;
 
     public bool Default { get; set; }
     public Version Version { get; set; } = new();
 
     public string LayoutTitle { get; set; } = string.Empty;
-    public bool LayoutEnabled { get; set; } = false;
     public Layout Layout { get; set; } = new();
 
     public bool Whitelisted { get; set; } // if true, can see through the HidHide cloak
@@ -95,27 +97,23 @@ public partial class Profile : ICloneable, IComparable
     public float FlickstickSensivity { get; set; } = 3.0f;
 
     // power & graphics
-    public Guid PowerProfile { get; set; } = new("00000000-0000-0000-0000-000000000000");
-    public Guid BatteryProfile { get; set; } = new("00000000-0000-0000-0000-010000000000");
-
-    // power & graphics
     public Guid[] PowerProfiles { get; set; } = 
     [
-        new("00000000-0000-0000-0000-000000000000"), // PowerLineStatus.Offline
-        new("00000000-0000-0000-0000-010000000000") // PowerLineStatus.Online
+        new("00000000-0000-0000-0000-010000000000"), // PowerLineStatus.Offline
+        new("00000000-0000-0000-0000-000000000000"), // PowerLineStatus.Online
     ];
 
     public int FramerateValue { get; set; } = 0; // default RTSS value
-    public bool GPUScaling { get; set; } = false;
+    public bool GPUScaling { get; set; }
     public int ScalingMode { get; set; } = 0; // default AMD value
-    public bool RSREnabled { get; set; } = false;
+    public bool RSREnabled { get; set; }
     public int RSRSharpness { get; set; } = 20; // default AMD value
-    public bool IntegerScalingEnabled { get; set; } = false;
+    public bool IntegerScalingEnabled { get; set; }
     public int IntegerScalingDivider { get; set; } = 1;
     public byte IntegerScalingType { get; set; } = 0;
-    public bool RISEnabled { get; set; } = false;
+    public bool RISEnabled { get; set; }
     public int RISSharpness { get; set; } = 80; // default AMD value
-    public bool AFMFEnabled { get; set; } = false;
+    public bool AFMFEnabled { get; set; }
 
     // AppCompatFlags
     public bool FullScreenOptimization { get; set; } = true;
@@ -150,16 +148,17 @@ public partial class Profile : ICloneable, IComparable
             Path = path;
         }
 
+        // initialize layout
+        Layout.FillInherit();
+        LayoutTitle = LayoutTemplate.DefaultLayout.Name;
+
         // enable the below variables when profile is created
         Enabled = true;
     }
 
     public object Clone()
     {
-        var jsonString = JsonConvert.SerializeObject(this, Formatting.Indented,
-            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
-        return JsonConvert.DeserializeObject<Profile>(jsonString,
-            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+        return CloningHelper.DeepClone(this);
     }
 
     public int CompareTo(object obj)

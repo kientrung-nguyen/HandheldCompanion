@@ -1,14 +1,14 @@
 ﻿{
   "Logging": {
     "LogLevel": {
-      "Default": "Debug",
+      "Default": "Information",
       "Microsoft": "Warning",
       "Microsoft.Hosting.Lifetime": "Information"
     }
   },
   "Serilog": {
     "Using": [ "Serilog.Sinks.File", "Serilog.Sinks.Console" ],
-    "MinimumLevel": "Debug",
+    "MinimumLevel": "Information",
     "WriteTo": [
       {
         "Name": "File",

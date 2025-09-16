@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -13,6 +14,7 @@ public class GPDWin4 : IDevice
     {
         // device specific settings
         ProductIllustration = "device_gpd4";
+        UseOpenLib = true;
 
         // https://www.amd.com/fr/products/apu/amd-ryzen-7-6800u
         nTDP = new double[] { 15, 15, 28 };

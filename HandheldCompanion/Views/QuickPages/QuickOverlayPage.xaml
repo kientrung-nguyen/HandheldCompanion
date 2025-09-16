@@ -20,11 +20,11 @@
     KeepAlive="True"
     mc:Ignorable="d">
 
-    <ikw:SimpleStackPanel Margin="0,6,0,6" Spacing="24">
+    <ikw:SimpleStackPanel Spacing="24">
 
         <!--  Header  -->
         <ikw:SimpleStackPanel Spacing="6">
-            <Border Padding="4,12,12,12" CornerRadius="{DynamicResource ControlCornerRadius}">
+            <Border CornerRadius="{DynamicResource ControlCornerRadius}">
                 <DockPanel>
                     <Image
                         Name="ProfileIcon"
@@ -270,7 +270,7 @@
             </ikw:SimpleStackPanel>
         </Grid>
 
-        <ikw:SimpleStackPanel Spacing="6" Visibility="Collapsed">
+        <ikw:SimpleStackPanel Spacing="6">
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Overlay" />
             <!--  Overlay display level  -->
             <ikw:SimpleStackPanel Spacing="6">

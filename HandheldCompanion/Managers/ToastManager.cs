@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Views;
+﻿using HandheldCompanion.Shared;
+using HandheldCompanion.Views;
 using HandheldCompanion.Views.Windows;
 using Microsoft.Toolkit.Uwp.Notifications;
 using System;
@@ -84,6 +85,7 @@ public static class ToastManager
             }
         });
 
+        ToastThread.IsBackground = true;
         ToastThread.Start();
     }
 

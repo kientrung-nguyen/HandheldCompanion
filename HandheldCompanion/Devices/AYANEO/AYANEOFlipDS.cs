@@ -38,7 +38,7 @@ public class AYANEOFlipDS : AYANEOFlipKB
             return;
 
         // update previous state
-        prevState = Inputs.ButtonState.Clone() as ButtonState;
+        ButtonState.Overwrite(Inputs.ButtonState, prevState);
 
         // if screen button is pressed, turn on bottom screen
         if (Inputs.ButtonState.Buttons.Contains(ButtonFlags.OEM5))
@@ -49,7 +49,7 @@ public class AYANEOFlipDS : AYANEOFlipKB
         }
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {

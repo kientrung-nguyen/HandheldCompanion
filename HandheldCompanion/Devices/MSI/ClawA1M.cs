@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HidLibrary;
 using Nefarius.Utilities.DeviceManagement.PnP;
@@ -105,9 +106,6 @@ public class ClawA1M : IDevice
             { 'Y', 'Z' },
             { 'Z', 'Y' }
         };
-
-        // device specific capacities
-        Capabilities |= DeviceCapabilities.None;
 
         DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileMSIClawBetterBattery, Properties.Resources.PowerProfileMSIClawBetterBatteryDesc)
         {
@@ -215,10 +213,10 @@ public class ClawA1M : IDevice
             case WMIEventCode.LaunchMcxMainUI:  // MSI Claw: Click
             case WMIEventCode.LaunchMcxOSD:     // Quick Settings: Click
                 {
-                    Task.Factory.StartNew(async () =>
+                    Task.Run(async () =>
                     {
                         KeyPress(button);
-                        await Task.Delay(KeyPressDelay);
+                        await Task.Delay(KeyPressDelay).ConfigureAwait(false); // Avoid blocking the synchronization context
                         KeyRelease(button);
                     });
                 }

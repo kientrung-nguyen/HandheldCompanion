@@ -1,8 +1,6 @@
-﻿using HandheldCompanion.Inputs;
+﻿using HandheldCompanion.Helpers;
+using HandheldCompanion.Inputs;
 using HandheldCompanion.Utils;
-using Nefarius.Utilities.DeviceManagement.PnP;
-using System;
-using System.Threading.Tasks;
 using static JSL;
 
 namespace HandheldCompanion.Controllers;
@@ -27,10 +25,6 @@ public class JSController : IController
 
         // Capabilities
         Capabilities |= ControllerCapabilities.MotionSensor;
-
-        // UI
-        DrawUI();
-        UpdateUI();
     }
 
     public override string ToString()
@@ -55,7 +49,10 @@ public class JSController : IController
 
     public virtual void UpdateState(float delta)
     {
-        Inputs.ButtonState = InjectedButtons.Clone() as ButtonState;
+        if (Inputs is null || IsDisposing)
+            return;
+
+        ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);
 
         // skip if controller isn't connected
         if (IsConnected())
@@ -119,7 +116,8 @@ public class JSController : IController
             Inputs.GyroState.SetAccelerometer(iMU_STATE.accelX, iMU_STATE.accelY, iMU_STATE.accelZ);
 
             // process motion
-            gamepadMotion.ProcessMotion(iMU_STATE.gyroX, iMU_STATE.gyroY, iMU_STATE.gyroZ, iMU_STATE.accelX, iMU_STATE.accelY, iMU_STATE.accelZ, delta);
+            if (gamepadMotions.TryGetValue(gamepadIndex, out GamepadMotion gamepadMotion))
+                gamepadMotion.ProcessMotion(iMU_STATE.gyroX, iMU_STATE.gyroY, iMU_STATE.gyroZ, iMU_STATE.accelX, iMU_STATE.accelY, iMU_STATE.accelZ, delta);
         }
     }
 
@@ -141,30 +139,6 @@ public class JSController : IController
     public override void SetVibration(byte LargeMotor, byte SmallMotor)
     {
         JslSetRumble(UserIndex, (byte)(SmallMotor * VibrationStrength), (byte)(LargeMotor * VibrationStrength));
-    }
-
-    public override void CyclePort()
-    {
-        string enumerator = Details.GetEnumerator();
-        switch (enumerator)
-        {
-            default:
-            case "BTHENUM":
-                Task.Run(async () =>
-                {
-                    // Details.InstallNullDrivers();
-                    // await Task.Delay(1000);
-                    // Details.InstallCustomDriver("hidbth.inf");
-
-                    Details.Uninstall(false);
-                    await Task.Delay(3000);
-                    Devcon.Refresh();
-                });
-                break;
-            case "USB":
-                base.CyclePort();
-                break;
-        }
     }
 
     public void AttachJoySettings(JOY_SETTINGS settings)

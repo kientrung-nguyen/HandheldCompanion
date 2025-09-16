@@ -1,9 +1,7 @@
-﻿using HandheldCompanion.Managers;
-using iNKORE.UI.WPF.Modern.Controls;
+﻿using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -164,36 +162,6 @@ public static class WPFUtils
         }
     }
 
-    // Helper method to calculate the distance between the centers of two controls
-    private static double GetDistance(Control source, Control target, Direction direction)
-    {
-        try
-        {
-            // Get the relative position of the target with respect to the source
-            var transform = target.TransformToVisual(source);
-            var position = transform.Transform(new Point(0, 0));
-
-            double dx = source.ActualWidth / 2 - (position.X + target.ActualWidth / 2);
-            double dy = source.ActualHeight / 2 - (position.Y + target.ActualHeight / 2);
-
-            switch (direction)
-            {
-                case Direction.Up:
-                case Direction.Down:
-                    return Math.Sqrt(dy * dy);
-
-                case Direction.Left:
-                case Direction.Right:
-                    return Math.Sqrt(dx * dx);
-            }
-
-            return Math.Sqrt(dx * dx + dy * dy);
-        }
-        catch { }
-
-        return 9999.0d;
-    }
-
     public static double GetDistanceV2(Control c1, Control c2, Direction direction)
     {
         try
@@ -209,45 +177,10 @@ public static class WPFUtils
             // Return the Euclidean distance between the nearest edges
             return Math.Sqrt(dx * dx + dy * dy);
         }
-        catch { }
-
-        return 9999.0d;
-    }
-
-    // This function takes two controls and returns their distance in pixels
-    private static double GetDistanceV3(Control c1, Control c2, Direction direction)
-    {
-        try
+        catch
         {
-            // Get the position of each control relative to the screen
-            Point p1 = c1.PointToScreen(new Point(0, 0));
-            Point p2 = c2.PointToScreen(new Point(0, 0));
-
-            // Convert the points to vectors
-            Vector3 v1 = new Vector3((float)p1.X, (float)p1.Y, 0f);
-            Vector3 v2 = new Vector3((float)p2.X, (float)p2.Y, 0f);
-
-            switch (direction)
-            {
-                case Direction.Up:
-                case Direction.Down:
-                    v1 = new Vector3(0f, (float)p1.Y, 0f);
-                    v2 = new Vector3(0f, (float)p2.Y, 0f);
-                    break;
-
-                case Direction.Left:
-                case Direction.Right:
-                    v1 = new Vector3((float)p1.X, 0f, 0f);
-                    v2 = new Vector3((float)p2.X, 0f, 0f);
-                    break;
-            }
-
-            // Calculate and return the distance between the vectors
-            return Vector3.Distance(v1, v2);
+            return 9999.0d;
         }
-        catch { }
-
-        return 9999.0d;
     }
 
     public static List<FrameworkElement> FindChildren(DependencyObject startNode)

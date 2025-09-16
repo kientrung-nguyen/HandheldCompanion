@@ -3,70 +3,34 @@ using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Sensors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Nefarius.ViGEm.Client.Exceptions;
 using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.DualShock4;
-using System;
-using System.Threading;
+using System.Numerics;
+using static HandheldCompanion.Inputs.GyroState;
 
 namespace HandheldCompanion.Targets
 {
     internal class DualShock4Target : ViGEmTarget
     {
         private DS4_REPORT_EX outDS4Report;
-
-        private new IDualShock4Controller virtualController;
+        private IDualShock4Controller dualShockController;
 
         public DualShock4Target() : base()
         {
             // initialize controller
+            virtualController = VirtualManager.vClient.CreateDualShock4Controller(0x054C, 0x09CC);
+
+            // update HID
             HID = HIDmode.DualShock4Controller;
 
-            virtualController = VirtualManager.vClient.CreateDualShock4Controller(0x054C, 0x09CC);
-            virtualController.AutoSubmitReport = false;
-            virtualController.FeedbackReceived += FeedbackReceived;
+            dualShockController = (IDualShock4Controller)virtualController;
+            dualShockController.AutoSubmitReport = false;
+            dualShockController.FeedbackReceived += FeedbackReceived;
 
             LogManager.LogInformation("{0} initialized, {1}", ToString(), virtualController);
-        }
-
-        public override bool Connect()
-        {
-            if (IsConnected)
-                return true;
-
-            try
-            {
-                virtualController.Connect();
-                return base.Connect();
-            }
-            catch (Exception ex)
-            {
-                LogManager.LogWarning("Failed to connect {0}. {1}", this.ToString(), ex.Message);
-
-                // give controller manager enough time to mount the controller
-                Thread.Sleep(2000);
-
-                virtualController?.Disconnect();
-                return false;
-            }
-        }
-
-        public override bool Disconnect()
-        {
-            if (!IsConnected)
-                return true;
-
-            try
-            {
-                virtualController?.Disconnect();
-                return base.Disconnect();
-            }
-            catch (Exception ex)
-            {
-                LogManager.LogWarning("Failed to disconnect {0}. {1}", this.ToString(), ex.Message);
-                return false;
-            }
         }
 
         public void FeedbackReceived(object sender, DualShock4FeedbackReceivedEventArgs e)
@@ -177,13 +141,19 @@ namespace HandheldCompanion.Targets
                 calibration = gamepadMotion.GetCalibration();
 
             // Use gyro sensor data, map to proper range, invert where needed
-            outDS4Report.wGyroX = (short)InputUtils.rangeMap(Inputs.GyroState.Gyroscope[GyroState.SensorState.Raw].X, -2000.0f, 2000.0f, short.MinValue, short.MaxValue);
-            outDS4Report.wGyroY = (short)InputUtils.rangeMap(Inputs.GyroState.Gyroscope[GyroState.SensorState.Raw].Y, -2000.0f, 2000.0f, short.MinValue, short.MaxValue);
-            outDS4Report.wGyroZ = (short)InputUtils.rangeMap(Inputs.GyroState.Gyroscope[GyroState.SensorState.Raw].Z, -2000.0f, 2000.0f, short.MinValue, short.MaxValue);
+            if (Inputs.GyroState.Gyroscope.TryGetValue(SensorState.GamepadMotion, out Vector3 gyrometer))
+            {
+                outDS4Report.wGyroX = (short)InputUtils.rangeMap(gyrometer.X, -2000.0f, 2000.0f, short.MinValue, short.MaxValue);
+                outDS4Report.wGyroY = (short)InputUtils.rangeMap(gyrometer.Y, -2000.0f, 2000.0f, short.MinValue, short.MaxValue);
+                outDS4Report.wGyroZ = (short)InputUtils.rangeMap(gyrometer.Z, -2000.0f, 2000.0f, short.MinValue, short.MaxValue);
+            }
 
-            outDS4Report.wAccelX = (short)InputUtils.rangeMap(Inputs.GyroState.Accelerometer[GyroState.SensorState.Raw].X, -4.0f, 4.0f, short.MinValue, short.MaxValue);
-            outDS4Report.wAccelY = (short)InputUtils.rangeMap(Inputs.GyroState.Accelerometer[GyroState.SensorState.Raw].Y, -4.0f, 4.0f, short.MinValue, short.MaxValue);
-            outDS4Report.wAccelZ = (short)InputUtils.rangeMap(Inputs.GyroState.Accelerometer[GyroState.SensorState.Raw].Z, -4.0f, 4.0f, short.MinValue, short.MaxValue);
+            if (Inputs.GyroState.Accelerometer.TryGetValue(SensorState.GamepadMotion, out Vector3 accelerometer))
+            {
+                outDS4Report.wAccelX = (short)InputUtils.rangeMap(accelerometer.X, -4.0f, 4.0f, short.MinValue, short.MaxValue);
+                outDS4Report.wAccelY = (short)InputUtils.rangeMap(accelerometer.Y, -4.0f, 4.0f, short.MinValue, short.MaxValue);
+                outDS4Report.wAccelZ = (short)InputUtils.rangeMap(accelerometer.Z, -4.0f, 4.0f, short.MinValue, short.MaxValue);
+            }
 
             // todo: implement battery value based on device
             outDS4Report.bBatteryLvlSpecial = 11;
@@ -196,7 +166,7 @@ namespace HandheldCompanion.Targets
 
             try
             {
-                virtualController.SubmitRawReport(rawOutReportEx);
+                dualShockController.SubmitRawReport(rawOutReportEx);
             }
             catch (VigemBusNotFoundException ex)
             {
@@ -210,8 +180,9 @@ namespace HandheldCompanion.Targets
 
         public override void Dispose()
         {
-            if (virtualController is not null)
-                virtualController.Disconnect();
+            dualShockController?.Disconnect();
+            dualShockController?.Dispose();
+            dualShockController = null;
 
             base.Dispose();
         }

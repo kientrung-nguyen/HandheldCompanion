@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.ADLX;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using iNKORE.UI.WPF.Modern.Controls.Helpers;
 using System;

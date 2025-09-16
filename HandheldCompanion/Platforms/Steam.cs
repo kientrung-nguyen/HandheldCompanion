@@ -1,4 +1,4 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Microsoft.Win32;
 using Nefarius.Utilities.DeviceManagement.Drivers;
@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace HandheldCompanion.Platforms;
 
@@ -18,6 +19,7 @@ public class Steam : IPlatform
 
     private readonly RegistryWatcher SteamActiveUserWatcher = new(WatchedRegistry.CurrentUser, @"SOFTWARE\\Valve\\Steam\\ActiveProcess\\", "ActiveUser");
     private FileSystemWatcher SteamActiveUserFileWatcher = new();
+    private Timer debounceTimer;
 
     private readonly int SteamAppsId = 413080;
 
@@ -60,6 +62,11 @@ public class Steam : IPlatform
 
         // check drivers
         IsControllerDriverInstalled = HasXboxDriversInstalled();
+
+        // Initialize debounce timer
+        debounceTimer = new Timer(1000); // 1 second delay
+        debounceTimer.AutoReset = false; // Trigger only once per activation
+        debounceTimer.Elapsed += DebounceTimer_Elapsed;
     }
 
     public override bool Start()
@@ -91,13 +98,24 @@ public class Steam : IPlatform
             IncludeSubdirectories = true,
         };
 
-        SteamActiveUserFileWatcher.Changed += (sender, e) => ActiveFileWatch_Changed();
+        SteamActiveUserFileWatcher.Changed += FileWatcher_Changed;
         ActiveFileWatch_Changed();
     }
 
-    private async void ActiveFileWatch_Changed()
+    private void FileWatcher_Changed(object sender, FileSystemEventArgs e)
     {
-        await Task.Delay(1000);
+        // Restart the debounce timer whenever a change is detected
+        debounceTimer?.Stop();
+        debounceTimer?.Start();
+    }
+
+    private void DebounceTimer_Elapsed(object? sender, ElapsedEventArgs e)
+    {
+        ActiveFileWatch_Changed();
+    }
+
+    private void ActiveFileWatch_Changed()
+    {
         int SteamInput = GetUseSteamControllerConfigValue();
         base.SettingsValueChaned("UseSteamControllerConfig", SteamInput);
     }
@@ -182,20 +200,24 @@ public class Steam : IPlatform
     {
         SteamActiveUserWatcher.StopWatching();
 
-        SteamActiveUserFileWatcher.Changed -= (sender, e) => ActiveFileWatch_Changed();
+        SteamActiveUserFileWatcher.Changed -= FileWatcher_Changed;
         SteamActiveUserFileWatcher.Dispose();
+
+        debounceTimer.Stop();
+        if (kill)
+        {
+            debounceTimer.Dispose();
+            debounceTimer = null;
+        }
 
         return base.Stop();
     }
 
     public bool HasXboxDriversInstalled()
     {
-        return FilterDrivers
-            .GetDeviceClassUpperFilters(DeviceClassIds.XnaComposite)
-            .Any(f => f.Equals("steamxbox"));
-
-        // deprecated method
-        return RegistryUtils.SearchForKeyValue(@"SYSTEM\CurrentControlSet\Enum\ROOT\SYSTEM", "Service", "steamxbox");
+        bool driversCheck = FilterDrivers.GetDeviceClassUpperFilters(DeviceClassIds.XnaComposite).Any(f => f.Equals("steamxbox"));
+        bool registryCheck = RegistryUtils.SearchForKeyValue(@"SYSTEM\CurrentControlSet\Enum\ROOT\SYSTEM", "Service", "steamxbox");
+        return driversCheck || registryCheck;
     }
 
     public override bool StartProcess()

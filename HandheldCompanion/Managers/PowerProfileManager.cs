@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using HandheldCompanion.Views.Windows;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace HandheldCompanion.Managers
@@ -25,19 +27,17 @@ namespace HandheldCompanion.Managers
 
         static PowerProfileManager()
         {
-            // initialiaze path(s)
+            // initialize path(s)
             ProfilesPath = Path.Combine(MainWindow.SettingsPath, "powerprofiles");
             if (!Directory.Exists(ProfilesPath))
                 Directory.CreateDirectory(ProfilesPath);
-
-            PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
-
-            ProfileManager.Applied += ProfileManager_Applied;
-            ProfileManager.Discarded += ProfileManager_Discarded;
         }
 
-        public static void Start()
+        public static async Task Start()
         {
+            if (IsInitialized)
+                return;
+
             // process existing profiles
             var fileEntries = Directory.GetFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
             foreach (var fileName in fileEntries)
@@ -49,16 +49,35 @@ namespace HandheldCompanion.Managers
                     UpdateOrCreateProfile(devicePowerProfile, UpdateSource.Serializer);
             }
 
+            // manage events
+            PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
+            ProfileManager.Applied += ProfileManager_Applied;
+            ProfileManager.Discarded += ProfileManager_Discarded;
+            SystemManager.PowerLineStatusChanged += SystemManager_PowerLineStatusChanged;
+
+            // raise events
+            if (ProfileManager.IsInitialized)
+            {
+                ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+            }
+
             IsInitialized = true;
             Initialized?.Invoke();
 
             LogManager.LogInformation("{0} has started", "PowerProfileManager");
+            return;
         }
 
         public static void Stop()
         {
             if (!IsInitialized)
                 return;
+
+            // manage events
+            PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged -= LibreHardwareMonitor_CpuTemperatureChanged;
+            ProfileManager.Applied -= ProfileManager_Applied;
+            ProfileManager.Discarded -= ProfileManager_Discarded;
+            SystemManager.PowerLineStatusChanged -= SystemManager_PowerLineStatusChanged;
 
             IsInitialized = false;
 
@@ -85,12 +104,17 @@ namespace HandheldCompanion.Managers
             }
         }
 
+        private static void SystemManager_PowerLineStatusChanged(PowerLineStatus powerLineStatus)
+        {
+            // Get current profile
+            Profile profile = ProfileManager.GetCurrent();
+
+            ProfileManager_Applied(profile, UpdateSource.Background);
+        }
+
         private static void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
-            var powerProfile = GetProfile(
-                        SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online
-                        ? profile.PowerProfile
-                        : profile.BatteryProfile);
+            var powerProfile = GetProfile(profile.PowerProfiles[(int)SystemInformation.PowerStatus.PowerLineStatus]);
             if (powerProfile is null)
                 return;
 
@@ -100,19 +124,18 @@ namespace HandheldCompanion.Managers
             ApplyProfile(powerProfile, source);
         }
 
-        private static void ProfileManager_Discarded(Profile profile)
+        private static void ProfileManager_Discarded(Profile profile, bool swapped)
         {
             // reset current profile
             currentProfile = null;
 
-            var powerProfile = GetProfile(
-                SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online
-                        ? profile.PowerProfile
-                        : profile.BatteryProfile);
+            var powerProfile = GetProfile(profile.PowerProfiles[(int)SystemInformation.PowerStatus.PowerLineStatus]);
             if (powerProfile is null)
                 return;
 
-            Discarded?.Invoke(powerProfile);
+            // don't bother discarding settings, new one will be enforce shortly
+            if (!swapped)
+                Discarded?.Invoke(powerProfile);
         }
 
         private static void ProcessProfile(string fileName)
@@ -146,7 +169,7 @@ namespace HandheldCompanion.Managers
             // failed to parse
             if (profile is null || profile.Name is null)
             {
-                LogManager.LogError("Failed to parse power profile {0}", fileName);
+                LogManager.LogError("Failed to parse power profile: {0}", fileName);
                 return;
             }
 
@@ -155,6 +178,17 @@ namespace HandheldCompanion.Managers
 
         public static void UpdateOrCreateProfile(PowerProfile profile, UpdateSource source)
         {
+            switch (source)
+            {
+                case UpdateSource.Serializer:
+                    LogManager.LogInformation($"Loaded power profile: {profile.Name}");
+                    break;
+
+                default:
+                    LogManager.LogInformation($"Attempting to update/create power profile: {profile.Name}");
+                    break;
+            }
+
             // update database
             profiles[profile.Guid] = profile;
 
@@ -227,15 +261,15 @@ namespace HandheldCompanion.Managers
             return GetDefault();
         }
 
-        private static bool HasDefault()
+        private static bool HasDefault(bool AC = true)
         {
-            return profiles.Values.Any(a => a.Default);
+            return profiles.Values.Any(a => a.Default && a.Guid == (AC ? Guid.Empty : new Guid("00000000-0000-0000-0000-010000000000")));
         }
 
-        public static PowerProfile GetDefault()
+        public static PowerProfile GetDefault(bool AC = true)
         {
-            if (HasDefault())
-                return profiles.Values.First(a => a.Default);
+            if (HasDefault(AC))
+                return profiles.Values.First(a => a.Default && a.Guid == (AC ? Guid.Empty : new Guid("00000000-0000-0000-0000-010000000000")));
             return new PowerProfile();
         }
 

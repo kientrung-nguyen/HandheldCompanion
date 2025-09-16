@@ -1,7 +1,6 @@
 ﻿using HandheldCompanion.Managers;
-using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views.Windows;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +13,6 @@ namespace HandheldCompanion.Misc;
 
 public static class ScreenControl
 {
-    private static Dictionary<string, Action<Display>> eventHandlers;
     private static IEnumerable<Display> allDisplays = [];
     private static Display primaryDisplay;
     private static Display internalDisplay;
@@ -22,8 +20,9 @@ public static class ScreenControl
 
     private static readonly Dictionary<int, IEnumerable<int?>> cachedFrameLimits = new();
 
-    public static Display PrimaryDisplay => primaryDisplay;
-    public static IEnumerable<Display> AllDisplays => allDisplays;
+    public static Display PrimaryDisplay { get => primaryDisplay; set => primaryDisplay = value; }
+    public static Display InternalDisplay => internalDisplay;
+    public static IEnumerable<Display> AllDisplays { get => allDisplays; set => allDisplays = value; }
 
     public static bool IsExternalDisplayConnected()
     {
@@ -65,6 +64,8 @@ public static class ScreenControl
     // A function that takes a screen frequency int value and returns a list of integer values that are the quotient of the frequency and the closest divisor
     public static IEnumerable<int?> GetFramelimits(Display display)
     {
+        if (display is null)
+            return [];
         // A list to store the quotients
         List<int?> limits = [0]; // (Comparer<int>.Create((x, y) => y.CompareTo(x)));
 
@@ -189,10 +190,8 @@ public static class ScreenControl
         }
     }
 
-    public static void SubscribeToEvents(Dictionary<string, Action<Display>> EventHandlers)
+    public static void SubscribeToEvents()
     {
-        eventHandlers = EventHandlers;
-        SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
         HandleEvents();
     }
 
@@ -219,37 +218,14 @@ public static class ScreenControl
         }
 
         internalDisplay = _internalDisplay;
+        //primaryDisplay = _primaryDisplay;
 
-        if (primaryDisplay is null || !primaryDisplay.ToPathDisplayTarget().FriendlyName.Equals(_primaryDisplay.ToPathDisplayTarget().FriendlyName))
-        {
-            primaryDisplay = _primaryDisplay;
-            if (eventHandlers.TryGetValue("PrimaryScreenChanged", out var PrimaryScreenChanged))
-                PrimaryScreenChanged(_primaryDisplay);
-        }
+        //allDisplays = [];
+        //allDisplays = _allDisplays;
 
-        foreach (var _display in _allDisplays.Where(_v => !allDisplays.Any(v => v.DevicePath == _v.DevicePath)))
-            if (eventHandlers.TryGetValue("ScreenConnected", out var ScreenConnected))
-                ScreenConnected(_display);
-
-        foreach (var _display in allDisplays.Where(v => !_allDisplays.Any(_v => _v.DevicePath == v.DevicePath)))
-            if (eventHandlers.TryGetValue("ScreenDisconnected", out var ScreenDisconnected))
-                ScreenDisconnected(_display);
-
-        allDisplays = [];
-        allDisplays = _allDisplays;
-
-        if (primaryDisplay is not null)
-            if (eventHandlers.TryGetValue("DisplaySettingsChanged", out var DisplaySettingsChanged))
-                DisplaySettingsChanged(primaryDisplay);
     }
 
     public static void Unsubscribe()
     {
-        SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
-    }
-
-    private static void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
-    {
-        HandleEvents();
     }
 }

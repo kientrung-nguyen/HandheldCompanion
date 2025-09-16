@@ -57,7 +57,7 @@
       <Value Profile="(Default)">en-US</Value>
     </Setting>
     <Setting Name="OverlayControllerRestingPitch" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">0</Value>
+      <Value Profile="(Default)">20</Value>
     </Setting>
     <Setting Name="SensorPlacementUpsideDown" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -97,9 +97,6 @@
     </Setting>
     <Setting Name="MainWindowPrevState" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
-    </Setting>
-    <Setting Name="FirstStart" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="MainWindowBackdrop" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1</Value>
@@ -170,9 +167,6 @@
     <Setting Name="PlatformRTSSEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="PlatformHWiNFOEnabled" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
-    </Setting>
     <Setting Name="QuickToolsLocation" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1</Value>
     </Setting>
@@ -184,9 +178,6 @@
     </Setting>
     <Setting Name="ControllerManagement" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
-    </Setting>
-    <Setting Name="SuspendedControllers" Type="System.Collections.Specialized.StringCollection" Scope="User">
-      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="HidModeDoNotShowAgain" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -235,9 +226,6 @@
     </Setting>
     <Setting Name="LEDPresetIndex" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
-    </Setting>
-    <Setting Name="SuspendedDevices" Type="System.Collections.Specialized.StringCollection" Scope="User">
-      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="LegionControllerPassthrough" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -301,6 +289,15 @@
     </Setting>
     <Setting Name="QuickToolsDeviceName" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="AYANEOFlipScreenEnabled" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="AYANEOFlipScreenBrightness" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">100</Value>
+    </Setting>
+    <Setting Name="HotkeyRumbleOnExecution" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
     </Setting>
   </Settings>
 </SettingsFile>

@@ -12,16 +12,32 @@ namespace HandheldCompanion.ViewModels
         public ObservableCollection<HotkeyViewModel> HotkeysList { get; set; } = [];
         public ICommand CreateHotkeyCommand { get; private set; }
 
+        public bool Rumble
+        {
+            get => SettingsManager.Get<bool>("HotkeyRumbleOnExecution");
+            set => SettingsManager.Set("HotkeyRumbleOnExecution", value);
+        }
+
         public HotkeyPageViewModel()
         {
+            // manage events
             HotkeysManager.Updated += HotkeysManager_Updated;
             HotkeysManager.Deleted += HotkeysManager_Deleted;
             HotkeysManager.Initialized += HotkeysManager_Initialized;
-
             InputsManager.StartedListening += InputsManager_StartedListening;
             InputsManager.StoppedListening += InputsManager_StoppedListening;
-
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+
+            // raise event
+            if (ControllerManager.HasTargetController)
+            {
+                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
+            }
+
+            if (HotkeysManager.IsInitialized)
+            {
+                HotkeysManager_Initialized();
+            }
 
             CreateHotkeyCommand = new DelegateCommand(async () =>
             {
@@ -71,15 +87,13 @@ namespace HandheldCompanion.ViewModels
         private void InputsManager_StartedListening(ButtonFlags buttonFlags, InputsChordTarget chordTarget)
         {
             HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
-            if (hotkeyViewModel != null)
-                hotkeyViewModel.SetListening(true, chordTarget);
+            hotkeyViewModel?.SetListening(true, chordTarget);
         }
 
         private void InputsManager_StoppedListening(ButtonFlags buttonFlags, InputsChord storedChord)
         {
             HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
-            if (hotkeyViewModel != null)
-                hotkeyViewModel.SetListening(false, storedChord.chordTarget);
+            hotkeyViewModel?.SetListening(false, storedChord.chordTarget);
         }
     }
 }

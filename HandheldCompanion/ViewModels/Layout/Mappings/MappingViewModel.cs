@@ -1,11 +1,11 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
-using Nefarius.Utilities.DeviceManagement.PnP;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Media;
@@ -162,12 +162,16 @@ namespace HandheldCompanion.ViewModels
         {
             Value = value;
 
+            // manage events
             MainWindow.layoutPage.LayoutUpdated += UpdateMapping;
-
             ControllerManager.ControllerSelected += UpdateController;
-            DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceUpdated;
-            DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceUpdated;
             VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+
+            // send events
+            if (ControllerManager.HasTargetController)
+            {
+                UpdateController(ControllerManager.GetTarget());
+            }
 
             // Send update event to Model
             PropertyChanged +=
@@ -181,10 +185,7 @@ namespace HandheldCompanion.ViewModels
         public override void Dispose()
         {
             MainWindow.layoutPage.LayoutUpdated -= UpdateMapping;
-
             ControllerManager.ControllerSelected -= UpdateController;
-            DeviceManager.UsbDeviceArrived -= DeviceManager_UsbDeviceUpdated;
-            DeviceManager.UsbDeviceRemoved -= DeviceManager_UsbDeviceUpdated;
             VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
 
             base.Dispose();
@@ -192,19 +193,21 @@ namespace HandheldCompanion.ViewModels
 
         private void VirtualManager_ControllerSelected(HIDmode hid) => ActionTypeChanged();
 
-        private void DeviceManager_UsbDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
-        {
-            IController controller = ControllerManager.GetTargetController();
-            if (controller is not null) UpdateController(controller);
-        }
-
         protected void UpdateIcon(GlyphIconInfo glyphIconInfo)
         {
+            if (glyphIconInfo is null)
+                return;
+
             Name = glyphIconInfo.Name!;
             Glyph = glyphIconInfo.Glyph!;
             GlyphFontFamily = glyphIconInfo.FontFamily;
             GlyphFontSize = glyphIconInfo.FontSize;
-            GlyphForeground = glyphIconInfo.Foreground;
+
+            // UI thread
+            UIHelper.TryInvoke(() =>
+            {
+                GlyphForeground = new SolidColorBrush(glyphIconInfo.Color);
+            });
         }
 
         protected abstract void UpdateController(IController controller);

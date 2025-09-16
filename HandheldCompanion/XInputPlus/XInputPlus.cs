@@ -1,8 +1,9 @@
 ﻿using Force.Crc32;
 using HandheldCompanion.Controllers;
-using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Properties;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.Generic;
@@ -145,7 +146,7 @@ public static class XInputPlus
                 if (attempt == 10)
                     return;
 
-                await Task.Delay(500);
+                await Task.Delay(500).ConfigureAwait(false); // Avoid blocking the synchronization context
             }
 
             bool x64bit = Is64bitProcess(processEx.Process);

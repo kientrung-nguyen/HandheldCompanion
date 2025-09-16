@@ -8,14 +8,14 @@ using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
+using PowerManagerAPI;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -23,7 +23,6 @@ using System.Windows.Media;
 using WindowsDisplayAPI;
 using static HandheldCompanion.GraphicsProcessingUnit.GPU;
 using Page = System.Windows.Controls.Page;
-using Separator = System.Windows.Controls.Separator;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Views.QuickPages;
@@ -45,8 +44,6 @@ public partial class QuickProfilesPage : Page
     private const ButtonFlags gyroButtonFlags = ButtonFlags.HOTKEY_GYRO_ACTIVATION_QP;
     private Hotkey GyroHotkey = new(gyroButtonFlags) { IsInternal = true };
 
-    public ObservableCollection<HotkeyViewModel> HotkeysList { get; set; } = [];
-
     private Profile realProfile;
 
     public QuickProfilesPage(string Tag) : this()
@@ -56,21 +53,17 @@ public partial class QuickProfilesPage : Page
 
     public QuickProfilesPage()
     {
+        DataContext = new QuickProfilesPageViewModel(this);
         InitializeComponent();
 
         // manage events
         ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
         ProfileManager.Applied += ProfileManager_Applied;
         ProfileManager.Deleted += ProfileManager_Deleted;
-        PowerProfileManager.Applied += PowerProfileManager_Applied;
-        PowerProfileManager.Updated += PowerProfileManager_Updated;
-        PowerProfileManager.Deleted += PowerProfileManager_Deleted;
-
         MultimediaManager.Initialized += MultimediaManager_Initialized;
         MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+        MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
         HotkeysManager.Updated += HotkeysManager_Updated;
-        InputsManager.StartedListening += InputsManager_StartedListening;
-        InputsManager.StoppedListening += InputsManager_StoppedListening;
         PlatformManager.RTSS.Updated += RTSS_Updated;
         GPUManager.Hooked += GPUManager_Hooked;
         GPUManager.Unhooked += GPUManager_Unhooked;
@@ -152,34 +145,34 @@ public partial class QuickProfilesPage : Page
         HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
     }
 
-    private void PowerProfileManager_Applied(PowerProfile powerProfile, UpdateSource source)
+    private void MultimediaManager_PrimaryScreenChanged(Display screen)
     {
-        switch (source)
-        {
-            // self update, unlock and exit
-            case UpdateSource.QuickProfilesPage:
-                return;
-        }
-
-        // UI thread (async)
+        // UI thread
         Application.Current.Dispatcher.Invoke(() =>
         {
-            // power profile
-            powerProfile?.Check(this);
-            if (System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online)
-            {
-                PowerPresetIcon.Glyph = "\ue95f";
-                PowerPresetIcon.RenderTransformOrigin = new Point(.5, .5);
-                PowerPresetIcon.RenderTransform = new RotateTransform(-135);
-            }
-            else
-            {
-                PowerPresetIcon.Glyph = "\ue83f";
-                PowerPresetIcon.RenderTransformOrigin = new Point(0, 0);
-                PowerPresetIcon.RenderTransform = Transform.Identity;
-            }
+            IntegerScalingComboBox.Items.Clear();
+            var index = 1;
+            var possibleResolutions = screen.DisplayScreen.GetPossibleSettings()
+                .DistinctBy(setting => new
+                {
+                    setting.Resolution.Width,
+                    setting.Resolution.Height
+                })
+                .OrderByDescending(setting => (ulong)setting.Resolution.Height * (ulong)setting.Resolution.Width);
 
-            SelectedPowerProfileName.Text = powerProfile?.Name;
+            if (possibleResolutions.Any())
+            {
+                var nativeResolution = possibleResolutions.First();
+                while (possibleResolutions.FirstOrDefault(r => r.Resolution.Height == (nativeResolution.Resolution.Height / index)) is DisplayPossibleSetting setting && setting is not null)
+                {
+                    IntegerScalingComboBox.Items.Add(new ComboBoxItem
+                    {
+                        Tag = index,
+                        Content = $"1/{index} ({setting.Resolution.Width} x {setting.Resolution.Height})"
+                    });
+                    index++;
+                }
+            }
         });
     }
 
@@ -188,8 +181,7 @@ public partial class QuickProfilesPage : Page
         // UI thread (async)
         //Application.Current.Dispatcher.Invoke(() =>
         //{
-        //    DesktopScreen desktopScreen = MultimediaManager.PrimaryDesktop;
-        //    desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));
+
         //});
     }
 
@@ -216,7 +208,7 @@ public partial class QuickProfilesPage : Page
         bool IsGPUScalingEnabled = GPU.GetGPUScaling();
 
         // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        Application.Current.Dispatcher.BeginInvoke(() =>
         {
             // GPU-specific settings
             StackProfileRSR.Visibility = GPU is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
@@ -246,8 +238,8 @@ public partial class QuickProfilesPage : Page
         GPU.IntegerScalingChanged -= OnIntegerScalingChanged;
         GPU.GPUScalingChanged -= OnGPUScalingChanged;
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             StackProfileRSR.IsEnabled = false;
             StackProfileAFMF.IsEnabled = false;
@@ -259,8 +251,8 @@ public partial class QuickProfilesPage : Page
 
     private void OnRSRStateChanged(bool Supported, bool Enabled, int Sharpness)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread (async)
+        UIHelper.TryInvoke(() =>
         {
             StackProfileRSR.IsEnabled = Supported;
         });
@@ -298,8 +290,8 @@ public partial class QuickProfilesPage : Page
 
     private void RTSS_Updated(PlatformStatus status)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             switch (status)
             {
@@ -317,13 +309,10 @@ public partial class QuickProfilesPage : Page
 
     private void MultimediaManager_DisplaySettingsChanged(Display display)
     {
-        if (display is null || selectedProfile is null)
-            return;
-
         var frameLimits = ScreenControl.GetFramelimits(display);
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             cB_Framerate.Items.Clear();
 
@@ -353,8 +342,8 @@ public partial class QuickProfilesPage : Page
                     cB_Framerate.SelectedItem = item;
             }
 
+            
         });
-
     }
 
     public void SubmitProfile(UpdateSource source = UpdateSource.QuickProfilesPage)
@@ -365,163 +354,19 @@ public partial class QuickProfilesPage : Page
         ProfileManager.UpdateOrCreateProfile(selectedProfile, source);
     }
 
-    private void PowerProfileManager_Deleted(PowerProfile powerProfile)
+    private void PowerProfileOnBatteryMore_Click(object sender, RoutedEventArgs e)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            int idx = -1;
-            foreach (var item in ProfileStack.Children)
-            {
-                if (item is not Button)
-                    continue;
-
-                // get power profile
-                var parent = (Button)item;
-                if (parent.Tag is not PowerProfile)
-                    continue;
-
-                PowerProfile pr = (PowerProfile)parent.Tag;
-
-                bool isCurrent = pr.Guid == powerProfile.Guid;
-                if (isCurrent)
-                {
-                    idx = ProfileStack.Children.IndexOf(parent);
-                    break;
-                }
-            }
-
-            if (idx != -1)
-            {
-                // remove profile
-                ProfileStack.Children.RemoveAt(idx);
-
-                if (ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == powerProfile.Guid) is ComboBoxItem item1)
-                    ProfilePluggedIn.Items.Remove(item1);
-
-                if (ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == powerProfile.Guid) is ComboBoxItem item2)
-                    ProfileOnBattery.Items.Remove(item2);
-
-                // remove separator
-                if (idx >= ProfileStack.Children.Count)
-                    idx = ProfileStack.Children.Count - 1;
-                ProfileStack.Children.RemoveAt(idx);
-            }
-        });
-    }
-
-    private void PowerProfileManager_Updated(PowerProfile powerProfile, UpdateSource source)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            int idx = -1;
-            foreach (var item in ProfileStack.Children)
-            {
-                if (item is not Button)
-                    continue;
-
-                // get power profile
-                var parent = (Button)item;
-                if (parent.Tag is not PowerProfile)
-                    continue;
-
-                PowerProfile pr = (PowerProfile)parent.Tag;
-
-                bool isCurrent = pr.Guid == powerProfile.Guid;
-                if (isCurrent)
-                {
-                    idx = ProfileStack.Children.IndexOf(parent);
-                    break;
-                }
-            }
-
-            if (idx != -1)
-            {
-                // found it
-
-                if (ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == powerProfile.Guid) is ComboBoxItem item1)
-                    item1.Content = powerProfile.Name;
-
-                if (ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == powerProfile.Guid) is ComboBoxItem item2)
-                    item2.Content = powerProfile.Name;
-
-
-                return;
-            }
-            else
-            {
-                // draw UI elements
-                powerProfile.DrawUI(this);
-
-                idx = ProfileStack.Children.Count;
-                if (idx != 0)
-                {
-                    // Create a separator
-                    Separator separator = new()
-                    {
-                        Margin = new Thickness(-16, 0, -16, 0),
-                        BorderBrush = (Brush)FindResource("SystemControlBackgroundChromeMediumBrush"),
-                        BorderThickness = new Thickness(0, 1, 0, 0)
-                    };
-                    ProfileStack.Children.Add(separator);
-                }
-
-                // add new entry
-                if (powerProfile.Default)
-                {
-                    if (powerProfile.Guid == new Guid("00000000-0000-0000-0000-010000000000"))
-                        ProfileOnBattery.Items.Add(new ComboBoxItem
-                        {
-                            Content = powerProfile.Name,
-                            Tag = powerProfile
-                        });
-                    else
-                        ProfilePluggedIn.Items.Add(new ComboBoxItem
-                        {
-                            Content = powerProfile.Name,
-                            Tag = powerProfile
-                        });
-                }
-                else
-                {
-                    ProfileOnBattery.Items.Add(new ComboBoxItem
-                    {
-                        Content = powerProfile.Name,
-                        Tag = powerProfile
-                    });
-                    ProfilePluggedIn.Items.Add(new ComboBoxItem
-                    {
-                        Content = powerProfile.Name,
-                        Tag = powerProfile
-                    });
-                }
-
-                if (powerProfile.GetButton(this) is Button button)
-                {
-                    button.Click += (sender, e) => PowerProfile_Clicked(powerProfile);
-                    if (powerProfile.GetRadioButton(this) is RadioButton radioButton)
-                    {
-                        radioButton.IsEnabled = false;
-                        //radioButton.Checked += (sender, e) => PowerProfile_Selected(powerProfile);
-                    }
-                    ProfileStack.Children.Add(button);
-                }
-            }
-        });
-    }
-
-    private void PowerProfile_Clicked(PowerProfile powerProfile)
-    {
-        RadioButton radioButton = powerProfile.GetRadioButton(this);
-        if (radioButton.IsMouseOver)
-            return;
-
-        MainWindow.overlayquickTools.performancePage.SelectionChanged(powerProfile.Guid);
+        MainWindow.overlayquickTools.performancePage.SelectionChanged(selectedProfile.PowerProfiles[(int)PowerLineStatus.Offline]);
         MainWindow.overlayquickTools.NavView_Navigate("QuickPerformancePage");
     }
 
-    public void PowerProfile_Selected(PowerProfile powerProfile, bool isPlugged = true)
+    private void PowerProfilePluggedMore_Click(object sender, RoutedEventArgs e)
+    {
+        MainWindow.overlayquickTools.performancePage.SelectionChanged(selectedProfile.PowerProfiles[(int)PowerLineStatus.Online]);
+        MainWindow.overlayquickTools.NavView_Navigate("QuickPerformancePage");
+    }
+
+    public void PowerProfile_Selected(PowerProfile powerProfile, bool AC)
     {
         if (selectedProfile is null)
             return;
@@ -530,35 +375,21 @@ public partial class QuickProfilesPage : Page
         if (profileLock.IsEntered())
             return;
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
-            if ((isPlugged && System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online) ||
-                (!isPlugged && System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus != System.Windows.Forms.PowerLineStatus.Online))
+            switch (AC)
             {
-                SelectedPowerProfileName.Text = powerProfile.Name;
-                powerProfile?.Check(this);
-                if (System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online)
-                {
-                    PowerPresetIcon.Glyph = "\ue95f";
-                    PowerPresetIcon.RenderTransformOrigin = new Point(.5, .5);
-                    PowerPresetIcon.RenderTransform = new RotateTransform(-135);
-                }
-                else
-                {
-                    PowerPresetIcon.Glyph = "\ue83f";
-                    PowerPresetIcon.RenderTransformOrigin = new Point(0, 0);
-                    PowerPresetIcon.RenderTransform = Transform.Identity;
-                }
+                case false:
+                    selectedProfile.PowerProfiles[(int)PowerLineStatus.Offline] = powerProfile.Guid;
+                    SelectedPowerProfileName.Text = powerProfile.Name;
+                    break;
+                case true:
+                    selectedProfile.PowerProfiles[(int)PowerLineStatus.Online] = powerProfile.Guid;
+                    SelectedPowerProfileName.Text = powerProfile.Name;
+                    break;
             }
         });
-
-        // update profile
-        if (!isPlugged)
-            selectedProfile.BatteryProfile = powerProfile.Guid;
-        else
-            selectedProfile.PowerProfile = powerProfile.Guid;
-
         UpdateProfile();
     }
 
@@ -586,7 +417,7 @@ public partial class QuickProfilesPage : Page
                 selectedProfile = profile;
 
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     // update profile name
                     CurrentProfileName.Text = selectedProfile.Name;
@@ -619,9 +450,13 @@ public partial class QuickProfilesPage : Page
 
                     cb_SubProfiles.SelectedIndex = selectedIndex;
 
-                    ProfilePluggedIn.SelectedItem = ProfilePluggedIn.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profilePluggedin && profilePluggedin.Guid == profile.PowerProfile);
-                    ProfileOnBattery.SelectedItem = ProfileOnBattery.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is PowerProfile profileOnBattery && profileOnBattery.Guid == profile.BatteryProfile);
+                    // power profile
+                    PowerProfile powerProfileDC = PowerProfileManager.GetProfile(profile.PowerProfiles[(int)PowerLineStatus.Offline]);
+                    PowerProfile powerProfileAC = PowerProfileManager.GetProfile(profile.PowerProfiles[(int)PowerLineStatus.Online]);
 
+                    SelectedPowerProfileName.Text = System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Offline ? powerProfileDC?.Name : powerProfileAC?.Name;
+
+                    ((QuickProfilesPageViewModel)DataContext).PowerProfileChanged(powerProfileAC, powerProfileDC);
 
                     // gyro layout
                     if (!selectedProfile.Layout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out var currentAction))
@@ -658,8 +493,9 @@ public partial class QuickProfilesPage : Page
                         HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
                     }
 
+                    var primaryDisplay = ScreenControl.PrimaryDisplay;
                     // Framerate limit
-                    if (ScreenControl.PrimaryDisplay is not null)
+                    if (primaryDisplay is not null)
                     {
                         var frameLimits = ScreenControl.GetFramelimits(ScreenControl.PrimaryDisplay);
                         var fpsInLimits = frameLimits.FirstOrDefault(l => l == selectedProfile.FramerateValue);
@@ -700,6 +536,17 @@ public partial class QuickProfilesPage : Page
                     IntegerScalingToggle.IsOn = selectedProfile.IntegerScalingEnabled;
                     IntegerScalingTypeComboBox.SelectedIndex = selectedProfile.IntegerScalingType;
 
+                    if (primaryDisplay is not null)
+                    {
+                        foreach (ComboBoxItem item in IntegerScalingComboBox.Items)
+                        {
+                            if ((int)item.Tag == selectedProfile.IntegerScalingDivider)
+                            {
+                                IntegerScalingComboBox.SelectedItem = item;
+                                break;
+                            }
+                        }
+                    }
                     //if (desktopScreen is not null)
                     //    IntegerScalingComboBox.SelectedItem = desktopScreen.screenDividers.FirstOrDefault(d => d.divider == selectedProfile.IntegerScalingDivider);
 
@@ -982,31 +829,6 @@ public partial class QuickProfilesPage : Page
 
         ((GyroActions)currentAction).MotionTrigger = hotkey.inputsChord.ButtonState.Clone() as ButtonState;
         UpdateProfile();
-
-        if (hotkey.ButtonFlags != gyroButtonFlags)
-            return;
-
-        HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
-        if (foundHotkey is null)
-            HotkeysList.SafeAdd(new HotkeyViewModel(hotkey));
-        else
-            foundHotkey.Hotkey = hotkey;
-    }
-
-
-
-    private void InputsManager_StartedListening(ButtonFlags buttonFlags, InputsChordTarget chordTarget)
-    {
-        HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
-        if (hotkeyViewModel != null)
-            hotkeyViewModel.SetListening(true, chordTarget);
-    }
-
-    private void InputsManager_StoppedListening(ButtonFlags buttonFlags, InputsChord storedChord)
-    {
-        HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
-        if (hotkeyViewModel != null)
-            hotkeyViewModel.SetListening(false, storedChord.chordTarget);
     }
 
     private void cB_UMC_MotionDefaultOffOn_SelectionChanged(object sender, RoutedEventArgs e)
@@ -1168,9 +990,9 @@ public partial class QuickProfilesPage : Page
             return;
 
         var divider = 1;
-        if (IntegerScalingComboBox.SelectedItem is ScreenDivider screenDivider)
+        if (IntegerScalingComboBox.SelectedItem is ComboBoxItem screenDivider)
         {
-            divider = screenDivider.divider;
+            divider = (int)screenDivider.Tag;
         }
 
         selectedProfile.IntegerScalingDivider = divider;
@@ -1331,30 +1153,5 @@ public partial class QuickProfilesPage : Page
                 graphicLock.Exit();
             }
         }
-    }
-
-    private void ProfilePluggedIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (ProfilePluggedIn.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
-            PowerProfile_Selected(powerProfile);
-
-    }
-
-    private void ProfileOnBattery_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (ProfileOnBattery.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
-            PowerProfile_Selected(powerProfile, false);
-    }
-
-    private void ProfilePluggedInButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ProfilePluggedIn.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
-            PowerProfile_Clicked(powerProfile);
-    }
-
-    private void PorfileBatteryButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ProfileOnBattery.SelectedItem is ComboBoxItem item && item.Tag is PowerProfile powerProfile)
-            PowerProfile_Clicked(powerProfile);
     }
 }

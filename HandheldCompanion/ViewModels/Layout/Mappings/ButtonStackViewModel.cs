@@ -3,7 +3,6 @@ using HandheldCompanion.Extensions;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Views;
-using Nefarius.Utilities.DeviceManagement.PnP;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -36,18 +35,21 @@ namespace HandheldCompanion.ViewModels
             _flag = flag;
             ButtonMappings.Add(new ButtonMappingViewModel(this, flag, isInitialMapping: true));
 
+            // manage events
             MainWindow.layoutPage.LayoutUpdated += UpdateMapping;
             ControllerManager.ControllerSelected += UpdateController;
-            DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceUpdated;
-            DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceUpdated;
+
+            // send events
+            if (ControllerManager.HasTargetController)
+            {
+                UpdateController(ControllerManager.GetTarget());
+            }
         }
 
         public override void Dispose()
         {
             MainWindow.layoutPage.LayoutUpdated -= UpdateMapping;
             ControllerManager.ControllerSelected -= UpdateController;
-            DeviceManager.UsbDeviceArrived -= DeviceManager_UsbDeviceUpdated;
-            DeviceManager.UsbDeviceRemoved -= DeviceManager_UsbDeviceUpdated;
 
             foreach (var buttonMapping in ButtonMappings)
             {
@@ -92,12 +94,10 @@ namespace HandheldCompanion.ViewModels
             if (layout.ButtonLayout.TryGetValue(_flag, out var actions))
             {
                 foreach (var mapping in ButtonMappings)
-                {
                     mapping.Dispose();
-                }
 
                 var newMappings = new List<ButtonMappingViewModel>();
-                foreach (var action in actions)
+                foreach (var action in actions.OrderBy(a => a.ShiftSlot))
                 {
                     var newMapping = new ButtonMappingViewModel(this, _flag, isInitialMapping: newMappings.Count == 0);
                     newMappings.Add(newMapping);
@@ -113,17 +113,10 @@ namespace HandheldCompanion.ViewModels
             else
             {
                 foreach (var mapping in ButtonMappings)
-                {
                     mapping.Dispose();
-                }
+
                 ButtonMappings.ReplaceWith([new ButtonMappingViewModel(this, _flag, isInitialMapping: true)]);
             }
-        }
-
-        private void DeviceManager_UsbDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
-        {
-            IController controller = ControllerManager.GetTargetController();
-            if (controller is not null) UpdateController(controller);
         }
 
         private void UpdateController(IController controller)

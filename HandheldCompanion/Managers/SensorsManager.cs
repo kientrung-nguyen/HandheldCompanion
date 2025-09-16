@@ -3,9 +3,11 @@ using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Sensors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using static HandheldCompanion.Utils.DeviceUtils;
@@ -27,17 +29,61 @@ namespace HandheldCompanion.Managers
 
         static SensorsManager()
         {
+        }
+
+        public static async Task Start()
+        {
+            if (IsInitialized)
+                return;
+
+            // manage events
             DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceArrived;
             DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceRemoved;
-
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
             ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-
             SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+            if (DeviceManager.IsInitialized)
+            {
+                DeviceManager_UsbDeviceArrived(null, Guid.Empty);
+            }
+
+            if (ControllerManager.HasTargetController)
+            {
+                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
+            }
+
+            IsInitialized = true;
+            Initialized?.Invoke();
+
+            LogManager.LogInformation("{0} has started", "SensorsManager");
+            return;
+        }
+
+        public static void Stop()
+        {
+            if (!IsInitialized)
+                return;
+
+            StopListening();
+
+            // manage events
+            DeviceManager.UsbDeviceArrived -= DeviceManager_UsbDeviceArrived;
+            DeviceManager.UsbDeviceRemoved -= DeviceManager_UsbDeviceRemoved;
+            ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+            ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
+            SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+
+            IsInitialized = false;
+
+            LogManager.LogInformation("{0} has stopped", "SensorsManager");
         }
 
         private static void ControllerManager_ControllerSelected(IController Controller)
         {
+            if (Controller is null)
+                return;
+
             // select controller as current sensor if current sensor selection is none
             if (Controller.Capabilities.HasFlag(ControllerCapabilities.MotionSensor))
                 SettingsManager.Set("SensorSelection", (int)SensorFamily.Controller);
@@ -58,7 +104,7 @@ namespace HandheldCompanion.Managers
             PickNextSensor();
         }
 
-        private static void DeviceManager_UsbDeviceRemoved(PnPDevice device, DeviceEventArgs obj)
+        private static void DeviceManager_UsbDeviceRemoved(PnPDevice device, Guid IntefaceGuid)
         {
             if (USBSensor is null || sensorFamily != SensorFamily.SerialUSBIMU)
                 return;
@@ -85,7 +131,7 @@ namespace HandheldCompanion.Managers
                 SettingsManager.Set("SensorSelection", (int)SensorFamily.None);
         }
 
-        private static void DeviceManager_UsbDeviceArrived(PnPDevice device, DeviceEventArgs obj)
+        private static void DeviceManager_UsbDeviceArrived(PnPDevice device, Guid IntefaceGuid)
         {
             // If USB Gyro is plugged, hook into it
             USBSensor = SerialUSBIMU.GetCurrent();
@@ -95,7 +141,7 @@ namespace HandheldCompanion.Managers
                 SettingsManager.Set("SensorSelection", (int)SensorFamily.SerialUSBIMU);
         }
 
-        private static void SettingsManager_SettingValueChanged(string name, object value)
+        private static void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
         {
             switch (name)
             {
@@ -173,26 +219,6 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        public static void Start()
-        {
-            IsInitialized = true;
-            Initialized?.Invoke();
-
-            LogManager.LogInformation("{0} has started", "SensorsManager");
-        }
-
-        public static void Stop()
-        {
-            if (!IsInitialized)
-                return;
-
-            StopListening();
-
-            IsInitialized = false;
-
-            LogManager.LogInformation("{0} has stopped", "SensorsManager");
-        }
-
         public static void Resume(bool OS)
         {
             Gyrometer?.UpdateSensor();
@@ -245,6 +271,11 @@ namespace HandheldCompanion.Managers
 
         public static async void Calibrate(GamepadMotion gamepadMotion)
         {
+            Calibrate(new Dictionary<byte, GamepadMotion> { { 0, gamepadMotion } });
+        }
+
+        public static async void Calibrate(Dictionary<byte, GamepadMotion> gamepadMotions)
+        {
             Dialog dialog = new Dialog(MainWindow.GetCurrent())
             {
                 Title = "Please place the controller on a stable and level surface.",
@@ -255,93 +286,101 @@ namespace HandheldCompanion.Managers
             // display calibration dialog
             dialog.Show();
 
-            // skip if null
-            if (gamepadMotion is null)
+            // skip if empty
+            if (gamepadMotions.Count == 0)
                 goto Close;
 
             for (int i = 4; i > 0; i--)
             {
                 dialog.UpdateContent($"Calibration will start in {i} seconds.");
-                await Task.Delay(1000);
+                await Task.Delay(1000); // Captures synchronization context
             }
 
-            dialog.UpdateContent("Calibrating stationary sensor noise and drift correction...");
-
-            // reset motion values
-            gamepadMotion.ResetMotion();
-
-            // wait until device is steady
-            DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
-            while (DateTime.Now < timeout && !gamepadMotion.GetAutoCalibrationIsSteady())
-                await Task.Delay(100);
-
-            // device is either too shaky or stalled
-            bool IsSteady = gamepadMotion.GetAutoCalibrationIsSteady();
-            if (!IsSteady)
+            foreach (GamepadMotion gamepadMotion in gamepadMotions.Values)
             {
-                gamepadMotion.GetCalibratedGyro(out float x, out float y, out float z);
+                dialog.UpdateContent($"Calibrating {gamepadMotion.deviceInstanceId} stationary sensor noise and drift correction...");
+
+                // reset motion values
+                gamepadMotion.ResetMotion();
+
+                // wait until device is steady
+                DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
+                while (DateTime.Now < timeout && !gamepadMotion.GetAutoCalibrationIsSteady())
+                    await Task.Delay(100); // Captures synchronization context
+
+                // device is either too shaky or stalled
+                bool IsSteady = gamepadMotion.GetAutoCalibrationIsSteady();
+                if (!IsSteady)
+                {
+                    gamepadMotion.GetCalibratedGyro(out float x, out float y, out float z);
+
+                    // display message
+                    if (x == 0 && y == 0 && z == 0)
+                        dialog.UpdateContent($"Calibration failed: device is silent.");
+                    else
+                        dialog.UpdateContent($"Calibration device is silent or unsteady.");
+
+                    // wait a bit
+                    await Task.Delay(2000); // Captures synchronization context
+
+                    break;
+                }
+
+                // start continuous calibration
+                gamepadMotion.StartContinuousCalibration();
+
+                // give gamepad motion 3 seconds to get values
+                timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
+                while (DateTime.Now < timeout)
+                    await Task.Delay(100); // Captures synchronization context
+
+                // halt continuous calibration
+                gamepadMotion.PauseContinuousCalibration();
+
+                // get continuous calibration confidence
+                float confidence = gamepadMotion.GetAutoCalibrationConfidence();
+
+                // get/set calibration offsets
+                gamepadMotion.GetCalibrationOffset(out float xOffset, out float yOffset, out float zOffset);
+                gamepadMotion.SetCalibrationOffset(xOffset, yOffset, zOffset, (int)(confidence * 10.0f));
+
+                /*
+                dialog.UpdateTitle("Please take back the controller in hands and get ready to shake it.");
+
+                for (int i = 4; i > 0; i--)
+                {
+                    dialog.UpdateContent($"Threshold calibration will start in {i} seconds.");
+                    await Task.Delay(1000);
+                }
+
+                dialog.UpdateContent("Shake the device in all direction...");
+
+                // reset motion values
+                gamepadMotion.ResetThresholdCalibration();
+                gamepadMotion.StartThresholdCalibration();
+
+                // wait until device is steady
+                timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
+                while (DateTime.Now < timeout)
+                    await Task.Delay(100);
+
+                gamepadMotion.PauseThresholdCalibration();
+
+                // get calibration offsets
+                gamepadMotion.SetCalibrationThreshold(gamepadMotion.maxGyro, gamepadMotion.maxAccel);
+                */
+
+                // store calibration offsets
+                IMUCalibration.StoreCalibration(gamepadMotion.deviceInstanceId, gamepadMotion.GetCalibration());
 
                 // display message
-                if (x == 0 && y == 0 && z == 0)
-                    dialog.UpdateContent("Calibration failed: device is silent.");
-                else
-                    dialog.UpdateContent("Calibration failed: device is silent or unsteady.");
+                dialog.UpdateContent($"Calibration succeeded: stationary sensor noise recorded. Drift correction found. Confidence: {confidence * 100.0f}%");
 
-                goto Close;
+                // wait a bit
+                await Task.Delay(2000); // Captures synchronization context
             }
-
-            // start continuous calibration
-            gamepadMotion.StartContinuousCalibration();
-
-            // give gamepad motion 3 seconds to get values
-            timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
-            while (DateTime.Now < timeout)
-                await Task.Delay(100);
-
-            // halt continuous calibration
-            gamepadMotion.PauseContinuousCalibration();
-
-            // get continuous calibration confidence
-            float confidence = gamepadMotion.GetAutoCalibrationConfidence();
-
-            // get/set calibration offsets
-            gamepadMotion.GetCalibrationOffset(out float xOffset, out float yOffset, out float zOffset);
-            gamepadMotion.SetCalibrationOffset(xOffset, yOffset, zOffset, (int)(confidence * 10.0f));
-
-            /*
-            dialog.UpdateTitle("Please take back the controller in hands and get ready to shake it.");
-
-            for (int i = 4; i > 0; i--)
-            {
-                dialog.UpdateContent($"Threshold calibration will start in {i} seconds.");
-                await Task.Delay(1000);
-            }
-
-            dialog.UpdateContent("Shake the device in all direction...");
-
-            // reset motion values
-            gamepadMotion.ResetThresholdCalibration();
-            gamepadMotion.StartThresholdCalibration();
-
-            // wait until device is steady
-            timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
-            while (DateTime.Now < timeout)
-                await Task.Delay(100);
-
-            gamepadMotion.PauseThresholdCalibration();
-
-            // get calibration offsets
-            gamepadMotion.SetCalibrationThreshold(gamepadMotion.maxGyro, gamepadMotion.maxAccel);
-            */
-
-            // store calibration offsets
-            IMUCalibration.StoreCalibration(gamepadMotion.deviceInstanceId, gamepadMotion.GetCalibration());
-
-            // display message
-            dialog.UpdateContent($"Calibration succeeded: stationary sensor noise recorded. Drift correction found. Confidence: {confidence * 100.0f}%");
 
         Close:
-            await Task.Delay(2000);
             dialog.Hide();
         }
     }

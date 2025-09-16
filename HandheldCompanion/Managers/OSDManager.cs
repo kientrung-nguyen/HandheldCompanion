@@ -1,10 +1,12 @@
-﻿using HandheldCompanion.Utils;
+﻿using HandheldCompanion.Shared;
+using HandheldCompanion.Utils;
 using Hwinfo.SharedMemory;
 using PrecisionTiming;
 using RTSSSharedMemoryNET;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HandheldCompanion.Managers;
 
@@ -25,6 +27,7 @@ public enum OverlayEntryLevel
 public static class OSDManager
 {
     public delegate void InitializedEventHandler();
+    public static event InitializedEventHandler Initialized;
 
     // C1: GPU // 8040
     // C2: CPU // 80FF
@@ -64,20 +67,68 @@ public static class OSDManager
 
     static OSDManager()
     {
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-
-        PlatformManager.RTSS.Hooked += RTSS_Hooked;
-        PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
-
-        // timer used to monitor foreground application framerate
-        RefreshInterval = SettingsManager.Get<int>("OnScreenDisplayRefreshRate");
-        OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(SettingsManager.Get<int>("OnScreenDisplayLevel"));
-
         RefreshTimer = new PrecisionTimer();
         RefreshTimer.SetInterval(new Action(UpdateOSD), RefreshInterval, false, 0, TimerMode.Periodic, true);
     }
 
-    public static event InitializedEventHandler Initialized;
+    public static async Task Start()
+    {
+        if (IsInitialized)
+            return;
+
+        if (OverlayLevel != 0 && !RefreshTimer.IsRunning())
+            RefreshTimer.Start();
+
+        // manage events
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        PlatformManager.RTSS.Hooked += RTSS_Hooked;
+        PlatformManager.RTSS.Unhooked += RTSS_Unhooked;
+
+        if (SettingsManager.IsInitialized)
+        {
+            // timer used to monitor foreground application framerate
+            RefreshInterval = SettingsManager.Get<int>("OnScreenDisplayRefreshRate");
+
+            // OverlayLevel
+            OverlayLevel = EnumUtils<OverlayDisplayLevel>.Parse(SettingsManager.Get<int>("OnScreenDisplayLevel"));
+        }
+
+        if (PlatformManager.IsInitialized)
+        {
+            AppEntry appEntry = PlatformManager.RTSS.GetAppEntry();
+            if (appEntry is not null)
+                RTSS_Hooked(appEntry);
+        }
+
+        IsInitialized = true;
+        Initialized?.Invoke();
+
+        LogManager.LogInformation("{0} has started", "OSDManager");
+        return;
+    }
+
+    public static void Stop()
+    {
+        if (!IsInitialized)
+            return;
+
+        RefreshTimer.Stop();
+
+        // unhook all processes
+        foreach (var osd in onScreenDisplays)
+			RTSS_Unhooked(osd.Key);
+
+        onScreenDisplays.Clear();
+
+        // manage events
+        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        PlatformManager.RTSS.Hooked -= RTSS_Hooked;
+        PlatformManager.RTSS.Unhooked -= RTSS_Unhooked;
+
+        IsInitialized = false;
+
+        LogManager.LogInformation("{0} has stopped", "OSDManager");
+    }
 
     private static void RTSS_Unhooked(int processId)
     {
@@ -95,6 +146,9 @@ public static class OSDManager
 
     private static void RTSS_Hooked(AppEntry appEntry)
     {
+        if (appEntry is null)
+            return;
+
         try
         {
             // update foreground id
@@ -104,21 +158,8 @@ public static class OSDManager
             //
             if (!onScreenDisplays.TryGetValue(appEntry.ProcessId, out var osd))
                 onScreenDisplays[osdAppEntry.ProcessId] = new OSD(osdAppEntry.Name);
-
-
         }
         catch { }
-    }
-
-    public static void Start()
-    {
-        IsInitialized = true;
-        Initialized?.Invoke();
-
-        LogManager.LogInformation("{0} has started", "OSDManager");
-
-        if (OverlayLevel != OverlayDisplayLevel.Disabled && !RefreshTimer.IsRunning())
-            RefreshTimer.Start();
     }
 
     private static void UpdateOSD()
@@ -315,31 +356,6 @@ public static class OSDManager
                 OverlayOrientation == 0 ? "<C=FF8000> | <C>" : " \n ", Content));
     }
 
-    public static void Stop()
-    {
-        if (!IsInitialized)
-            return;
-
-        RefreshTimer.Stop();
-
-        try
-        {
-            // unhook all processes
-            foreach (var osd in onScreenDisplays)
-            {
-                osd.Value.Update(string.Empty);
-                osd.Value.Dispose();
-            }
-
-            onScreenDisplays.Clear();
-        }
-        catch { }
-
-        IsInitialized = false;
-
-        LogManager.LogInformation("{0} has stopped", "OSDManager");
-    }
-
     private static string EntryContent(string name)
     {
         using OverlayRow row = new();
@@ -430,6 +446,7 @@ public static class OSDManager
                 }
                 break;
         }
+
         // Skip empty rows
         if (entry.elements.Count == 0) return "";
         row.entries.Add(entry);
@@ -448,11 +465,11 @@ public static class OSDManager
         {
             "FPS" => "FF0000",
             "CPU" => "80FF",
-            "GPU" => "50E000",
+            "GPU" => "8040",
             "RAM" => "FF80C0",
             "VRAM" => "FF80FF",
             "BATT" => "FF8000",
-            _ => "C0",
+            _ => "FFFFFF",
         };
     }
 
@@ -462,7 +479,7 @@ public static class OSDManager
             entry.elements.Add(new OverlayEntryElement(fl, unit, format, colorScheme));
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
+    private static void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {

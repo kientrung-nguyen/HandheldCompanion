@@ -1,10 +1,11 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace HandheldCompanion;
 
@@ -17,73 +18,75 @@ public partial class Layout : ICloneable, IDisposable
 
     public bool IsDefaultLayout { get; set; }
 
-    // gyro related
-
     public Layout()
     {
     }
 
-    public Layout(bool fill) : this()
+    ~Layout()
     {
-        // reset layout(s)
         Dispose();
+    }
 
-        // get current controller
-        IController controller = ControllerManager.GetEmulatedController();
+    public void FillInherit()
+    {
+        // Get the current controller
+        IController controller = ControllerManager.GetDefaultXBOX();
 
-        // generic button mapping
-        foreach (ButtonFlags button in Enum.GetValues(typeof(ButtonFlags)))
-        {
-            if (!controller.GetTargetButtons().Contains(button))
-                continue;
+        // Generic button mapping
+        foreach (ButtonFlags button in controller.GetTargetButtons())
+            ButtonLayout[button] = [new InheritActions()];
 
-            ButtonLayout[button] = [new ButtonActions() { Button = button }];
-        }
+        // Generic axis mapping
+        var allAxes = controller.GetTargetAxis().Union(controller.GetTargetTriggers());
+        foreach (AxisLayoutFlags axis in allAxes)
+            AxisLayout[axis] = new InheritActions();
+    }
 
-        // ButtonLayout[ButtonFlags.OEM1] = new List<IActions>() { new ButtonActions { Button = ButtonFlags.Special } };
-        ButtonLayout[ButtonFlags.LeftPadClickUp] = [new ButtonActions { Button = ButtonFlags.DPadUp }];
-        ButtonLayout[ButtonFlags.LeftPadClickDown] = [new ButtonActions { Button = ButtonFlags.DPadDown }];
-        ButtonLayout[ButtonFlags.LeftPadClickLeft] = [new ButtonActions { Button = ButtonFlags.DPadLeft }];
-        ButtonLayout[ButtonFlags.LeftPadClickRight] = [new ButtonActions { Button = ButtonFlags.DPadRight }];
+    public void FillDefault()
+    {
+        // Get the current controller
+        IController controller = ControllerManager.GetDefaultXBOX();
 
-        // DualShock4
-        ButtonLayout[ButtonFlags.LeftPadTouch] = [new ButtonActions { Button = ButtonFlags.LeftPadTouch }];
-        ButtonLayout[ButtonFlags.LeftPadClick] = [new ButtonActions { Button = ButtonFlags.LeftPadClick }];
-        ButtonLayout[ButtonFlags.RightPadTouch] = [new ButtonActions { Button = ButtonFlags.RightPadTouch }];
-        ButtonLayout[ButtonFlags.RightPadClick] = [new ButtonActions { Button = ButtonFlags.RightPadClick }];
+        // Generic button mapping
+        foreach (ButtonFlags button in controller.GetTargetButtons())
+            ButtonLayout[button] = new List<IActions> { new ButtonActions { Button = button } };
 
-        // generic axis mapping
-        foreach (AxisLayoutFlags axis in Enum.GetValues(typeof(AxisLayoutFlags)))
-        {
-            if (!controller.GetTargetAxis().Contains(axis))
-                continue;
-
+        // Generic axis mappings
+        foreach (AxisLayoutFlags axis in controller.GetTargetAxis())
             AxisLayout[axis] = new AxisActions { Axis = axis };
-        }
 
+        // Trigger axis mappings
+        foreach (AxisLayoutFlags axis in controller.GetTargetTriggers())
+            AxisLayout[axis] = new TriggerActions { Axis = axis };
+
+        // Special button mappings
+        Dictionary<ButtonFlags, ButtonFlags> specialButtonMappings = new Dictionary<ButtonFlags, ButtonFlags>
+        {
+            { ButtonFlags.LeftPadClickUp, ButtonFlags.DPadUp },
+            { ButtonFlags.LeftPadClickDown, ButtonFlags.DPadDown },
+            { ButtonFlags.LeftPadClickLeft, ButtonFlags.DPadLeft },
+            { ButtonFlags.LeftPadClickRight, ButtonFlags.DPadRight },
+            { ButtonFlags.LeftPadTouch, ButtonFlags.LeftPadTouch },
+            { ButtonFlags.LeftPadClick, ButtonFlags.LeftPadClick },
+            { ButtonFlags.RightPadTouch, ButtonFlags.RightPadTouch },
+            { ButtonFlags.RightPadClick, ButtonFlags.RightPadClick }
+        };
+
+        foreach (KeyValuePair<ButtonFlags, ButtonFlags> mapping in specialButtonMappings)
+            ButtonLayout[mapping.Key] = new List<IActions> { new ButtonActions { Button = mapping.Value } };
+
+        // Add specific axis mappings
         AxisLayout[AxisLayoutFlags.LeftPad] = new AxisActions { Axis = AxisLayoutFlags.LeftPad };
         AxisLayout[AxisLayoutFlags.RightPad] = new AxisActions { Axis = AxisLayoutFlags.RightPad };
-
-        // generic axis mapping
-        foreach (AxisLayoutFlags axis in Enum.GetValues(typeof(AxisLayoutFlags)))
-        {
-            if (!controller.GetTargetTriggers().Contains(axis))
-                continue;
-
-            AxisLayout[axis] = new TriggerActions { Axis = axis };
-        }
     }
 
     public object Clone()
     {
-        var jsonString = JsonConvert.SerializeObject(this, Formatting.Indented,
-            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
-        var deserialized = JsonConvert.DeserializeObject<Layout>(jsonString,
-            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+        // Clone shouldn't be default layout in case it is true
+        Layout clone = CloningHelper.DeepClone(this);
+        clone.IsDefaultLayout = false;
 
-        deserialized.IsDefaultLayout = false; // Clone shouldn't be default layout in case it is true
-
-        return deserialized;
+        return clone;
     }
 
     public void Dispose()
@@ -91,6 +94,8 @@ public partial class Layout : ICloneable, IDisposable
         ButtonLayout.Clear();
         AxisLayout.Clear();
         GyroLayout.Clear();
+
+        GC.SuppressFinalize(this);
     }
 
     public void UpdateLayout()
@@ -100,7 +105,8 @@ public partial class Layout : ICloneable, IDisposable
 
     public void UpdateLayout(ButtonFlags button, List<IActions> actions)
     {
-        ButtonLayout[button] = actions;
+        // sort actions based on press type, will be required by layout manager
+        ButtonLayout[button] = actions.OrderByDescending(a => (int)a.pressType).ToList();
         Updated?.Invoke(this);
     }
 

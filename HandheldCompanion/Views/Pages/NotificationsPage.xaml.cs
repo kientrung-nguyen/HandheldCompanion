@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Controls.Hints;
+using HandheldCompanion.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace HandheldCompanion.Views.Pages
         public event StatusChangedEventHandler StatusChanged;
 
         private Timer timer;
-        private int prevStatus = -1;
+        private int prevNotifications = -1;
 
         public NotificationsPage()
         {
@@ -34,19 +35,22 @@ namespace HandheldCompanion.Views.Pages
 
         private void Timer_Elapsed(object? sender, ElapsedEventArgs e)
         {
-            // UI thread (async)
-            Application.Current.Dispatcher.Invoke(() =>
+            // Calculate the number of visible notifications on a background thread
+            int notifications = UIHelper.TryInvoke(() => Notifications.Children.OfType<IHint>().Count(element => element.Visibility == Visibility.Visible));
+            if (notifications != prevNotifications)
             {
-                bool hasAnyVisible = Notifications.Children.OfType<IHint>().Any(element => element.Visibility == Visibility.Visible);
-                NothingToSee.Visibility = hasAnyVisible ? Visibility.Collapsed : Visibility.Visible;
-
-                int status = Convert.ToInt32(hasAnyVisible);
-                if (status != prevStatus)
+                // UI thread (async)
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
-                    StatusChanged?.Invoke(status);
-                    prevStatus = status;
-                }
-            });
+                    NothingToSee.Visibility = notifications != 0 ? Visibility.Collapsed : Visibility.Visible;
+                });
+
+                // Raise the event outside the UI thread
+                StatusChanged?.Invoke(notifications);
+
+                // Update previous notification count
+                prevNotifications = notifications;
+            }
         }
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
@@ -55,8 +59,8 @@ namespace HandheldCompanion.Views.Pages
 
         public void Page_Closed()
         {
-            // UI thread (async)
-            Application.Current.Dispatcher.Invoke(() =>
+            // UI thread
+            UIHelper.TryInvoke(() =>
             {
                 IEnumerable<IHint> notifications = Notifications.Children.OfType<IHint>();
                 foreach (IHint hint in notifications)

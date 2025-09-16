@@ -26,41 +26,6 @@ namespace HandheldCompanion.ViewModels
 
         #region Axis Action Properties
 
-        public bool Axis2AxisAutoRotate
-        {
-            get => (Action is AxisActions axisAction) ? axisAction.AutoRotate : false;
-            set
-            {
-                if (Action is AxisActions axisAction && value != Axis2AxisAutoRotate)
-                {
-                    axisAction.AutoRotate = value;
-                    OnPropertyChanged(nameof(Axis2AxisAutoRotate));
-                }
-            }
-        }
-
-        public int Axis2AxisRotation
-        {
-            get
-            {
-                if (Action is AxisActions axisAction)
-                {
-                    return (axisAction.AxisInverted ? 180 : 0) + (axisAction.AxisRotated ? 90 : 0);
-                }
-
-                return 0;
-            }
-            set
-            {
-                if (Action is AxisActions axisAction && value != Axis2AxisRotation)
-                {
-                    axisAction.AxisInverted = ((value / 90) & 2) == 2;
-                    axisAction.AxisRotated = ((value / 90) & 1) == 1;
-                    OnPropertyChanged(nameof(Axis2AxisRotation));
-                }
-            }
-        }
-
         public int Axis2AxisInnerDeadzone
         {
             get => (Action is AxisActions axisAction) ? axisAction.AxisDeadZoneInner : 0;
@@ -102,7 +67,7 @@ namespace HandheldCompanion.ViewModels
 
         public bool Axis2AxisImproveCircularity
         {
-            get => (Action is AxisActions axisAction) ? axisAction.ImproveCircularity : false;
+            get => (Action is AxisActions axisAction) && axisAction.ImproveCircularity;
             set
             {
                 if (Action is AxisActions axisAction && value != Axis2AxisImproveCircularity)
@@ -126,41 +91,6 @@ namespace HandheldCompanion.ViewModels
                 {
                     mouseAction.Sensivity = value;
                     OnPropertyChanged(nameof(Axis2MousePointerSpeed));
-                }
-            }
-        }
-
-        public bool Axis2MouseAutoRotate
-        {
-            get => (Action is MouseActions mouseAction) ? mouseAction.AutoRotate : false;
-            set
-            {
-                if (Action is MouseActions mouseAction && value != Axis2MouseAutoRotate)
-                {
-                    mouseAction.AutoRotate = value;
-                    OnPropertyChanged(nameof(Axis2MouseAutoRotate));
-                }
-            }
-        }
-
-        public int Axis2MouseRotation
-        {
-            get
-            {
-                if (Action is MouseActions mouseAction)
-                {
-                    return (mouseAction.AxisInverted ? 180 : 0) + (mouseAction.AxisRotated ? 90 : 0);
-                }
-
-                return 0;
-            }
-            set
-            {
-                if (Action is MouseActions mouseAction && value != Axis2MouseRotation)
-                {
-                    mouseAction.AxisInverted = ((value / 90) & 2) == 2;
-                    mouseAction.AxisRotated = ((value / 90) & 1) == 1;
-                    OnPropertyChanged(nameof(Axis2MouseRotation));
                 }
             }
         }
@@ -285,15 +215,13 @@ namespace HandheldCompanion.ViewModels
         private void InputsManager_StartedListening(ButtonFlags buttonFlags, InputsChordTarget chordTarget)
         {
             HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
-            if (hotkeyViewModel != null)
-                hotkeyViewModel.SetListening(true, chordTarget);
+            hotkeyViewModel?.SetListening(true, chordTarget);
         }
 
         private void InputsManager_StoppedListening(ButtonFlags buttonFlags, InputsChord storedChord)
         {
             HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
-            if (hotkeyViewModel != null)
-                hotkeyViewModel.SetListening(false, storedChord.chordTarget);
+            hotkeyViewModel?.SetListening(false, storedChord.chordTarget);
         }
 
         public override void Dispose()
@@ -340,7 +268,7 @@ namespace HandheldCompanion.ViewModels
                 }
 
                 // get current controller
-                var controller = ControllerManager.GetEmulatedController();
+                var controller = ControllerManager.GetDefault();
 
                 // Build Targets
                 var targets = new List<MappingTargetViewModel>();
@@ -399,6 +327,16 @@ namespace HandheldCompanion.ViewModels
                 // Update list and selected target
                 Targets.ReplaceWith(targets);
                 SelectedTarget = matchingTargetVm ?? Targets.First();
+            }
+            else if (actionType == ActionType.Inherit)
+            {
+                if (Action is null || Action is not InheritActions)
+                {
+                    Action = new InheritActions();
+                }
+
+                // Update list and selected target
+                Targets.Clear();
             }
 
             // Refresh mapping

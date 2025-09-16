@@ -25,7 +25,7 @@ namespace HandheldCompanion.Commands.Functions.Windows
             OnKeyUp = true;
         }
 
-        public override void Execute(bool IsKeyDown, bool IsKeyUp)
+        public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
         {
             Task.Run(async () =>
             {
@@ -40,7 +40,7 @@ namespace HandheldCompanion.Commands.Functions.Windows
                 {
                     // Start a new osk.exe process
                     Process OSK = Process.Start(new ProcessStartInfo("osk.exe") { UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden });
-                    await Task.Delay(200);
+                    await Task.Delay(200).ConfigureAwait(false); // Avoid blocking the synchronization context
 
                     // Find the OSK window. 
                     IntPtr hwndOSK = FindWindow("OSKMainClass", null);
@@ -60,7 +60,7 @@ namespace HandheldCompanion.Commands.Functions.Windows
                 }
             });
 
-            base.Execute(IsKeyDown, IsKeyUp);
+            base.Execute(IsKeyDown, IsKeyUp, false);
         }
 
         public override object Clone()
