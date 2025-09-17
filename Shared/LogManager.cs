@@ -22,6 +22,18 @@ public static class LogManager
             .CreateLogger();
 
         logger = new SerilogLoggerFactory(serilogLogger).CreateLogger(name);
+
+#if DEBUG
+        // Redirect standard input, output, and error to the new console
+        StreamWriter standardOutput = new StreamWriter(Console.OpenStandardOutput())
+        {
+            AutoFlush = true
+        };
+        Console.SetOut(standardOutput);
+
+        StreamReader standardInput = new StreamReader(Console.OpenStandardInput());
+        Console.SetIn(standardInput);
+#endif
     }
 
     public static void LogInformation(string message, params object[] args)

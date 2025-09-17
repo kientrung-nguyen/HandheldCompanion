@@ -52,7 +52,7 @@ namespace HandheldCompanion.Targets
             catch (Exception ex)
             {
                 LogManager.LogWarning("Failed to connect {0}. {1}", this.ToString(), ex.Message);
-                SettingsManager.Set("HIDstatus", 0); // Disable controller
+                ManagerFactory.settingsManager.Set("HIDstatus", 0); // Disable controller
                 return false;
             }
 
@@ -75,7 +75,7 @@ namespace HandheldCompanion.Targets
             catch (Exception ex)
             {
                 LogManager.LogWarning("Failed to disconnect {0}. {1}", ToString(), ex.Message);
-                SettingsManager.Set("HIDstatus", 1); // Enable controller
+                ManagerFactory.settingsManager.Set("HIDstatus", 1); // Enable controller
                 return false;
             }
 

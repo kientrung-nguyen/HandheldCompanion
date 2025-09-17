@@ -1,5 +1,4 @@
 ﻿using HandheldCompanion.ADLX;
-using HandheldCompanion.Controls;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.IGCL;
 using HandheldCompanion.Misc;
@@ -12,20 +11,16 @@ using WindowsDisplayAPI;
 
 namespace HandheldCompanion.Managers
 {
-    public static class GPUManager
+    public class GPUManager : IManager
     {
         #region events
-        public static event InitializedEventHandler? Initialized;
-        public delegate void InitializedEventHandler(bool HasIGCL, bool HasADLX);
-
-        public static event HookedEventHandler? Hooked;
+        public event HookedEventHandler? Hooked;
         public delegate void HookedEventHandler(GPU GPU);
 
-        public static event UnhookedEventHandler? Unhooked;
+        public event UnhookedEventHandler? Unhooked;
         public delegate void UnhookedEventHandler(GPU GPU);
         #endregion
 
-        public static bool IsInitialized = false;
         public static bool IsLoaded_IGCL = false;
         public static bool IsLoaded_ADLX = false;
 

@@ -95,6 +95,7 @@ namespace HandheldCompanion.UI
 
             switch (uIElement.GetType().Name)
             {
+                case "ScrollViewer":
                 case "TouchScrollViewer":
                     return;
                 case "ComboBoxItem":
@@ -181,7 +182,7 @@ namespace HandheldCompanion.UI
 
         public static void PlayOggFile(string fileName)
         {
-            bool Enabled = SettingsManager.Get<bool>("UISounds");
+            bool Enabled = ManagerFactory.settingsManager.Get<bool>("UISounds");
             if (!Enabled)
                 return;
 

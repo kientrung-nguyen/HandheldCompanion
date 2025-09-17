@@ -2,6 +2,7 @@
     x:Class="HandheldCompanion.Views.QuickPages.QuickHomePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:HandheldCompanion.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:dd="urn:gong-wpf-dragdrop"
     xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
@@ -19,6 +20,10 @@
     d:DesignWidth="640"
     KeepAlive="True"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <converters:WidthToColumnsConverter x:Key="WidthToColumns" DesiredItemWidth="90" />
+    </Page.Resources>
 
     <Grid>
         <Grid.RowDefinitions>

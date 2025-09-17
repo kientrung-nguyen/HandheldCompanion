@@ -1,18 +1,20 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Localization;
+using HandheldCompanion.Managers;
+using HandheldCompanion.Properties;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using Sentry;
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
-using static HandheldCompanion.WinAPI;
-using System.IO;
-using HandheldCompanion.Shared;
 
 namespace HandheldCompanion;
 
@@ -21,7 +23,7 @@ namespace HandheldCompanion;
 /// </summary>
 public partial class App : Application
 {
-    public static bool IsMultiThreaded { get; } = false;
+    public static bool IsMultiThreaded { get; } = true;
     public static string InstallPath = string.Empty;
     public static string SettingsPath = string.Empty;
 
@@ -37,6 +39,7 @@ public partial class App : Application
 
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool FreeConsole();
+
     /// <summary>
     ///     Initializes the singleton application object.  This is the first line of authored code
     ///     executed, and as such is the logical equivalent of main() or WinMain().
@@ -44,11 +47,32 @@ public partial class App : Application
     public App()
     {
         InitializeSentry();
+
+        InjectResource();
+
         InitializeComponent();
 
+        // initialize path(s)
+        InstallPath = AppDomain.CurrentDomain.BaseDirectory;
+        SettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion");
+
 #if DEBUG
-        AllocConsole();
+        if (!ManagerFactory.settingsManager.Get<bool>("MuteConsole"))
+            AllocConsole();
 #endif
+    }
+
+    /// <summary>
+    /// Replaces the default ResourceManager instance in the auto-generated Resources class
+    /// with a custom ResilientResourceManager that supports fallback logic.
+    /// </summary>
+    private void InjectResource()
+    {
+        Type resourcesType = typeof(Resources);
+        var customManager = new ResilientResourceManager(resourcesType.FullName, resourcesType.Assembly);
+        FieldInfo? field = resourcesType.GetField("resourceMan", BindingFlags.Static | BindingFlags.NonPublic);
+        if (field == null) return;
+        field.SetValue(null, customManager);
     }
 
     /// <summary>
@@ -98,34 +122,32 @@ public partial class App : Application
         }
 
         // define culture settings
-        var currentCulture = SettingsManager.Get<string>("CurrentCulture");
-        var culture = CultureInfo.CurrentCulture;
-
-        switch (currentCulture)
+        var currentCultureString = ManagerFactory.settingsManager.Get<string>("CurrentCulture");
+        CultureInfo culture;
+        if (string.IsNullOrEmpty(currentCultureString))
         {
-            default:
-                culture = new CultureInfo("en-US");
-                break;
-            case "fr-FR":
-            case "en-US":
-            case "zh-Hans":
-            case "zh-Hant":
-            case "de-DE":
-            case "it-IT":
-            case "pt-BR":
-            case "es-ES":
-            case "ja-JP":
-            case "ru-RU":
-                culture = new CultureInfo(currentCulture);
-                break;
-            case "zh-CN": // fallback change locale name from zh-CN to zh-Hans
-                SettingsManager.Set("CurrentCulture", "zh-Hans");
-                currentCulture = "zh-Hans";
-                culture = new CultureInfo(currentCulture);
-                break;
+            culture = CultureInfo.CurrentCulture;
+        }
+        else
+        {
+            culture = new CultureInfo(currentCultureString);
         }
 
-        Localization.TranslationSource.Instance.CurrentCulture = culture;
+        while (culture is not null)
+        {
+            if (TranslationSource.ValidCultures.Contains(culture)) break;
+
+            // if we're already at the top of the chain, bail out
+            if (culture.Equals(CultureInfo.InvariantCulture) || culture.Equals(culture.Parent))
+                break;
+
+            culture = culture.Parent;
+        }
+
+        if (culture is null || !TranslationSource.ValidCultures.Contains(culture))
+            culture = new CultureInfo("en-US");
+
+        TranslationSource.Instance.CurrentCulture = culture;
 
         // handle exceptions nicely
         var currentDomain = default(AppDomain);
@@ -146,7 +168,7 @@ public partial class App : Application
         Exception ex = e.Exception;
 
         // send to sentry
-        bool IsSentryEnabled = SettingsManager.Get<bool>("TelemetryEnabled");
+        bool IsSentryEnabled = ManagerFactory.settingsManager.Get<bool>("TelemetryEnabled");
         if (SentrySdk.IsEnabled && IsSentryEnabled)
             SentrySdk.CaptureException(ex);
 
@@ -161,7 +183,7 @@ public partial class App : Application
         Exception ex = (Exception)e.ExceptionObject;
 
         // send to sentry
-        bool IsSentryEnabled = SettingsManager.Get<bool>("TelemetryEnabled");
+        bool IsSentryEnabled = ManagerFactory.settingsManager.Get<bool>("TelemetryEnabled");
         if (SentrySdk.IsEnabled && IsSentryEnabled)
             SentrySdk.CaptureException(ex);
 
@@ -180,7 +202,7 @@ public partial class App : Application
             goto Handled;
 
         // send to sentry
-        bool IsSentryEnabled = SettingsManager.Get<bool>("TelemetryEnabled");
+        bool IsSentryEnabled = ManagerFactory.settingsManager.Get<bool>("TelemetryEnabled");
         if (SentrySdk.IsEnabled && IsSentryEnabled)
             SentrySdk.CaptureException(ex);
 

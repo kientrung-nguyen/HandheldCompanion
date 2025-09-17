@@ -27,21 +27,22 @@ public partial class OverlayModel : OverlayWindow
 
     private IModel CurrentModel;
     public Vector3D DesiredAngleDeg = new(0, 0, 0);
-    public float RestingPitchAngleDeg;
     private Quaternion DevicePose;
     private Vector3D DevicePoseRad;
     private Vector3D DiffAngle = new(0, 0, 0);
-    private static MadgwickAHRS madgwickAHRS;
 
     private static IEnumerable<ButtonFlags> resetFlags = [ButtonFlags.B1, ButtonFlags.B2, ButtonFlags.B3, ButtonFlags.B4];
 
-    public bool FaceCamera = false;
+    // settings
+    private float RestingPitchAngleDeg;
+    private bool MotionActivated = true;
+    private bool FaceCamera = false;
+
     public Vector3D FaceCameraObjectAlignment;
 
     private ControllerState Inputs = new();
 
     private OverlayModelMode Modelmode;
-    public bool MotionActivated = true;
 
     private Transform3DGroup Transform3DGroupModelPrev = new();
 
@@ -58,12 +59,10 @@ public partial class OverlayModel : OverlayWindow
     {
         InitializeComponent();
 
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         float samplePeriod = TimerManager.GetPeriod() / 1000f;
-        madgwickAHRS = new(samplePeriod, 0.01f);
-
-        ResetModelPose();
+        madgwickAHRS = new(samplePeriod, 0.1f);
 
         // initialize timers
         UpdateTimer = new Timer(33)
@@ -75,23 +74,121 @@ public partial class OverlayModel : OverlayWindow
 
     private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        switch (name)
         {
-            switch (name)
-            {
-                case "OverlayControllerMotion":
-                    MotionActivated = Convert.ToBoolean(value);
-
-                    // On change of motion activated, reset object alignment
-                    ResetModelPose();
-
-                    break;
-            }
-        });
+            case "OverlayControllerMotion":
+                MotionActivated = Convert.ToBoolean(value);
+                break;
+            case "OverlayFaceCamera":
+                FaceCamera = Convert.ToBoolean(value);
+                break;
+            case "OverlayControllerRestingPitch":
+                RestingPitchAngleDeg = (float)(-1.0d * Convert.ToDouble(value));
+                break;
+            case "OverlayControllerAlignment":
+                {
+                    int controllerAlignment = Convert.ToInt32(value);
+                    // UI thread
+                    UIHelper.TryInvoke(() => { UpdateUI_ControllerPosition(controllerAlignment); });
+                }
+                break;
+            case "OverlayControllerSize":
+                {
+                    double controllerSize = Convert.ToDouble(value);
+                    // UI thread
+                    UIHelper.TryInvoke(() =>
+                    {
+                        MainWindow.overlayModel.Width = controllerSize;
+                        MainWindow.overlayModel.Height = controllerSize;
+                    });
+                }
+                break;
+            case "OverlayModel":
+                {
+                    OverlayModelMode modelMode = (OverlayModelMode)Convert.ToInt32(value);
+                    // UI thread
+                    UIHelper.TryInvoke(() => { UpdateOverlayMode(modelMode); });
+                }
+                break;
+            case "OverlayRenderAntialiasing":
+                {
+                    bool antialiasing = Convert.ToBoolean(value);
+                    // UI thread
+                    UIHelper.TryInvoke(() => { ModelViewPort.SetValue(RenderOptions.EdgeModeProperty, antialiasing ? EdgeMode.Unspecified : EdgeMode.Aliased); });
+                }
+                break;
+            case "OverlayRenderInterval":
+                {
+                    double interval = 1000.0d / Convert.ToDouble(value);
+                    UpdateInterval(interval);
+                }
+                break;
+            case "OverlayControllerOpacity":
+                {
+                    double opacity = Convert.ToDouble(value);
+                    // UI thread
+                    UIHelper.TryInvoke(() => { ModelViewPort.Opacity = opacity; });
+                }
+                break;
+            case "OverlayControllerAlwaysOnTop":
+                {
+                    bool alwaysOnTop = Convert.ToBoolean(value);
+                    // UI thread
+                    UIHelper.TryInvoke(() => { Topmost = alwaysOnTop; });
+                }
+                break;
+            case "OverlayControllerBackgroundColor":
+                {
+                    Color SelectedColor = (Color)ColorConverter.ConvertFromString(Convert.ToString(value));
+                    // UI thread
+                    UIHelper.TryInvoke(() => { Background = new SolidColorBrush(SelectedColor); });
+                }
+                break;
+        }
     }
 
-    private void ResetModelPose()
+    private void UpdateUI_ControllerPosition(int controllerAlignment)
+    {
+        switch (controllerAlignment)
+        {
+            case 0:
+            case 1:
+            case 2:
+                VerticalAlignment = VerticalAlignment.Top;
+                break;
+            case 3:
+            case 4:
+            case 5:
+                VerticalAlignment = VerticalAlignment.Center;
+                break;
+            case 6:
+            case 7:
+            case 8:
+                VerticalAlignment = VerticalAlignment.Bottom;
+                break;
+        }
+
+        switch (controllerAlignment)
+        {
+            case 0:
+            case 3:
+            case 6:
+                HorizontalAlignment = HorizontalAlignment.Left;
+                break;
+            case 1:
+            case 4:
+            case 7:
+                HorizontalAlignment = HorizontalAlignment.Center;
+                break;
+            case 2:
+            case 5:
+            case 8:
+                HorizontalAlignment = HorizontalAlignment.Right;
+                break;
+        }
+    }
+
+    private void ResetModelPose(GamepadMotion gamepadMotion)
     {
         // Reset model to initial pose
         FaceCameraObjectAlignment = new Vector3D(0.0d, 0.0d, 0.0d); // Angles when facing camera
@@ -104,6 +201,12 @@ public partial class OverlayModel : OverlayWindow
         ShoulderTriggerAngleRightPrev = 0;
 
         madgwickAHRS.Reset();
+        gamepadMotion.Reset();
+    }
+
+    public void Close(bool v)
+    {
+        Close();
     }
 
     private void Window_Closing(object sender, CancelEventArgs e)
@@ -163,8 +266,7 @@ public partial class OverlayModel : OverlayWindow
 
         if (newModel != CurrentModel)
         {
-            ResetModelPose();
-
+            CurrentModel?.Dispose();
             CurrentModel = newModel;
 
             ModelVisual3D.Content = CurrentModel.model3DGroup;
@@ -172,10 +274,19 @@ public partial class OverlayModel : OverlayWindow
         }
     }
 
+    public void SetVisibility(Visibility visibility)
+    {
+        // UI thread
+        UIHelper.TryInvoke(() =>
+        {
+            this.Visibility = visibility;
+        });
+    }
+
     public override void ToggleVisibility()
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (Visibility)
             {
@@ -201,6 +312,8 @@ public partial class OverlayModel : OverlayWindow
     private RotateTransform3D DeviceRotateTransformFaceCameraY;
     private RotateTransform3D DeviceRotateTransformFaceCameraZ;
 
+    private static MadgwickAHRS madgwickAHRS;
+
     public void UpdateReport(ControllerState Inputs, GamepadMotion gamepadMotion, float deltaSeconds)
     {
         // Update only if 3D overlay is visible
@@ -215,16 +328,21 @@ public partial class OverlayModel : OverlayWindow
 
         // Reset device pose if all facebuttons are pressed at the same time
         if (Inputs.ButtonState.Buttons.Intersect(resetFlags).Count() == 4)
-            ResetModelPose();
+            ResetModelPose(gamepadMotion);
 
         // Rotate for different coordinate system of 3D model and motion algorithm
         // Motion algorithm uses DS4 coordinate system
         // 3D model, has Z+ up, X+ to the right, Y+ towards the screen
 
-        // Update Madgwick orientation filter with IMU sensor data for 3D overlay
+        /*
+        gamepadMotion.GetOrientation(out float oW, out float oX, out float oY, out float oZ);
+        DevicePose = new Quaternion(-oX, -oY, oZ, oW);
+        */
+
         gamepadMotion.GetCalibratedGyro(out float gyroX, out float gyroY, out float gyroZ);
         gamepadMotion.GetGravity(out float accelX, out float accelY, out float accelZ);
 
+        // Update Madgwick orientation filter with IMU sensor data for 3D overlay
         madgwickAHRS.UpdateReport(
             -InputUtils.deg2rad(gyroX),
             InputUtils.deg2rad(gyroY),
@@ -232,12 +350,19 @@ public partial class OverlayModel : OverlayWindow
             -accelX,
             accelY,
             -accelZ,
-            gamepadMotion.deltaTime
+            deltaSeconds
             );
 
         // System.Numerics to Media.3D, library really requires System.Numerics
         NumQuaternion quaternion = madgwickAHRS.GetQuaternion();
         DevicePose = new Quaternion(quaternion.W, quaternion.X, quaternion.Y, quaternion.Z);
+
+        // Dirty fix for devices without Accelerometer (MSI Claw 8)
+        if (gamepadMotion.accelX == 0 && gamepadMotion.accelY == 0 && gamepadMotion.accelZ == 0)
+        {
+            DevicePose.X = DevicePose.X * -1.0f;
+            DevicePose.Z = DevicePose.Z * -1.0f;
+        }
 
         // Also make euler equivalent availible of quaternions
         NumVector3 euler = InputUtils.ToEulerAngles(DevicePose);
@@ -256,8 +381,8 @@ public partial class OverlayModel : OverlayWindow
 
         HighLightButtons();
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             // Define transformation group for model
             var Transform3DGroupModel = new Transform3DGroup();
@@ -412,7 +537,7 @@ public partial class OverlayModel : OverlayWindow
                 continue;
 
             // Execute the following code on the UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 // Todo, there is a bug here when switching 3D overlay type that
                 // things are checked from a controller that does not exist or opposite
@@ -433,9 +558,11 @@ public partial class OverlayModel : OverlayWindow
                     // Update the model material based on the button state
                     // If the button is pressed, use the highlight material;
                     // otherwise, use the default material
-                    model3D.Material = Inputs.ButtonState[button]
-                        ? model3D.BackMaterial = CurrentModel.HighlightMaterials[model3DGroup]
-                        : model3D.BackMaterial = CurrentModel.DefaultMaterials[model3DGroup];
+                    bool hasButton = Inputs.ButtonState is not null && Inputs.ButtonState[button];
+
+                    model3D.Material = hasButton ?
+                    model3D.BackMaterial = CurrentModel.HighlightMaterials[model3DGroup] :
+                    model3D.BackMaterial = CurrentModel.DefaultMaterials[model3DGroup];
                 }
             });
         }
@@ -478,15 +605,19 @@ public partial class OverlayModel : OverlayWindow
     Dictionary<Model3DGroup, Material> highlightMaterials)
     {
         GeometryModel3D geometryModel3D = thumbRing.Children[0] as GeometryModel3D;
+
+        float X = Inputs.AxisState is not null ? Inputs.AxisState[stickX] : 0.0f;
+        float Y = Inputs.AxisState is not null ? Inputs.AxisState[stickY] : 0.0f;
+
         // Determine if stick has moved
-        bool isStickMoved = Inputs.AxisState[stickX] != 0.0f || Inputs.AxisState[stickY] != 0.0f;
+        bool isStickMoved = X != 0.0f || Y != 0.0f;
 
         // Adjust material gradually based on distance from center
         if (isStickMoved)
         {
             float gradientFactor = Math.Max(
-                Math.Abs(1 * Inputs.AxisState[stickX] / (float)short.MaxValue),
-                Math.Abs(1 * Inputs.AxisState[stickY] / (float)short.MaxValue));
+                Math.Abs(1 * X / (float)short.MaxValue),
+                Math.Abs(1 * Y / (float)short.MaxValue));
 
             geometryModel3D.Material = GradientHighlight(
                 defaultMaterials[thumbRing],
@@ -499,8 +630,8 @@ public partial class OverlayModel : OverlayWindow
         }
 
         // Define and compute rotation angles
-        float x = maxAngleDeg * Inputs.AxisState[stickX] / short.MaxValue;
-        float y = -1 * maxAngleDeg * Inputs.AxisState[stickY] / short.MaxValue;
+        float x = maxAngleDeg * X / short.MaxValue;
+        float y = -1 * maxAngleDeg * Y / short.MaxValue;
 
         // Create rotation transformations
         RotateTransform3D rotationX = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 0, 1), x), new Point3D(rotationPointCenter.X, rotationPointCenter.Y, rotationPointCenter.Z));
@@ -563,19 +694,20 @@ public partial class OverlayModel : OverlayWindow
         ref Model3DGroup shoulderTriggerModel,
         ref float triggerAngle,
         float triggerMaxAngleDeg,
-        AxisFlags axisFlag,
+        AxisFlags triggerFlag,
         float shoulderButtonsAngleDeg,
         ref float triggerAnglePrev,
         ref float shoulderButtonsAngleDegPrev,
         Material defaultMaterial,
         Dictionary<Model3DGroup, Material> highlightMaterials)
     {
-        var geometryModel3D = shoulderTriggerModel.Children[0] as GeometryModel3D;
+        GeometryModel3D? geometryModel3D = shoulderTriggerModel.Children[0] as GeometryModel3D;
+        byte triggerValue = (byte)(Inputs.AxisState is not null ? (Inputs.AxisState[triggerFlag] / (float)byte.MaxValue) : 0.0f);
 
         // Adjust trigger color gradient based on amount of pull
-        if (Inputs.AxisState[axisFlag] > 0)
+        if (triggerValue > 0)
         {
-            float gradientFactor = 1 * Inputs.AxisState[axisFlag] / (float)byte.MaxValue;
+            float gradientFactor = 1.0f * triggerValue;
             geometryModel3D.Material = GradientHighlight(defaultMaterial, highlightMaterials[shoulderTriggerModel], gradientFactor);
         }
         else
@@ -584,23 +716,23 @@ public partial class OverlayModel : OverlayWindow
         }
 
         // Determine trigger angle pull in degree
-        triggerAngle = -1 * triggerMaxAngleDeg * Inputs.AxisState[axisFlag] / byte.MaxValue;
+        triggerAngle = -1.0f * triggerMaxAngleDeg * triggerValue;
 
         // In case device pose changes leading to different visibility angle or if trigger angle changes
         if (shoulderButtonsAngleDeg != shoulderButtonsAngleDegPrev || triggerAngle != triggerAnglePrev)
         {
-            Model3DGroup Placeholder = CurrentModel.ButtonMap[axisFlag == AxisFlags.L2 ? ButtonFlags.L1 : ButtonFlags.R1][0];
+            Model3DGroup Placeholder = CurrentModel.ButtonMap[triggerFlag == AxisFlags.L2 ? ButtonFlags.L1 : ButtonFlags.R1][0];
 
             UpwardVisibilityRotationShoulderButtons(shoulderButtonsAngleDeg,
-                axisFlag == AxisFlags.L2 ? CurrentModel.UpwardVisibilityRotationAxisLeft : CurrentModel.UpwardVisibilityRotationAxisRight,
-                axisFlag == AxisFlags.L2 ? CurrentModel.UpwardVisibilityRotationPointLeft : CurrentModel.UpwardVisibilityRotationPointRight,
+                triggerFlag == AxisFlags.L2 ? CurrentModel.UpwardVisibilityRotationAxisLeft : CurrentModel.UpwardVisibilityRotationAxisRight,
+                triggerFlag == AxisFlags.L2 ? CurrentModel.UpwardVisibilityRotationPointLeft : CurrentModel.UpwardVisibilityRotationPointRight,
                 triggerAngle,
-                axisFlag == AxisFlags.L2 ? CurrentModel.ShoulderTriggerRotationPointCenterLeftMillimeter : CurrentModel.ShoulderTriggerRotationPointCenterRightMillimeter,
+                triggerFlag == AxisFlags.L2 ? CurrentModel.ShoulderTriggerRotationPointCenterLeftMillimeter : CurrentModel.ShoulderTriggerRotationPointCenterRightMillimeter,
                 ref shoulderTriggerModel,
                 ref Placeholder
             );
 
-            CurrentModel.ButtonMap[axisFlag == AxisFlags.L2 ? ButtonFlags.L1 : ButtonFlags.R1][0] = Placeholder;
+            CurrentModel.ButtonMap[triggerFlag == AxisFlags.L2 ? ButtonFlags.L1 : ButtonFlags.R1][0] = Placeholder;
 
             triggerAnglePrev = triggerAngle;
             shoulderButtonsAngleDegPrev = shoulderButtonsAngleDeg;

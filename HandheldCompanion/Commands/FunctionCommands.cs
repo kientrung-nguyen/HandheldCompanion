@@ -3,6 +3,8 @@ using HandheldCompanion.Commands.Functions.Multimedia;
 using HandheldCompanion.Commands.Functions.Multitasking;
 using HandheldCompanion.Commands.Functions.Performance;
 using HandheldCompanion.Commands.Functions.Windows;
+using HandheldCompanion.Properties;
+
 using System;
 using System.Collections.Generic;
 

@@ -1,24 +1,25 @@
-using HandheldCompanion.Controls;
+using HandheldCompanion.Helpers;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Automation;
 using Windows.System.Diagnostics;
-using static HandheldCompanion.Controls.ProcessEx;
+using static HandheldCompanion.Misc.ProcessEx;
 using static HandheldCompanion.WinAPI;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
-public static class ProcessManager
+public class ProcessManager : IManager
 {
     #region imports
     [DllImport("user32.dll")]
@@ -27,20 +28,20 @@ public static class ProcessManager
     public delegate bool WindowEnumCallback(IntPtr hwnd, int lparam);
 
     [DllImport("user32.dll")]
-    public static extern bool IsWindowVisible(int h);
+    private static extern bool IsWindowVisible(int h);
 
     // Import the necessary user32.dll functions
     [DllImport("user32.dll")]
-    static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+    private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+    private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
     #endregion
 
     // Declare the WinEventDelegate
-    private static WinEventDelegate winDelegate = null;
-    private static IntPtr m_hhook = IntPtr.Zero;
+    private WinEventDelegate winDelegate = null;
+    private IntPtr m_hhook = IntPtr.Zero;
 
     // Define the WinEventDelegate
     delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
@@ -51,41 +52,44 @@ public static class ProcessManager
     private const uint EVENT_SYSTEM_FOREGROUND = 3;
 
     // process vars
-    private static readonly Timer ForegroundTimer;
-    private static readonly Timer ProcessWatcher;
+    private readonly Timer ForegroundTimer;
+    private readonly Timer ProcessWatcher;
 
     private static readonly ConcurrentDictionary<int, ProcessEx> Processes = new();
-    private static object processLock = new();
 
-    private static ProcessEx foregroundProcess;
-    private static IntPtr foregroundWindow;
+    private static ProcessEx currentProcess;
+    private IntPtr currenthWnd;
 
-    public static bool IsInitialized;
+    private AutomationEventHandler _windowOpenedHandler;
 
-    static ProcessManager()
+    public ProcessManager()
     {
         // hook: on window opened
+        _windowOpenedHandler = OnWindowOpened;
+
         Automation.AddAutomationEventHandler(
             WindowPattern.WindowOpenedEvent,
             AutomationElement.RootElement,
             TreeScope.Children,
-            OnWindowOpened);
+            _windowOpenedHandler);
 
         // Set up the WinEvent hook
         winDelegate = new WinEventDelegate(WinEventProc);
         m_hhook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, winDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
 
         ForegroundTimer = new Timer(2000);
-        ForegroundTimer.Elapsed += (sender, e) => ForegroundCallback();
+        ForegroundTimer.Elapsed += (sender, e) => ForegroundCallback(false);
 
         ProcessWatcher = new Timer(2000);
         ProcessWatcher.Elapsed += (sender, e) => ProcessWatcher_Elapsed();
     }
 
-    public static async Task Start()
+    public override void Start()
     {
-        if (IsInitialized)
+        if (Status.HasFlag(ManagerStatus.Initializing) || Status.HasFlag(ManagerStatus.Initialized))
             return;
+
+        base.PrepareStart();
 
         // list all current windows
         EnumWindows(OnWindowDiscovered, 0);
@@ -94,16 +98,82 @@ public static class ProcessManager
         ForegroundTimer.Start();
         ProcessWatcher.Start();
 
-        IsInitialized = true;
-        Initialized?.Invoke();
+        // manage events
+        UIGamepad.GotFocus += GamepadFocusManager_GotFocus;
+        UIGamepad.LostFocus += GamepadFocusManager_LostFocus;
 
-        LogManager.LogInformation("{0} has started", "ProcessManager");
+        base.Start();
     }
 
-    public static void Stop()
+    private nint processHandle = IntPtr.Zero;
+    private int processId = 0;
+
+    private async void GamepadFocusManager_GotFocus(string Name)
     {
-        if (!IsInitialized)
+        // bail out if Name is null or empty
+        if (string.IsNullOrEmpty(Name))
             return;
+
+        switch (Name)
+        {
+            case "QuickTools":
+                {
+                    // we already have a suspended process
+                    if (processHandle != IntPtr.Zero)
+                        return;
+
+                    if (currentProcess is not null)
+                    {
+                        Profile currentProfile = ManagerFactory.profileManager.GetProfileFromPath(currentProcess.Path, false);
+                        if (!currentProfile.SuspendOnQT || currentProfile.Default)
+                            return;
+
+                        bool success = SuspendProcess(currentProcess.Handle, currentProcess.ProcessId);
+                        if (success)
+                        {
+                            processHandle = currentProcess.Handle;
+                            processId = currentProcess.ProcessId;
+                        }
+                    }
+                }
+                break;
+        }
+    }
+
+    private async void GamepadFocusManager_LostFocus(string Name)
+    {
+        switch (Name)
+        {
+            case "QuickTools":
+                {
+                    // no suspended process
+                    if (processHandle == IntPtr.Zero)
+                        return;
+
+                    bool success = ResumeProcess(processHandle, processId);
+                    if (success)
+                    {
+                        processHandle = IntPtr.Zero;
+                        processId = 0;
+                    }
+                }
+                break;
+        }
+    }
+
+    public override void Stop()
+    {
+        if (Status.HasFlag(ManagerStatus.Halting) || Status.HasFlag(ManagerStatus.Halted))
+            return;
+
+        base.PrepareStop();
+
+        // Remove the WindowOpened event handler
+        if (_windowOpenedHandler != null)
+            ProcessUtils.TaskWithTimeout(() => Automation.RemoveAutomationEventHandler(
+                WindowPattern.WindowOpenedEvent,
+                AutomationElement.RootElement,
+                _windowOpenedHandler), TimeSpan.FromSeconds(3));
 
         // Unhook the event when no longer needed
         if (m_hhook != IntPtr.Zero)
@@ -116,18 +186,58 @@ public static class ProcessManager
         ForegroundTimer.Stop();
         ProcessWatcher.Stop();
 
-        IsInitialized = false;
+        // manage events
+        UIGamepad.GotFocus -= GamepadFocusManager_GotFocus;
+        UIGamepad.LostFocus -= GamepadFocusManager_LostFocus;
 
-        LogManager.LogInformation("{0} has stopped", "ProcessManager");
+        base.Stop();
     }
 
-    private static void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+    private bool Settings_SuspendOnSleep => ManagerFactory.settingsManager.Get<bool>("SuspendOnSleep");
+
+    public override void Resume()
+    {
+        // reset known foreground window
+        currenthWnd = IntPtr.Zero;
+
+        if (Settings_SuspendOnSleep)
+        {
+            foreach (ProcessEx processEx in Processes.Values)
+            {
+                Profile profile = ManagerFactory.profileManager.GetProfileFromPath(processEx.Path, true);
+                if (!processEx.IsSuspended || !profile.SuspendOnSleep)
+                    continue;
+
+                ResumeProcess(processEx, false);
+            }
+        }
+    }
+
+    public override void Suspend()
+    {
+        // reset known foreground window
+        currenthWnd = IntPtr.Zero;
+
+        if (Settings_SuspendOnSleep)
+        {
+            foreach (ProcessEx processEx in Processes.Values)
+            {
+                Profile profile = ManagerFactory.profileManager.GetProfileFromPath(processEx.Path, true);
+                if (processEx.IsSuspended || !profile.SuspendOnSleep)
+                    continue;
+
+                SuspendProcess(processEx, false);
+            }
+        }
+    }
+
+    private void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
     {
         // Avoid locking UI thread by running the action in a task
-        Task.Run(() => ForegroundCallback());
+        Task.Run(() => ForegroundCallback(true));
     }
 
-    private static void OnWindowOpened(object sender, AutomationEventArgs automationEventArgs)
+    private void OnWindowOpened(object sender, AutomationEventArgs automationEventArgs)
     {
         try
         {
@@ -160,13 +270,19 @@ public static class ProcessManager
         catch { }
     }
 
-    private static bool OnWindowDiscovered(IntPtr hWnd, int lparam)
+    private bool OnWindowDiscovered(IntPtr hWnd, int lparam)
     {
         if (IsWindowVisible((int)hWnd))
         {
             try
             {
-                AutomationElement element = AutomationElement.FromHandle(hWnd);
+                // Run the call to AutomationElement.FromHandle in a separate task
+                AutomationElement element = null;
+                Task<AutomationElement> task = Task.Run(() => AutomationElement.FromHandle(hWnd));
+                if (!task.Wait(TimeSpan.FromSeconds(5)))
+                    return false;
+
+                element = task.Result;
                 if (element is null)
                     return false;
 
@@ -183,23 +299,15 @@ public static class ProcessManager
                 // create process
                 CreateOrUpdateProcess(processId, element, true);
             }
-            catch
-            {
-                // timeout
-            }
+            catch { }
         }
 
         return true;
     }
 
-    public static ProcessEx GetForegroundProcess()
+    public static ProcessEx GetCurrent()
     {
-        return foregroundProcess;
-    }
-
-    public static ProcessEx GetLastSuspendedProcess()
-    {
-        return Processes.Values.LastOrDefault(item => item.IsSuspended);
+        return currentProcess;
     }
 
     public static ProcessEx GetProcess(int processId)
@@ -225,25 +333,38 @@ public static class ProcessManager
         return Processes.Values.Where(a => a.Executable.Equals(executable, StringComparison.InvariantCultureIgnoreCase)).ToList();
     }
 
-    private static async void ForegroundCallback()
+    private async void ForegroundCallback(bool IsEventProc)
     {
         IntPtr hWnd = GetforegroundWindow();
 
         // skip if this window is already in foreground
-        if (foregroundWindow == hWnd || hWnd == IntPtr.Zero)
+        if (currenthWnd == hWnd || hWnd == IntPtr.Zero)
             return;
+
+        RawForeground?.Invoke(hWnd);
+
+        // update current foreground window
+        currenthWnd = hWnd;
 
         AutomationElement element = null;
         int processId = 0;
 
         try
         {
-            element = AutomationElement.FromHandle(hWnd);
+            // Run the call to AutomationElement.FromHandle in a separate task
+            Task<AutomationElement> task = Task.Run(() => AutomationElement.FromHandle(hWnd));
+            if (!task.Wait(TimeSpan.FromSeconds(5)))
+                return;
 
+            element = task.Result;
             if (element is null)
                 return;
 
             processId = element.Current.ProcessId;
+        }
+        catch (COMException)
+        {
+            // Operation timed out
         }
         catch
         {
@@ -267,135 +388,146 @@ public static class ProcessManager
             if (!Processes.TryGetValue(processId, out ProcessEx process))
                 return;
 
-            ProcessEx prevProcess = foregroundProcess;
+            // store previous process
+            ProcessEx prevProcess = currentProcess;
 
-            // filter based on current process status
-            ProcessFilter filter = GetFilter(process.Executable, process.Path /*, ProcessUtils.GetWindowTitle(hWnd) */);
+            // get filter
+            ProcessFilter filter = GetFilter(process.Executable, process.Path);
+
             switch (filter)
             {
-                // do nothing on QuickTools window, current process is kept
+                case ProcessFilter.Restricted:
                 case ProcessFilter.HandheldCompanion:
                     return;
-                // foreground of those processes is ignored, they fallback to default
-                case ProcessFilter.Desktop:
-                    return;
-                // update foreground process
-                default:
-                    foregroundProcess = process;
-                    foregroundProcess.Refresh();
-                    break;
             }
 
-            // nothing's changed
-            if (foregroundProcess == prevProcess)
-                return;
+            // update current process
+            currentProcess = process;
+            currentProcess.Refresh(true);
 
-            if (foregroundProcess is not null)
-                LogManager.LogDebug("{0} process {1} now has the foreground", foregroundProcess.Platform, foregroundProcess.Executable);
+            if (currentProcess is not null)
+                LogManager.LogDebug("{0} process {1} now has the foreground", currentProcess.Platform, currentProcess.Executable);
             else
+            {
                 LogManager.LogDebug("No current foreground process or it is ignored");
+                return;
+            }
 
             // raise event
-            ForegroundChanged?.Invoke(foregroundProcess, prevProcess);
-
-            // update current foreground window
-            foregroundWindow = hWnd;
+            ForegroundChanged?.Invoke(process, prevProcess, filter);
         }
-        catch
-        {
-            // process has too high elevation
-            return;
-        }
+        catch { }
     }
 
-    private static void ProcessHalted(object? sender, EventArgs e)
+    private void ProcessHalted(object? sender, EventArgs e)
     {
+        // Get the processId
         int processId = ((Process)sender).Id;
 
-        if (!Processes.TryGetValue(processId, out var processEx))
-            return;
-
-        // stopped process can't have foreground
-        if (foregroundProcess == processEx)
+        object lockObject = processLocks.GetOrAdd(processId, id => new object());
+        lock (lockObject)
         {
-            LogManager.LogDebug("{0} process {1} that had foreground has halted", foregroundProcess.Platform, foregroundProcess.Executable);
-            ForegroundChanged?.Invoke(null, foregroundProcess);
-        }
+            if (!Processes.TryGetValue(processId, out ProcessEx processEx))
+                return;
 
-        // raise event
-        if (Processes.TryRemove(processId, out _))
-        {
-            ProcessStopped?.Invoke(processEx);
+            // If the halted process had foreground, log and raise event.
+            if (currentProcess == processEx)
+            {
+                LogManager.LogDebug("{0} process {1} that had foreground has halted", currentProcess.Platform, currentProcess.Executable);
+                ForegroundChanged?.Invoke(null, currentProcess, ProcessFilter.Allowed);
+            }
 
-            LogManager.LogDebug("Process halted: {0}", processEx.Executable);
+            // Remove the process from the dictionary and raise the stopped event.
+            if (Processes.TryRemove(processId, out _))
+            {
+                ProcessStopped?.Invoke(processEx);
+                LogManager.LogDebug("Process halted: {0}", processEx.Executable);
+            }
 
+            // Dispose the process.
             processEx.Dispose();
         }
+
+        processLocks.TryRemove(processId, out _);
     }
 
-    private static bool CreateOrUpdateProcess(int processID, AutomationElement automationElement, bool OnStartup = false)
+    // Define a thread-safe dictionary to hold lock objects per process id.
+    private static readonly ConcurrentDictionary<int, object> processLocks = new ConcurrentDictionary<int, object>();
+
+    private bool CreateOrUpdateProcess(int processID, AutomationElement automationElement, bool OnStartup = false)
     {
-        lock (processLock)
+        object lockObject = processLocks.GetOrAdd(processID, id => new object());
+        lock (lockObject)
         {
             try
             {
-                // process has exited on arrival
+                if (!automationElement.Current.IsContentElement && !automationElement.Current.IsControlElement)
+                    return false;
+
+                // Process has exited on arrival
                 Process proc = Process.GetProcessById(processID);
                 if (proc.HasExited)
                     return false;
 
                 if (!Processes.TryGetValue(proc.Id, out ProcessEx processEx))
                 {
-                    // hook exited event
+                    // Hook exited event
                     try
                     {
                         proc.EnableRaisingEvents = true;
+                        proc.Exited += ProcessHalted;
                     }
                     catch (Exception)
                     {
-                        // access denied
+                        // Access denied, don't go further
+                        return false;
                     }
-                    proc.Exited += ProcessHalted;
 
-                    // check process path
+                    // Check process path
                     string path = ProcessUtils.GetPathToApp(proc.Id);
                     if (string.IsNullOrEmpty(path))
                         return false;
 
-                    // get filter
+                    // Get filter
                     string exec = Path.GetFileName(path);
                     ProcessFilter filter = GetFilter(exec, path);
 
-                    // create process 
+                    // Create process 
                     // UI thread (synchronous)
-                    Application.Current.Dispatcher.Invoke(() => { processEx = new ProcessEx(proc, path, exec, filter); });
+                    UIHelper.TryInvoke(() =>
+                    {
+                        try
+                        {
+                            processEx = new ProcessEx(proc, path, exec, filter);
+                        }
+                        catch
+                        {
+                            // Handle exception if needed
+                        }
+                    });
 
                     if (processEx is null)
                         return false;
 
-                    // attach current window
+                    // Attach current window
                     processEx.AttachWindow(automationElement);
 
-                    // get the proper platform
+                    // Get the proper platform
                     processEx.Platform = PlatformManager.GetPlatform(proc);
 
-                    // add to dictionary
+                    // Add to dictionary
                     Processes.TryAdd(processID, processEx);
 
-                    // todo: move me to event listeners
-                    // we might want to treat this information differently depending on the location
+                    // Raise event if allowed
                     if (processEx.Filter != ProcessFilter.Allowed)
                         return true;
 
-                    // raise event
                     ProcessStarted?.Invoke(processEx, OnStartup);
-
                     LogManager.LogDebug("Process detected: {0}", processEx.Executable);
                 }
                 else
                 {
-                    // process already exist
-                    // attach current window
+                    // Process already exists; attach current window
                     processEx.AttachWindow(automationElement);
                 }
 
@@ -403,14 +535,13 @@ public static class ProcessManager
             }
             catch (Exception)
             {
-                // process has too high elevation
+                // Process has too high elevation or other error occurred
             }
-
             return false;
         }
     }
 
-    private static ProcessFilter GetFilter(string exec, string path, string MainWindowTitle = "")
+    public static ProcessFilter GetFilter(string exec, string path, string MainWindowTitle = "")
     {
         if (string.IsNullOrEmpty(path))
             return ProcessFilter.Restricted;
@@ -420,23 +551,10 @@ public static class ProcessManager
         {
             // handheld companion
             case "handheldcompanion.exe":
-                {
-                    /* if (!string.IsNullOrEmpty(MainWindowTitle))
-                    {
-                        switch (MainWindowTitle)
-                        {
-                            case "QuickTools":
-                                return ProcessFilter.HandheldCompanion;
-                        }
-                    } */
-
-                    return ProcessFilter.HandheldCompanion;
-                }
+                return ProcessFilter.HandheldCompanion;
 
             case "rw.exe": // Used to change TDP
             case "kx.exe": // Used to change TDP
-            // case "devenv.exe": // Visual Studio
-            // case "msedge.exe": // Edge has energy awareness
             case "webviewhost.exe":
             case "taskmgr.exe":
             case "procmon.exe":
@@ -455,16 +573,13 @@ public static class ProcessManager
             case "wudfrd.exe":
 
             // Other
-            case "bdagent.exe": // Bitdefender Agent
-            case "monotificationux.exe":
-                return ProcessFilter.Restricted;
-
-            // Desktop
             case "applicationframehost.exe":
             case "ashotplugctrl.exe":
             case "asmultidisplaycontrol.exe":
             case "asusosd.exe":
-            case "explorer.exe":
+            case "bdagent.exe": // Bitdefender Agent
+            case "monotificationux.exe":
+            case "shellexperiencehost.exe":
             case "gamebuzz.exe":
             case "gameinputsvc.exe":
             case "gamepadcustomizeosd":
@@ -479,10 +594,12 @@ public static class ProcessManager
             case "rtkuwp.exe":
             case "searchapp.exe":
             case "searchhost.exe":
-            case "shellexperiencehost.exe":
             case "startmenuexperiencehost.exe":
             case "textinputhost.exe":
-            case "credentialuibroker.exe":
+                return ProcessFilter.Restricted;
+
+            // Desktop
+            case "explorer.exe":
                 return ProcessFilter.Desktop;
 
             default:
@@ -490,104 +607,143 @@ public static class ProcessManager
         }
     }
 
-    private static void ProcessWatcher_Elapsed()
+    private void ProcessWatcher_Elapsed()
     {
-        Parallel.ForEach(Processes,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, process =>
+        Parallel.ForEach(Processes, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, process =>
+        {
+            // refresh process
+            try
             {
-                try
-                {
-                    ProcessEx processEx = process.Value;
-                    processEx.Refresh();
-                }
-                catch { }
-            });
+                bool IsSuspended = windowsCache.ContainsKey(process.Value.ProcessId);
+                process.Value.Refresh(IsSuspended);
+            }
+            catch { }
+        });
     }
 
-    public static async void ResumeProcess(ProcessEx processEx)
+    private static Dictionary<int, int[]> windowsCache = new();
+
+    public static async Task<bool> ResumeProcess(ProcessEx processEx, bool restoreWindow = true)
     {
         // process has exited
         if (processEx.Process.HasExited)
-            return;
+            return false;
 
-        ProcessUtils.NtResumeProcess(processEx.Process.Handle);
+        // suspend main handle
+        bool success = ProcessUtils.NtResumeProcess(processEx.Handle) == 0;
 
-        // refresh child processes list (most likely useless, a suspended process shouldn't have new child processes)
-        processEx.RefreshChildProcesses();
+        // refresh processes handles and resume
+        IEnumerable<nint> handles = ProcessUtils.GetChildProcesses(processEx.ProcessId).Select(p => p.Handle);
+        foreach (nint handle in handles)
+            ProcessUtils.NtResumeProcess(handle);
 
-        Parallel.ForEach(processEx.ChildrenProcessIds,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, childId =>
-            {
-                Process process = Process.GetProcessById(childId);
-                ProcessUtils.NtResumeProcess(process.Handle);
-            });
+        if (restoreWindow && windowsCache.ContainsKey(processEx.ProcessId))
+        {
+            // wait a bit
+            await Task.Delay(500).ConfigureAwait(false); // Avoid blocking the synchronization context
 
-        await Task.Delay(500).ConfigureAwait(false); // Avoid blocking the synchronization context
+            // restore process windows
+            foreach (int hwnd in windowsCache[processEx.ProcessId])
+                ProcessUtils.ShowWindow(hwnd, (int)ProcessUtils.ShowWindowCommands.Restored);
 
-        // restore process windows
-        foreach (ProcessWindow processWindow in processEx.ProcessWindows.Values)
-            ProcessUtils.ShowWindow(processWindow.Hwnd, (int)ProcessUtils.ShowWindowCommands.Restored);
+            // clear cache
+            windowsCache.Remove(processEx.ProcessId);
+        }
+
+        return success;
     }
 
-    public static async void SuspendProcess(ProcessEx processEx)
+    public static bool ResumeProcess(nint mainHandle, int mainId)
+    {
+        // suspend main handle
+        bool success = ProcessUtils.NtResumeProcess(mainHandle) == 0;
+
+        // refresh processes handles and resume
+        IEnumerable<nint> handles = ProcessUtils.GetChildProcesses(mainId).Select(p => p.Handle);
+        foreach (nint handle in handles)
+            ProcessUtils.NtResumeProcess(handle);
+
+        return success;
+    }
+
+    public static bool SuspendProcess(nint mainHandle, int mainId)
+    {
+        // refresh processes handles and suspend
+        IEnumerable<nint> handles = ProcessUtils.GetChildProcesses(mainId).Select(p => p.Handle);
+        foreach (nint handle in handles)
+            ProcessUtils.NtSuspendProcess(handle);
+
+        // suspend main handle
+        return ProcessUtils.NtSuspendProcess(mainHandle) == 0;
+    }
+
+    public static async Task<bool> SuspendProcess(ProcessEx processEx, bool hideWindow = true)
     {
         // process has exited
         if (processEx.Process.HasExited)
-            return;
+            return false;
 
-        // hide process windows
-        foreach (ProcessWindow processWindow in processEx.ProcessWindows.Values)
-            ProcessUtils.ShowWindow(processWindow.Hwnd, (int)ProcessUtils.ShowWindowCommands.Hide);
+        if (hideWindow)
+        {
+            // store process windows in cache
+            windowsCache[processEx.ProcessId] = processEx.ProcessWindows.Keys.ToArray();
 
-        await Task.Delay(500).ConfigureAwait(false); // Avoid blocking the synchronization context
+            // hide process windows
+            foreach (int hwnd in windowsCache[processEx.ProcessId])
+                ProcessUtils.ShowWindow(hwnd, (int)ProcessUtils.ShowWindowCommands.Hide);
 
-        ProcessUtils.NtSuspendProcess(processEx.Process.Handle);
+            // wait a bit
+            await Task.Delay(500).ConfigureAwait(false); // Avoid blocking the synchronization context
+        }
 
-        // refresh child processes list
-        processEx.RefreshChildProcesses();
+        // refresh processes handles and suspend
+        IEnumerable<nint> handles = ProcessUtils.GetChildProcesses(processEx.ProcessId).Select(p => p.Handle);
+        foreach (nint handle in handles)
+            ProcessUtils.NtSuspendProcess(handle);
 
-        Parallel.ForEach(processEx.ChildrenProcessIds,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, childId =>
-            {
-                Process process = Process.GetProcessById(childId);
-                ProcessUtils.NtSuspendProcess(process.Handle);
-            });
+        // suspend main handle
+        return ProcessUtils.NtSuspendProcess(processEx.Handle) == 0;
     }
 
     // A function that takes a Process as a parameter and returns true if it has any xinput related dlls in its modules
     public static bool CheckXInput(Process process)
     {
-        // Loop through the modules of the process
-        foreach (ProcessModule module in process.Modules)
+        try
         {
-            // Get the name of the module
-            string moduleName = module.ModuleName.ToLower();
-
-            // Check if the name contains "xinput"
-            if (moduleName.Contains("xinput"))
+            // Loop through the modules of the process
+            foreach (ProcessModule module in process.Modules)
             {
-                // Return true if found
-                return true;
+                try
+                {
+                    // Get the name of the module
+                    string moduleName = module.ModuleName.ToLower();
+
+                    // Check if the name contains "xinput"
+                    if (moduleName.Contains("xinput", StringComparison.InvariantCultureIgnoreCase))
+                        return true;
+                }
+                catch (Win32Exception) { }
+                catch (InvalidOperationException) { }
             }
         }
+        catch { }
 
-        // Return false if not found
         return false;
     }
 
     #region events
 
-    public static event ForegroundChangedEventHandler ForegroundChanged;
-    public delegate void ForegroundChangedEventHandler(ProcessEx? processEx, ProcessEx? backgroundEx);
+    public event RawForegroundEventHandler RawForeground;
+    public delegate void RawForegroundEventHandler(IntPtr hWnd);
 
-    public static event ProcessStartedEventHandler ProcessStarted;
+    public event ForegroundChangedEventHandler ForegroundChanged;
+    public delegate void ForegroundChangedEventHandler(ProcessEx? processEx, ProcessEx? backgroundEx, ProcessFilter filter);
+
+    public event ProcessStartedEventHandler ProcessStarted;
     public delegate void ProcessStartedEventHandler(ProcessEx processEx, bool OnStartup);
 
-    public static event ProcessStoppedEventHandler ProcessStopped;
+    public event ProcessStoppedEventHandler ProcessStopped;
     public delegate void ProcessStoppedEventHandler(ProcessEx processEx);
-
-    public static event InitializedEventHandler Initialized;
-    public delegate void InitializedEventHandler();
 
     #endregion
 }

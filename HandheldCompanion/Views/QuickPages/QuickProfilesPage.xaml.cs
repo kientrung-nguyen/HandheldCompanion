@@ -1,5 +1,4 @@
 using HandheldCompanion.Actions;
-using HandheldCompanion.Controls;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Extensions;
 using HandheldCompanion.GraphicsProcessingUnit;

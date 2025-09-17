@@ -4,6 +4,7 @@ using HandheldCompanion.Managers;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Data;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -13,15 +14,35 @@ namespace HandheldCompanion.ViewModels
 
         public QuickHomePageViewModel()
         {
-            // manage events
-            HotkeysManager.Updated += HotkeysManager_Updated;
-            HotkeysManager.Deleted += HotkeysManager_Deleted;
-            HotkeysManager.Initialized += HotkeysManager_Initialized;
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(HotkeysList, new object());
 
-            if (HotkeysManager.IsInitialized)
+            // manage events
+            ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
+            ManagerFactory.hotkeysManager.Deleted += HotkeysManager_Deleted;
+
+            // raise events
+            switch (ManagerFactory.hotkeysManager.Status)
             {
-                HotkeysManager_Initialized();
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.hotkeysManager.Initialized += HotkeysManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QueryHotkeys();
+                    break;
             }
+        }
+
+        private void HotkeysManager_Initialized()
+        {
+            QueryHotkeys();
+        }
+
+        private void QueryHotkeys()
+        {
+            foreach (Hotkey hotkey in ManagerFactory.hotkeysManager.GetHotkeys())
+                HotkeysManager_Updated(hotkey);
         }
 
         void IDropTarget.DragOver(IDropInfo dropInfo)
@@ -54,17 +75,11 @@ namespace HandheldCompanion.ViewModels
                         for (int i = start; i <= end; i++)
                         {
                             HotkeysList[i].Hotkey.PinIndex = i;
-                            HotkeysManager.UpdateOrCreateHotkey(HotkeysList[i].Hotkey);
+                            ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(HotkeysList[i].Hotkey);
                         }
                     }
                 }
             }
-        }
-
-        private void HotkeysManager_Initialized()
-        {
-            foreach (Hotkey hotkey in HotkeysManager.GetHotkeys().OrderBy(hotkey => hotkey.PinIndex))
-                HotkeysManager_Updated(hotkey);
         }
 
         private void HotkeysManager_Updated(Hotkey hotkey)
@@ -72,21 +87,24 @@ namespace HandheldCompanion.ViewModels
             if (hotkey.IsInternal)
                 return;
 
-            HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+            HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
             if (foundHotkey is null)
             {
-                HotkeyViewModel hotkeyViewModel = new HotkeyViewModel(hotkey);
-                HotkeysList.SafeAdd(hotkeyViewModel);
+                if (hotkey.IsPinned)
+                    HotkeysList.SafeInsert(hotkey.PinIndex, new HotkeyViewModel(hotkey));
             }
             else
             {
-                foundHotkey.Hotkey = hotkey;
+                if (hotkey.IsPinned)
+                    foundHotkey.Hotkey = hotkey;
+                else
+                    HotkeysManager_Deleted(hotkey);
             }
         }
 
         private void HotkeysManager_Deleted(Hotkey hotkey)
         {
-            HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+            HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
             if (foundHotkey is not null)
             {
                 HotkeysList.SafeRemove(foundHotkey);

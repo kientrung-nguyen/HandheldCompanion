@@ -3,6 +3,7 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace HandheldCompanion.ViewModels
@@ -14,34 +15,45 @@ namespace HandheldCompanion.ViewModels
 
         public bool Rumble
         {
-            get => SettingsManager.Get<bool>("HotkeyRumbleOnExecution");
-            set => SettingsManager.Set("HotkeyRumbleOnExecution", value);
+            get => ManagerFactory.settingsManager.Get<bool>("HotkeyRumbleOnExecution");
+            set
+            {
+                ManagerFactory.settingsManager.Set("HotkeyRumbleOnExecution", value);
+                OnPropertyChanged(nameof(Rumble));
+            }
         }
 
         public HotkeyPageViewModel()
         {
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(HotkeysList, new object());
+
             // manage events
-            HotkeysManager.Updated += HotkeysManager_Updated;
-            HotkeysManager.Deleted += HotkeysManager_Deleted;
-            HotkeysManager.Initialized += HotkeysManager_Initialized;
+            ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
+            ManagerFactory.hotkeysManager.Deleted += HotkeysManager_Deleted;
             InputsManager.StartedListening += InputsManager_StartedListening;
             InputsManager.StoppedListening += InputsManager_StoppedListening;
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
 
             // raise event
             if (ControllerManager.HasTargetController)
-            {
-                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
-            }
+                ControllerManager_ControllerSelected(ControllerManager.GetTarget());
 
-            if (HotkeysManager.IsInitialized)
+            // raise events
+            switch (ManagerFactory.hotkeysManager.Status)
             {
-                HotkeysManager_Initialized();
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.hotkeysManager.Initialized += HotkeysManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QueryHotkeys();
+                    break;
             }
 
             CreateHotkeyCommand = new DelegateCommand(async () =>
             {
-                HotkeysManager.UpdateOrCreateHotkey(new Hotkey());
+                ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(new Hotkey());
             });
         }
 
@@ -54,7 +66,12 @@ namespace HandheldCompanion.ViewModels
 
         private void HotkeysManager_Initialized()
         {
-            foreach (Hotkey hotkey in HotkeysManager.GetHotkeys())
+            QueryHotkeys();
+        }
+
+        private void QueryHotkeys()
+        {
+            foreach (Hotkey hotkey in ManagerFactory.hotkeysManager.GetHotkeys())
                 HotkeysManager_Updated(hotkey);
         }
 
@@ -63,7 +80,7 @@ namespace HandheldCompanion.ViewModels
             if (hotkey.IsInternal)
                 return;
 
-            HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+            HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
             if (foundHotkey is null)
             {
                 HotkeysList.SafeAdd(new HotkeyViewModel(hotkey));
@@ -72,16 +89,18 @@ namespace HandheldCompanion.ViewModels
             {
                 foundHotkey.Hotkey = hotkey;
             }
+            OnPropertyChanged(nameof(HotkeysList));
         }
 
         private void HotkeysManager_Deleted(Hotkey hotkey)
         {
-            HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+            HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
             if (foundHotkey is not null)
             {
                 HotkeysList.SafeRemove(foundHotkey);
                 foundHotkey.Dispose();
             }
+            OnPropertyChanged(nameof(HotkeysList));
         }
 
         private void InputsManager_StartedListening(ButtonFlags buttonFlags, InputsChordTarget chordTarget)
@@ -94,6 +113,19 @@ namespace HandheldCompanion.ViewModels
         {
             HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
             hotkeyViewModel?.SetListening(false, storedChord.chordTarget);
+        }
+
+        public override void Dispose()
+        {
+            // manage events
+            ManagerFactory.hotkeysManager.Updated -= HotkeysManager_Updated;
+            ManagerFactory.hotkeysManager.Deleted -= HotkeysManager_Deleted;
+            ManagerFactory.hotkeysManager.Initialized -= HotkeysManager_Initialized;
+            InputsManager.StartedListening -= InputsManager_StartedListening;
+            InputsManager.StoppedListening -= InputsManager_StoppedListening;
+            ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+
+            base.Dispose();
         }
     }
 }

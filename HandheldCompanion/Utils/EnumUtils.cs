@@ -11,7 +11,8 @@ namespace HandheldCompanion.Utils;
 
 public static class EnumUtils
 {
-    public static T GetAttributeOfType<T>(this Type type, string value) where T : Attribute
+    private static HashSet<string> missingKeys = new();
+	public static T GetAttributeOfType<T>(this Type type, string value) where T : Attribute
     {
         var attr = type
             .GetField(value)
@@ -49,8 +50,7 @@ public static class EnumUtils
             key = $"Enum_{value.GetType().Name}_{value}";
 
         var root = Resources.ResourceManager.GetString(key);
-
-        if (root is not null)
+        if (!string.IsNullOrEmpty(root) && !root.Equals(key))
             return root;
 
         // return description otherwise
@@ -68,7 +68,10 @@ public static class EnumUtils
         if (attribute is not null)
             return attribute.Description;
 
-        LogManager.LogError("Neither localization nor description exists for enum: {0}", key);
+        // only display enum warnings once
+        if (missingKeys.Add(key))
+            LogManager.LogDebug("No localization for enum: {0}", key);
+
         return value.ToString();
     }
 

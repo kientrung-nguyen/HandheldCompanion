@@ -1,14 +1,16 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
-using System.Threading.Tasks;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using static HandheldCompanion.Managers.ControllerManager;
 using Page = System.Windows.Controls.Page;
 
@@ -19,10 +21,6 @@ namespace HandheldCompanion.Views.Pages;
 /// </summary>
 public partial class ControllerPage : Page
 {
-    // controllers vars
-    private HIDmode controllerMode = HIDmode.NoController;
-    private HIDstatus controllerStatus = HIDstatus.Disconnected;
-
     public ControllerPage()
     {
         DataContext = new ControllerPageViewModel(this);
@@ -31,9 +29,9 @@ public partial class ControllerPage : Page
         SteamDeckPanel.Visibility = IDevice.GetCurrent() is SteamDeck ? Visibility.Visible : Visibility.Collapsed;
 
         // manage events
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         ControllerManager.StatusChanged += ControllerManager_Working;
-        ProfileManager.Applied += ProfileManager_Applied;
+        ManagerFactory.profileManager.Applied += ProfileManager_Applied;
     }
 
     public ControllerPage(string Tag) : this()
@@ -43,8 +41,8 @@ public partial class ControllerPage : Page
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             // disable emulated controller combobox if profile is not default or set to default controller
             if (!profile.Default && profile.HID != HIDmode.NotSelected)
@@ -62,7 +60,7 @@ public partial class ControllerPage : Page
     private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (name)
             {
@@ -81,18 +79,21 @@ public partial class ControllerPage : Page
                 case "VibrationStrength":
                     SliderStrength.Value = Convert.ToDouble(value);
                     break;
-                case "DesktopLayoutEnabled":
-                    Toggle_DesktopLayout.IsOn = Convert.ToBoolean(value);
-                    break;
                 case "SteamControllerMode":
                     cB_SCModeController.SelectedIndex = Convert.ToInt32(value);
                     ControllerRefresh();
+                    break;
+                case "SteamControllerRumbleInterval":
+                    SliderInterval.Value = Convert.ToDouble(value);
                     break;
                 case "HIDmode":
                     cB_HidMode.SelectedIndex = Convert.ToInt32(value);
                     break;
                 case "HIDstatus":
                     cB_ServiceSwitch.SelectedIndex = Convert.ToInt32(value);
+                    break;
+                case "ConnectOnPlug":
+                    Toggle_ConnectOnPlug.IsOn = Convert.ToBoolean(value);
                     break;
             }
         });
@@ -104,81 +105,29 @@ public partial class ControllerPage : Page
 
     public void Page_Closed()
     {
+        ((ControllerPageViewModel)DataContext).Dispose();
     }
-
-    private Dialog dialog = new Dialog(MainWindow.GetCurrent())
-    {
-        Title = Properties.Resources.ControllerPage_ControllerManagement,
-        Content = Properties.Resources.ControllerPage_ControllerManagement_Content,
-        CanClose = false
-    };
 
     private void ControllerManager_Working(ControllerManagerStatus status, int attempts)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(async () =>
+        // UI thread
+        UIHelper.TryInvoke(async () =>
         {
             switch (status)
             {
                 case ControllerManagerStatus.Busy:
-                    {
-                        switch (attempts)
-                        {
-                            case 0:
-                                // set dialog settings
-                                dialog.CanClose = false;
-                                dialog.DefaultButton = ContentDialogButton.Primary;
-                                dialog.CloseButtonText = string.Empty;
-                                dialog.PrimaryButtonText = string.Empty;
-
-                                dialog.Content = Properties.Resources.ControllerPage_ControllerManagment_Attempting;
-                                break;
-                            case 1:
-                                dialog.Content = Properties.Resources.ControllerPage_ControllerManagment_Reordering;
-                                break;
-                            case 2:
-                                dialog.Content = Properties.Resources.ControllerPage_ControllerManagment_RedOrGreen;
-                                break;
-                            case 3:
-                                dialog.Content = Properties.Resources.ControllerPage_ControllerManagment_FinalAttempt;
-                                break;
-                        }
-
-                        dialog.Show();
-                    }
+                    ControllerSettings.IsEnabled = false;
+                    ScanHardwareCard.IsEnabled = false;
                     break;
 
                 case ControllerManagerStatus.Succeeded:
-                    {
-                        dialog.UpdateContent(Properties.Resources.ControllerPage_ControllerManagment_Done);
-                        await Task.Delay(2000); // Captures synchronization context
-                        dialog.Hide();
-                    }
+                    ControllerSettings.IsEnabled = true;
+                    ScanHardwareCard.IsEnabled = true;
                     break;
 
                 case ControllerManagerStatus.Failed:
-                    {
-                        // set dialog settings
-                        dialog.CanClose = true;
-                        dialog.DefaultButton = ContentDialogButton.Close;
-                        dialog.CloseButtonText = Properties.Resources.ControllerPage_Close;
-                        dialog.PrimaryButtonText = Properties.Resources.ControllerPage_TryAgain;
-
-                        dialog.Content = Properties.Resources.ControllerPage_ControllerManagment_Failed;
-
-                        Task<ContentDialogResult> dialogTask = dialog.ShowAsync();
-
-                        await dialogTask; // sync call
-
-                        switch (dialogTask.Result)
-                        {
-                            case ContentDialogResult.None:
-                                Toggle_ControllerManagement.IsOn = true;
-                                break;
-                        }
-
-                        dialog.Hide();
-                    }
+                    ControllerSettings.IsEnabled = true;
+                    ScanHardwareCard.IsEnabled = true;
                     break;
             }
 
@@ -187,18 +136,39 @@ public partial class ControllerPage : Page
         });
     }
 
+    private string GetResourceString(string baseKey, int attempts)
+    {
+        // Combine the base key with the attempts number to form the resource key
+        string resourceKey = $"{baseKey}{attempts}";
+        return Properties.Resources.ResourceManager.GetString(resourceKey, CultureInfo.CurrentUICulture);
+    }
+
+    private TextBlock CreateFormattedContent(string title, string description)
+    {
+        TextBlock textBlock = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        textBlock.Inlines.Add(new Run { Text = title, FontWeight = FontWeights.Bold });
+        //textBlock.Inlines.Add(new LineBreak());
+        textBlock.Inlines.Add(new Run { Text = description });
+
+        return textBlock;
+    }
+
     public void ControllerRefresh()
     {
-        IController targetController = ControllerManager.GetTargetController();
-        bool hasPhysical = ControllerManager.HasPhysicalController();
-        bool hasVirtual = ControllerManager.HasVirtualController();
+        IController targetController = ControllerManager.GetTarget();
+        bool hasPhysical = ControllerManager.HasPhysicalController<IController>();
+        bool hasVirtual = ControllerManager.HasVirtualController<IController>();
         bool hasTarget = targetController != null;
 
         bool isPlugged = hasPhysical && hasTarget;
         bool isHidden = targetController is not null && targetController.IsHidden();
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             PhysicalDevices.Visibility = hasPhysical ? Visibility.Visible : Visibility.Collapsed;
             WarningNoPhysical.Visibility = !hasPhysical ? Visibility.Visible : Visibility.Collapsed;
@@ -210,10 +180,6 @@ public partial class ControllerPage : Page
             // hint: Has physical controller not hidden, and virtual controller
             bool hasDualInput = isPlugged && !isHidden && hasVirtual;
             HintsNotMuted.Visibility = hasDualInput ? Visibility.Visible : Visibility.Collapsed;
-
-            Hints.Visibility = (HintsHIDManagedByProfile.Visibility == Visibility.Visible ||
-                                HintsNotMuted.Visibility == Visibility.Visible ||
-                                WarningNoVirtual.Visibility == Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
         });
     }
 
@@ -222,13 +188,11 @@ public partial class ControllerPage : Page
         if (cB_HidMode.SelectedIndex == -1)
             return;
 
-        controllerMode = (HIDmode)cB_HidMode.SelectedIndex;
-
         // only change HIDmode setting if current profile is default or set to default controller
-        var currentProfile = ProfileManager.GetCurrent();
+        var currentProfile = ManagerFactory.profileManager.GetCurrent();
         if (currentProfile.Default || currentProfile.HID == HIDmode.NotSelected)
         {
-            SettingsManager.Set("HIDmode", cB_HidMode.SelectedIndex);
+            ManagerFactory.settingsManager.Set("HIDmode", cB_HidMode.SelectedIndex);
         }
     }
 
@@ -237,9 +201,7 @@ public partial class ControllerPage : Page
         if (cB_HidMode.SelectedIndex == -1)
             return;
 
-        controllerStatus = (HIDstatus)cB_ServiceSwitch.SelectedIndex;
-
-        SettingsManager.Set("HIDstatus", cB_ServiceSwitch.SelectedIndex);
+        ManagerFactory.settingsManager.Set("HIDstatus", cB_ServiceSwitch.SelectedIndex);
     }
 
     private void Toggle_Cloaked_Toggled(object sender, RoutedEventArgs e)
@@ -247,7 +209,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("HIDcloakonconnect", Toggle_Cloaked.IsOn);
+        ManagerFactory.settingsManager.Set("HIDcloakonconnect", Toggle_Cloaked.IsOn);
     }
 
     private void Toggle_Uncloak_Toggled(object sender, RoutedEventArgs e)
@@ -255,21 +217,23 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("HIDuncloakonclose", Toggle_Uncloak.IsOn);
+        ManagerFactory.settingsManager.Set("HIDuncloakonclose", Toggle_Uncloak.IsOn);
     }
 
     private void SliderStrength_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        var value = SliderStrength.Value;
-        if (double.IsNaN(value))
-            return;
-
-        SliderStrength.Value = value;
-
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("VibrationStrength", value);
+        ManagerFactory.settingsManager.Set("VibrationStrength", SliderStrength.Value);
+    }
+
+    private void SliderInterval_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("SteamControllerRumbleInterval", Convert.ToInt32(SliderInterval.Value));
     }
 
     private void Toggle_Vibrate_Toggled(object sender, RoutedEventArgs e)
@@ -277,7 +241,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("HIDvibrateonconnect", Toggle_Vibrate.IsOn);
+        ManagerFactory.settingsManager.Set("HIDvibrateonconnect", Toggle_Vibrate.IsOn);
     }
 
     private void Toggle_ControllerManagement_Toggled(object sender, RoutedEventArgs e)
@@ -285,13 +249,17 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("ControllerManagement", Toggle_ControllerManagement.IsOn);
+        ManagerFactory.settingsManager.Set("ControllerManagement", Toggle_ControllerManagement.IsOn);
     }
 
     private void Button_Layout_Click(object sender, RoutedEventArgs e)
     {
+        Layout desktopLayout = ManagerFactory.layoutManager.GetDesktop();
+        if (desktopLayout is null)
+            return;
+
         // prepare layout editor, desktopLayout gets saved automatically
-        LayoutTemplate desktopTemplate = new(LayoutManager.GetDesktop())
+        LayoutTemplate desktopTemplate = new(desktopLayout)
         {
             Name = LayoutTemplate.DesktopLayout.Name,
             Description = LayoutTemplate.DesktopLayout.Description,
@@ -301,15 +269,6 @@ public partial class ControllerPage : Page
         };
         MainWindow.layoutPage.UpdateLayoutTemplate(desktopTemplate);
         MainWindow.NavView_Navigate(MainWindow.layoutPage);
-    }
-
-    private void Toggle_DesktopLayout_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded)
-            return;
-
-        // temporary settings
-        SettingsManager.Set("DesktopLayoutEnabled", Toggle_DesktopLayout.IsOn, false);
     }
 
     private void Expander_Expanded(object sender, RoutedEventArgs e)
@@ -322,6 +281,14 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("SteamControllerMode", Convert.ToBoolean(cB_SCModeController.SelectedIndex));
+        ManagerFactory.settingsManager.Set("SteamControllerMode", Convert.ToBoolean(cB_SCModeController.SelectedIndex));
+    }
+
+    private void Toggle_ConnectOnPlug_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("ConnectOnPlug", Toggle_ConnectOnPlug.IsOn);
     }
 }

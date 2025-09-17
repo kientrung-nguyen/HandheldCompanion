@@ -1,34 +1,44 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Helpers;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views;
 using HandheldCompanion.Views.Windows;
+using iNKORE.UI.WPF.Modern.Controls;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using static HandheldCompanion.Managers.LibraryManager;
 
 namespace HandheldCompanion.ViewModels
 {
     public class ProfileViewModel : BaseViewModel
     {
-        QuickApplicationsPageViewModel PageViewModel;
-
         public ICommand StartProcessCommand { get; private set; }
+        public ICommand Navigate { get; private set; }
 
-        private Profile _Profile;
+        public readonly bool IsQuickTools;
+        public bool IsMainPage => !IsQuickTools;
+
+        private Profile _profile;
         public Profile Profile
         {
-            get => _Profile;
+            get => _profile;
             set
             {
                 // todo: we need to check if _hotkey != value but this will return false because this is a pointer
                 // I've implemented all required Clone() functions but not sure where to call them
 
-                _Profile = value;
+                _profile = value;
 
                 // refresh all properties
                 OnPropertyChanged(string.Empty);
@@ -36,9 +46,35 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public string Name => _Profile.ToString();
+        public override string ToString()
+        {
+            return Name;
+        }
 
-        public bool IsAvailable => !ProcessManager.GetProcesses().Any(p => p.Path.Equals(Profile.Path));
+        public string Name => _profile.Name;
+        public string Description => _profile.GetOwnerName();
+
+        public DateTime DateCreated => _profile.DateCreated;
+        public DateTime DateModified => _profile.DateModified;
+        public DateTime LastUsed => _profile.LastUsed;
+
+        public PlatformType PlatformType => _profile.PlatformType;
+
+        public bool IsAvailable => _profile.CanExecute && !ProcessManager.GetProcesses().Any(p => p.Path.Equals(Profile.Path));
+
+        private bool _IsBusy;
+        public bool IsBusy
+        {
+            get => _IsBusy;
+            set
+            {
+                if (value != _IsBusy)
+                {
+                    _IsBusy = value;
+                    OnPropertyChanged(nameof(IsBusy));
+                }
+            }
+        }
 
         public ImageSource Icon
         {
@@ -60,66 +96,208 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public ProfileViewModel(Profile profile, QuickApplicationsPageViewModel pageViewModel)
+        public Image Platform
+        {
+            get
+            {
+                switch (PlatformType)
+                {
+                    default:
+                    case PlatformType.Windows:
+                        return null;
+                    case PlatformType.Steam:
+                        return PlatformManager.Steam.GetLogo();
+                    case PlatformType.Origin:
+                        return PlatformManager.Origin.GetLogo();
+                    case PlatformType.UbisoftConnect:
+                        return PlatformManager.UbisoftConnect.GetLogo();
+                    case PlatformType.GOG:
+                        return PlatformManager.GOGGalaxy.GetLogo();
+                    case PlatformType.BattleNet:
+                        return PlatformManager.BattleNet.GetLogo();
+                    case PlatformType.Epic:
+                        return PlatformManager.Epic.GetLogo();
+                    case PlatformType.RiotGames:
+                        return PlatformManager.RiotGames.GetLogo();
+                    case PlatformType.Rockstar:
+                        return PlatformManager.Rockstar.GetLogo();
+                }
+            }
+        }
+
+        public BitmapImage Cover
+        {
+            get
+            {
+                if (Profile.LibraryEntry is null)
+                    return LibraryResources.MissingCover;
+
+                long id = Profile.LibraryEntry.Id;
+                long imageId = Profile.LibraryEntry.GetCoverId();
+                string imageExtension = Profile.LibraryEntry.GetCoverExtension(false);
+
+                return ManagerFactory.libraryManager.GetGameArt(id, LibraryType.cover, imageId, imageExtension);
+            }
+        }
+
+        public BitmapImage Artwork
+        {
+            get
+            {
+                if (Profile.LibraryEntry is null)
+                    return null;
+
+                long id = Profile.LibraryEntry.Id;
+                long imageId = Profile.LibraryEntry.GetArtworkId();
+                string imageExtension = Profile.LibraryEntry.GetArtworkExtension(false);
+
+                return ManagerFactory.libraryManager.GetGameArt(id, LibraryType.artwork, imageId, imageExtension);
+            }
+        }
+
+        public ProfileViewModel(Profile profile, bool isQuickTools)
         {
             Profile = profile;
-            PageViewModel = pageViewModel;
+            IsQuickTools = isQuickTools;
 
-            ProcessManager.ProcessStarted += (processEx, onStartup) => ProcessManager_Changes();
-            ProcessManager.ProcessStopped += (processEx) => ProcessManager_Changes();
+            ManagerFactory.processManager.ProcessStarted += ProcessManager_ProcessStarted;
+            ManagerFactory.processManager.ProcessStopped += ProcessManager_ProcessStopped;
 
-            StartProcessCommand = new DelegateCommand(async () =>
+            StartProcessCommand = new DelegateCommand<bool>(async runAsAdmin =>
             {
+                // localize me
+                Dialog dialog = new Dialog(isQuickTools ? OverlayQuickTools.GetCurrent() : MainWindow.GetCurrent())
+                {
+                    Title = "Launching",
+                    Content = "The system cannot find the file specified.",
+                    PrimaryButtonText = Properties.Resources.ProfilesPage_OK,
+                    CanClose = true,
+                };
+
                 if (!File.Exists(profile.Path))
                 {
-                    // localize me
-                    new Dialog(OverlayQuickTools.GetCurrent())
+                    ContentDialogResult result = await dialog.ShowAsync();
+                    switch (result)
                     {
-                        Title = "Quick start",
-                        Content = "The system cannot find the file specified.",
-                        PrimaryButtonText = Properties.Resources.ProfilesPage_OK
-                    }.Show();
-
+                        case ContentDialogResult.None:
+                            dialog.Hide();
+                            break;
+                    }
                     return;
                 }
 
                 // localize me
-                Dialog dialog = new Dialog(OverlayQuickTools.GetCurrent())
-                {
-                    Title = "Quick start",
-                    Content = "Please wait while we initialize the application.",
-                    CanClose = false
-                };
+                dialog.UpdateContent("Please wait while we initialize the application.");
+                dialog.PrimaryButtonText = string.Empty;
+                dialog.CanClose = false;
 
                 // display dialog
-                dialog.Show();
+                dialog.ShowAsync();
 
-                // Create a new instance of ProcessStartInfo
-                ProcessStartInfo startInfo = new ProcessStartInfo
+                try
                 {
-                    FileName = profile.Path,
-                    Arguments = profile.Arguments
-                };
+                    // set profile as favorite
+                    ManagerFactory.profileManager.SetSubProfileAsFavorite(Profile);
 
-                Process process = new() { StartInfo = startInfo };
+                    await Task.Run(async () =>
+                    {
+                        ProcessStartInfo psi = new ProcessStartInfo
+                        {
+                            FileName = !string.IsNullOrEmpty(profile.LaunchString) ? profile.LaunchString : Profile.Executable,
+                            WorkingDirectory = Directory.GetParent(Profile.Path)?.FullName ?? string.Empty,
+                            Arguments = Profile.Arguments,
+                            UseShellExecute = true,
+                            Verb = runAsAdmin ? "runas" : string.Empty,
+                        };
 
-                // Run the process start operation in a task to avoid blocking the UI thread
-                await Task.Run(() =>
+                        using (Process? process = Process.Start(psi))
+                        {
+                            // failed to start the process
+                            if (process == null)
+                                return;
+
+                            // wait up to 10 sec for any visible window
+                            List<string> execs = profile.GetExecutables(true);
+
+                            Task timeout = Task.Delay(TimeSpan.FromSeconds(10));
+                            while (!timeout.IsCompleted && !ProcessManager.GetProcesses().Any(p => execs.Contains(p.Path)))
+                                await Task.Delay(300).ConfigureAwait(false);
+
+                            if (ProcessManager.GetProcesses().Any(p => execs.Contains(p.Path)))
+                                MainWindow.GetCurrent().SetState(WindowState.Minimized);
+
+                            // hide the dialog
+                            UIHelper.TryInvoke(() => dialog.Hide());
+
+                            // Wait until none of the known executables are running
+                            while (ProcessManager.GetProcesses().Any(p => execs.Contains(p.Path)))
+                                await Task.Delay(300).ConfigureAwait(false);
+
+                            if (IsMainPage)
+                                MainWindow.GetCurrent().SetState(WindowState.Normal);
+                        }
+                    }).ConfigureAwait(false);
+                }
+                catch { }
+                finally
                 {
-                    process.Start();
-                    process.WaitForInputIdle(4000);
-                });
+                    // always hide the dialog
+                    UIHelper.TryInvoke(() => { dialog.Hide(); });
+                }
+            });
 
-                dialog.Hide();
+            Navigate = new DelegateCommand(async () =>
+            {
+                var page = MainWindow.profilesPage;
 
-                if (process is not null && process.MainWindowHandle != IntPtr.Zero)
-                    WinAPI.SetForegroundWindow(process.MainWindowHandle);
+                // pick the profile to select in the main combobox
+                Profile target = Profile.IsSubProfile
+                    ? ManagerFactory.profileManager.GetParent(Profile)
+                    : Profile;
+
+                // find a matching instance in the ComboBox (in case instances differ)
+                Profile? match = page.cB_Profiles.Items
+                    .OfType<Profile>()
+                    .FirstOrDefault(p => p.Guid == target.Guid);
+
+                if (match is not null)
+                    page.cB_Profiles.SelectedItem = match;
+
+                // subprofile picker: select current subprofile or reset
+                if (Profile.IsSubProfile)
+                    page.cb_SubProfilePicker.SelectedItem = Profile;
+                else
+                    page.cb_SubProfilePicker.SelectedIndex = 0;
+
+                MainWindow.GetCurrent().NavigateToPage("ProfilesPage");
             });
         }
 
-        private void ProcessManager_Changes()
+        private void ProcessManager_ProcessStarted(ProcessEx processEx, bool OnStartup)
         {
-            OnPropertyChanged(nameof(IsAvailable));
+            ProcessManager_Changes(processEx.Path);
+        }
+
+        private void ProcessManager_ProcessStopped(ProcessEx processEx)
+        {
+            ProcessManager_Changes(processEx.Path);
+        }
+
+        public override void Dispose()
+        {
+            ManagerFactory.processManager.ProcessStarted -= ProcessManager_ProcessStarted;
+            ManagerFactory.processManager.ProcessStopped -= ProcessManager_ProcessStopped;
+
+            // dispose commands
+            StartProcessCommand = null;
+
+            base.Dispose();
+        }
+
+        private void ProcessManager_Changes(string path)
+        {
+            if (path.Equals(Profile.Path))
+                OnPropertyChanged(nameof(IsAvailable));
         }
     }
 }

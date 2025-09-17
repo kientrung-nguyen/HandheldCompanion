@@ -6,6 +6,7 @@ using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Nefarius.Utilities.DeviceManagement.PnP;
+using SharpDX.XInput;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ using System.Windows.Media;
 
 namespace HandheldCompanion.Controllers
 {
-    public class IController
+    public class IController : IDisposable
     {
         #region events
         public event UserIndexChangedEventHandler UserIndexChanged;
@@ -23,15 +24,15 @@ namespace HandheldCompanion.Controllers
         public event StateChangedEventHandler StateChanged;
         public delegate void StateChangedEventHandler();
 
-        public event InputsUpdatedEventHandler InputsUpdated;
-        public delegate void InputsUpdatedEventHandler(ControllerState Inputs, Dictionary<byte, GamepadMotion> gamepadMotions, float delta, byte gamepadIndex);
+        public event VisibilityChangedEventHandler VisibilityChanged;
+        public delegate void VisibilityChangedEventHandler(bool status);
         #endregion
 
         // Buttons and axes we should be able to map to.
         // When we have target controllers with different buttons (e.g. in VigEm) this will have to be moved elsewhere.
         protected readonly List<ButtonFlags> TargetButtons =
         [
-            ButtonFlags.None, ButtonFlags.B1, ButtonFlags.B2, ButtonFlags.B3, ButtonFlags.B4,
+            ButtonFlags.B1, ButtonFlags.B2, ButtonFlags.B3, ButtonFlags.B4,
             ButtonFlags.DPadUp, ButtonFlags.DPadDown, ButtonFlags.DPadLeft, ButtonFlags.DPadRight,
             ButtonFlags.Start, ButtonFlags.Back, ButtonFlags.Special,
             ButtonFlags.L1, ButtonFlags.R1,
@@ -62,9 +63,9 @@ namespace HandheldCompanion.Controllers
             ButtonFlags.L1, ButtonFlags.R1,
             ButtonFlags.LeftStickClick, ButtonFlags.RightStickClick,
             // additional buttons calculated from the above
-            ButtonFlags.L2Soft, ButtonFlags.R2Soft, ButtonFlags.L2Full, ButtonFlags.R2Full,
+            /* ButtonFlags.L2Soft, ButtonFlags.R2Soft, ButtonFlags.L2Full, ButtonFlags.R2Full,
             ButtonFlags.LeftStickUp, ButtonFlags.LeftStickDown, ButtonFlags.LeftStickLeft, ButtonFlags.LeftStickRight,
-            ButtonFlags.RightStickUp, ButtonFlags.RightStickDown, ButtonFlags.RightStickLeft, ButtonFlags.RightStickRight
+            ButtonFlags.RightStickUp, ButtonFlags.RightStickDown, ButtonFlags.RightStickLeft, ButtonFlags.RightStickRight */
         ];
 
         protected static readonly FontFamily GlyphFontFamily = new("PromptFont");
@@ -74,26 +75,27 @@ namespace HandheldCompanion.Controllers
         protected SortedDictionary<AxisLayoutFlags, Color> ColoredAxis = [];
         protected SortedDictionary<ButtonFlags, Color> ColoredButtons = [];
 
-        public PnPDetails Details;
+        public PnPDetails? Details;
 
         public ButtonState InjectedButtons = new();
         public ControllerState Inputs = new();
 
-        protected byte gamepadIndex = 0;
-        protected Dictionary<byte, GamepadMotion> gamepadMotions = new();
+        // motion variables
+        public byte gamepadIndex = 0;
+        public Dictionary<byte, GamepadMotion> gamepadMotions = new();
+        protected float aX = 0.0f, aZ = 0.0f, aY = 0.0f;
+        protected float gX = 0.0f, gZ = 0.0f, gY = 0.0f;
 
         protected double VibrationStrength = 1.0d;
         private Task rumbleTask;
 
         protected object hidLock = new();
 
+        public volatile bool IsDisposed = false; // Prevent multiple disposals
+        public volatile bool IsDisposing = false;
+
         public virtual bool IsReady => true;
-
-        public virtual bool IsWireless => Details.isBluetooth;
-        public virtual bool IsDongle => Details.isDongle;
-        public string Enumerator => Details.EnumeratorName;
-
-        public bool isPlaceholder;
+        public bool IsPlugged => ControllerManager.IsTargetController(GetInstanceId());
 
         private bool _IsBusy;
         public bool IsBusy
@@ -114,7 +116,7 @@ namespace HandheldCompanion.Controllers
         }
 
         private byte _UserIndex = 255;
-        protected byte UserIndex
+        public virtual byte UserIndex
         {
             get
             {
@@ -135,10 +137,38 @@ namespace HandheldCompanion.Controllers
         {
             gamepadMotions[gamepadIndex] = new(string.Empty, CalibrationMode.Manual);
             InitializeInputOutput();
+
+            // raise events
+            switch (ManagerFactory.settingsManager.Status)
+            {
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QuerySettings();
+                    break;
+            }
         }
 
-        protected virtual void UpdateSettings()
+        protected virtual void QuerySettings()
+        {
+            // manage events
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        }
+
+        protected virtual void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
         { }
+
+        protected virtual void SettingsManager_Initialized()
+        {
+            QuerySettings();
+        }
+
+        ~IController()
+        {
+            Dispose(false);
+        }
 
         protected virtual void InitializeInputOutput()
         { }
@@ -149,21 +179,27 @@ namespace HandheldCompanion.Controllers
                 return;
 
             this.Details = details;
-            Details.isHooked = true;
-
-            if (details.isVirtual)
-                return;
+            this.Details.isHooked = true;
 
             // manage gamepad motion
-            gamepadMotions[gamepadIndex] = new(details.deviceInstanceId, CalibrationMode.Manual | CalibrationMode.SensorFusion);
+            gamepadMotions[gamepadIndex] = new(details.baseContainerDeviceInstanceId);
+            InitializeInputOutput();
         }
 
-        public virtual void UpdateInputs(long ticks, float delta)
+        public virtual void Tick(long ticks, float delta, bool commit = false)
         {
             if (IsBusy)
                 return;
 
-            InputsUpdated?.Invoke(Inputs, gamepadMotions, delta, gamepadIndex);
+            Inputs.ButtonState[ButtonFlags.LeftStickLeft] = Inputs.AxisState[AxisFlags.LeftStickX] < -Gamepad.LeftThumbDeadZone;
+            Inputs.ButtonState[ButtonFlags.LeftStickRight] = Inputs.AxisState[AxisFlags.LeftStickX] > Gamepad.LeftThumbDeadZone;
+            Inputs.ButtonState[ButtonFlags.LeftStickDown] = Inputs.AxisState[AxisFlags.LeftStickY] < -Gamepad.LeftThumbDeadZone;
+            Inputs.ButtonState[ButtonFlags.LeftStickUp] = Inputs.AxisState[AxisFlags.LeftStickY] > Gamepad.LeftThumbDeadZone;
+
+            Inputs.ButtonState[ButtonFlags.RightStickLeft] = Inputs.AxisState[AxisFlags.RightStickX] < -Gamepad.RightThumbDeadZone;
+            Inputs.ButtonState[ButtonFlags.RightStickRight] = Inputs.AxisState[AxisFlags.RightStickX] > Gamepad.RightThumbDeadZone;
+            Inputs.ButtonState[ButtonFlags.RightStickDown] = Inputs.AxisState[AxisFlags.RightStickY] < -Gamepad.RightThumbDeadZone;
+            Inputs.ButtonState[ButtonFlags.RightStickUp] = Inputs.AxisState[AxisFlags.RightStickY] > Gamepad.RightThumbDeadZone;
         }
 
         public bool HasMotionSensor()
@@ -176,22 +212,79 @@ namespace HandheldCompanion.Controllers
             return gamepadMotions[gamepadIndex];
         }
 
-        public bool IsPhysical()
+        public virtual bool IsPhysical()
         {
             return !IsVirtual();
         }
 
-        public bool IsVirtual()
+        public virtual bool IsVirtual()
         {
             if (Details is not null)
                 return Details.isVirtual;
             return true;
         }
 
-        public bool IsGaming()
+        public virtual bool IsInternal()
+        {
+            return !IsExternal();
+        }
+
+        public virtual bool IsExternal()
+        {
+            if (Details is not null)
+                return Details.isExternal;
+            return true;
+        }
+
+        public virtual bool IsXInput()
+        {
+            if (Details is not null)
+                return Details.isXInput;
+            return false;
+        }
+
+        public virtual bool IsGaming()
         {
             if (Details is not null)
                 return Details.isGaming;
+            return false;
+        }
+
+        public virtual bool IsDummy()
+        {
+            return false;
+        }
+
+        public virtual ushort GetVendorID()
+        {
+            if (Details is not null)
+                return Details.VendorID;
+            return 0;
+        }
+
+        public virtual ushort GetProductID()
+        {
+            if (Details is not null)
+                return Details.ProductID;
+            return 0;
+        }
+
+        public virtual bool IsWireless()
+        {
+            return IsBluetooth() || IsDongle();
+        }
+
+        public virtual bool IsBluetooth()
+        {
+            if (Details is not null)
+                return Details.isBluetooth;
+            return false;
+        }
+
+        public virtual bool IsDongle()
+        {
+            if (Details is not null)
+                return Details.isDongle;
             return false;
         }
 
@@ -200,21 +293,49 @@ namespace HandheldCompanion.Controllers
             return UserIndex;
         }
 
-        public string GetInstancePath()
+        public string GetInstanceId()
         {
             if (Details is not null)
                 return Details.deviceInstanceId;
             return string.Empty;
         }
 
-        public string GetContainerInstancePath()
+        public string GetPath()
+        {
+            if (Details is not null)
+                return Details.devicePath;
+            return string.Empty;
+        }
+
+        public string GetContainerInstanceId()
         {
             if (Details is not null)
                 return Details.baseContainerDeviceInstanceId;
             return string.Empty;
         }
 
-        public void InjectState(ButtonState State, bool IsKeyDown, bool IsKeyUp)
+        public string GetContainerPath()
+        {
+            if (Details is not null)
+                return Details.baseContainerDevicePath;
+            return string.Empty;
+        }
+
+        public string GetEnumerator()
+        {
+            if (Details is not null)
+                return Details.EnumeratorName;
+            return "USB";
+        }
+
+        public DateTimeOffset GetLastArrivalDate()
+        {
+            if (Details is not null)
+                return Details.GetLastArrivalDate();
+            return new();
+        }
+
+        public virtual void InjectState(ButtonState State, bool IsKeyDown, bool IsKeyUp)
         {
             if (State.IsEmpty())
                 return;
@@ -226,7 +347,7 @@ namespace HandheldCompanion.Controllers
                 IsKeyDown, IsKeyUp, ToString());
         }
 
-        public void InjectButton(ButtonFlags button, bool IsKeyDown, bool IsKeyUp)
+        public virtual void InjectButton(ButtonFlags button, bool IsKeyDown, bool IsKeyUp)
         {
             if (button == ButtonFlags.None)
                 return;
@@ -305,90 +426,140 @@ namespace HandheldCompanion.Controllers
             });
         }
 
-        // this function cannot be called twice
         public virtual void Plug()
         {
-            if (isPlaceholder)
-                return;
-
-            SetVibrationStrength(SettingsManager.Get<uint>("VibrationStrength"));
+            SetVibrationStrength(ManagerFactory.settingsManager.Get<uint>("VibrationStrength"));
 
             InjectedButtons.Clear();
         }
 
-        // this function cannot be called twice
         public virtual void Unplug()
-        {
-            if (isPlaceholder)
-                return;
-        }
+        { }
 
         public bool IsHidden()
         {
-            // bool hide_device = HidHide.IsRegistered(Details.deviceInstanceId);
-            bool hide_base = HidHide.IsRegistered(Details.baseContainerDeviceInstanceId);
-            return /* hide_device || */ hide_base;
+            if (Details is not null)
+                return HidHide.IsRegistered(Details.baseContainerDeviceInstanceId);
+            return false;
         }
 
         public virtual void Hide(bool powerCycle = true)
         {
-            if (isPlaceholder)
-                return;
-
             HideHID();
 
             if (powerCycle)
                 CyclePort();
+
+            // raise event
+            VisibilityChanged?.Invoke(true);
         }
 
         public virtual void Unhide(bool powerCycle = true)
         {
-            if (isPlaceholder)
-                return;
-
             UnhideHID();
 
             if (powerCycle)
                 CyclePort();
+
+            // raise event
+            VisibilityChanged?.Invoke(false);
         }
 
-        public virtual void CyclePort()
+        public virtual void Gone()
+        { }
+
+        public virtual bool CyclePort()
         {
+            if (Details is null)
+                return false;
+
+            // set flag
+            bool success = false;
+
             // set status
             IsBusy = true;
-            ControllerManager.PowerCyclers[Details.baseContainerDeviceInstanceId] = true;
+            ControllerManager.PowerCyclers[GetContainerInstanceId()] = true;
 
-            switch (Enumerator)
+            string enumerator = GetEnumerator();
+            switch (enumerator)
             {
-                default:
                 case "BTHENUM":
-                    Task.Run(async () =>
+                case "BTHLEDEVICE":
                     {
-                        Details.Uninstall(false);
-                        await Task.Delay(3000).ConfigureAwait(false); // Avoid blocking the synchronization context
-                        Devcon.Refresh();
-                    });
+                        if (Details.Uninstall(false))
+                            Task.Delay(3000).Wait();
+                        success = Devcon.Refresh();
+                    }
                     break;
                 case "USB":
-                    Details.CyclePort();
+                case "HID":
+                    success = Details.CyclePort();
                     break;
             }
+
+            if (!success)
+            {
+                // (re)set status
+                IsBusy = false;
+                ControllerManager.PowerCyclers[GetContainerInstanceId()] = false;
+            }
+
+            return success;
         }
 
         public virtual void SetLightColor(byte R, byte G, byte B)
-        {
-        }
+        { }
 
         protected void HideHID()
         {
+            if (Details is null)
+                return;
+
+            /*
+            PnPDevice? baseDevice = Details.GetBasePnPDevice();
+            if (baseDevice is not null)
+            {
+                foreach (string instanceId in EnumerateDeviceAndChildren(baseDevice))
+                    HidHide.HidePath(instanceId);
+            }
+            */
+
             HidHide.HidePath(Details.baseContainerDeviceInstanceId);
             HidHide.HidePath(Details.deviceInstanceId);
         }
 
         protected void UnhideHID()
         {
+            if (Details is null)
+                return;
+
+            /*
+            PnPDevice? baseDevice = Details.GetBasePnPDevice();
+            if (baseDevice is not null)
+            {
+                foreach (string instanceId in EnumerateDeviceAndChildren(baseDevice))
+                    HidHide.UnhidePath(instanceId);
+            }
+            */
+
             HidHide.UnhidePath(Details.baseContainerDeviceInstanceId);
             HidHide.UnhidePath(Details.deviceInstanceId);
+        }
+
+        private IEnumerable<string> EnumerateDeviceAndChildren(IPnPDevice device)
+        {
+            // Yield this device
+            yield return device.InstanceId;
+
+            // Then recurse into all children
+            if (device.Children is { } children)
+            {
+                foreach (var child in children)
+                {
+                    foreach (var id in EnumerateDeviceAndChildren(child))
+                        yield return id;
+                }
+            }
         }
 
         public virtual bool RestoreDrivers()
@@ -398,7 +569,13 @@ namespace HandheldCompanion.Controllers
 
         public virtual async void Calibrate()
         {
+            // set flag
+            IsBusy = true;
+
             SensorsManager.Calibrate(gamepadMotions);
+
+            // set flag
+            IsBusy = false;
         }
 
         public virtual string GetGlyph(ButtonFlags button)
@@ -554,12 +731,12 @@ namespace HandheldCompanion.Controllers
             };
         }
 
-        public Color GetGlyphColor(ButtonFlags button)
+        public Color? GetGlyphColor(ButtonFlags button)
         {
             if (ColoredButtons.TryGetValue(button, out Color color))
                 return color;
 
-            return Colors.White;
+            return null;
         }
 
         public Color GetGlyphColor(AxisLayoutFlags axis)
@@ -618,12 +795,30 @@ namespace HandheldCompanion.Controllers
 
         public string GetButtonName(ButtonFlags button)
         {
-            return EnumUtils.GetDescriptionFromEnumValue(button, GetType().Name);
+            return GetLocalizedName(button);
         }
 
         public string GetAxisName(AxisLayoutFlags axis)
         {
-            return EnumUtils.GetDescriptionFromEnumValue(axis, GetType().Name);
+            return GetLocalizedName(axis);
+        }
+
+        private string GetLocalizedName<T>(T value) where T : Enum
+        {
+            Type? currentType = GetType();
+            string defaultString = value.ToString();
+
+            while (currentType is not null)
+            {
+                string result = EnumUtils.GetDescriptionFromEnumValue(value, currentType.Name);
+
+                if (!string.Equals(result, defaultString, StringComparison.Ordinal))
+                    return result;
+
+                currentType = currentType.BaseType;
+            }
+
+            return defaultString;
         }
 
         public override string ToString()
@@ -631,6 +826,49 @@ namespace HandheldCompanion.Controllers
             if (Details is not null)
                 return Details.Name;
             return string.Empty;
+        }
+
+        public virtual void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (IsDisposed) return;
+
+            // manage events
+            ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+
+            if (disposing)
+            {
+                // Free managed resources
+                IsDisposing = true;
+
+                // Dispose Inputs
+                Inputs?.Dispose();
+                Inputs = null;
+
+                // Dispose gamepad motions
+                foreach (var gamepadMotion in gamepadMotions.Values)
+                    gamepadMotion.Dispose();
+                gamepadMotions.Clear();
+
+                // Clear event handlers to prevent memory leaks
+                UserIndexChanged = null;
+                StateChanged = null;
+                VisibilityChanged = null;
+
+                // Dispose rumble task properly
+                if (rumbleTask is { Status: TaskStatus.Running })
+                    rumbleTask.Wait(); // Ensure task completes
+                rumbleTask = null;
+            }
+
+            IsDisposing = false;
+            IsDisposed = true;
         }
     }
 }

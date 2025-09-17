@@ -18,6 +18,8 @@ public static class Settings
 {
     public static readonly string ConfigurableTDPOverrideDown = "ConfigurableTDPOverrideDown";
     public static readonly string ConfigurableTDPOverrideUp = "ConfigurableTDPOverrideUp";
+
+    public static readonly string OnScreenDisplayRefreshRate = "OnScreenDisplayRefreshRate";
     public static readonly string OnScreenDisplayLevel = "OnScreenDisplayLevel";
     public static readonly string OnScreenDisplayTimeLevel = "OnScreenDisplayTimeLevel";
     public static readonly string OnScreenDisplayFPSLevel = "OnScreenDisplayFPSLevel";
@@ -31,9 +33,21 @@ public static class Settings
     /// First version that implemented the new hotkey manager
     /// </summary>
     public static readonly string VersionHotkeyManager = "0.21.5.0";
+
+    /// <summary>
+    /// First version that implemented Library manager
+    /// </summary>
+    public static readonly string VersionLibraryManager = "0.24.0.0";
 }
 
-public static class SettingsManager
+public enum LayoutModes
+{
+    Gamepad = 0,
+    Desktop = 1,
+    Auto = 2
+}
+
+public class SettingsManager : IManager
 {
     static string configFileName = "user.json";
     static string configFilePath;
@@ -42,18 +56,19 @@ public static class SettingsManager
     public delegate void InitializedEventHandler();
 
     public delegate void SettingValueChangedEventHandler(string name, object value, bool temporary);
+    public event SettingValueChangedEventHandler SettingValueChanged;
 
-    private static readonly Dictionary<string, object> Settings = new();
+    private readonly Dictionary<string, object> Settings = [];
 
-    private static ConcurrentDictionary<string, object> config = new();
-    private static ConcurrentDictionary<string, object> current = new();
-    private static Timer timer = new(1000)
+    private ConcurrentDictionary<string, object> config = new();
+    private ConcurrentDictionary<string, object> current = new();
+    private Timer timer = new(1000)
     {
         Enabled = false,
         AutoReset = false
     };
 
-    static SettingsManager()
+    public SettingsManager()
     {
 
         configSettingPath = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion"), "config");
@@ -77,16 +92,12 @@ public static class SettingsManager
             };
     }
 
-    public static bool IsInitialized { get; internal set; }
-
-    public static event SettingValueChangedEventHandler SettingValueChanged;
-
-    public static event InitializedEventHandler Initialized;
-
-    public static async Task Start()
+    public override void Start()
     {
-        if (IsInitialized)
+        if (Status.HasFlag(ManagerStatus.Initializing) || Status.HasFlag(ManagerStatus.Initialized))
             return;
+
+        base.PrepareStart();
 
         foreach (var property in Properties.Settings
             .Default
@@ -109,14 +120,21 @@ public static class SettingsManager
         timer.Elapsed += Timer_Elapsed;
         timer.Start();
 
-        IsInitialized = true;
-        Initialized?.Invoke();
-
         LogManager.LogInformation("{0} has started", "SettingsManager");
-        return;
+
+        base.Start();
     }
 
-    private static void Timer_Elapsed(object? sender, ElapsedEventArgs e)
+    public override void Stop()
+    {
+        if (Status.HasFlag(ManagerStatus.Halting) || Status.HasFlag(ManagerStatus.Halted))
+            return;
+
+        base.PrepareStop();
+        base.Stop();
+    }
+
+    private void Timer_Elapsed(object? sender, ElapsedEventArgs e)
     {
         try
         {
@@ -132,22 +150,12 @@ public static class SettingsManager
         }
     }
 
-    public static void Stop()
-    {
-        if (!IsInitialized)
-            return;
-
-        IsInitialized = false;
-
-        LogManager.LogInformation("{0} has stopped", "SettingsManager");
-    }
-
-    private static bool Is(string name)
+    private bool Is(string name)
     {
         return config.ContainsKey(name);
     }
 
-    private static bool HasProperty(string name)
+    private bool HasProperty(string name)
     {
         return Properties.Settings
             .Default
@@ -155,7 +163,7 @@ public static class SettingsManager
             .Cast<SettingsProperty>().Any(v => v.Name == name);
     }
 
-    public static void Set(string name, object value, bool save = true)
+    public void Set(string name, object value, bool save = true)
     {
         try
         {
@@ -169,7 +177,8 @@ public static class SettingsManager
                 config[name] = value;
                 timer.Start();
             }
-            if (IsInitialized)
+
+            if (Status.HasFlag(ManagerStatus.Initialized))
             {
                 LogManager.LogInformation($"SettingValueChanged {name} {value}");
                 // raise event
@@ -183,7 +192,7 @@ public static class SettingsManager
     }
 
 
-    public static T Get<T>(string name, T defaultValue = default)
+    public T Get<T>(string name, T defaultValue = default)
     {
         try
         {
@@ -206,7 +215,7 @@ public static class SettingsManager
         }
     }
 
-    private static object GetInternal(string name)
+    private object GetInternal(string name)
     {
         // used to handle cases
         switch (name)

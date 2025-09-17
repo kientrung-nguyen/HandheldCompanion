@@ -1,5 +1,4 @@
-﻿using HandheldCompanion.Controls;
-using HandheldCompanion.Extensions;
+﻿using HandheldCompanion.Extensions;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using System.Collections.ObjectModel;

@@ -32,6 +32,7 @@ public class AOKZOEA1 : IDevice
         // device specific settings
         ProductIllustration = "device_aokzoe_a1";
         ProductModel = "AOKZOEA1";
+        UseOpenLib = true;
 
         // https://www.amd.com/en/products/apu/amd-ryzen-7-6800u 
         nTDP = new double[] { 15, 15, 20 };
@@ -59,12 +60,14 @@ public class AOKZOEA1 : IDevice
         Capabilities = DeviceCapabilities.FanControl;
         Capabilities |= DeviceCapabilities.DynamicLighting;
         Capabilities |= DeviceCapabilities.DynamicLightingBrightness;
+
+        // dynamic lighting capacities
         DynamicLightingCapabilities |= LEDLevel.SolidColor;
         DynamicLightingCapabilities |= LEDLevel.Rainbow;
 
         // LED HID Device
-        _vid = 0x1A2C;
-        _pid = 0xB001;
+        vendorId = 0x1A2C;
+        productIds = [0xB001];
 
         ECDetails = new ECDetails
         {
@@ -121,7 +124,7 @@ public class AOKZOEA1 : IDevice
 
     public override bool Open()
     {
-        var success = base.Open();
+        bool success = base.Open();
         if (!success)
             return false;
 
@@ -131,11 +134,14 @@ public class AOKZOEA1 : IDevice
         ECRamDirectWrite(0x4F1, ECDetails, 0x40);
         ECRamDirectWrite(0x4F2, ECDetails, 0x02);
 
-        return (ECRamReadByte(0x4F1, ECDetails) == 0x40 && ECRamReadByte(0x4F2, ECDetails) == 0x02);
+        return (ECRamDirectReadByte(0x4F1, ECDetails) == 0x40 && ECRamDirectReadByte(0x4F2, ECDetails) == 0x02);
     }
 
     public override void Close()
     {
+        if (!IsOpen)
+            return;
+
         LogManager.LogInformation("Locked {0} OEM button", ButtonFlags.OEM3);
         ECRamDirectWrite(0x4F1, ECDetails, 0x00);
         ECRamDirectWrite(0x4F2, ECDetails, 0x00);
@@ -189,7 +195,7 @@ public class AOKZOEA1 : IDevice
     public override bool IsReady()
     {
         // Prepare list for all HID devices
-        HidDevice[] HidDeviceList = HidDevices.Enumerate(_vid, new int[] { _pid }).ToArray();
+        HidDevice[] HidDeviceList = HidDevices.Enumerate(vendorId, productIds).ToArray();
 
         // Check every HID device to find LED device
         foreach (HidDevice device in HidDeviceList)

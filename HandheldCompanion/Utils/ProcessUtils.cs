@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -58,26 +59,37 @@ public static class ProcessUtils
         return null;
     }
 
-    public static Dictionary<string, string> GetAppProperties(string filePath1)
+    public static Dictionary<string, string> GetAppProperties(string filePath)
     {
         Dictionary<string, string> AppProperties = [];
 
-        var shellFile = ShellObject.FromParsingName(filePath1);
-        foreach (var property in typeof(ShellProperties.PropertySystem).GetProperties(BindingFlags.Public |
-                     BindingFlags.Instance))
+        try
         {
-            var shellProperty = property.GetValue(shellFile.Properties.System, null) as IShellProperty;
-            if (shellProperty?.ValueAsObject is null) continue;
-            if (AppProperties.ContainsKey(property.Name)) continue;
+            var shellFile = ShellObject.FromParsingName(filePath);
+            foreach (var property in typeof(ShellProperties.PropertySystem).GetProperties(BindingFlags.Public |
+                         BindingFlags.Instance))
+            {
+                var shellProperty = property.GetValue(shellFile.Properties.System, null) as IShellProperty;
+                if (shellProperty?.ValueAsObject is null) continue;
+                if (AppProperties.ContainsKey(property.Name)) continue;
 
-            if (shellProperty.ValueAsObject is string[] shellPropertyValues && shellPropertyValues.Length > 0)
-                foreach (var shellPropertyValue in shellPropertyValues)
-                    AppProperties[property.Name] = shellPropertyValue;
-            else
-                AppProperties[property.Name] = shellProperty.ValueAsObject.ToString();
+                if (shellProperty.ValueAsObject is string[] shellPropertyValues && shellPropertyValues.Length > 0)
+                    foreach (var shellPropertyValue in shellPropertyValues)
+                        AppProperties[property.Name] = shellPropertyValue;
+                else
+                    AppProperties[property.Name] = shellProperty.ValueAsObject.ToString();
+            }
         }
+        catch { }
 
         return AppProperties;
+    }
+
+    public static void GetAppProperties(string filePath, out string ProductName, out string Company)
+    {
+        Dictionary<string, string> AppProperties = ProcessUtils.GetAppProperties(filePath);
+        ProductName = AppProperties.TryGetValue("FileDescription", out var property) ? property : string.Empty;
+        Company = AppProperties.ContainsKey("Copyright") ? AppProperties["Copyright"] : string.Empty;
     }
 
     public static string GetPathToApp(Process process, bool fast = true)
@@ -99,6 +111,42 @@ public static class ProcessUtils
             foreach (ManagementObject item in searcher.Get())
                 return Convert.ToString(item["ExecutablePath"]);
         }
+
+        return string.Empty;
+    }
+
+    public static bool TaskWithTimeout(Action removalAction, TimeSpan timeout)
+    {
+        try
+        {
+            Task removalTask = Task.Run(removalAction);
+            return removalTask.Wait(timeout);
+        }
+        catch (Exception ex)
+        {
+            // Log exception details
+            return false;
+        }
+    }
+
+    public static string ExecutePowerShellScript(string script)
+    {
+        try
+        {
+            using (var process = new Process())
+            {
+                process.StartInfo.FileName = "powershell.exe";
+                process.StartInfo.Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{script}\"";
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.CreateNoWindow = true;
+                process.Start();
+                string output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit(3000);
+                return output;
+            }
+        }
+        catch { }
 
         return string.Empty;
     }
@@ -196,18 +244,72 @@ public static class ProcessUtils
         return closestProcess;
     }
 
-    public static List<Process> GetChildProcesses(Process process)
+    public static IntPtr WaitForVisibleWindow(Process process, int timeout)
     {
-        return new ManagementObjectSearcher($"select processid from win32_process Where parentprocessid=={process.Id}")
+        IntPtr windowHandle = IntPtr.Zero;
+        DateTime startTime = DateTime.Now;
+
+        while ((DateTime.Now - startTime).TotalSeconds < timeout)
+        {
+            // Refresh to get updated process info
+            process.Refresh();
+
+            if (process.HasExited)
+                return windowHandle;
+
+            // First, try the main window handle if it exists and is visible
+            if (process.MainWindowHandle != IntPtr.Zero && ProcessUtils.IsWindowVisible(process.MainWindowHandle))
+            {
+                windowHandle = process.MainWindowHandle;
+                break;
+            }
+
+            // If the main window handle is not available, try enumerating all windows on each thread
+            foreach (ProcessThread thread in process.Threads)
+            {
+                EnumThreadWindows((uint)thread.Id, (hWnd, lParam) =>
+                {
+                    if (IsWindowVisible(hWnd))
+                    {
+                        windowHandle = hWnd;
+                        return false; // Stop enumerating since we've found a visible window
+                    }
+                    return true; // Continue enumerating
+                }, IntPtr.Zero);
+
+                if (windowHandle != IntPtr.Zero)
+                    break;
+            }
+
+            // Exit the loop if a valid window handle was found
+            if (windowHandle != IntPtr.Zero)
+                break;
+
+            // Wait a short interval before trying again
+            Thread.Sleep(1000);
+        }
+
+        return windowHandle;
+    }
+
+    /// <summary>
+    /// Retrieves all child processes of a given process.
+    /// </summary>
+    public static List<Process> GetChildProcesses(int pId)
+    {
+        return new ManagementObjectSearcher($"select processid from win32_process Where parentprocessid = {pId}")
             .Get()
             .Cast<ManagementObject>()
             .Select(mo => Process.GetProcessById(Convert.ToInt32(mo["ProcessID"])))
             .ToList();
     }
 
-    public static List<int> GetChildIds(Process process)
+    /// <summary>
+    /// Retrieves all child processes ids of a given process.
+    /// </summary>
+    public static List<int> GetChildIds(int pId)
     {
-        return new ManagementObjectSearcher($"select processid from win32_process Where parentprocessid={process.Id}")
+        return new ManagementObjectSearcher($"select processid from win32_process Where parentprocessid = {pId}")
             .Get()
             .Cast<ManagementObject>()
             .Select(mo => Convert.ToInt32(mo["ProcessID"]))
@@ -338,14 +440,20 @@ public static class ProcessUtils
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
 
-    public delegate bool WindowEnumProc(IntPtr hwnd, IntPtr lparam);
-
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool EnumChildWindows(IntPtr hwnd, WindowEnumProc callback, IntPtr lParam);
+    public delegate bool WindowEnumProc(IntPtr hwnd, IntPtr lparam);
 
     [DllImport("User32.dll")]
     public static extern bool SetForegroundWindow(IntPtr handle);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumThreadWindows(uint dwThreadId, EnumThreadDelegate lpfn, IntPtr lParam);
+    public delegate bool EnumThreadDelegate(IntPtr hWnd, IntPtr lParam);
 
     [DllImport("User32.dll")]
     public static extern bool ShowWindow(IntPtr handle, int nCmdShow);

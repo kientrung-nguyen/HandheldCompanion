@@ -98,25 +98,34 @@ public static class NightLight
 
     public static void Auto()
     {
-        if (!SettingsManager.IsInitialized) return;
-        if (!SettingsManager.Get<bool>("NightLightSchedule")) return;
+        // raise events
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                return;
+            case ManagerStatus.Initialized:
+                if (!ManagerFactory.settingsManager.Get<bool>("NightLightSchedule")) return;
 
-        var now = DateTime.Now.TimeOfDay;
-        var turnOn = SettingsManager.Get<DateTime>("NightLightTurnOn").TimeOfDay;
-        var turnOff = SettingsManager.Get<DateTime>("NightLightTurnOff").TimeOfDay;
-        var isNightlight = false;
+                var now = DateTime.Now.TimeOfDay;
+                var turnOn = ManagerFactory.settingsManager.Get<DateTime>("NightLightTurnOn").TimeOfDay;
+                var turnOff = ManagerFactory.settingsManager.Get<DateTime>("NightLightTurnOff").TimeOfDay;
+                var isNightlight = false;
 
-        if (turnOff < turnOn && (now > turnOn || (now < turnOn && turnOff > now)))
-            isNightlight = true;
+                if (turnOff < turnOn && (now > turnOn || (now < turnOn && turnOff > now)))
+                    isNightlight = true;
 
-        if (turnOff > turnOn && now > turnOn && now < turnOff)
-            isNightlight = true;
+                if (turnOff > turnOn && now > turnOn && now < turnOff)
+                    isNightlight = true;
 
-        var isEnabled = Set(isNightlight);
-        if (isEnabled is not null)
-            ToastManager.RunToast(
-                $"Night light {(isEnabled.Value ? Properties.Resources.On : Properties.Resources.Off)}",
-                isEnabled.Value ? ToastIcons.Nightlight : ToastIcons.NightlightOff);
+                var isEnabled = Set(isNightlight);
+                if (isEnabled is not null)
+                    ToastManager.RunToast(
+                        $"Night light {(isEnabled.Value ? Properties.Resources.On : Properties.Resources.Off)}",
+                        isEnabled.Value ? ToastIcons.Nightlight : ToastIcons.NightlightOff);
+
+                break;
+        }
     }
 
     public static void SubscribeToEvents(Action<object?, RegistryChangedEventArgs> EventHandler)

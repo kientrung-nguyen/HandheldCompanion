@@ -25,7 +25,7 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ToastEnable {
             get {
                 return ((bool)(this["ToastEnable"]));
@@ -229,7 +229,7 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("en-US")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string CurrentCulture {
             get {
                 return ((string)(this["CurrentCulture"]));
@@ -416,18 +416,6 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["MainWindowBackdrop"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool UseEnergyStar {
-            get {
-                return ((bool)(this["UseEnergyStar"]));
-            }
-            set {
-                this["UseEnergyStar"] = value;
             }
         }
         
@@ -697,7 +685,7 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
         public int QuicktoolsBackdrop {
             get {
                 return ((int)(this["QuicktoolsBackdrop"]));
@@ -721,7 +709,7 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool ControllerManagement {
             get {
                 return ((bool)(this["ControllerManagement"]));
@@ -1209,6 +1197,245 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["HotkeyRumbleOnExecution"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int ProcessPriority {
+            get {
+                return ((int)(this["ProcessPriority"]));
+            }
+            set {
+                this["ProcessPriority"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public int SteamControllerRumbleInterval {
+            get {
+                return ((int)(this["SteamControllerRumbleInterval"]));
+            }
+            set {
+                this["SteamControllerRumbleInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public int BatteryChargeLimitPercent {
+            get {
+                return ((int)(this["BatteryChargeLimitPercent"]));
+            }
+            set {
+                this["BatteryChargeLimitPercent"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int BatteryBypassChargingMode {
+            get {
+                return ((int)(this["BatteryBypassChargingMode"]));
+            }
+            set {
+                this["BatteryBypassChargingMode"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int LayoutMode {
+            get {
+                return ((int)(this["LayoutMode"]));
+            }
+            set {
+                this["LayoutMode"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public global::System.Collections.Specialized.StringCollection KnownDrivers {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["KnownDrivers"]));
+            }
+            set {
+                this["KnownDrivers"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int MSIClawControllerIndex {
+            get {
+                return ((int)(this["MSIClawControllerIndex"]));
+            }
+            set {
+                this["MSIClawControllerIndex"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ConfigurableTDPMethod {
+            get {
+                return ((int)(this["ConfigurableTDPMethod"]));
+            }
+            set {
+                this["ConfigurableTDPMethod"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int LibrarySortTarget {
+            get {
+                return ((int)(this["LibrarySortTarget"]));
+            }
+            set {
+                this["LibrarySortTarget"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool LibrarySortAscending {
+            get {
+                return ((bool)(this["LibrarySortAscending"]));
+            }
+            set {
+                this["LibrarySortAscending"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool QuickKeyboardVisibility {
+            get {
+                return ((bool)(this["QuickKeyboardVisibility"]));
+            }
+            set {
+                this["QuickKeyboardVisibility"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool QuickTrackpadVisibility {
+            get {
+                return ((bool)(this["QuickTrackpadVisibility"]));
+            }
+            set {
+                this["QuickTrackpadVisibility"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MuteConsole {
+            get {
+                return ((bool)(this["MuteConsole"]));
+            }
+            set {
+                this["MuteConsole"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool GPUManagerMonitor {
+            get {
+                return ((bool)(this["GPUManagerMonitor"]));
+            }
+            set {
+                this["GPUManagerMonitor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ConnectOnPlug {
+            get {
+                return ((bool)(this["ConnectOnPlug"]));
+            }
+            set {
+                this["ConnectOnPlug"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ZotacGamingZoneVRAM {
+            get {
+                return ((int)(this["ZotacGamingZoneVRAM"]));
+            }
+            set {
+                this["ZotacGamingZoneVRAM"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LegionControllerSwap {
+            get {
+                return ((bool)(this["LegionControllerSwap"]));
+            }
+            set {
+                this["LegionControllerSwap"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool PreloadPages {
+            get {
+                return ((bool)(this["PreloadPages"]));
+            }
+            set {
+                this["PreloadPages"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool QuickToolsSlideAnimation {
+            get {
+                return ((bool)(this["QuickToolsSlideAnimation"]));
+            }
+            set {
+                this["QuickToolsSlideAnimation"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool QuickToolsApplyNoise {
+            get {
+                return ((bool)(this["QuickToolsApplyNoise"]));
+            }
+            set {
+                this["QuickToolsApplyNoise"] = value;
             }
         }
     }

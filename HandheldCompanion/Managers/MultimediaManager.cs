@@ -15,7 +15,7 @@ using WindowsDisplayAPI.DisplayConfig;
 
 namespace HandheldCompanion.Managers;
 
-public static class MultimediaManager
+public class MultimediaManager : IManager
 {
 
     private static ScreenRotation screenOrientation;
@@ -36,13 +36,14 @@ public static class MultimediaManager
         NightLightSupport = NightLight.Get() != -1;
     }
 
-    public static async Task Start()
+    public override void Start()
     {
-        if (IsInitialized)
+        if (Status.HasFlag(ManagerStatus.Initializing) || Status.HasFlag(ManagerStatus.Initialized))
             return;
 
+        base.PrepareStart();
+
         // manage events
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
         ScreenControl.SubscribeToEvents();
 
@@ -53,14 +54,39 @@ public static class MultimediaManager
         NightLight.SubscribeToEvents(NightLightNotificationEventArrived);
         ScreenBrightness.SubscribeToEvents(BrightnessWatcherEventArrived);
 
-        IsInitialized = true;
-        Initialized?.Invoke();
+
+        // raise events
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
+        }
 
         LogManager.LogInformation("{0} has started", nameof(MultimediaManager));
         return;
     }
 
-    public static void Stop()
+
+    private void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+    private void QuerySettings()
+    {
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        // do something
+    }
+
+    public override void Stop()
     {
         if (!IsInitialized)
             return;
@@ -69,7 +95,8 @@ public static class MultimediaManager
         SoundControl.Unsubscribe();
         NightLight.Unsubscribe();
         ScreenControl.Unsubscribe();
-        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
         SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
 
         IsInitialized = false;
@@ -78,7 +105,7 @@ public static class MultimediaManager
     }
 
 
-    private static void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
+    private void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
     {
         var _allDisplays = Display.GetDisplays();
         var _primaryDisplay = _allDisplays.FirstOrDefault(v => v.DisplayScreen.IsPrimary);
@@ -106,7 +133,7 @@ public static class MultimediaManager
 
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
+    private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
         switch (name)
         {
@@ -128,23 +155,23 @@ public static class MultimediaManager
         }
     }
 
-    private static void NightLightNotificationEventArrived(object? sender, RegistryChangedEventArgs e)
+    private void NightLightNotificationEventArrived(object? sender, RegistryChangedEventArgs e)
     {
         NightLightNotification?.Invoke(NightLight.Get() == 1);
     }
 
-    private static void VolumeNotificationEventArrived(SoundDirections flow, float volume, bool muted)
+    private void VolumeNotificationEventArrived(SoundDirections flow, float volume, bool muted)
     {
         VolumeNotification?.Invoke(flow, volume, muted);
     }
 
-    private static void BrightnessWatcherEventArrived(object sender, EventArrivedEventArgs e)
+    private void BrightnessWatcherEventArrived(object sender, EventArrivedEventArgs e)
     {
         int brightness = Convert.ToInt32(e.NewEvent.Properties["Brightness"].Value);
         BrightnessNotification?.Invoke(brightness);
     }
 
-    public static string GetDisplayFriendlyName(string DeviceName)
+    public string GetDisplayFriendlyName(string DeviceName)
     {
         string friendlyName = string.Empty;
 
@@ -182,6 +209,7 @@ public static class MultimediaManager
     {
         return screenOrientation;
     }
+
     public static DisplayDevice GetDisplay(string DeviceName)
     {
         DisplayDevice dm = new DisplayDevice();
@@ -192,7 +220,7 @@ public static class MultimediaManager
 
     public static void PlayWindowsMedia(string file)
     {
-        bool Enabled = SettingsManager.Get<bool>("UISounds");
+        bool Enabled = ManagerFactory.settingsManager.Get<bool>("UISounds");
         if (!Enabled)
             return;
 
@@ -201,12 +229,12 @@ public static class MultimediaManager
             new SoundPlayer(path).Play();
     }
 
-    public static bool HasVolumeSupport()
+    public bool HasVolumeSupport()
     {
         return VolumeSupport && MicrophoneSupport;
     }
 
-    public static float AdjustVolume(int delta)
+    public float AdjustVolume(int delta)
     {
         if (!VolumeSupport) return -1;
 
@@ -219,21 +247,21 @@ public static class MultimediaManager
         return volume;
     }
 
-    public static void SetVolume(double volume)
+    public void SetVolume(double volume)
     {
         if (!VolumeSupport) return;
 
         SoundControl.AudioSet((int)volume);
     }
 
-    public static bool HasBrightnessSupport()
+    public bool HasBrightnessSupport()
     {
         return BrightnessSupport;
     }
 
-    public static bool HasNightLightSupport() => NightLightSupport;
+    public bool HasNightLightSupport() => NightLightSupport;
 
-    public static int AdjustBrightness(int delta)
+    public int AdjustBrightness(int delta)
     {
         if (!BrightnessSupport) return -1;
 
@@ -332,32 +360,29 @@ public static class MultimediaManager
 
     #region events
 
-    public static event DisplaySettingsChangedEventHandler DisplaySettingsChanged;
+    public event DisplaySettingsChangedEventHandler DisplaySettingsChanged;
     public delegate void DisplaySettingsChangedEventHandler(Display screen);
 
-    public static event PrimaryScreenChangedEventHandler PrimaryScreenChanged;
+    public event PrimaryScreenChangedEventHandler PrimaryScreenChanged;
     public delegate void PrimaryScreenChangedEventHandler(Display screen);
 
-    public static event ScreenConnectedEventHandler ScreenConnected;
+    public event ScreenConnectedEventHandler ScreenConnected;
     public delegate void ScreenConnectedEventHandler(Display screen);
 
-    public static event ScreenDisconnectedEventHandler ScreenDisconnected;
+    public event ScreenDisconnectedEventHandler ScreenDisconnected;
     public delegate void ScreenDisconnectedEventHandler(Display screen);
 
-    public static event DisplayOrientationChangedEventHandler DisplayOrientationChanged;
+    public event DisplayOrientationChangedEventHandler DisplayOrientationChanged;
     public delegate void DisplayOrientationChangedEventHandler(ScreenRotation rotation);
 
-    public static event VolumeNotificationEventHandler VolumeNotification;
+    public event VolumeNotificationEventHandler VolumeNotification;
     public delegate void VolumeNotificationEventHandler(SoundDirections flow, float volume, bool isMute);
 
-    public static event BrightnessNotificationEventHandler BrightnessNotification;
+    public event BrightnessNotificationEventHandler BrightnessNotification;
     public delegate void BrightnessNotificationEventHandler(int brightness);
 
-    public static event NightLightNotificationEventHandler NightLightNotification;
+    public event NightLightNotificationEventHandler NightLightNotification;
     public delegate void NightLightNotificationEventHandler(bool enabled);
-
-    public static event InitializedEventHandler Initialized;
-    public delegate void InitializedEventHandler();
 
     #endregion
 }

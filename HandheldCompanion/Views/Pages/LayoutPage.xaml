@@ -15,6 +15,7 @@
     d:DataContext="{d:DesignInstance Type=viewmodels:LayoutPageViewModel}"
     d:DesignHeight="1000"
     d:DesignWidth="1000"
+    KeepAlive="True"
     Loaded="Page_Loaded"
     mc:Ignorable="d">
 
@@ -105,7 +106,18 @@
                         HorizontalContentAlignment="Left"
                         ItemsSource="{Binding LayoutList, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                         SelectionChanged="cB_Layouts_SelectionChanged">
-
+                        <ComboBox.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate>
+                                        <TextBlock
+                                            Margin="16,0,0,0"
+                                            Style="{StaticResource BaseTextBlockStyle}"
+                                            Text="{Binding Name, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </ComboBox.GroupStyle>
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="15,0,15,0">
@@ -156,11 +168,6 @@
                                 <Setter Property="IsEnabled" Value="True" />
                                 <Setter Property="Visibility" Value="{Binding Visibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <Setter Property="Width" Value="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ComboBox}}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsHeader}" Value="True">
-                                        <Setter Property="IsEnabled" Value="False" />
-                                    </DataTrigger>
-                                </Style.Triggers>
                             </Style>
                         </ComboBox.ItemContainerStyle>
                     </ComboBox>
@@ -251,12 +258,6 @@
                                 </Button>
                             </ikw:SimpleStackPanel>
                         </Grid>
-
-                        <CheckBox
-                            Name="CheckBoxDefaultLayout"
-                            Checked="CheckBoxDefaultLayout_Checked"
-                            Content="{l:Static resx:Resources.LayoutPage_SetAsDefault}"
-                            Unchecked="CheckBoxDefaultLayout_Checked" />
                     </ikw:SimpleStackPanel>
 
                     <!--  Separator  -->

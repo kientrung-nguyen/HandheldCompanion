@@ -11,16 +11,24 @@
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="Hotkeys"
     Title="Hotkeys"
     d:Background="White"
+    d:DataContext="{d:DesignInstance Type=viewmodels:HotkeyPageViewModel}"
     d:DesignHeight="1500"
     d:DesignWidth="1000"
     KeepAlive="True"
     Loaded="Page_Loaded"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <!--  Converters to split the list  -->
+        <converters:EvenIndexFilterConverter x:Key="EvenIndexFilter" />
+        <converters:OddIndexFilterConverter x:Key="OddIndexFilter" />
+    </Page.Resources>
 
     <Grid Name="MainGrid" Margin="20">
 

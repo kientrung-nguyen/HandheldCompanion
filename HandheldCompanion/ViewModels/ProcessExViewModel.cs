@@ -1,5 +1,4 @@
-﻿using HandheldCompanion.Controls;
-using HandheldCompanion.Extensions;
+﻿using HandheldCompanion.Extensions;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -7,6 +6,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -16,6 +16,7 @@ namespace HandheldCompanion.ViewModels
     {
         public QuickApplicationsPageViewModel PageViewModel;
 
+        private readonly object _processWindowsSyncLock = new object();
         public ObservableCollection<ProcessWindowViewModel> ProcessWindows { get; set; } = [];
 
         private ProcessEx _process;
@@ -28,7 +29,9 @@ namespace HandheldCompanion.ViewModels
                 // I've implemented all required Clone() functions but not sure where to call them
 
                 UpdateProcess(_process, value);
-                OnPropertyChanged(nameof(Process));
+
+                // refresh all properties
+                OnPropertyChanged(string.Empty);
             }
         }
 
@@ -42,23 +45,48 @@ namespace HandheldCompanion.ViewModels
                 if (value != IsSuspended)
                 {
                     Process.IsSuspended = value;
+                    OnPropertyChanged(nameof(IsSuspended));
                 }
             }
         }
 
         public string Executable => Process.Executable;
+        public string Path => Process.Path;
 
-        public bool FullScreenOptimization
+        public string ProductName
         {
-            get => !Process.FullScreenOptimization;
-            set { } // empty set to allow binding to ToggleSwitch.IsOn
+            get
+            {
+                string FileDescription = Process.AppProperties.TryGetValue("FileDescription", out var property) ? property : string.Empty;
+                if (!string.IsNullOrEmpty(FileDescription))
+                    return FileDescription;
+
+                string pName = Process.Process.MainModule?.FileVersionInfo?.ProductName ?? string.Empty;
+                if (!string.IsNullOrEmpty(pName))
+                    return pName;
+
+                return Executable;
+            }
         }
 
-        public bool HighDPIAware
+        public string CompanyName
         {
-            get => !Process.HighDPIAware;
-            set { } // empty set to allow binding to ToggleSwitch.IsOn
+            get
+            {
+                string Copyright = Process.AppProperties.TryGetValue("Copyright", out var property) ? property : string.Empty;
+                if (!string.IsNullOrEmpty(Copyright))
+                    return Copyright;
+
+                string cName = Process.Process.MainModule?.FileVersionInfo?.CompanyName ?? string.Empty;
+                if (!string.IsNullOrEmpty(cName))
+                    return cName;
+
+                return Path;
+            }
         }
+
+        public bool FullScreenOptimization => !Process.FullScreenOptimization;
+        public bool HighDPIAware => !Process.HighDPIAware;
 
         public ICommand KillProcessCommand { get; private set; }
 
@@ -67,6 +95,9 @@ namespace HandheldCompanion.ViewModels
             Process = process;
             Process.WindowAttached += Process_WindowAttached;
             Process.WindowDetached += Process_WindowDetached;
+
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(ProcessWindows, _processWindowsSyncLock);
 
             foreach (ProcessWindow processWindow in Process.ProcessWindows.Values)
             {
@@ -95,7 +126,7 @@ namespace HandheldCompanion.ViewModels
                 switch (dialogTask.Result)
                 {
                     case ContentDialogResult.Primary:
-                        Process.Process?.Kill();
+                        Process.Kill();
                         break;
                     default:
                         dialog.Hide();
@@ -106,10 +137,10 @@ namespace HandheldCompanion.ViewModels
 
         private void Process_WindowAttached(ProcessWindow processWindow)
         {
-            ProcessWindowViewModel? foundWindow = ProcessWindows.ToList().FirstOrDefault(win => win.ProcessWindow.Hwnd == processWindow.Hwnd);
+            ProcessWindowViewModel? foundWindow = ProcessWindows.FirstOrDefault(win => win.ProcessWindow.Hwnd == processWindow.Hwnd);
             if (foundWindow is null)
             {
-                ProcessWindows.SafeAdd(new ProcessWindowViewModel(processWindow, this));
+                ProcessWindows.SafeAdd(new ProcessWindowViewModel(processWindow));
             }
             else
             {
@@ -119,7 +150,7 @@ namespace HandheldCompanion.ViewModels
 
         private void Process_WindowDetached(ProcessWindow processWindow)
         {
-            ProcessWindowViewModel? foundWindow = ProcessWindows.ToList().FirstOrDefault(win => win.ProcessWindow.Hwnd == processWindow.Hwnd);
+            ProcessWindowViewModel? foundWindow = ProcessWindows.FirstOrDefault(win => win.ProcessWindow.Hwnd == processWindow.Hwnd);
             if (foundWindow is not null)
             {
                 ProcessWindows.SafeRemove(foundWindow);
@@ -148,7 +179,28 @@ namespace HandheldCompanion.ViewModels
         public override void Dispose()
         {
             if (_process is not null)
+            {
                 _process.Refreshed -= ProcessRefreshed;
+                _process.WindowAttached -= Process_WindowAttached;
+                _process.WindowDetached -= Process_WindowDetached;
+            }
+
+            // Take a snapshot of the children and clear the live collection
+            ProcessWindowViewModel[] windowsSnapshot;
+            lock (_processWindowsSyncLock)
+            {
+                windowsSnapshot = ProcessWindows.ToArray();
+                ProcessWindows.SafeClear();    // direct Clear, not SafeClear
+            }
+
+            // Dispose each window from the snapshot (outside the lock)
+            foreach (ProcessWindowViewModel processWindow in windowsSnapshot)
+                processWindow.Dispose();
+
+            // dispose commands
+            KillProcessCommand = null;
+            PageViewModel = null;
+            _process = null;
 
             base.Dispose();
         }

@@ -3,6 +3,7 @@ using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Models;
 using HandheldCompanion.Shared;
+using Microsoft.Win32;
 using SharpDX;
 using SharpDX.Direct3D9;
 using System;
@@ -11,10 +12,10 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
-using static HandheldCompanion.Utils.DeviceUtils;
-using Timer = System.Timers.Timer;
 using WindowsDisplayAPI;
+using static HandheldCompanion.Utils.DeviceUtils;
 using Device = SharpDX.Direct3D9.Device;
+using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
@@ -28,8 +29,10 @@ public static class DynamicLightingManager
 
     private static readonly Timer DynamicLightingTimer;
 
-    private static Device device;
-    private static Surface surface;
+    private static Direct3D? direct3D;
+    private static Device? device;
+    private static Surface? surface;
+
     private static DataRectangle dataRectangle;
     private static IntPtr dataPointer;
 
@@ -43,6 +46,8 @@ public static class DynamicLightingManager
     private static bool ambilightThreadRunning;
     private static int ambilightThreadDelay = defaultThreadDelay;
     private const int defaultThreadDelay = 33;
+
+    private static readonly object d3dLock = new object();
 
     private static bool VerticalBlackBarDetectionEnabled;
 
@@ -67,27 +72,71 @@ public static class DynamicLightingManager
         DynamicLightingTimer.Elapsed += (sender, e) => UpdateLED();
     }
 
-    public static async Task Start()
+    public static void Start()
     {
         if (IsInitialized)
             return;
 
+        // store and disable system setting AmbientLightingEnabled
+        OSAmbientLightingEnabled = GetAmbientLightingEnabled();
+        SetAmbientLightingEnabled(false);
+
+        // manage events
+        ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+
+        // raise events
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
+        }
+
+        switch (ManagerFactory.multimediaManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryMedia();
+                break;
+        }
+
         IsInitialized = true;
         Initialized?.Invoke();
 
+        LogManager.LogInformation("{0} has started", "DynamicLightingManager");
+    }
+
+    private static void QueryMedia()
+    {
+        if (ScreenControl.PrimaryDisplay is not null)
+            MultimediaManager_DisplaySettingsChanged(ScreenControl.PrimaryDisplay);
+    }
+
+    private static void MultimediaManager_Initialized()
+    {
+        QueryMedia();
+    }
+
+    private static void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+    private static void QuerySettings()
+    {
         // manage events
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
-        IDevice.GetCurrent().PowerStatusChanged += CurrentDevice_PowerStatusChanged;
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // raise events
-        if (MultimediaManager.IsInitialized)
-        {
-            MultimediaManager_DisplaySettingsChanged(ScreenControl.PrimaryDisplay);
-        }
-
-        LogManager.LogInformation("{0} has started", "DynamicLightingManager");
-        return;
+        SettingsManager_SettingValueChanged("LEDAmbilightVerticalBlackBarDetection", ManagerFactory.settingsManager.Get<string>("LEDAmbilightVerticalBlackBarDetection"), false);
+        SettingsManager_SettingValueChanged("LEDSettingsEnabled", ManagerFactory.settingsManager.Get<string>("LEDSettingsEnabled"), false);
     }
 
     public static void Stop()
@@ -95,19 +144,43 @@ public static class DynamicLightingManager
         if (!IsInitialized)
             return;
 
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+        ManagerFactory.multimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
+        ManagerFactory.multimediaManager.Initialized -= MultimediaManager_Initialized;
+
         StopAmbilight();
 
-        ReleaseDirect3DDevice();
+        // dispose resources
+        DisposeDirect3DResources();
 
-        // manage events
-        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
-        MultimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
-        IDevice.GetCurrent().PowerStatusChanged -= CurrentDevice_PowerStatusChanged;
+        // restore system setting AmbientLightingEnabled
+        SetAmbientLightingEnabled(OSAmbientLightingEnabled);
 
         IsInitialized = false;
 
         LogManager.LogInformation("{0} has stopped", "DynamicLightingManager");
     }
+
+    private static bool GetAmbientLightingEnabled()
+    {
+        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Lighting"))
+            if (key != null)
+                return Convert.ToBoolean(key.GetValue(OSAmbientLightingEnabledKey));
+
+        return false;
+    }
+
+    private static void SetAmbientLightingEnabled(bool enabled)
+    {
+        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Lighting", writable: true))
+            if (key != null)
+                key.SetValue(OSAmbientLightingEnabledKey, enabled ? 1 : 0);
+    }
+
+    private static bool LEDSettingsEnabled => ManagerFactory.settingsManager.Get<bool>("LEDSettingsEnabled");
+    private static bool AmbilightEnabled => ManagerFactory.settingsManager.Get<int>("LEDSettingsLevel") == (int)LEDLevel.Ambilight;
 
     private static void MultimediaManager_DisplaySettingsChanged(Display? desktopScreen)
     {
@@ -121,53 +194,84 @@ public static class DynamicLightingManager
 
         squareSize = (int)Math.Floor((decimal)screenWidth / 10);
 
-        LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.Get<int>("LEDSettingsLevel");
-        bool ambilightOn = LEDSettingsLevel == LEDLevel.Ambilight;
-
-        // stop ambilight if running
-        if (ambilightOn)
-            StopAmbilight();
-
-        // (re)create the Direct3D device
-        InitializeDirect3DDevice();
-
-        // restart ambilight if it was running
-        if (ambilightOn)
-            StartAmbilight();
-    }
-
-    private static async void InitializeDirect3DDevice()
-    {
-        try
+        // Restart Ambilight if necessary
+        if (AmbilightEnabled && LEDSettingsEnabled)
         {
-            // Create a device to access the screen
-            device = new Device(new Direct3D(), 0, DeviceType.Hardware, IntPtr.Zero, CreateFlags.SoftwareVertexProcessing, new PresentParameters(screenWidth, screenHeight));
+            if (ambilightThreadRunning)
+                StopAmbilight();
 
-            // Create a surface to capture the screen
-            surface = Surface.CreateOffscreenPlain(device, screenWidth, screenHeight, Format.A8R8G8B8, Pool.Scratch);
-        }
-        catch (SharpDXException ex)
-        {
-            if (ex.ResultCode == ResultCode.DeviceLost)
-            {
-                while (device is not null && device.TestCooperativeLevel() == ResultCode.DeviceLost)
-                    await Task.Delay(100).ConfigureAwait(false); // Avoid blocking the synchronization context
-
-                // Recreate the device and resources
-                ReleaseDirect3DDevice();
-                InitializeDirect3DDevice();
-            }
-            else
-            {
-                // Handle other exceptions here
-            }
+            if (InitializeDirect3DDevice())
+                StartAmbilight();
         }
     }
 
-    private static void ReleaseDirect3DDevice()
+    private static void DisposeDirect3DResources()
     {
+        // Dispose in the correct order: Child resources -> Device -> Direct3D
+        surface?.Dispose();
+        surface = null;
+
         device?.Dispose();
         device = null;
+
+        direct3D?.Dispose();
+        direct3D = null;
+    }
+
+    private static bool InitializeDirect3DDevice(int maxAttempts = 3)
+    {
+        // Try to enter the critical section without waiting.
+        if (!Monitor.TryEnter(d3dLock, TimeSpan.Zero))
+            return false;
+
+        try
+        {
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    // Ensure clean-up before re-initialization
+                    DisposeDirect3DResources();
+
+                    // Create a Direct3D instance
+                    direct3D = new Direct3D();
+
+                    // Create a Device to access the screen
+                    device = new Device(
+                        direct3D,
+                        0,
+                        DeviceType.Hardware,
+                        IntPtr.Zero,
+                        CreateFlags.SoftwareVertexProcessing,
+                        new PresentParameters(screenWidth, screenHeight)
+                    );
+
+                    // Create a Surface to capture the screen
+                    surface = Surface.CreateOffscreenPlain(
+                        device,
+                        screenWidth,
+                        screenHeight,
+                        Format.A8R8G8B8,
+                        Pool.Scratch
+                    );
+
+                    return true;
+                }
+                catch { }
+
+                // Wait before retrying, if not the last attempt.
+                if (attempt < maxAttempts)
+                    Task.Delay(3000).Wait();
+            }
+
+            LogManager.LogError("Failed to initialize Direct3D resources after {0} attempts", maxAttempts);
+            return false;
+        }
+        catch { return false; }
+        finally
+        {
+            Monitor.Exit(d3dLock);
+        }
     }
 
     private static void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
@@ -191,11 +295,6 @@ public static class DynamicLightingManager
         }
     }
 
-    private static void CurrentDevice_PowerStatusChanged(Devices.IDevice device)
-    {
-        RequestUpdate();
-    }
-
     private static void RequestUpdate()
     {
         DynamicLightingTimer.Stop();
@@ -204,81 +303,68 @@ public static class DynamicLightingManager
 
     private static void UpdateLED()
     {
-        bool LEDSettingsEnabled = SettingsManager.Get<bool>("LEDSettingsEnabled");
-        IDevice.GetCurrent().SetLedStatus(LEDSettingsEnabled);
+        bool LEDSettingsEnabled = ManagerFactory.settingsManager.Get<bool>("LEDSettingsEnabled");
+        IDevice device = IDevice.GetCurrent();
+        device.SetLedStatus(LEDSettingsEnabled);
 
-        if (LEDSettingsEnabled)
-        {
-            LEDLevel LEDSettingsLevel = (LEDLevel)SettingsManager.Get<int>("LEDSettingsLevel");
-            int LEDBrightness = SettingsManager.Get<int>("LEDBrightness");
-            int LEDSpeed = SettingsManager.Get<int>("LEDSpeed");
-
-            // Set brightness and color based on settings
-            IDevice.GetCurrent().SetLedBrightness(LEDBrightness);
-
-            // Get colors
-            Color LEDMainColor = SettingsManager.Get<Color>("LEDMainColor");
-            Color LEDSecondColor = SettingsManager.Get<Color>("LEDSecondColor");
-            bool useSecondColor = SettingsManager.Get<bool>("LEDUseSecondColor");
-            
-            // Get Preset
-            int LEDPresetIndex = SettingsManager.Get<int>("LEDPresetIndex");
-            List<LEDPreset> presets = IDevice.GetCurrent().LEDPresets;
-            LEDPreset? selectedPreset = LEDPresetIndex < presets.Count ? presets[LEDPresetIndex] : null;
-
-            switch (LEDSettingsLevel)
-            {
-                case LEDLevel.SolidColor:
-                case LEDLevel.Breathing:
-                case LEDLevel.Rainbow:
-                    {
-                        StopAmbilight();
-
-                        IDevice.GetCurrent().SetLedColor(LEDMainColor, useSecondColor ? LEDSecondColor : LEDMainColor, LEDSettingsLevel, LEDSpeed);
-                    }
-                    break;
-
-                case LEDLevel.Wave:
-                case LEDLevel.Wheel:
-                case LEDLevel.Gradient:
-                    {
-                        StopAmbilight();
-
-                        IDevice.GetCurrent().SetLedColor(LEDMainColor, LEDSecondColor, LEDSettingsLevel, LEDSpeed);
-                    }
-                    break;
-
-                case LEDLevel.Ambilight:
-                    {
-                        // Start adjusting LED colors based on screen content
-                        if (!ambilightThreadRunning)
-                        {
-                            StartAmbilight();
-
-                            // Provide LEDs with initial brightness
-                            IDevice.GetCurrent().SetLedBrightness(100);
-                            IDevice.GetCurrent().SetLedColor(Colors.Black, Colors.Black, LEDLevel.SolidColor);
-                        }
-
-                        ambilightThreadDelay = (int)(defaultThreadDelay / 100.0d * LEDSpeed);
-                    }
-                    break;
-                case LEDLevel.LEDPreset:
-                    {
-                        StopAmbilight();
-
-                        IDevice.GetCurrent().SetLEDPreset(selectedPreset);
-                    }
-                    break;
-            }
-        }
-        else
+        if (!LEDSettingsEnabled)
         {
             StopAmbilight();
+            device.SetLedBrightness(0);
+            device.SetLedColor(Colors.Black, Colors.Black, LEDLevel.SolidColor);
+            return;
+        }
 
-            // Set both brightness to 0 and color to black
-            IDevice.GetCurrent().SetLedBrightness(0);
-            IDevice.GetCurrent().SetLedColor(Colors.Black, Colors.Black, LEDLevel.SolidColor);
+        // Get LED settings
+        LEDLevel LEDSettingsLevel = (LEDLevel)ManagerFactory.settingsManager.Get<int>("LEDSettingsLevel");
+        int LEDBrightness = ManagerFactory.settingsManager.Get<int>("LEDBrightness");
+        int LEDSpeed = ManagerFactory.settingsManager.Get<int>("LEDSpeed");
+        device.SetLedBrightness(LEDBrightness);
+
+        // Get colors
+        Color LEDMainColor = ManagerFactory.settingsManager.Get<Color>("LEDMainColor");
+        Color LEDSecondColor = ManagerFactory.settingsManager.Get<Color>("LEDSecondColor");
+        bool useSecondColor = ManagerFactory.settingsManager.Get<bool>("LEDUseSecondColor");
+
+        // Get preset
+        int LEDPresetIndex = ManagerFactory.settingsManager.Get<int>("LEDPresetIndex");
+        List<LEDPreset> presets = device.LEDPresets;
+        LEDPreset? selectedPreset = LEDPresetIndex < presets.Count ? presets[LEDPresetIndex] : null;
+
+        // Stop Ambilight if needed
+        if (LEDSettingsLevel != LEDLevel.Ambilight)
+            StopAmbilight();
+
+        // Handle LED levels
+        switch (LEDSettingsLevel)
+        {
+            case LEDLevel.SolidColor:
+            case LEDLevel.Breathing:
+            case LEDLevel.Rainbow:
+            case LEDLevel.Wave:
+            case LEDLevel.Wheel:
+            case LEDLevel.Gradient:
+                device.SetLedColor(LEDMainColor, useSecondColor ? LEDSecondColor : LEDMainColor, LEDSettingsLevel, LEDSpeed);
+                break;
+
+            case LEDLevel.Ambilight:
+                if (!ambilightThreadRunning)
+                {
+                    if (InitializeDirect3DDevice())
+                    {
+                        // prepare LEDs
+                        device.SetLedBrightness(100);
+                        device.SetLedColor(Colors.Black, Colors.Black, LEDLevel.SolidColor);
+
+                        StartAmbilight();
+                    }
+                }
+                ambilightThreadDelay = (int)(defaultThreadDelay / 100.0 * LEDSpeed);
+                break;
+
+            case LEDLevel.LEDPreset:
+                device.SetLEDPreset(selectedPreset);
+                break;
         }
     }
 
@@ -288,40 +374,46 @@ public static class DynamicLightingManager
         {
             try
             {
-                // Capture the screen
-                device.GetFrontBufferData(0, surface);
-
-                // Lock the surface to access the pixel data
-                dataRectangle = surface.LockRectangle(LockFlags.None);
-
-                // Get the data pointer
-                dataPointer = dataRectangle.DataPointer;
-
-                // Apply vertical black bar detection if enabled
-                int VerticalBlackBarWidth = VerticalBlackBarDetectionEnabled ? DynamicLightingManager.VerticalBlackBarWidth() : 0;
-
-                Color currentColorLeft = CalculateColorAverage(1 + VerticalBlackBarWidth, 1);
-                Color currentColorRight = CalculateColorAverage(screenWidth - squareSize - VerticalBlackBarWidth, ((screenHeight / 2) - (squareSize / 2)));
-
-                // Unlock the surface
-                surface.UnlockRectangle();
-
-                leftLedTracker.AddColor(currentColorLeft);
-                rightLedTracker.AddColor(currentColorRight);
-
-                // Calculate the average colors based on previous colors for the left and right LEDs
-                Color averageColorLeft = leftLedTracker.CalculateAverageColor();
-                Color averageColorRight = rightLedTracker.CalculateAverageColor();
-
-                // Only send HID update instruction if the color is different
-                if (averageColorLeft != previousColorLeft || averageColorRight != previousColorRight)
+                lock (d3dLock)
                 {
-                    // Change LED colors of the device
-                    IDevice.GetCurrent().SetLedColor(averageColorLeft, averageColorRight, LEDLevel.Ambilight);
+                    if (device is null || surface is null)
+                        continue;
 
-                    // Update the previous colors for next time
-                    previousColorLeft = averageColorLeft;
-                    previousColorRight = averageColorRight;
+                    // Capture the screen
+                    device.GetFrontBufferData(0, surface);
+
+                    // Lock the surface to access the pixel data
+                    dataRectangle = surface.LockRectangle(LockFlags.None);
+
+                    // Get the data pointer
+                    dataPointer = dataRectangle.DataPointer;
+
+                    // Apply vertical black bar detection if enabled
+                    int VerticalBlackBarWidth = VerticalBlackBarDetectionEnabled ? DynamicLightingManager.VerticalBlackBarWidth() : 0;
+
+                    Color currentColorLeft = CalculateColorAverage(1 + VerticalBlackBarWidth, 1);
+                    Color currentColorRight = CalculateColorAverage(screenWidth - squareSize - VerticalBlackBarWidth, ((screenHeight / 2) - (squareSize / 2)));
+
+                    // Unlock the surface
+                    surface.UnlockRectangle();
+
+                    leftLedTracker.AddColor(currentColorLeft);
+                    rightLedTracker.AddColor(currentColorRight);
+
+                    // Calculate the average colors based on previous colors for the left and right LEDs
+                    Color averageColorLeft = leftLedTracker.CalculateAverageColor();
+                    Color averageColorRight = rightLedTracker.CalculateAverageColor();
+
+                    // Only send HID update instruction if the color is different
+                    if (averageColorLeft != previousColorLeft || averageColorRight != previousColorRight)
+                    {
+                        // Change LED colors of the device
+                        IDevice.GetCurrent().SetLedColor(averageColorLeft, averageColorRight, LEDLevel.Ambilight);
+
+                        // Update the previous colors for next time
+                        previousColorLeft = averageColorLeft;
+                        previousColorRight = averageColorRight;
+                    }
                 }
             }
             catch { }
@@ -358,7 +450,7 @@ public static class DynamicLightingManager
             ambilightThreadRunning = false;
             // Ensure the thread has finished execution
             if (ambilightThread.IsAlive)
-                ambilightThread.Join();
+                ambilightThread.Join(3000);
             ambilightThread = null;
         }
     }

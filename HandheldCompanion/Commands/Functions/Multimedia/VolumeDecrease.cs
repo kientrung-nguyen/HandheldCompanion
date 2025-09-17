@@ -17,7 +17,7 @@ namespace HandheldCompanion.Commands.Functions.Multimedia
 
         public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
         {
-            ToastManager.RunToast($"{MultimediaManager.AdjustVolume(-2)}", ToastIcons.VolumeDown);
+            ToastManager.RunToast($"{ManagerFactory.multimediaManager.AdjustVolume(-2)}", ToastIcons.VolumeDown);
             base.Execute(IsKeyDown, IsKeyUp, false);
         }
 

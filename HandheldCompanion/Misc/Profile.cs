@@ -1,11 +1,16 @@
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Libraries;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using WpfScreenHelper.Enum;
 using static HandheldCompanion.Utils.XInputPlusUtils;
 
 namespace HandheldCompanion;
@@ -27,10 +32,11 @@ public enum UpdateSource
     Background = 0,
     ProfilesPage = 1,
     QuickProfilesPage = 2,
-    QuickProfilesCreation = 3,
-    Creation = 4,
-    Serializer = 5,
-    ProfilesPageUpdateOnly = 6,
+    QuickProfilesCreation = 4,
+    Creation = 8,
+    Serializer = 16,
+    ProfilesPageUpdateOnly = 32,
+    LibraryUpdate = 64,
     PowerStatusChange = 7
 }
 
@@ -42,30 +48,96 @@ public enum SteeringAxis
 }
 
 [Serializable]
+public class ProcessWindowSettings
+{
+    public string DeviceName { get; set; } = "\\\\.\\DISPLAY0";
+    public bool Borderless { get; set; } = false;
+    public WindowPositions WindowPositions { get; set; } = WindowPositions.Center;
+    [JsonIgnore] public bool IsGeneric { get; set; } = true;
+    public int Hwnd { get; set; } = 0;
+
+    public ProcessWindowSettings()
+    { }
+
+    public ProcessWindowSettings(string deviceName, bool borderless, WindowPositions windowPositions)
+    {
+        DeviceName = deviceName;
+        Borderless = borderless;
+        WindowPositions = windowPositions;
+        IsGeneric = false;
+    }
+}
+
+[Serializable]
 public partial class Profile : ICloneable, IComparable
 {
-    [JsonIgnore] public const int SensivityArraySize = 49; // x + 1 (hidden)
+    [JsonIgnore]
+    public const int SensivityArraySize = 49; // x + 1 (hidden)
 
-    public ProfileErrorCode ErrorCode = ProfileErrorCode.None;
+    [JsonIgnore]
+    private ProfileErrorCode _ErrorCode = ProfileErrorCode.None;
+    [JsonIgnore]
+    public ProfileErrorCode ErrorCode
+    {
+        get
+        {
+            if (IsSubProfile && ParentGuid != Guid.Empty)
+            {
+                Profile parentProfile = ManagerFactory.profileManager.GetProfileFromGuid(ParentGuid, true, true);
+
+                // corrupted profile, shouldn't happen
+                if (parentProfile.Guid == this.Guid)
+                    return _ErrorCode;
+
+                return parentProfile.ErrorCode;
+            }
+            else
+                return _ErrorCode;
+        }
+
+        set
+        {
+            if (value != _ErrorCode)
+                _ErrorCode = value;
+        }
+    }
 
     public string Name { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
     public string Arguments { get; set; } = string.Empty;
+    [JsonIgnore]
+    public string FileName { get; set; } = string.Empty;
 
     public bool IsSubProfile { get; set; }
     public bool IsFavoriteSubProfile { get; set; }
 
     public Guid Guid { get; set; } = Guid.NewGuid();
-    public string Executable { get; set; } = string.Empty;
+    public Guid ParentGuid { get; set; } = Guid.Empty;
+
+    public DateTime DateCreated { get; set; } = DateTime.MinValue;
+    public DateTime DateModified { get; set; } = DateTime.MinValue;
+    public DateTime LastUsed { get; set; } = DateTime.MinValue;
+
+    // Library
+    public LibraryEntry LibraryEntry { get; set; }
+    public bool ShowInLibrary { get; set; } = true;
+
+    // GameLib
+    public PlatformType PlatformType { get; set; } = PlatformType.Windows;
+    public string LaunchString { get; set; } = string.Empty;
+
+    public string Executable => System.IO.Path.GetFileName(Path);
+    public List<string> Executables { get; set; } = new();
 
     public bool Enabled { get; set; }
     public bool IsPinned { get; set; } = true;
+    public bool SuspendOnSleep { get; set; }
+    public bool SuspendOnQT { get; set; }
 
     public bool Default { get; set; }
     public Version Version { get; set; } = new();
 
     public string LayoutTitle { get; set; } = string.Empty;
-    public bool LayoutEnabled { get; set; }
     public Layout Layout { get; set; } = new();
 
     public bool Whitelisted { get; set; } // if true, can see through the HidHide cloak
@@ -91,11 +163,6 @@ public partial class Profile : ICloneable, IComparable
     // Aiming down sights
     public float AimingSightsMultiplier { get; set; } = 1.0f;
     public ButtonState AimingSightsTrigger { get; set; } = new();
-
-    // flickstick
-    public bool FlickstickEnabled { get; set; }
-    public float FlickstickDuration { get; set; } = 0.1f;
-    public float FlickstickSensivity { get; set; } = 3.0f;
 
     // power & graphics
     public Guid[] PowerProfiles { get; set; } = 
@@ -123,42 +190,49 @@ public partial class Profile : ICloneable, IComparable
     // emulated controller type, default is default
     public HIDmode HID { get; set; } = HIDmode.NotSelected;
 
+    public Dictionary<string, ProcessWindowSettings> WindowsSettings = new();
+
     public Profile()
     {
         // initialize aiming array
         if (MotionSensivityArray.Count == 0)
+        {
             for (var i = 0; i < SensivityArraySize; i++)
             {
                 var value = i / (double)(SensivityArraySize - 1);
                 MotionSensivityArray[value] = 0.5f;
             }
+        }
     }
 
     public Profile(string path) : this()
     {
-        if (!string.IsNullOrEmpty(path))
+        if (File.Exists(path))
         {
-            Dictionary<string, string> AppProperties = ProcessUtils.GetAppProperties(path);
-
-            string ProductName = AppProperties.TryGetValue("FileDescription", out var property) ? property : AppProperties["ItemFolderNameDisplay"];
-            // string Version = AppProperties.ContainsKey("FileVersion") ? AppProperties["FileVersion"] : "1.0.0.0";
-            // string Company = AppProperties.ContainsKey("Company") ? AppProperties["Company"] : AppProperties.ContainsKey("Copyright") ? AppProperties["Copyright"] : "Unknown";
-
-            Executable = System.IO.Path.GetFileName(path);
-            Name = string.IsNullOrEmpty(ProductName) ? Executable : ProductName;
+            // store path
             Path = path;
+
+            ProcessUtils.GetAppProperties(path, out string ProductName, out string Company);
+            Name = !string.IsNullOrEmpty(ProductName) ? ProductName : Executable;
         }
+        else
+        {
+            // throw new Exception("Can't create a profile with no path");
+        }
+
+        // initialize layout
+        Layout.FillInherit();
+        LayoutTitle = LayoutTemplate.DefaultLayout.Name;
 
         // enable the below variables when profile is created
         Enabled = true;
     }
 
+    public bool CanExecute => !(ErrorCode.HasFlag(ProfileErrorCode.MissingExecutable) || ErrorCode.HasFlag(ProfileErrorCode.MissingPath) || ErrorCode.HasFlag(ProfileErrorCode.Running));
+
     public object Clone()
     {
-        var jsonString = JsonConvert.SerializeObject(this, Formatting.Indented,
-            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
-        return JsonConvert.DeserializeObject<Profile>(jsonString,
-            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+        return CloningHelper.DeepClone(this);
     }
 
     public int CompareTo(object obj)
@@ -179,27 +253,55 @@ public partial class Profile : ICloneable, IComparable
 
     public string GetFileName()
     {
-        var name = Name;
+        string name = Name;
 
-        if (!Default)
-            name = System.IO.Path.GetFileNameWithoutExtension(Executable);
-
-        // sub profile files will be of form "executable - #guid"
         if (IsSubProfile)
-            name = $"{name} - {Guid}";
+        {
+            Profile mainProfile = ManagerFactory.profileManager.GetProfileFromGuid(ParentGuid, true);
+            name = $"{mainProfile.Name} - {name}";
+        }
 
-        return $"{name}.json";
+        return $"{FileUtils.MakeValidFileName(name)}.json";
+    }
+
+    public static string RemoveSpecialCharacters(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        // Define a set of allowed characters (letters, digits, '.', '_', and space)
+        var allowedCharacters = new HashSet<char>("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._ ");
+        var sanitizedString = new StringBuilder(input.Length);
+
+        // Iterate over each character in the input string
+        foreach (char character in input)
+            if (allowedCharacters.Contains(character))
+                sanitizedString.Append(character);
+
+        // Return the sanitized string
+        return sanitizedString.ToString();
+    }
+
+    public string GetOwnerName()
+    {
+        if (IsSubProfile)
+            return ManagerFactory.profileManager.GetParent(this).Name;
+        else
+            return string.Empty;
     }
 
     public override string ToString()
     {
-        // if sub profile, return the following (mainprofile.name - subprofile.name)
-        if (IsSubProfile)
-        {
-            string mainProfileName = ProfileManager.GetProfileForSubProfile(this).Name;
-            return $"{mainProfileName} - {Name}";
-        }
-        else
-            return Name;
+        return Name;
+    }
+
+    public List<string> GetExecutables(bool addMain)
+    {
+        List<string> execs = new(Executables);
+
+        if (addMain)
+            execs.Add(Path);
+
+        return execs;
     }
 }

@@ -16,7 +16,7 @@ namespace HandheldCompanion.Commands.Functions.Multimedia
 
             Update();
 
-            MultimediaManager.VolumeNotification += MultimediaManager_VolumeNotification;
+            ManagerFactory.multimediaManager.VolumeNotification += MultimediaManager_VolumeNotification;
         }
 
         private void MultimediaManager_VolumeNotification(SoundDirections flow, float volume, bool isMute)
@@ -67,7 +67,7 @@ namespace HandheldCompanion.Commands.Functions.Multimedia
 
         public override void Dispose()
         {
-            MultimediaManager.VolumeNotification -= MultimediaManager_VolumeNotification;
+            ManagerFactory.multimediaManager.VolumeNotification -= MultimediaManager_VolumeNotification;
             base.Dispose();
         }
     }

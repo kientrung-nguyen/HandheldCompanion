@@ -7,19 +7,20 @@ using HandheldCompanion.Views.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace HandheldCompanion.Managers
 {
-    static class PowerProfileManager
+    public class PowerProfileManager : IManager
     {
-        private static PowerProfile currentProfile;
+        private object profileLock = new();
+        private PowerProfile currentProfile;
 
-        public static Dictionary<Guid, PowerProfile> profiles = [];
+        public ConcurrentDictionary<Guid, PowerProfile> profiles = [];
 
         private static string ProfilesPath;
 
@@ -33,112 +34,221 @@ namespace HandheldCompanion.Managers
                 Directory.CreateDirectory(ProfilesPath);
         }
 
-        public static async Task Start()
+        public override void Start()
         {
-            if (IsInitialized)
+            if (Status.HasFlag(ManagerStatus.Initializing) || Status.HasFlag(ManagerStatus.Initialized))
                 return;
 
+            base.PrepareStart();
+
             // process existing profiles
-            var fileEntries = Directory.GetFiles(ProfilesPath, "*.json", SearchOption.AllDirectories);
+            string[] fileEntries = Directory.GetFiles(ManagerPath, "*.json", SearchOption.AllDirectories);
             foreach (var fileName in fileEntries)
                 ProcessProfile(fileName);
 
-            foreach (var devicePowerProfile in IDevice.GetCurrent().DevicePowerProfiles)
+            foreach (PowerProfile profile in IDevice.GetCurrent().DevicePowerProfiles)
             {
-                if (!profiles.ContainsKey(devicePowerProfile.Guid))
-                    UpdateOrCreateProfile(devicePowerProfile, UpdateSource.Serializer);
+                // we want the OEM power profiles to be always up-to-date
+                if (profile.DeviceDefault || (profile.Default && !profiles.ContainsKey(profile.Guid)))
+                    UpdateOrCreateProfile(profile, UpdateSource.Serializer);
             }
 
             // manage events
-            PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
-            ProfileManager.Applied += ProfileManager_Applied;
-            ProfileManager.Discarded += ProfileManager_Discarded;
+            ManagerFactory.profileManager.Applied += ProfileManager_Applied;
+            ManagerFactory.profileManager.Discarded += ProfileManager_Discarded;
             SystemManager.PowerLineStatusChanged += SystemManager_PowerLineStatusChanged;
 
             // raise events
-            if (ProfileManager.IsInitialized)
-            {
-                ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
-            }
-
-            IsInitialized = true;
-            Initialized?.Invoke();
-
-            LogManager.LogInformation("{0} has started", "PowerProfileManager");
-            return;
-        }
-
-        public static void Stop()
-        {
-            if (!IsInitialized)
-                return;
-
-            // manage events
-            PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged -= LibreHardwareMonitor_CpuTemperatureChanged;
-            ProfileManager.Applied -= ProfileManager_Applied;
-            ProfileManager.Discarded -= ProfileManager_Discarded;
-            SystemManager.PowerLineStatusChanged -= SystemManager_PowerLineStatusChanged;
-
-            IsInitialized = false;
-
-            LogManager.LogInformation("{0} has stopped", "PowerProfileManager");
-        }
-
-        private static void LibreHardwareMonitor_CpuTemperatureChanged(object? value)
-        {
-            if (currentProfile is null || currentProfile.FanProfile is null || value is null)
-                return;
-
-            // update fan profile
-            currentProfile.FanProfile.SetTemperature((float)value);
-
-            switch (currentProfile.FanProfile.FanMode)
+            switch (ManagerFactory.profileManager.Status)
             {
                 default:
-                case FanMode.Hardware:
-                    return;
-                case FanMode.Software:
-                    double fanSpeed = currentProfile.FanProfile.GetFanSpeed();
-                    IDevice.GetCurrent().SetFanDuty(fanSpeed);
-                    return;
+                case ManagerStatus.Initializing:
+                    ManagerFactory.profileManager.Initialized += ProfileManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QueryProfile();
+                    break;
+            }
+
+            switch (ManagerFactory.settingsManager.Status)
+            {
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QuerySettings();
+                    break;
+            }
+
+            switch (ManagerFactory.platformManager.Status)
+            {
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.platformManager.Initialized += PlatformManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QueryPlatforms();
+                    break;
+            }
+
+            base.Start();
+        }
+
+        private void QueryPlatforms()
+        {
+            // manage events
+            PlatformManager.HardwareMonitor.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
+        }
+
+        private void PlatformManager_Initialized()
+        {
+            QueryPlatforms();
+        }
+
+        private void QueryProfile()
+        {
+            ProfileManager_Applied(ManagerFactory.profileManager.GetCurrent(), UpdateSource.Background);
+        }
+
+        private void ProfileManager_Initialized()
+        {
+            QueryProfile();
+        }
+
+        private void SettingsManager_Initialized()
+        {
+            QuerySettings();
+        }
+
+        private void QuerySettings()
+        {
+            // manage events
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+            // raise events
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", ManagerFactory.settingsManager.Get<string>("ConfigurableTDPOverrideDown"), false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", ManagerFactory.settingsManager.Get<string>("ConfigurableTDPOverrideUp"), false);
+        }
+
+        public override void Stop()
+        {
+            if (Status.HasFlag(ManagerStatus.Halting) || Status.HasFlag(ManagerStatus.Halted))
+                return;
+
+            base.PrepareStop();
+
+            // manage events
+            PlatformManager.HardwareMonitor.CPUTemperatureChanged -= LibreHardwareMonitor_CpuTemperatureChanged;
+            ManagerFactory.profileManager.Applied -= ProfileManager_Applied;
+            ManagerFactory.profileManager.Discarded -= ProfileManager_Discarded;
+            ManagerFactory.profileManager.Initialized -= ProfileManager_Initialized;
+            SystemManager.PowerLineStatusChanged -= SystemManager_PowerLineStatusChanged;
+            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+
+            base.Stop();
+        }
+        private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
+        {
+            // Only process relevant setting names.
+            if (name != "ConfigurableTDPOverrideDown" && name != "ConfigurableTDPOverrideUp")
+                return;
+
+            double threshold = Convert.ToDouble(value);
+
+            // Define the condition based on the setting name.
+            Func<double, bool> shouldUpdate = name == "ConfigurableTDPOverrideDown"
+                ? (current => current < threshold)
+                : (current => current > threshold);
+
+            foreach (PowerProfile profile in profiles.Values)
+            {
+                bool updated = false;
+
+                // Prevent null reference if TDPOverrideValues is null.
+                if (profile.TDPOverrideValues == null)
+                    continue;
+
+                if (profile.IsDeviceDefault())
+                    continue;
+
+                // Loop through all override values
+                for (int i = 0; i < profile.TDPOverrideValues.Length; i++)
+                {
+                    if (shouldUpdate(profile.TDPOverrideValues[i]))
+                    {
+                        profile.TDPOverrideValues[i] = threshold;
+                        updated = true;
+                    }
+                }
+
+                if (updated)
+                    UpdateOrCreateProfile(profile, UpdateSource.Background);
             }
         }
 
-        private static void SystemManager_PowerLineStatusChanged(PowerLineStatus powerLineStatus)
+        private void LibreHardwareMonitor_CpuTemperatureChanged(float? value)
+        {
+            lock (profileLock)
+            {
+                if (currentProfile is null || currentProfile.FanProfile is null || value is null)
+                    return;
+
+                // update fan profile
+                currentProfile.FanProfile.SetTemperature((float)value);
+
+                switch (currentProfile.FanProfile.FanMode)
+                {
+                    default:
+                    case FanMode.Hardware:
+                        return;
+                    case FanMode.Software:
+                        double fanSpeed = currentProfile.FanProfile.GetFanSpeed();
+                        IDevice.GetCurrent().SetFanDuty(fanSpeed);
+                        return;
+                }
+            }
+        }
+        private void SystemManager_PowerLineStatusChanged(PowerLineStatus powerLineStatus)
         {
             // Get current profile
-            Profile profile = ProfileManager.GetCurrent();
+            Profile profile = ManagerFactory.profileManager.GetCurrent();
 
             ProfileManager_Applied(profile, UpdateSource.Background);
         }
 
-        private static void ProfileManager_Applied(Profile profile, UpdateSource source)
+        private void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
-            var powerProfile = GetProfile(profile.PowerProfiles[(int)SystemInformation.PowerStatus.PowerLineStatus]);
-            if (powerProfile is null)
-                return;
+            lock (profileLock)
+            {
+                var powerProfile = GetProfile(profile.PowerProfiles[(int)SystemInformation.PowerStatus.PowerLineStatus]);
+                if (powerProfile is null)
+                    return;
 
-            // update current profile
-            //currentProfile = powerProfile;
+                // update current profile
+                //currentProfile = powerProfile;
 
-            ApplyProfile(powerProfile, source);
+                ApplyProfile(powerProfile, source);
+            }
         }
 
-        private static void ProfileManager_Discarded(Profile profile, bool swapped)
+        private void ProfileManager_Discarded(Profile profile, bool swapped, Profile nextProfile)
         {
-            // reset current profile
-            currentProfile = null;
+            lock (profileLock)
+            {
+                // reset current profile
+                currentProfile = null;
 
-            var powerProfile = GetProfile(profile.PowerProfiles[(int)SystemInformation.PowerStatus.PowerLineStatus]);
-            if (powerProfile is null)
-                return;
+                var powerProfile = GetProfile(profile.PowerProfiles[(int)SystemInformation.PowerStatus.PowerLineStatus]);
+                if (powerProfile is null)
+                    return;
 
-            // don't bother discarding settings, new one will be enforce shortly
-            if (!swapped)
-                Discarded?.Invoke(powerProfile);
+                // don't bother discarding settings, new one will be enforce shortly
+                Discarded?.Invoke(powerProfile, swapped);
+            }
         }
 
-        private static void ProcessProfile(string fileName)
+        private void ProcessProfile(string fileName)
         {
             PowerProfile profile = null;
 
@@ -163,7 +273,7 @@ namespace HandheldCompanion.Managers
             }
             catch (Exception ex)
             {
-                LogManager.LogError("Could not parse power profile {0}. {1}", fileName, ex.Message);
+                LogManager.LogError("Could not parse power profile: {0}. {1}", fileName, ex.Message);
             }
 
             // failed to parse
@@ -176,16 +286,16 @@ namespace HandheldCompanion.Managers
             UpdateOrCreateProfile(profile, UpdateSource.Serializer);
         }
 
-        public static void UpdateOrCreateProfile(PowerProfile profile, UpdateSource source)
+        public void UpdateOrCreateProfile(PowerProfile profile, UpdateSource source)
         {
             switch (source)
             {
                 case UpdateSource.Serializer:
-                    LogManager.LogInformation($"Loaded power profile: {profile.Name}");
+                    LogManager.LogInformation("Loaded power profile: {0}", profile.Name);
                     break;
 
                 default:
-                    LogManager.LogInformation($"Attempting to update/create power profile: {profile.Name}");
+                    LogManager.LogInformation("Attempting to update/create power profile: {0}", profile.Name);
                     break;
             }
 
@@ -198,17 +308,20 @@ namespace HandheldCompanion.Managers
             if (source == UpdateSource.Serializer)
                 return;
 
-            // warn owner
-            bool isCurrent = profile.Guid == currentProfile?.Guid || source == UpdateSource.PowerStatusChange;
+            lock (profileLock)
+            {
+                // warn owner
+                bool isCurrent = profile.Guid == currentProfile?.Guid || source == UpdateSource.PowerStatusChange;
 
-            if (isCurrent)
-                ApplyProfile(profile, source);
+                if (isCurrent)
+                    ApplyProfile(profile, source);
 
-            // serialize profile
-            SerializeProfile(profile);
+                // serialize profile
+                SerializeProfile(profile);
+            }
         }
 
-        private static void ApplyProfile(PowerProfile profile, UpdateSource source = UpdateSource.Background, bool announce = true)
+        private void ApplyProfile(PowerProfile profile, UpdateSource source = UpdateSource.Background, bool announce = true)
         {
             try
             {
@@ -243,17 +356,17 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        public static bool Contains(Guid guid)
+        public bool Contains(Guid guid)
         {
             return profiles.ContainsKey(guid);
         }
 
-        public static bool Contains(PowerProfile profile)
+        public bool Contains(PowerProfile profile)
         {
-            return profiles.ContainsValue(profile);
+            return profiles.ContainsKey(profile.Guid);
         }
 
-        public static PowerProfile GetProfile(Guid guid)
+        public PowerProfile GetProfile(Guid guid)
         {
             if (profiles.TryGetValue(guid, out var profile))
                 return profile;
@@ -261,27 +374,30 @@ namespace HandheldCompanion.Managers
             return GetDefault();
         }
 
-        private static bool HasDefault(bool AC = true)
+        private bool HasDefault(bool AC = true)
         {
             return profiles.Values.Any(a => a.Default && a.Guid == (AC ? Guid.Empty : new Guid("00000000-0000-0000-0000-010000000000")));
         }
 
-        public static PowerProfile GetDefault(bool AC = true)
+        public PowerProfile GetDefault(bool AC = true)
         {
             if (HasDefault(AC))
                 return profiles.Values.First(a => a.Default && a.Guid == (AC ? Guid.Empty : new Guid("00000000-0000-0000-0000-010000000000")));
             return new PowerProfile();
         }
 
-        public static PowerProfile GetCurrent()
+        public PowerProfile GetCurrent()
         {
-            if (currentProfile is not null)
-                return currentProfile;
+            lock (profileLock)
+            {
+                if (currentProfile is not null)
+                    return currentProfile;
 
-            return GetDefault();
+                return GetDefault();
+            }
         }
 
-        public static void SerializeProfile(PowerProfile profile)
+        public void SerializeProfile(PowerProfile profile)
         {
             // update profile version to current build
             profile.Version = new Version(MainWindow.fileVersionInfo.FileVersion);
@@ -302,17 +418,19 @@ namespace HandheldCompanion.Managers
             catch { }
         }
 
-        public static void DeleteProfile(PowerProfile profile)
+        public void DeleteProfile(PowerProfile profile)
         {
             string profilePath = Path.Combine(ProfilesPath, profile.GetFileName());
 
-            if (profiles.Remove(profile.Guid))
+            if (profiles.Remove(profile.Guid, out _))
             {
-                // warn owner
-                bool isCurrent = profile.Guid == currentProfile?.Guid;
-
+                lock (profileLock)
+                {
+                    // warn owner
+                    bool isCurrent = profile.Guid == currentProfile?.Guid;
+                }
                 // raise event
-                Discarded?.Invoke(profile);
+                Discarded?.Invoke(profile, false);
 
                 // raise event(s)
                 Deleted?.Invoke(profile);
@@ -328,20 +446,17 @@ namespace HandheldCompanion.Managers
         }
 
         #region events
-        public static event DeletedEventHandler Deleted;
+        public event DeletedEventHandler Deleted;
         public delegate void DeletedEventHandler(PowerProfile profile);
 
-        public static event UpdatedEventHandler Updated;
+        public event UpdatedEventHandler Updated;
         public delegate void UpdatedEventHandler(PowerProfile profile, UpdateSource source);
 
-        public static event AppliedEventHandler Applied;
+        public event AppliedEventHandler Applied;
         public delegate void AppliedEventHandler(PowerProfile profile, UpdateSource source);
 
-        public static event DiscardedEventHandler Discarded;
-        public delegate void DiscardedEventHandler(PowerProfile profile);
-
-        public static event InitializedEventHandler Initialized;
-        public delegate void InitializedEventHandler();
+        public event DiscardedEventHandler Discarded;
+        public delegate void DiscardedEventHandler(PowerProfile profile, bool swapped);
         #endregion
     }
 }

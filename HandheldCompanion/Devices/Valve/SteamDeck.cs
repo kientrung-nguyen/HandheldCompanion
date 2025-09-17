@@ -1,4 +1,6 @@
-﻿using HandheldCompanion.Inputs;
+﻿using HandheldCompanion.Devices.Valve;
+using HandheldCompanion.Helpers;
+using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Shared;
 using System;
@@ -28,27 +30,6 @@ public class SteamDeck : IDevice
     private static readonly IntPtr PDCT = new(0xFE700C00 + 0x01);
     private static readonly IntPtr MCBL = new(0xFE700B00 + 0x9F);
 
-    public struct DeviceVersion
-    {
-        public ushort Firmware { get; set; }
-        public byte BoardID { get; set; }
-        public byte PDCS { get; set; }
-
-        public bool BatteryTempLE { get; set; }
-        public bool MaxBatteryCharge { get; set; }
-
-        public bool IsSupported(ushort deviceFirmware, byte deviceBoardID, byte devicePDCS)
-        {
-            if (Firmware != 0 && Firmware != deviceFirmware)
-                return false;
-            if (BoardID != 0 && BoardID != deviceBoardID)
-                return false;
-            if (PDCS != 0 && PDCS != devicePDCS)
-                return false;
-            return true;
-        }
-    };
-
     private static readonly DeviceVersion[] deviceVersions =
     {
         // Steam Deck - LCD version
@@ -61,8 +42,13 @@ public class SteamDeck : IDevice
         new DeviceVersion() { Firmware = 0x1090, BoardID = 0x5, PDCS = 0 /* 0x2F */, BatteryTempLE = true, MaxBatteryCharge = true },
     };
 
-    public bool BatteryTempLE { get; set; }
-    public bool MaxBatteryCharge { get; set; }
+    public static ushort FirmwareVersion { get; private set; }
+    public static byte BoardID { get; private set; }
+    public static byte PDCS { get; private set; }
+
+    public override bool IsOpen => inpOut is not null;
+    public DeviceVersion? SupportedDevice => deviceVersions.FirstOrDefault(version => version.IsSupported(FirmwareVersion, BoardID, PDCS));
+    public override bool IsSupported => SupportedDevice is not null && SupportedDevice?.Firmware != 0;
 
     private InpOut inpOut;
 
@@ -78,9 +64,16 @@ public class SteamDeck : IDevice
 
         if (IsSupported)
         {
-            bool maxBatteryCharge = SupportedDevice?.MaxBatteryCharge ?? false;
             Capabilities |= DeviceCapabilities.FanControl;
-            Capabilities |= maxBatteryCharge ? DeviceCapabilities.BatteryChargeLimit : DeviceCapabilities.None;
+            Capabilities |= DeviceCapabilities.OEMCPU;
+            Capabilities |= VangoghGPU.Detect() == VangoghGPU.DetectionStatus.Detected ? DeviceCapabilities.OEMGPU : DeviceCapabilities.None;
+
+            bool HasBatteryChargeLimitSupport = SupportedDevice?.MaxBatteryCharge ?? false;
+            if (HasBatteryChargeLimitSupport)
+            {
+                Capabilities |= DeviceCapabilities.BatteryChargeLimit;
+                Capabilities |= DeviceCapabilities.BatteryChargeLimitPercent;
+            }
         }
 
         // https://www.steamdeck.com/en/tech
@@ -95,8 +88,6 @@ public class SteamDeck : IDevice
             [], [],
             false, ButtonFlags.OEM1
         ));
-
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
     public override string GetGlyph(ButtonFlags button)
@@ -109,14 +100,6 @@ public class SteamDeck : IDevice
 
         return defaultGlyph;
     }
-
-    public static ushort FirmwareVersion { get; private set; }
-    public static byte BoardID { get; private set; }
-    public static byte PDCS { get; private set; }
-
-    public override bool IsOpen => inpOut is not null;
-    public DeviceVersion? SupportedDevice => deviceVersions.FirstOrDefault(version => version.IsSupported(FirmwareVersion, BoardID, PDCS));
-    public override bool IsSupported => SupportedDevice is not null && SupportedDevice?.Firmware != 0;
 
     public override bool Open()
     {
@@ -156,12 +139,94 @@ public class SteamDeck : IDevice
         }
     }
 
+    protected override void QuerySettings()
+    {
+        // raise events
+        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.Get<bool>("BatteryChargeLimit"), false);
+        SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.Get<bool>("BatteryChargeLimitPercent"), false);
+
+        base.QuerySettings();
+    }
+
+    protected override void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
+    {
+        switch (name)
+        {
+            case "BatteryChargeLimit":
+                bool enabled = Convert.ToBoolean(value);
+                switch (enabled)
+                {
+                    case false:
+                        SetMaxBatteryCharge(100);
+                        break;
+                    case true:
+                        int percent = Convert.ToInt32(ManagerFactory.settingsManager.Get<int>("BatteryChargeLimitPercent"));
+                        SetMaxBatteryCharge(percent);
+                        break;
+                }
+                break;
+
+            case "BatteryChargeLimitPercent":
+                {
+                    int percent = Convert.ToInt32(value);
+                    SetMaxBatteryCharge(percent);
+                }
+                break;
+        }
+
+        base.SettingsManager_SettingValueChanged(name, value, temporary);
+    }
+
     public override void Close()
     {
         inpOut.Dispose();
         inpOut = null;
 
         base.Close();
+    }
+
+    public override void set_long_limit(int limit)
+    {
+        using (VangoghGPU? GPU = VangoghGPU.Open())
+        {
+            if (GPU is null)
+                return;
+
+            GPU.SlowTDP = (uint)limit;
+        }
+    }
+
+    public override void set_short_limit(int limit)
+    {
+        using (VangoghGPU? GPU = VangoghGPU.Open())
+        {
+            if (GPU is null)
+                return;
+
+            GPU.FastTDP = (uint)limit;
+        }
+    }
+
+    public override void set_min_gfxclk_freq(uint clock)
+    {
+        using (VangoghGPU? GPU = VangoghGPU.Open())
+        {
+            if (GPU is null)
+                return;
+
+            GPU.HardMinGfxClock = clock;
+        }
+    }
+
+    public override void set_max_gfxclk_freq(uint clock)
+    {
+        using (VangoghGPU? GPU = VangoghGPU.Open())
+        {
+            if (GPU is null)
+                return;
+
+            GPU.SoftMaxGfxClock = clock;
+        }
     }
 
     private void SetGain(ushort gain)
@@ -245,26 +310,5 @@ public class SteamDeck : IDevice
             return;
         byte[] data = BitConverter.GetBytes(chargeLimit);
         inpOut?.WriteMemory(MCBL, data);
-    }
-
-    private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
-    {
-        switch (name)
-        {
-            case "BatteryChargeLimit":
-                {
-                    bool enabled = Convert.ToBoolean(value);
-                    switch (enabled)
-                    {
-                        case true:
-                            SetMaxBatteryCharge(80);
-                            break;
-                        case false:
-                            SetMaxBatteryCharge(100);
-                            break;
-                    }
-                }
-                break;
-        }
     }
 }

@@ -19,18 +19,18 @@ namespace HandheldCompanion.Commands.Functions.HC
 
             Update();
 
-            ProfileManager.Applied += ProfileManager_Applied;
+            ManagerFactory.profileManager.Applied += ProfileManager_Applied;
         }
 
         private void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
             IsEnabled = profile.HID == HIDmode.NotSelected;
-            Update();
+            Update(profile.HID);
         }
 
-        public override void Update()
+        public void Update(HIDmode profileMode = HIDmode.NotSelected)
         {
-            HIDmode currentHIDmode = (HIDmode)SettingsManager.Get<int>(SettingsName);
+            HIDmode currentHIDmode = profileMode == HIDmode.NotSelected ? (HIDmode)ManagerFactory.settingsManager.Get<int>(SettingsName) : profileMode;
             switch (currentHIDmode)
             {
                 case HIDmode.Xbox360Controller:
@@ -48,14 +48,14 @@ namespace HandheldCompanion.Commands.Functions.HC
         {
             if (IsEnabled)
             {
-                HIDmode currentHIDmode = (HIDmode)SettingsManager.Get<int>(SettingsName);
+                HIDmode currentHIDmode = (HIDmode)ManagerFactory.settingsManager.Get<int>(SettingsName);
                 switch (currentHIDmode)
                 {
                     case HIDmode.Xbox360Controller:
-                        SettingsManager.Set(SettingsName, (int)HIDmode.DualShock4Controller);
+                        ManagerFactory.settingsManager.Set(SettingsName, (int)HIDmode.DualShock4Controller);
                         break;
                     case HIDmode.DualShock4Controller:
-                        SettingsManager.Set(SettingsName, (int)HIDmode.Xbox360Controller);
+                        ManagerFactory.settingsManager.Set(SettingsName, (int)HIDmode.Xbox360Controller);
                         break;
                     default:
                         break;
@@ -85,7 +85,7 @@ namespace HandheldCompanion.Commands.Functions.HC
 
         public override void Dispose()
         {
-            ProfileManager.Applied -= ProfileManager_Applied;
+            ManagerFactory.profileManager.Applied -= ProfileManager_Applied;
             base.Dispose();
         }
     }

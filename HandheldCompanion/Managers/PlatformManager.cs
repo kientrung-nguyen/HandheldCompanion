@@ -1,139 +1,111 @@
-﻿using HandheldCompanion.Misc;
+﻿using GameLib.Core;
+using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
-using HandheldCompanion.Shared;
+using HandheldCompanion.Platforms.Games;
+using HandheldCompanion.Platforms.Misc;
 using HandheldCompanion.Utils;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
+using System.Linq;
 using System.Timers;
 using System.Windows;
-using LibreHwdMonitor = HandheldCompanion.Platforms.LibreHardwareMonitor;
 
 namespace HandheldCompanion.Managers;
 
-public static class PlatformManager
+public class PlatformManager : IManager
 {
+    public static List<IPlatform> GamingPlatforms;
+    public static List<IPlatform> MiscPlatforms;
+    public static List<IPlatform> AllPlatforms;
+
     // gaming platforms
-    public static readonly Steam Steam = new();
-    public static readonly GOGGalaxy GOGGalaxy = new();
-    public static readonly UbisoftConnect UbisoftConnect = new();
+    public static Steam Steam;
+    public static GOGGalaxy GOGGalaxy;
+    public static UbisoftConnect UbisoftConnect;
+    public static BattleNet BattleNet;
+    public static Origin Origin;
+    public static Epic Epic;
+    public static RiotGames RiotGames;
+    public static Rockstar Rockstar;
 
     // misc platforms
-    public static RTSS RTSS = new();
-    public static LibreHwdMonitor LibreHardwareMonitor = new();
+    public static RTSS RTSS;
+    public static LibreHardware HardwareMonitor;
 
     private const int UpdateInterval = 1000;
     private static Timer UpdateTimer;
 
-    public static bool IsInitialized;
-
     private static PlatformNeeds CurrentNeeds = PlatformNeeds.None;
     private static PlatformNeeds PreviousNeeds = PlatformNeeds.None;
 
-    public static event InitializedEventHandler Initialized;
-    public delegate void InitializedEventHandler();
-
-    static PlatformManager()
+    public PlatformManager()
     {
-        UpdateTimer = new() { Interval = UpdateInterval, AutoReset = false };
-        UpdateTimer.Elapsed += (sender, e) => MonitorPlatforms();
+
     }
 
-    public static async Task Start()
+    public override void Start()
     {
-        if (IsInitialized)
+        if (Status.HasFlag(ManagerStatus.Initializing) || Status.HasFlag(ManagerStatus.Initialized))
             return;
 
-        if (Steam.IsInstalled)
-            Steam.Start();
+        base.PrepareStart();
 
-        if (GOGGalaxy.IsInstalled)
+
+        UpdateTimer = new() { Interval = UpdateInterval, AutoReset = false };
+        UpdateTimer.Elapsed += (sender, e) => MonitorPlatforms();
+
+        // initialize gaming platforms
+        Steam = new Steam();
+        GOGGalaxy = new GOGGalaxy();
+        UbisoftConnect = new UbisoftConnect();
+        BattleNet = new BattleNet();
+        Origin = new Origin();
+        Epic = new Epic();
+        RiotGames = new RiotGames();
+        Rockstar = new Rockstar();
+
+        // initialize misc platforms
+        RTSS = new RTSS();
+        HardwareMonitor = new LibreHardware();
+
+        // populate lists
+        GamingPlatforms = new() { Steam, GOGGalaxy, UbisoftConnect, BattleNet, Origin, Epic, RiotGames, Rockstar };
+        MiscPlatforms = new() { RTSS, HardwareMonitor };
+        AllPlatforms = new(GamingPlatforms.Concat(MiscPlatforms));
+
+        // start platforms
+        foreach (IPlatform platform in AllPlatforms)
         {
-            // do something
+            if (platform.IsInstalled)
+                platform.Start();
         }
 
-        if (UbisoftConnect.IsInstalled)
-        {
-            // do something
-        }
-
-        if (RTSS.IsInstalled)
-        {
-            UpdateCurrentNeedsOnScreenDisplay(EnumUtils<OverlayDisplayLevel>.Parse(SettingsManager.Get<int>("OnScreenDisplayLevel")));
-        }
-
-        if (LibreHardwareMonitor.IsInstalled)
-        {
-            LibreHardwareMonitor.Start();
-        }
-
-        // manage update timer events
-        UpdateTimer.Start();
-
-        // manage events
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ProfileManager.Applied += ProfileManager_Applied;
-        PowerProfileManager.Applied += PowerProfileManager_Applied;
-
-        // raise events
-        if (ProfileManager.IsInitialized)
-        {
-            ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
-        }
-
-        // raise events
-        if (PowerProfileManager.IsInitialized)
-        {
-            PowerProfileManager_Applied(PowerProfileManager.GetCurrent(), UpdateSource.Background);
-        }
-
-        // raise events
-        if (SettingsManager.IsInitialized)
-        {
-            SettingsManager_SettingValueChanged("OnScreenDisplayLevel", SettingsManager.Get<int>("OnScreenDisplayLevel"), false);
-        }
-
-        IsInitialized = true;
-        Initialized?.Invoke();
-
-        LogManager.LogInformation("{0} has started", "PlatformManager");
+        base.Start();
     }
 
-    public static void Stop()
+    public override void Stop()
     {
-        if (Steam.IsInstalled)
-            Steam.Stop();
+        if (Status.HasFlag(ManagerStatus.Halting) || Status.HasFlag(ManagerStatus.Halted))
+            return;
 
-        if (GOGGalaxy.IsInstalled)
-            GOGGalaxy.Stop();
+        base.PrepareStop();
 
-        if (UbisoftConnect.IsInstalled)
-            UbisoftConnect.Stop();
-
-        if (RTSS.IsInstalled)
+        // stop platforms
+        foreach (IPlatform platform in AllPlatforms)
         {
-            bool killRTSS = SettingsManager.Get<bool>("PlatformRTSSEnabled");
-            RTSS.Stop(killRTSS);
+            if (platform.IsInstalled)
+            {
+                bool kill = true;
+
+                if (platform is RTSS)
+                    kill = ManagerFactory.settingsManager.Get<bool>("PlatformRTSSEnabled");
+                else if (platform is LibreHardware)
+                    kill = false;
+
+                platform.Stop(kill);
+            }
         }
-
-        if (LibreHardwareMonitor.IsInstalled)
-        {
-            LibreHardwareMonitor.Stop();
-        }
-
-        // manage update timer events
-        UpdateTimer.Stop();
-
-        // manage events
-        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
-        ProfileManager.Applied -= ProfileManager_Applied;
-        PowerProfileManager.Applied -= PowerProfileManager_Applied;
-
-        IsInitialized = false;
-
-        PreviousNeeds = PlatformNeeds.None;
-        CurrentNeeds = PlatformNeeds.None;
-        LogManager.LogInformation("{0} has stopped", "PlatformManager");
     }
 
     private static void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
@@ -254,17 +226,16 @@ public static class PlatformManager
 
     public static PlatformType GetPlatform(Process proc)
     {
-        if (!IsInitialized)
-            return PlatformType.Windows;
+        foreach (IPlatform platform in GamingPlatforms)
+            if (platform.IsRelated(proc))
+                return platform.PlatformType;
 
-        // is this process part of a specific platform
-        if (Steam.IsRelated(proc))
-            return Steam.PlatformType;
-        if (GOGGalaxy.IsRelated(proc))
-            return GOGGalaxy.PlatformType;
-        if (UbisoftConnect.IsRelated(proc))
-            return UbisoftConnect.PlatformType;
         return PlatformType.Windows;
+    }
+
+    public static IEnumerable<IGame> GetGames()
+    {
+        return GamingPlatforms.SelectMany(platform => platform.GetGames());
     }
 
     [Flags]

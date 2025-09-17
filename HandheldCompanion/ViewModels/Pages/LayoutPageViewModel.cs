@@ -2,7 +2,6 @@
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
-using HandheldCompanion.Properties;
 using HandheldCompanion.Views.Pages;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -13,44 +12,42 @@ namespace HandheldCompanion.ViewModels
 {
     public class LayoutPageViewModel : BaseViewModel
     {
-        public ObservableCollection<LayoutTemplateViewModel> LayoutList { get; set; } = [];
-        private LayoutTemplateViewModel _layoutTemplates;
-        private LayoutTemplateViewModel _layoutCommunity;
+        private ObservableCollection<LayoutTemplateViewModel> layoutList = [];
+        public ListCollectionView LayoutCollectionView { get; set; }
 
         public LayoutPageViewModel(LayoutPage layoutPage)
         {
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(layoutList, new object());
+
             // manage events
-            LayoutManager.Updated += LayoutManager_Updated;
-            LayoutManager.Initialized += LayoutManager_Initialized;
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            ManagerFactory.layoutManager.Updated += LayoutManager_Updated;
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
 
-            // Enable thread-safe access to the collection
-            BindingOperations.EnableCollectionSynchronization(LayoutList, new object());
-
-            _layoutTemplates = new() { IsHeader = true, Name = Resources.LayoutPage_Templates, Guid = new() };
-            _layoutCommunity = new() { IsHeader = true, Name = Resources.LayoutPage_Community, Guid = new() };
-
-            LayoutList.Add(_layoutTemplates);
-            LayoutList.Add(_layoutCommunity);
+            LayoutCollectionView = new ListCollectionView(layoutList);
+            LayoutCollectionView.GroupDescriptions.Add(new PropertyGroupDescription("Header"));
 
             // raise events
-            if (LayoutManager.IsInitialized)
+            switch (ManagerFactory.layoutManager.Status)
             {
-                foreach (LayoutTemplate template in LayoutManager.Templates)
-                    LayoutManager_Updated(template);
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.layoutManager.Initialized += LayoutManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QueryLayouts();
+                    break;
             }
 
             if (ControllerManager.HasTargetController)
-            {
-                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
-            }
+                ControllerManager_ControllerSelected(ControllerManager.GetTarget());
         }
 
         private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
         {
             // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 switch (name)
                 {
@@ -68,46 +65,72 @@ namespace HandheldCompanion.ViewModels
 
         private void LayoutManager_Initialized()
         {
+            QueryLayouts();
             RefreshLayoutList();
+        }
+
+        private void QueryLayouts()
+        {
+            foreach (LayoutTemplate template in LayoutManager.Templates)
+                LayoutManager_Updated(template);
         }
 
         private void LayoutManager_Updated(LayoutTemplate layoutTemplate)
         {
-            int index;
-            LayoutTemplateViewModel? foundPreset = LayoutList.FirstOrDefault(p => p.Guid == layoutTemplate.Guid);
-            if (foundPreset is not null)
+            lock (lockcollection)
             {
-                index = LayoutList.IndexOf(foundPreset);
-                foundPreset = new(layoutTemplate);
+                int index;
+                LayoutTemplateViewModel? foundPreset = layoutList.FirstOrDefault(p => p.Guid == layoutTemplate.Guid);
+                if (foundPreset is not null)
+                {
+                    index = layoutList.IndexOf(foundPreset);
+                    foundPreset = new(layoutTemplate);
+                }
+                else
+                {
+                    layoutList.Insert(0, new(layoutTemplate));
+                }
             }
-            else
-            {
-                index = LayoutList.IndexOf(layoutTemplate.IsInternal ? _layoutTemplates : _layoutCommunity) + 1;
-                LayoutList.Insert(index, new(layoutTemplate));
-            }
+
+            RefreshLayoutList();
         }
 
+        private object lockcollection = new();
         private void RefreshLayoutList()
         {
             // Get filter settings
-            bool FilterOnDevice = SettingsManager.Get<bool>("LayoutFilterOnDevice");
+            bool FilterOnDevice = ManagerFactory.settingsManager.Get<bool>("LayoutFilterOnDevice");
 
             // Get current controller
-            IController? controller = ControllerManager.GetTargetController();
+            IController? controller = ControllerManager.GetTarget();
 
-            foreach (LayoutTemplateViewModel layoutTemplate in LayoutList)
+            lock (lockcollection)
             {
-                if (layoutTemplate.ControllerType is not null && FilterOnDevice)
+                foreach (LayoutTemplateViewModel layoutTemplate in layoutList)
                 {
-                    if (layoutTemplate.ControllerType != controller?.GetType())
+                    if (layoutTemplate.ControllerType is not null && FilterOnDevice)
                     {
-                        layoutTemplate.Visibility = Visibility.Collapsed;
-                        continue;
+                        if (layoutTemplate.ControllerType != controller?.GetType())
+                        {
+                            layoutTemplate.Visibility = Visibility.Collapsed;
+                            continue;
+                        }
                     }
-                }
 
-                layoutTemplate.Visibility = Visibility.Visible;
+                    layoutTemplate.Visibility = Visibility.Visible;
+                }
             }
+        }
+
+        public override void Dispose()
+        {
+            // manage events
+            ManagerFactory.layoutManager.Updated -= LayoutManager_Updated;
+            ManagerFactory.layoutManager.Initialized -= LayoutManager_Initialized;
+            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+            ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+
+            base.Dispose();
         }
     }
 }

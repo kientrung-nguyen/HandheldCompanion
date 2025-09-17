@@ -25,8 +25,8 @@ public enum MotionInput
     /// </summary>
     PlayerSpace = 1,
     /// <summary>
-    /// World Space: Gyro controls calculate the direction of gravity to determine the player’s “up” orientation.
-    /// The yaw axis remains aligned with this “up” direction, regardless of the controller’s physical orientation.
+    /// World Space: Gyro controls calculate the direction of gravity to determine the player's "up" orientation.
+    /// The yaw axis remains aligned with this "up" direction, regardless of the controller's physical orientation.
     /// By using the accelerometer, local space inputs are converted to world space.
     /// Players can consistently turn the camera left and right by rotating the controller relative to themselves.
     /// While more intuitive, world space controls are challenging to implement and less suitable for handheld devices.
@@ -35,20 +35,18 @@ public enum MotionInput
     JoystickSteering = 3
 }
 
-public enum MotionOutput
-{
-    Disabled = 0,
-    LeftStick = 1,
-    RightStick = 2,
-    MoveCursor = 3,
-    ScrollWheel = 4
-}
+public enum MotionOutput { Disabled, LeftStick, RightStick, MoveCursor, ScrollWheel }
+public enum MotionMode { Off, On, Toggle }
 
-public enum MotionMode
+[Flags]
+public enum MotionDirection
 {
-    Off = 0,
-    On = 1,
-    Toggle = 2
+    None = 0,
+    Left = 1,
+    Right = 2,
+    Up = 4,
+    Down = 8,
+    Any = Left | Right | Up | Down
 }
 
 public enum OverlayModelMode
@@ -504,5 +502,22 @@ public static class InputUtils
         pitchYawRoll.Z = (float)Math.Atan2(2f * q.X * q.W - 2f * q.Y * q.Z, -sqx + sqy - sqz + sqw); // Roll
 
         return pitchYawRoll;
+    }
+
+    public static MotionDirection GetMotionDirection(Vector2 vector, float threshold)
+    {
+        MotionDirection direction = 0;
+
+        if (vector.X > threshold)
+            direction |= MotionDirection.Right;
+        else if (vector.X < -threshold)
+            direction |= MotionDirection.Left;
+
+        if (vector.Y > threshold)
+            direction |= MotionDirection.Up;
+        else if (vector.Y < -threshold)
+            direction |= MotionDirection.Down;
+
+        return direction;
     }
 }

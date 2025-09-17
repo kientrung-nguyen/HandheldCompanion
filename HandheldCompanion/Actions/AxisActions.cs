@@ -2,27 +2,34 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Utils;
 using System;
 using System.Numerics;
-using System.Windows.Forms;
 
 namespace HandheldCompanion.Actions
 {
+    public enum OutputShape
+    {
+        Default = 0,
+        Circle = 1,
+        Cross = 2,
+        Square = 3
+    }
+
     [Serializable]
     public class AxisActions : GyroActions
     {
         public AxisLayoutFlags Axis;
 
         // Axis to axis
-        public bool ImproveCircularity = false;
         public int AxisAntiDeadZone = 0;
         public int AxisDeadZoneInner = 0;
         public int AxisDeadZoneOuter = 0;
-        public bool AxisRotated = false;
-        public bool AxisInverted = false;
+        public OutputShape OutputShape = OutputShape.Default;
+
+        public bool InvertHorizontal = false;
+        public bool InvertVertical = false;
 
         public AxisActions()
         {
             this.actionType = ActionType.Joystick;
-            this.Value = new Vector2();
         }
 
         public AxisActions(AxisLayoutFlags axis) : this()
@@ -30,29 +37,47 @@ namespace HandheldCompanion.Actions
             this.Axis = axis;
         }
 
-        public void Execute(AxisLayout layout)
+        public float XOuput => this.Vector.X;
+        public float YOuput => this.Vector.Y;
+
+        public override void Execute(AxisLayout layout, ShiftSlot shiftSlot)
         {
-            layout.vector = InputUtils.ThumbScaledRadialInnerOuterDeadzone(layout.vector, AxisDeadZoneInner, AxisDeadZoneOuter);
-            layout.vector = InputUtils.ApplyAntiDeadzone(layout.vector, AxisAntiDeadZone);
+            // update value
+            this.Vector = layout.vector;
 
-            if (ImproveCircularity)
-                layout.vector = InputUtils.ImproveCircularity(layout.vector);
+            // call parent, check shiftSlot
+            base.Execute(layout, shiftSlot);
 
-            if (AutoRotate)
-                layout.vector = ((Orientation & ScreenOrientation.Angle90) == ScreenOrientation.Angle90
-                             ? new Vector2(layout.vector.Y, -layout.vector.X)
-                             : layout.vector)
-                         * ((Orientation & ScreenOrientation.Angle180) == ScreenOrientation.Angle180 ? -1.0f : 1.0f);
-            else
-                layout.vector = (AxisRotated ? new Vector2(layout.vector.Y, -layout.vector.X) : layout.vector)
-                         * (AxisInverted ? -1.0f : 1.0f);
+            // skip if zero
+            if (this.Vector == Vector2.Zero)
+                return;
 
-            this.Value = (AxisRotated ? new(layout.vector.Y, -layout.vector.X) : layout.vector) * (AxisInverted ? -1.0f : 1.0f);
+            this.Vector = InputUtils.ThumbScaledRadialInnerOuterDeadzone(this.Vector, AxisDeadZoneInner, AxisDeadZoneOuter);
+            this.Vector = InputUtils.ApplyAntiDeadzone(this.Vector, AxisAntiDeadZone);
+
+            switch (OutputShape)
+            {
+                default:
+                    break;
+                case OutputShape.Circle:
+                    this.Vector = InputUtils.ImproveCircularity(this.Vector);
+                    break;
+                case OutputShape.Cross:
+                    this.Vector = InputUtils.CrossDeadzoneMapping(this.Vector, AxisDeadZoneInner, AxisDeadZoneOuter);
+                    this.Vector = InputUtils.ImproveCircularity(this.Vector);
+                    break;
+                case OutputShape.Square:
+                    this.Vector = InputUtils.ImproveSquare(this.Vector);
+                    break;
+            }
+
+            // invert axis
+            this.Vector = new Vector2(InvertHorizontal ? -this.Vector.X : this.Vector.X, InvertVertical ? -this.Vector.Y : this.Vector.Y);
         }
 
         public Vector2 GetValue()
         {
-            return (Vector2)this.Value;
+            return this.Vector;
         }
     }
 }

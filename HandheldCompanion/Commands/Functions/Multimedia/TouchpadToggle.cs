@@ -18,7 +18,7 @@ public class TouchpadToggle : FunctionCommands
 
     public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
     {
-        var status = DeviceManager.ToggleTouchpad();
+        var status = ManagerFactory.deviceManager.ToggleTouchpad();
         Thread.Sleep(200);
         if (status is not null)
             ToastManager.RunToast($"{Properties.Resources.Hotkey_touchpadToggle} {((bool)status ? Properties.Resources.On : Properties.Resources.Off)}",
@@ -26,7 +26,7 @@ public class TouchpadToggle : FunctionCommands
         base.Execute(IsKeyDown, IsKeyUp, false);
     }
 
-    public override bool IsToggled => DeviceManager.GetToggleTouchpadState() ?? false;
+    public override bool IsToggled => ManagerFactory.deviceManager.GetToggleTouchpadState() ?? false;
 
     public override object Clone()
     {

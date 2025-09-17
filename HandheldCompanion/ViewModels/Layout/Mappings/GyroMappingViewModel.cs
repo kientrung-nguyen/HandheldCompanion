@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
-using HandheldCompanion.Devices;
 using HandheldCompanion.Extensions;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
@@ -10,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Data;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -25,41 +25,6 @@ namespace HandheldCompanion.ViewModels
         ];
 
         #region Axis Action Properties
-
-        public bool Axis2AxisAutoRotate
-        {
-            get => (Action is AxisActions axisAction) && axisAction.AutoRotate;
-            set
-            {
-                if (Action is AxisActions axisAction && value != Axis2AxisAutoRotate)
-                {
-                    axisAction.AutoRotate = value;
-                    OnPropertyChanged(nameof(Axis2AxisAutoRotate));
-                }
-            }
-        }
-
-        public int Axis2AxisRotation
-        {
-            get
-            {
-                if (Action is AxisActions axisAction)
-                {
-                    return (axisAction.AxisInverted ? 180 : 0) + (axisAction.AxisRotated ? 90 : 0);
-                }
-
-                return 0;
-            }
-            set
-            {
-                if (Action is AxisActions axisAction && value != Axis2AxisRotation)
-                {
-                    axisAction.AxisInverted = ((value / 90) & 2) == 2;
-                    axisAction.AxisRotated = ((value / 90) & 1) == 1;
-                    OnPropertyChanged(nameof(Axis2AxisRotation));
-                }
-            }
-        }
 
         public int Axis2AxisInnerDeadzone
         {
@@ -100,15 +65,15 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public bool Axis2AxisImproveCircularity
+        public int Axis2AxisOutputShapeIndex
         {
-            get => (Action is AxisActions axisAction) && axisAction.ImproveCircularity;
+            get => (Action is AxisActions axisAction) ? (int)axisAction.OutputShape : 0;
             set
             {
-                if (Action is AxisActions axisAction && value != Axis2AxisImproveCircularity)
+                if (Action is AxisActions axisAction && value != Axis2AxisOutputShapeIndex)
                 {
-                    axisAction.ImproveCircularity = value;
-                    OnPropertyChanged(nameof(Axis2AxisImproveCircularity));
+                    axisAction.OutputShape = (OutputShape)value;
+                    OnPropertyChanged(nameof(Axis2AxisOutputShapeIndex));
                 }
             }
         }
@@ -126,41 +91,6 @@ namespace HandheldCompanion.ViewModels
                 {
                     mouseAction.Sensivity = value;
                     OnPropertyChanged(nameof(Axis2MousePointerSpeed));
-                }
-            }
-        }
-
-        public bool Axis2MouseAutoRotate
-        {
-            get => (Action is MouseActions mouseAction) && mouseAction.AutoRotate;
-            set
-            {
-                if (Action is MouseActions mouseAction && value != Axis2MouseAutoRotate)
-                {
-                    mouseAction.AutoRotate = value;
-                    OnPropertyChanged(nameof(Axis2MouseAutoRotate));
-                }
-            }
-        }
-
-        public int Axis2MouseRotation
-        {
-            get
-            {
-                if (Action is MouseActions mouseAction)
-                {
-                    return (mouseAction.AxisInverted ? 180 : 0) + (mouseAction.AxisRotated ? 90 : 0);
-                }
-
-                return 0;
-            }
-            set
-            {
-                if (Action is MouseActions mouseAction && value != Axis2MouseRotation)
-                {
-                    mouseAction.AxisInverted = ((value / 90) & 2) == 2;
-                    mouseAction.AxisRotated = ((value / 90) & 1) == 1;
-                    OnPropertyChanged(nameof(Axis2MouseRotation));
                 }
             }
         }
@@ -240,6 +170,9 @@ namespace HandheldCompanion.ViewModels
 
         public GyroMappingViewModel(AxisLayoutFlags layoutFlag) : base(layoutFlag)
         {
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(HotkeysList, new object());
+
             foreach (var mode in Enum.GetValues<MotionInput>())
             {
                 MotionInputItems.Add(new MotionInputViewModel
@@ -249,13 +182,13 @@ namespace HandheldCompanion.ViewModels
                 });
             }
 
-            HotkeysManager.Updated += HotkeysManager_Updated;
+            ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
             InputsManager.StartedListening += InputsManager_StartedListening;
             InputsManager.StoppedListening += InputsManager_StoppedListening;
 
             // store hotkey to manager
             HotkeysList.SafeAdd(new HotkeyViewModel(GyroHotkey));
-            HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
+            ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
         }
 
         private void HotkeysManager_Updated(Hotkey hotkey)
@@ -273,7 +206,7 @@ namespace HandheldCompanion.ViewModels
             GyroHotkey = hotkey;
 
             // update hotkey UI
-            HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+            HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
             if (foundHotkey is null)
                 HotkeysList.SafeAdd(new HotkeyViewModel(hotkey));
             else
@@ -296,22 +229,10 @@ namespace HandheldCompanion.ViewModels
 
         public override void Dispose()
         {
-            HotkeysManager.Updated -= HotkeysManager_Updated;
+            ManagerFactory.hotkeysManager.Updated -= HotkeysManager_Updated;
             InputsManager.StartedListening -= InputsManager_StartedListening;
             InputsManager.StoppedListening -= InputsManager_StoppedListening;
             base.Dispose();
-        }
-
-        protected override void UpdateController(IController controller)
-        {
-            var flag = (AxisLayoutFlags)Value;
-
-            IsSupported = controller.HasSourceAxis(flag) || IDevice.GetCurrent().HasMotionSensor();
-
-            if (IsSupported)
-            {
-                UpdateIcon(controller.GetGlyphIconInfo(flag, 28));
-            }
         }
 
         protected override void ActionTypeChanged(ActionType? newActionType = null)
@@ -325,6 +246,12 @@ namespace HandheldCompanion.ViewModels
                 return;
             }
 
+            // get current controller
+            IController controller = ControllerManager.GetDefault(true);
+
+            // Build Targets
+            List<MappingTargetViewModel> targets = new List<MappingTargetViewModel>();
+
             if (actionType == ActionType.Joystick)
             {
                 if (Action is null || Action is not AxisActions)
@@ -336,12 +263,6 @@ namespace HandheldCompanion.ViewModels
                         MotionTrigger = GyroHotkey.inputsChord.ButtonState.Clone() as ButtonState
                     };
                 }
-
-                // get current controller
-                var controller = ControllerManager.GetPlaceholderController();
-
-                // Build Targets
-                var targets = new List<MappingTargetViewModel>();
 
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var axis in controller.GetTargetAxis())
@@ -375,9 +296,6 @@ namespace HandheldCompanion.ViewModels
                     };
                 }
 
-                // Build Targets
-                var targets = new List<MappingTargetViewModel>();
-
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var mouseType in Enum.GetValues<MouseActionsType>().Except(_unsupportedMouseActionTypes))
                 {
@@ -397,6 +315,14 @@ namespace HandheldCompanion.ViewModels
                 // Update list and selected target
                 Targets.ReplaceWith(targets);
                 SelectedTarget = matchingTargetVm ?? Targets.First();
+            }
+            else if (actionType == ActionType.Inherit)
+            {
+                if (Action is null || Action is not InheritActions)
+                    Action = new InheritActions();
+
+                // Update list and selected target
+                Targets.Clear();
             }
 
             // Refresh mapping
@@ -439,7 +365,7 @@ namespace HandheldCompanion.ViewModels
                 GyroHotkey.inputsChord.ButtonState = ((GyroActions)newAction).MotionTrigger.Clone() as ButtonState;
 
                 // update hotkey UI
-                HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == GyroHotkey.ButtonFlags);
+                HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == GyroHotkey.ButtonFlags);
                 if (foundHotkey is not null)
                     foundHotkey.Hotkey = GyroHotkey;
 

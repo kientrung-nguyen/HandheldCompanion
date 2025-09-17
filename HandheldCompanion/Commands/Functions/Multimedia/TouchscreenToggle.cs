@@ -17,14 +17,14 @@ public class TouchscreenToggle : FunctionCommands
 
     public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
     {
-        var status = DeviceManager.ToggleTouchscreen();
+        var status = ManagerFactory.deviceManager.ToggleTouchscreen();
         if (status is not null)
             ToastManager.RunToast($"{Properties.Resources.Hotkey_touchscreenToggle} {((bool)status ? Properties.Resources.On : Properties.Resources.Off)}",
                 ToastIcons.Touchscreen);
         base.Execute(IsKeyDown, IsKeyUp, false);
     }
 
-    public override bool IsToggled => DeviceManager.GetToggleTouchscreenState() ?? false;
+    public override bool IsToggled => ManagerFactory.deviceManager.GetToggleTouchscreenState() ?? false;
 
     public override object Clone()
     {

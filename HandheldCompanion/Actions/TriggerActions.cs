@@ -17,7 +17,7 @@ namespace HandheldCompanion.Actions
         public TriggerActions()
         {
             this.actionType = ActionType.Trigger;
-            this.Value = (short)0;
+            this.Value = short.MinValue;
         }
 
         public TriggerActions(AxisLayoutFlags axis) : this()
@@ -25,18 +25,43 @@ namespace HandheldCompanion.Actions
             this.Axis = axis;
         }
 
-        public void Execute(AxisFlags axis, short value)
+        public void Execute(AxisFlags axis, float value, ShiftSlot shiftSlot)
         {
-            // Apply inner and outer deadzone adjustments
-            value = (short)InputUtils.InnerOuterDeadzone(value, AxisDeadZoneInner, AxisDeadZoneOuter, byte.MaxValue);
-            value = (short)InputUtils.ApplyAntiDeadzone(value, AxisAntiDeadZone, byte.MaxValue);
+            // update value
+            this.Value = (short)Math.Clamp(value, byte.MinValue, byte.MaxValue);
 
-            this.Value = value;
+            // call parent, check shiftSlot
+            base.Execute(axis, shiftSlot);
+
+            // skip if zero
+            if (this.Value is short sValue && sValue == 0)
+                return;
+
+            // Apply inner and outer deadzone adjustments
+            value = InputUtils.InnerOuterDeadzone(value, AxisDeadZoneInner, AxisDeadZoneOuter, byte.MaxValue);
+            value = InputUtils.ApplyAntiDeadzone(value, AxisAntiDeadZone, byte.MaxValue);
+
+            this.Value = (byte)value;
         }
 
-        public short GetValue()
+        public override void Execute(ButtonFlags button, bool value, ShiftSlot shiftSlot = Actions.ShiftSlot.None)
         {
-            return (short)this.Value;
+            // call parent, check shiftSlot
+            base.Execute(button, value, shiftSlot);
+
+            // skip if value is false
+            if (this.Value is bool bValue && !bValue)
+                return;
+
+            this.Value = (byte)motionThreshold;
+        }
+
+        public byte GetValue()
+        {
+            if (this.Value is byte sValue)
+                return sValue;
+
+            return 0;
         }
     }
 }

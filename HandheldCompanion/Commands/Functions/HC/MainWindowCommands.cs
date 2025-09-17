@@ -6,6 +6,8 @@ namespace HandheldCompanion.Commands.Functions.HC
     [Serializable]
     public class MainWindowCommands : FunctionCommands
     {
+        public int PageIndex { get; set; } = 0;
+
         public MainWindowCommands()
         {
             base.Name = Properties.Resources.Hotkey_Mainwindow;

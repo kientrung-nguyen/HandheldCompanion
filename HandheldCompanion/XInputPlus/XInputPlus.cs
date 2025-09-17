@@ -1,6 +1,5 @@
 ﻿using Force.Crc32;
 using HandheldCompanion.Controllers;
-using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Properties;
@@ -96,7 +95,7 @@ public static class XInputPlus
 
     static XInputPlus()
     {
-        ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
+        ManagerFactory.processManager.ProcessStarted += ProcessManager_ProcessStarted;
     }
 
     // this should be handled by the installer at some point.
@@ -134,7 +133,7 @@ public static class XInputPlus
         try
         {
             // get related profile
-            Profile profile = ProfileManager.GetProfileFromPath(processEx.Path, true);
+            Profile profile = ManagerFactory.profileManager.GetProfileFromPath(processEx.Path, true);
 
             if (profile.XInputPlus != XInputPlusMethod.Injection)
                 return;
@@ -172,7 +171,7 @@ public static class XInputPlus
             XInputDLL64 = XInputPlus_XInputx64,
             DInputDLL64 = XInputPlus_DInputx64,                         // unused
             DInput8DLL64 = XInputPlus_DInput8x64,                       // unused
-            TargetProgram = "",                                         // Internal use
+            TargetProgram = string.Empty,                                         // Internal use
             LoaderDir = XInputPlus_InjectorDir,                         // "XInputPlus.ini" in this folder is used
             HookChildProcess = false,
             Launched = false                                           // Internal use
@@ -384,7 +383,7 @@ public static class XInputPlus
                     IniFile.Write($"Controller{i + 1}", "0", "ControllerNumber");
 
                 // we need to define Controller index overwrite
-                XInputController vController = ControllerManager.GetVirtualControllers().OfType<XInputController>().FirstOrDefault();
+                XInputController vController = ControllerManager.GetVirtualControllers<XInputController>().FirstOrDefault();
                 if (vController is null)
                     return false;
 
@@ -396,7 +395,7 @@ public static class XInputPlus
                 userIndex.Remove(idx);
 
                 // remove all hidden physical controllers from the list
-                foreach (XInputController pController in ControllerManager.GetPhysicalControllers().OfType<XInputController>().Where(c => c.IsHidden()))
+                foreach (XInputController pController in ControllerManager.GetPhysicalControllers<XInputController>().Where(c => c.IsHidden()))
                     userIndex.Remove(pController.GetUserIndex() + 1);
 
                 for (int i = 0; i < userIndex.Count; i++)

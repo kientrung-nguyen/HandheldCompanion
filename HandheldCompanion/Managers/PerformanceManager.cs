@@ -45,6 +45,15 @@ public enum CPUBoostLevel
     EfficientAggressiveAtGuaranteed = 6
 }
 
+public enum CoreParkingMode
+{
+    AllCoresAuto,
+    AllCoresPrefPCore,
+    AllCoresPrefECore,
+    OnlyPCore,
+    OnlyECore,
+}
+
 public static class PerformanceManager
 {
     private const short INTERVAL_DEFAULT = 3000; // default interval between value scans

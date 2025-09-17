@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+
 using System;
 
 namespace HandheldCompanion.Commands
@@ -26,10 +27,9 @@ namespace HandheldCompanion.Commands
 
         [JsonIgnore] public bool OnKeyDown = false;
         [JsonIgnore] public bool OnKeyUp = false;
-        [JsonIgnore] public Hotkey Hotkey;
 
-        [JsonIgnore] public string Name = "Empty hotkey";
-        [JsonIgnore] public string Description = "Please pick a command type";
+        [JsonIgnore] public string Name = Properties.Resources.Hotkey_DefaultName;
+        [JsonIgnore] public string Description = Properties.Resources.Hotkey_DefaultDesc;
         [JsonIgnore] public string Glyph = "\ue895";
 
         [JsonIgnore] private string _LiveGlyph = string.Empty;
@@ -50,11 +50,37 @@ namespace HandheldCompanion.Commands
             }
         }
 
+        [JsonIgnore] private string _LiveName = string.Empty;
+        [JsonIgnore]
+        public string LiveName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_LiveName))
+                    return Glyph;
+
+                return _LiveName;
+            }
+            set
+            {
+                if (value != _LiveName)
+                    _LiveName = value;
+            }
+        }
+
         [JsonIgnore] public string FontFamily = "Segoe Fluent Icons";
 
         public CommandType commandType;
+        public Type deviceType = null;
+
+        private bool _disposed = false; // Prevent multiple disposals
 
         public ICommands() { }
+
+        ~ICommands()
+        {
+            Dispose(false);
+        }
 
         public virtual void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
         {
@@ -67,16 +93,34 @@ namespace HandheldCompanion.Commands
         }
 
         [JsonIgnore] public virtual bool IsToggled => false;
+
         [JsonIgnore] public bool IsEnabled = true;
+        [JsonIgnore] public bool CanCustom = true;
+        [JsonIgnore] public bool CanUnpin = true;
 
         public virtual object Clone()
         {
-            return this;
+            return MemberwiseClone();
         }
 
         public virtual void Dispose()
         {
+            Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                // Release managed resources
+                Executed = null;
+                Updated = null;
+            }
+
+            _disposed = true;
         }
     }
 }

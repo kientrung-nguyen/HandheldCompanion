@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using System.Windows.Media;
 using Windows.Devices.Sensors;
 using WindowsInput.Events;
@@ -34,6 +35,17 @@ public enum DeviceCapabilities : ushort
     DynamicLightingBrightness = 16,
     DynamicLightingSecondLEDColor = 32,
     BatteryChargeLimit = 64,
+    BatteryChargeLimitPercent = 128,
+    BatteryBypassCharging = 256,
+    FanOverride = 512,
+    OEMCPU = 1024,
+    OEMGPU = 2048,
+}
+
+public enum TDPMethod
+{
+    Default = 0,
+    OEM = 1
 }
 
 public struct ECDetails
@@ -63,12 +75,24 @@ public struct ECDetails
 
 }
 
+public struct HidFilter
+{
+    public short UsagePage;
+    public short Usage;
+    public HidFilter(short usagePage, short usage)
+    {
+        UsagePage = usagePage;
+        Usage = usage;
+    }
+}
 public abstract class IDevice
 {
     public delegate void KeyPressedEventHandler(ButtonFlags button);
+    public event KeyPressedEventHandler KeyPressed;
     public delegate void KeyReleasedEventHandler(ButtonFlags button);
-    public delegate void PowerStatusChangedEventHandler(IDevice device);
+    public event KeyReleasedEventHandler KeyReleased;
 
+    public delegate void PowerStatusChangedEventHandler(IDevice device);
     public static readonly Guid BetterBatteryGuid = new Guid("961cc777-2547-4f9d-8174-7d86181b8a7a");
     public static readonly Guid BetterPerformanceGuid = new Guid("3af9B8d9-7c97-431d-ad78-34a8bfea439f");
     public static readonly Guid BestPerformanceGuid = new Guid("ded574b5-45a0-4f42-8737-46345c09c238");
@@ -78,8 +102,10 @@ public abstract class IDevice
 
     private static IDevice device;
 
-    protected ushort _vid, _pid;
-    public Dictionary<byte, HidDevice> hidDevices = [];
+    protected int vendorId;
+    protected int[] productIds;
+    protected Dictionary<int, HidDevice> hidDevices = [];
+    protected Dictionary<int, HidFilter> hidFilters = [];
 
     public Vector3 AccelerometerAxis = new(1.0f, 1.0f, 1.0f);
     public SortedDictionary<char, char> AccelerometerAxisSwap = new()
@@ -100,8 +126,13 @@ public abstract class IDevice
     public GamepadMotion GamepadMotion;
 
     public DeviceCapabilities Capabilities = DeviceCapabilities.None;
-    public LEDLevel DynamicLightingCapabilities = LEDLevel.SolidColor;
+    public LEDLevel DynamicLightingCapabilities = LEDLevel.None;
     public List<LEDPreset> LEDPresets { get; protected set; } = [];
+    public List<BatteryBypassPreset> BatteryBypassPresets { get; protected set; } = [];
+
+    public int BatteryBypassMin = 50;   // Arbitrary
+    public int BatteryBypassMax = 100;  // Shouldn't it be 90% ?
+    public int BatteryBypassStep = 10;
 
     protected const byte EC_OBF = 0x01;  // Output Buffer Full
     protected const byte EC_IBF = 0x02;  // Input Buffer Full
@@ -117,7 +148,7 @@ public abstract class IDevice
     public double[] GfxClock = { 100, 1800 };
     public uint CpuClock = 6000;
 
-    // device nominal TDP (slow, fast)
+    // device nominal TDP (slow, slow, fast)
     public double[] nTDP = { 15, 15, 20 };
 
     // device maximum operating temperature
@@ -141,6 +172,7 @@ public abstract class IDevice
     protected FontFamily GlyphFontFamily = new("PromptFont");
     protected const string defaultGlyph = "\u2753";
 
+    protected bool UseOpenLib = false;
     public ECDetails ECDetails;
 
     public string ExternalSensorName = string.Empty;
@@ -153,11 +185,14 @@ public abstract class IDevice
     public short ResumeDelay = 2000;
 
     // key press delay to use for certain scenarios
-    public short KeyPressDelay = 20;
+    public short KeyPressDelay = (short)(TimerManager.GetPeriod() * 2);
 
+
+    protected bool DeviceOpen = false;
+    public virtual bool IsOpen => DeviceOpen;
     public IDevice()
     {
-        GamepadMotion = new(ProductIllustration, CalibrationMode.Manual | CalibrationMode.SensorFusion);
+        GamepadMotion = new(ProductIllustration, CalibrationMode.Manual  /*| CalibrationMode.SensorFusion */);
 
         // add default power profile
         DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileDefaultName, Properties.Resources.PowerProfileDefaultDescription)
@@ -176,11 +211,154 @@ public abstract class IDevice
             OSPowerMode = OSPowerMode.BetterBattery,
             TDPOverrideValues = [nTDP[0], nTDP[0], nTDP[0]]
         });
-
-        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
-        DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
-        DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
     }
+
+    public virtual bool Open()
+    {
+        if (IsOpen)
+            return true;
+
+        if (UseOpenLib)
+        {
+            bool success = OpenLibSys();
+            if (!success)
+                return false;
+        }
+
+        // set flag
+        DeviceOpen = true;
+
+        return DeviceOpen;
+    }
+
+    private bool OpenLibSys()
+    {
+        if (openLibSys != null) return true;
+
+        try
+        {
+            // initialize OpenLibSys
+            openLibSys = new OpenLibSys();
+
+            // Check support library sutatus
+            OlsStatus status = openLibSys.GetStatus();
+            switch (status)
+            {
+                case (uint)OlsStatus.NO_ERROR:
+                    break;
+                default:
+                    LogManager.LogError("Couldn't initialize OpenLibSys. ErrorCode: {0}", status);
+                    return false;
+            }
+
+            // Check WinRing0 status
+            OlsDllStatus dllstatus = (OlsDllStatus)openLibSys.GetDllStatus();
+            switch (dllstatus)
+            {
+                case (uint)OlsDllStatus.OLS_DLL_NO_ERROR:
+                    break;
+                default:
+                    LogManager.LogError("Couldn't initialize OpenLibSys. ErrorCode: {0}", dllstatus);
+                    return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Couldn't initialize OpenLibSys. ErrorCode: {0}", ex.Message);
+            Close();
+            return false;
+        }
+
+        return true;
+    }
+
+    public virtual void OpenEvents()
+    {
+        // raise events
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
+        }
+
+        switch (ManagerFactory.deviceManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.deviceManager.Initialized += DeviceManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryDevices();
+                break;
+        }
+
+        // manage events
+        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+
+        // raise events
+        if (VirtualManager.IsInitialized)
+        {
+            VirtualManager_ControllerSelected(VirtualManager.HIDmode);
+        }
+    }
+
+    private void QueryDevices()
+    {
+        // manage events
+        ManagerFactory.deviceManager.UsbDeviceArrived += GenericDeviceUpdated;
+        ManagerFactory.deviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
+
+        GenericDeviceUpdated(null, Guid.Empty);
+    }
+
+    private void DeviceManager_Initialized()
+    {
+        QueryDevices();
+    }
+
+    protected virtual void QuerySettings()
+    {
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+    }
+
+    protected virtual void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
+    { }
+
+    protected virtual void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+    public virtual void Close()
+    {
+        // disable fan control
+        SetFanControl(false);
+
+        // Close openLib
+        if (openLibSys is not null)
+        {
+            openLibSys.Dispose();
+            openLibSys = null;
+        }
+
+        // set flag
+        DeviceOpen = false;
+
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+        VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
+        ManagerFactory.deviceManager.UsbDeviceArrived -= GenericDeviceUpdated;
+        ManagerFactory.deviceManager.UsbDeviceRemoved -= GenericDeviceUpdated;
+    }
+
+    public virtual void Initialize(bool FirstStart, bool NewUpdate)
+    { }
 
     private void VirtualManager_ControllerSelected(HIDmode mode)
     {
@@ -193,17 +371,11 @@ public abstract class IDevice
         PullSensors();
     }
 
-    public IEnumerable<ButtonFlags> OEMButtons => OEMChords.SelectMany(a => a.state.Buttons).Distinct();
-
-    public virtual bool IsOpen => openLibSys is not null;
+    public IEnumerable<ButtonFlags> OEMButtons => OEMChords.Where(a => !a.silenced).SelectMany(a => a.state.Buttons).Distinct();
 
     public virtual bool IsSupported => true;
 
     public Layout DefaultLayout { get; set; } = LayoutTemplate.DefaultLayout.Layout;
-
-    public event KeyPressedEventHandler KeyPressed;
-    public event KeyReleasedEventHandler KeyReleased;
-    public event PowerStatusChangedEventHandler PowerStatusChanged;
 
     public string ManufacturerName = string.Empty;
     public string ProductName = string.Empty;
@@ -651,86 +823,44 @@ public abstract class IDevice
         return Capabilities.HasFlag(DeviceCapabilities.InternalSensor) || Capabilities.HasFlag(DeviceCapabilities.ExternalSensor);
     }
 
-    public virtual bool Open()
-    {
-        if (openLibSys != null)
-            return true;
-
-        try
-        {
-            // initialize OpenLibSys
-            openLibSys = new OpenLibSys();
-
-            // Check support library sutatus
-            var status = openLibSys.GetStatus();
-            switch (status)
-            {
-                case (uint)OlsStatus.NO_ERROR:
-                    break;
-                default:
-                    LogManager.LogError("Couldn't initialize OpenLibSys. ErrorCode: {0}", status);
-                    return false;
-            }
-
-            // Check WinRing0 status
-            var dllstatus = (OlsDllStatus)openLibSys.GetDllStatus();
-            switch (dllstatus)
-            {
-                case (uint)OlsDllStatus.OLS_DLL_NO_ERROR:
-                    break;
-                default:
-                    LogManager.LogError("Couldn't initialize OpenLibSys. ErrorCode: {0}", dllstatus);
-                    return false;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogManager.LogError("Couldn't initialize OpenLibSys. ErrorCode: {0}", ex.Message);
-            Close();
-            return false;
-        }
-
-        return true;
-    }
-
-    public virtual void Close()
-    {
-        if (openLibSys is null)
-            return;
-
-        SetFanControl(false);
-
-        openLibSys.Dispose();
-        openLibSys = null;
-    }
-
     public virtual bool IsReady()
     {
         return true;
+    }
+
+    protected async Task WaitUntilReady()
+    {
+        while (!IsReady())
+            await Task.Delay(250).ConfigureAwait(false);
     }
 
     public virtual void SetKeyPressDelay(HIDmode controllerMode)
     {
         switch (controllerMode)
         {
+            case HIDmode.DualShock4Controller:
+                KeyPressDelay = (short)(TimerManager.GetPeriod() * 18);
+                break;
             default:
-                KeyPressDelay = 20;
+                KeyPressDelay = (short)(TimerManager.GetPeriod() * 2);
                 break;
         }
     }
 
     public void PullSensors()
     {
-        Gyrometer? gyrometer = Gyrometer.GetDefault();
-        Accelerometer? accelerometer = Accelerometer.GetDefault();
+        Gyrometer gyrometer = Gyrometer.GetDefault();
+        Accelerometer accelerometer = Accelerometer.GetDefault();
 
-        if (gyrometer is not null && accelerometer is not null)
+        if (gyrometer != null || accelerometer != null)
         {
-            // check sensor
-            string DeviceId = CommonUtils.Between(gyrometer.DeviceId, @"\\?\", @"#{").Replace(@"#", @"\");
-            USBDeviceInfo sensor = GetUSBDevice(DeviceId);
-            if (sensor is not null)
-                InternalSensorName = sensor.Name;
+            // pick the non-null sensor's DeviceId
+            string rawId = (gyrometer != null) ? gyrometer.DeviceId : accelerometer.DeviceId;
+            string deviceId = CommonUtils.Between(rawId, @"\\?\", @"#{")?.Replace("#", @"\") ?? rawId;
+
+            USBDeviceInfo sensorInfo = GetUSBDevice(deviceId);
+            if (sensorInfo != null)
+                InternalSensorName = sensorInfo.Name;
 
             Capabilities |= DeviceCapabilities.InternalSensor;
         }
@@ -818,14 +948,16 @@ public abstract class IDevice
     [Obsolete("ECRamReadByte is deprecated, please use ECRamReadByte with ECDetails instead.")]
     public virtual byte ECRamReadByte(ushort address)
     {
+        if (!IsOpen)
+            return 0;
+
         try
         {
             return openLibSys.ReadIoPortByte(address);
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Couldn't read byte from address {0} using OpenLibSys. ErrorCode: {1}", address,
-                ex.Message);
+            LogManager.LogError("Couldn't read byte from address {0} using OpenLibSys. ErrorCode: {1}", address, ex.Message);
             return 0;
         }
     }
@@ -833,6 +965,9 @@ public abstract class IDevice
     [Obsolete("ECRamWriteByte is deprecated, please use ECRamDirectWrite with ECDetails instead.")]
     public virtual bool ECRamWriteByte(ushort address, byte data)
     {
+        if (!IsOpen)
+            return false;
+
         try
         {
             openLibSys.WriteIoPortByte(address, data);
@@ -840,15 +975,14 @@ public abstract class IDevice
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Couldn't write byte to address {0} using OpenLibSys. ErrorCode: {1}", address,
-                ex.Message);
+            LogManager.LogError("Couldn't write byte to address {0} using OpenLibSys. ErrorCode: {1}", address, ex.Message);
             return false;
         }
     }
 
-    public virtual byte ECRamReadByte(ushort address, ECDetails details)
+    public virtual byte ECRamDirectReadByte(ushort address, ECDetails details)
     {
-        if (openLibSys is null)
+        if (!IsOpen)
             return 0;
 
         var addr_upper = (byte)((address >> 8) & byte.MaxValue);
@@ -892,7 +1026,7 @@ public abstract class IDevice
 
     public virtual bool ECRamDirectWrite(ushort address, ECDetails details, byte data)
     {
-        if (openLibSys is null)
+        if (!IsOpen)
             return false;
 
         byte addr_upper = (byte)((address >> 8) & byte.MaxValue);
@@ -930,6 +1064,21 @@ public abstract class IDevice
         SendECData(data);
     }
 
+    public virtual void set_long_limit(int limit)
+    { }
+
+    public virtual void set_short_limit(int limit)
+    { }
+
+    public virtual void set_min_gfxclk_freq(uint clock)
+    { }
+
+    public virtual void set_max_gfxclk_freq(uint clock)
+    { }
+
+    public virtual void set_gfx_clk(uint clock)
+    { }
+
     protected virtual void SendECCommand(byte command)
     {
         if (IsECReady())
@@ -944,14 +1093,11 @@ public abstract class IDevice
 
     protected bool IsECReady()
     {
-        DateTime timeout = DateTime.Now.AddMilliseconds(250);
-        while (DateTime.Now < timeout)
-        {
+        Task timeout = Task.Delay(TimeSpan.FromMilliseconds(250));
+        while (!timeout.IsCompleted)
             if ((ECRamReadByte(EC_SC) & EC_IBF) == 0x0)
-            {
                 return true;
-            }
-        }
+
         return false;
     }
 
@@ -977,53 +1123,26 @@ public abstract class IDevice
         return false;
     }
 
-    protected void ResumeDevices()
+    public static IEnumerable<HidDevice> GetHidDevices(int vendorId, int[] deviceIds, int minFeatures = 1)
     {
-        List<string> successes = [];
-
-        var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedDevices");
-
-        deviceInstanceIds ??= [];
-
-        foreach (string InstanceId in deviceInstanceIds)
-        {
-            if (PnPUtil.EnableDevice(InstanceId))
-                successes.Add(InstanceId);
-        }
-
-        foreach (string InstanceId in successes)
-            deviceInstanceIds.Remove(InstanceId);
-
-        SettingsManager.Set("SuspendedDevices", deviceInstanceIds);
-    }
-
-    protected bool SuspendDevice(string InterfaceId)
-    {
-        PnPDevice pnPDevice = PnPDevice.GetDeviceByInterfaceId(InterfaceId);
-
-        if (pnPDevice is not null)
-        {
-            var deviceInstanceIds = SettingsManager.Get<List<string>>("SuspendedDevices");
-
-            deviceInstanceIds ??= new();
-
-            if (!deviceInstanceIds.Contains(pnPDevice.InstanceId))
-                deviceInstanceIds.Add(pnPDevice.InstanceId);
-
-            SettingsManager.Set("SuspendedDevices", deviceInstanceIds);
-
-            return PnPUtil.DisableDevice(pnPDevice.InstanceId);
-        }
-
-        return false;
+        HidDevice[] HidDeviceList = HidDevices.Enumerate(vendorId, deviceIds).ToArray();
+        foreach (HidDevice device in HidDeviceList)
+            if (device.IsConnected && device.Capabilities.FeatureReportByteLength >= minFeatures)
+                yield return device;
     }
 
     public static IEnumerable<HidDevice> GetHidDevices(int vendorId, int deviceId, int minFeatures = 1)
     {
-        HidDevice[] HidDeviceList = HidDevices.Enumerate(vendorId, new int[] { deviceId }).ToArray();
-        foreach (HidDevice device in HidDeviceList)
-            if (device.IsConnected && device.Capabilities.FeatureReportByteLength >= minFeatures)
-                yield return device;
+        return GetHidDevices(vendorId, new int[] { deviceId }, minFeatures);
+    }
+
+    public static byte[] WithReportID(byte[] payload, byte reportID = 0x00, int reportLen = 64)
+    {
+        var buffer = new byte[1 + reportLen];
+        buffer[0] = reportID;
+        int len = Math.Min(payload.Length, reportLen);
+        Buffer.BlockCopy(payload, 0, buffer, 1, len);
+        return buffer;
     }
 
     public string GetButtonName(ButtonFlags button)
@@ -1039,24 +1158,9 @@ public abstract class IDevice
             Name = GetButtonName(button),
             Glyph = glyph is not null ? glyph : defaultGlyph,
             FontSize = fontIconSize,
-            FontFamily = GlyphFontFamily
+            FontFamily = GlyphFontFamily,
+            Color = Colors.White
         };
-    }
-
-    [Obsolete("GetFontIcon has dependencies on UI and should be avoided. Use GetGlyphIconInfo instead.")]
-    public FontIcon GetFontIcon(ButtonFlags button, int FontIconSize = 14)
-    {
-        var FontIcon = new FontIcon
-        {
-            Glyph = GetGlyph(button),
-            FontSize = FontIconSize,
-            Foreground = null,
-        };
-
-        if (FontIcon.Glyph is not null)
-            FontIcon.FontFamily = GlyphFontFamily;
-
-        return FontIcon;
     }
 
     public virtual string GetGlyph(ButtonFlags button)

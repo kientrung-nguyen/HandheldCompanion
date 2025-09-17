@@ -1,11 +1,15 @@
-﻿using HandheldCompanion.Views.Windows;
+﻿using HandheldCompanion.Helpers;
+using HandheldCompanion.Views.Windows;
 using System;
+using System.Windows;
 
 namespace HandheldCompanion.Commands.Functions.HC
 {
     [Serializable]
     public class QuickToolsCommands : FunctionCommands
     {
+        public int PageIndex { get; set; } = 0;
+
         public QuickToolsCommands()
         {
             base.Name = Properties.Resources.Hotkey_quickTools;
@@ -21,14 +25,40 @@ namespace HandheldCompanion.Commands.Functions.HC
             base.Execute(OnKeyDown, OnKeyUp, true);
         }
 
-        public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
+        public override void Execute(bool isKeyDown, bool isKeyUp, bool isBackground)
         {
-            OverlayQuickTools.GetCurrent().ToggleVisibility();
+            string pageTag = PageIndex switch
+            {
+                // 0 => "Current",
+                1 => "QuickHomePage",
+                2 => "QuickDevicePage",
+                3 => "QuickProfilesPage",
+                4 => "QuickApplicationsPage",
+                _ => string.Empty
+            };
 
-            base.Execute(IsKeyDown, IsKeyUp, false);
+            OverlayQuickTools overlayQuickTools = OverlayQuickTools.GetCurrent();
+
+            // Toggle visibility
+            overlayQuickTools.ToggleVisibility();
+
+            // UI thread
+            UIHelper.TryInvoke(() =>
+            {
+                switch (overlayQuickTools.Visibility)
+                {
+                    case Visibility.Visible:
+                        // Navigate to the specified page if valid
+                        if (!string.IsNullOrEmpty(pageTag))
+                            overlayQuickTools.NavigateToPage(pageTag);
+                        break;
+                }
+            });
+
+            base.Execute(isKeyDown, isKeyUp, false);
         }
 
-        public override bool IsToggled => OverlayQuickTools.GetCurrent().Visibility == System.Windows.Visibility.Visible;
+        public override bool IsToggled => OverlayQuickTools.GetCurrent().Visibility == Visibility.Visible;
 
         public override object Clone()
         {

@@ -1,9 +1,10 @@
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Utils;
 using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
+using System.Numerics;
 using WindowsInput.Events;
 
 namespace HandheldCompanion.Actions
@@ -93,6 +94,9 @@ namespace HandheldCompanion.Actions
         protected object Value;
         protected object prevValue;
 
+        protected Vector2 Vector = new();
+        protected Vector2 prevVector = new();
+
         public int ActionTimer = 200; // default value for steam
         public int pressTimer = -1; // -1 inactive, >= 0 active
 
@@ -111,13 +115,13 @@ namespace HandheldCompanion.Actions
         protected bool IsToggled;
 
         public bool Interruptable = true;
-        public ShiftSlot ShiftSlot = 0;
+        public ShiftSlot ShiftSlot = ShiftSlot.Any;
 
         public HapticMode HapticMode = HapticMode.Off;
         public HapticStrength HapticStrength = HapticStrength.Low;
 
-        protected ScreenOrientation Orientation = ScreenOrientation.Angle0;
-        public bool AutoRotate { get; set; } = false;
+        public MotionDirection motionDirection = MotionDirection.None;
+        public float motionThreshold = 4000;
 
         public IActions()
         {
@@ -129,7 +133,49 @@ namespace HandheldCompanion.Actions
             if (this.HapticMode == HapticMode.Down && up) return;
             if (this.HapticMode == HapticMode.Up && !up) return;
 
-            ControllerManager.GetTargetController()?.SetHaptic(this.HapticStrength, button);
+            ControllerManager.GetTarget()?.SetHaptic(this.HapticStrength, button);
+        }
+
+        public virtual void Execute(AxisFlags axis, ShiftSlot shiftSlot)
+        {
+            // manage shift slot
+            switch (ShiftSlot)
+            {
+                case ShiftSlot.None:
+                    if (shiftSlot != ShiftSlot.None)
+                        this.Value = (short)0;
+                    break;
+
+                case ShiftSlot.Any:
+                    // do nothing
+                    break;
+
+                default:
+                    if (!shiftSlot.HasFlag(ShiftSlot))
+                        this.Value = (short)0;
+                    break;
+            }
+        }
+
+        public virtual void Execute(AxisLayout layout, ShiftSlot shiftSlot)
+        {
+            // manage shift slot
+            switch (ShiftSlot)
+            {
+                case ShiftSlot.None:
+                    if (shiftSlot != ShiftSlot.None)
+                        this.Vector = Vector2.Zero;
+                    break;
+
+                case ShiftSlot.Any:
+                    // do nothing
+                    break;
+
+                default:
+                    if (!shiftSlot.HasFlag(ShiftSlot))
+                        this.Vector = Vector2.Zero;
+                    break;
+            }
         }
 
         public virtual void Execute(ButtonFlags button, bool value, ShiftSlot shiftSlot = Actions.ShiftSlot.None)
@@ -152,6 +198,10 @@ namespace HandheldCompanion.Actions
                 case ShiftSlot.None:
                     if (shiftSlot != ShiftSlot.None)
                         value = false;
+                    break;
+
+                case ShiftSlot.Any:
+                    // do nothing
                     break;
 
                 default:
@@ -260,12 +310,9 @@ namespace HandheldCompanion.Actions
 
                 case PressType.Double:
                     {
-                        if (value)
-                        {
-                            // increase press count
-                            if ((bool)prevValue != value)
-                                pressCount++;
-                        }
+                        // increase press count
+                        if (prevValue is bool pbValue && pbValue != value && value)
+                            pressCount++;
 
                         switch (pressCount)
                         {
@@ -348,7 +395,7 @@ namespace HandheldCompanion.Actions
 
             if (Toggle)
             {
-                if ((bool)prevValue != value && value)
+                if (prevValue is bool pbValue && pbValue != value && value)
                     IsToggled = !IsToggled;
             }
             else
@@ -386,15 +433,9 @@ namespace HandheldCompanion.Actions
                 this.Value = value;
         }
 
-        public virtual void SetOrientation(ScreenOrientation orientation)
-        {
-            Orientation = orientation;
-        }
-
-        // Improve me !
         public object Clone()
         {
-            return MemberwiseClone();
+            return CloningHelper.DeepClone(this);
         }
     }
 }

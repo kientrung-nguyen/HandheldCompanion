@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using WindowsDisplayAPI;
 using static HandheldCompanion.ADLX.ADLXBackend;
@@ -33,7 +34,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         private bool prevAFMFSupport = false;
         private bool prevAFMF = false;
 
-        protected new AdlxTelemetryData TelemetryData = new();
+        protected AdlxTelemetryData TelemetryData = new();
 
 
         public static void KillAdrenaline()
@@ -339,6 +340,11 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         {
             return (float)TelemetryData.gpuVramValue;
         }
+		
+		static AmdGpu()
+        {
+            ProcessTargets = new HashSet<string> { "RadeonSoftware", "cncmd" };
+        }
 
         public AmdGpu(AdapterInformation adapterInformation) : base(adapterInformation)
         {
@@ -421,20 +427,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                 try
                 {
                     TelemetryData = GetTelemetry();
-                    /*
-                    for (int i = 0; i < AmdGpuSensorsData.Length; i++)
-                    {
-                        if (EnumUtils<ADLSensorType>.TryParse(i, out var type))
-                        {
-                            if (AmdGpuSensorsData[(int)type].Supported == 1)
-                                LogManager.LogDebug($"{type}: {AmdGpuSensorsData[(int)type].Value}");
-
-                        }
-                        else if (AmdGpuSensorsData[i].Supported == 1)
-                            LogManager.LogDebug($"[{i}]: {AmdGpuSensorsData[i].Value}");
-                    }
-                    */
                 }
+                catch { }
                 finally
                 {
                     Monitor.Exit(telemetryLock);
@@ -455,11 +449,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             base.Stop();
         }
 
-        private void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
+        protected override void UpdateSettings()
         {
-            if (halting)
-                return;
-
             if (Monitor.TryEnter(updateLock))
             {
                 try
@@ -481,15 +472,9 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         if (ScalingSupport)
                             ScalingMode = GetScalingMode();
 
+                        // raise event
                         if (GPUScalingSupport != prevGPUScalingSupport || GPUScaling != prevGPUScaling || ScalingMode != prevScalingMode)
-                        {
-                            // raise event
                             base.OnGPUScalingChanged(GPUScalingSupport, GPUScaling, ScalingMode);
-
-                            prevGPUScaling = GPUScaling;
-                            prevScalingMode = ScalingMode;
-                            prevGPUScalingSupport = GPUScalingSupport;
-                        }
                     }
                     catch { }
 
@@ -500,8 +485,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         bool RSR = false;
                         int RSRSharpness = GetRSRSharpness();
 
-                        DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(2));
-                        while (DateTime.Now < timeout && !RSRSupport)
+                        Task timeout = Task.Delay(TimeSpan.FromSeconds(2));
+                        while (!timeout.IsCompleted && !RSRSupport)
                         {
                             RSRSupport = HasRSRSupport();
                             if (!RSRSupport) Thread.Sleep(1000);
@@ -526,8 +511,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         bool AFMFSupport = false;
                         bool AFMF = false;
 
-                        DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(2));
-                        while (DateTime.Now < timeout && !AFMFSupport)
+                        Task timeout = Task.Delay(TimeSpan.FromSeconds(2));
+                        while (!timeout.IsCompleted && !AFMFSupport)
                         {
                             AFMFSupport = HasAFMFSupport();
                             if (!AFMFSupport) Thread.Sleep(1000);
@@ -551,22 +536,17 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         bool IntegerScalingSupport = false;
                         bool IntegerScaling = false;
 
-                        DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(2));
-                        while (DateTime.Now < timeout && !IntegerScalingSupport && GPUScaling)
+                        Task timeout = Task.Delay(TimeSpan.FromSeconds(2));
+                        while (!timeout.IsCompleted && !IntegerScalingSupport && GPUScaling)
                         {
                             IntegerScalingSupport = HasIntegerScalingSupport();
                             if (!IntegerScalingSupport) Thread.Sleep(1000);
                         }
                         IntegerScaling = GetIntegerScaling();
 
+                        // raise event
                         if (IntegerScalingSupport != prevIntegerScalingSupport || IntegerScaling != prevIntegerScaling)
-                        {
-                            // raise event
                             base.OnIntegerScalingChanged(IntegerScalingSupport, IntegerScaling);
-
-                            prevIntegerScalingSupport = IntegerScalingSupport;
-                            prevIntegerScaling = IntegerScaling;
-                        }
                     }
                     catch { }
 
@@ -575,22 +555,34 @@ namespace HandheldCompanion.GraphicsProcessingUnit
                         bool ImageSharpening = GetImageSharpening();
                         int ImageSharpeningSharpness = GetImageSharpeningSharpness();
 
+                        // raise event
                         if (ImageSharpening != prevImageSharpening || ImageSharpeningSharpness != prevImageSharpeningSharpness)
-                        {
-                            // raise event
                             base.OnImageSharpeningChanged(ImageSharpening, ImageSharpeningSharpness);
-
-                            prevImageSharpening = ImageSharpening;
-                            prevImageSharpeningSharpness = ImageSharpeningSharpness;
-                        }
                     }
                     catch { }
                 }
+                catch { }
                 finally
                 {
                     Monitor.Exit(updateLock);
                 }
             }
+        }
+
+        private void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
+        {
+            if (halting)
+                return;
+
+            UpdateSettings();
+        }
+
+        protected override void BusyTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            // Call the generic method to terminate conflicting processes.
+            TerminateConflictingProcesses();
+
+            base.BusyTimer_Elapsed(sender, e);
         }
     }
 }

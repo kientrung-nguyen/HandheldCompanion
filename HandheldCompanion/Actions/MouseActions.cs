@@ -1,5 +1,6 @@
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Simulators;
+using HandheldCompanion.Utils;
 using System;
 using System.ComponentModel;
 using System.Numerics;
@@ -43,7 +44,6 @@ namespace HandheldCompanion.Actions
         private Vector2 remainder = new();
         private KeyCode[] pressed;
         private OneEuroFilterPair mouseFilter;
-        private Vector2 prevVector = new();
 
         // settings click
         public ModifierSet Modifiers = ModifierSet.None;
@@ -54,8 +54,6 @@ namespace HandheldCompanion.Actions
         public int Deadzone = 15;           // stick only
         public bool Filtering = false;      // pad only
         public float FilterCutoff = 0.05f;  // pad only
-        public bool AxisRotated = false;
-        public bool AxisInverted = false;
 
         public MouseActions()
         {
@@ -113,15 +111,42 @@ namespace HandheldCompanion.Actions
             return false;
         }
 
-        public void Execute(AxisLayout layout, bool touched)
+        private void ExecuteButton(AxisLayout layout, bool touched, ShiftSlot shiftSlot)
+        {
+            // update value
+            this.Vector = layout.vector;
+
+            // call parent, check shiftSlot
+            base.Execute(layout, shiftSlot);
+
+            // skip if zero
+            if (this.Vector == Vector2.Zero && !IsCursorDown)
+                return;
+
+            MotionDirection direction = InputUtils.GetMotionDirection(this.Vector, motionThreshold);
+            bool value = (direction.HasFlag(motionDirection) || motionDirection.HasFlag(direction)) && direction != MotionDirection.None;
+
+            // transition to Button Execute()
+            Execute(ButtonFlags.None, value, shiftSlot);
+        }
+
+        private void ExecuteAxis(AxisLayout layout, bool touched, ShiftSlot shiftSlot)
         {
             // this line needs to be before the next vector zero check
             bool newTouch = IsNewTouch(touched);
 
-            if (layout.vector == Vector2.Zero)
+            // update value
+            this.Vector = layout.vector;
+
+            // call parent, check shiftSlot
+            base.Execute(layout, shiftSlot);
+
+            // skip if zero
+            if (this.Vector == Vector2.Zero)
                 return;
 
-            layout.vector.Y *= -1;
+            // invert axis
+            this.Vector.Y *= -1;
 
             Vector2 deltaVector;
             float sensitivityFinetune;
@@ -134,7 +159,7 @@ namespace HandheldCompanion.Actions
                 default:
                     {
                         // convert to <0.0-1.0> values
-                        deltaVector = layout.vector / short.MaxValue;
+                        deltaVector = this.Vector / short.MaxValue;
                         float deadzone = Deadzone / 100.0f;
 
                         // apply deadzone
@@ -154,13 +179,13 @@ namespace HandheldCompanion.Actions
                         // touchpad was touched, update entry point for delta calculations
                         if (newTouch)
                         {
-                            prevVector = layout.vector;
+                            prevVector = this.Vector;
                             return;
                         }
 
                         // calculate delta and convert to <0.0-1.0> values
-                        deltaVector = (layout.vector - prevVector) / short.MaxValue;
-                        prevVector = layout.vector;
+                        deltaVector = (this.Vector - prevVector) / short.MaxValue;
+                        prevVector = this.Vector;
 
                         sensitivityFinetune = (MouseType == MouseActionsType.Move ? 9.0f : 3.0f);
                     }
@@ -181,11 +206,8 @@ namespace HandheldCompanion.Actions
                 sensitivityFinetune = (float)Math.Pow(sensitivityFinetune, Acceleration);
             }
 
-            // apply sensitivity, rotation and slider finetune
+            // apply sensitivity and slider finetune
             deltaVector *= Sensivity * sensitivityFinetune;
-            if (AxisRotated)
-                deltaVector = new(-deltaVector.Y, deltaVector.X);
-            deltaVector *= (AxisInverted ? -1.0f : 1.0f);
 
             // handle the fact that MoveBy()/*Scroll() are int only and we can have movement (0 < abs(delta) < 1)
             deltaVector += remainder;                                               // add partial previous step
@@ -196,10 +218,24 @@ namespace HandheldCompanion.Actions
             {
                 MouseSimulator.MoveBy((int)intVector.X, (int)intVector.Y);
             }
-            else /* if (MouseType == MouseActionsType.Scroll) */
+            else if (MouseType == MouseActionsType.Scroll)
             {
                 // MouseSimulator.HorizontalScroll((int)-intVector.X);
                 MouseSimulator.VerticalScroll((int)-intVector.Y);
+            }
+        }
+
+        public void Execute(AxisLayout layout, bool touched, ShiftSlot shiftSlot)
+        {
+            switch (MouseType)
+            {
+                case MouseActionsType.Move:
+                case MouseActionsType.Scroll:
+                    ExecuteAxis(layout, touched, shiftSlot);
+                    break;
+                default:
+                    ExecuteButton(layout, touched, shiftSlot);
+                    break;
             }
         }
     }

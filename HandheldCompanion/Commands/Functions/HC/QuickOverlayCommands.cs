@@ -18,9 +18,9 @@ namespace HandheldCompanion.Commands.Functions.HC
             base.Glyph = "\uE78B";
             base.OnKeyUp = true;
 
-            prevDisplaylevel = SettingsManager.Get<int>(Settings.OnScreenDisplayLevel);
+            prevDisplaylevel = ManagerFactory.settingsManager.Get<int>(Settings.OnScreenDisplayLevel);
 
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         }
 
         private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
@@ -39,10 +39,10 @@ namespace HandheldCompanion.Commands.Functions.HC
             switch (_IsToggled)
             {
                 case true:
-                    SettingsManager.Set(SettingsName, prevDisplaylevel, false);
+                    ManagerFactory.settingsManager.Set(SettingsName, prevDisplaylevel, false);
                     break;
                 case false:
-                    SettingsManager.Set(SettingsName, 0, false);
+                    ManagerFactory.settingsManager.Set(SettingsName, 0, false);
                     break;
             }
 
@@ -71,7 +71,7 @@ namespace HandheldCompanion.Commands.Functions.HC
 
         public override void Dispose()
         {
-            SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
             base.Dispose();
         }
     }

@@ -36,10 +36,10 @@ public partial class SettingsMode0 : Page
         this.Tag = Tag;
 
         MotionManager.SettingsMode0Update += MotionManager_SettingsMode0Update;
-        HotkeysManager.Updated += HotkeysManager_Updated;
+        ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
 
         // store hotkey to manager
-        HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
+        ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
     }
 
     public void SetProfile()
@@ -54,12 +54,9 @@ public partial class SettingsMode0 : Page
                     SliderSensitivityX.Value = ProfilesPage.selectedProfile.MotionSensivityX;
                     SliderSensitivityY.Value = ProfilesPage.selectedProfile.MotionSensivityY;
                     tb_ProfileAimingDownSightsMultiplier.Value = ProfilesPage.selectedProfile.AimingSightsMultiplier;
-                    Toggle_FlickStick.IsOn = ProfilesPage.selectedProfile.FlickstickEnabled;
-                    tb_ProfileFlickDuration.Value = ProfilesPage.selectedProfile.FlickstickDuration * 1000;
-                    tb_ProfileStickSensitivity.Value = ProfilesPage.selectedProfile.FlickstickSensivity;
 
                     GyroHotkey.inputsChord.ButtonState = ProfilesPage.selectedProfile.AimingSightsTrigger.Clone() as ButtonState;
-                    HotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
+                    ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(GyroHotkey);
 
                     // temp
                     StackCurve.Children.Clear();
@@ -89,6 +86,7 @@ public partial class SettingsMode0 : Page
                     }
                 });
             }
+            catch { }
             finally
             {
                 updateLock.Exit();
@@ -250,45 +248,6 @@ public partial class SettingsMode0 : Page
             return;
 
         ProfilesPage.selectedProfile.AimingSightsMultiplier = (float)tb_ProfileAimingDownSightsMultiplier.Value;
-        ProfilesPage.UpdateProfile();
-    }
-
-    private void Toggle_FlickStick_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (ProfilesPage.selectedProfile is null)
-            return;
-
-        // prevent update loop
-        if (updateLock.IsEntered())
-            return;
-
-        ProfilesPage.selectedProfile.FlickstickEnabled = Toggle_FlickStick.IsOn;
-        ProfilesPage.UpdateProfile();
-    }
-
-    private void SliderFlickDuration_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (ProfilesPage.selectedProfile is null)
-            return;
-
-        // prevent update loop
-        if (updateLock.IsEntered())
-            return;
-
-        ProfilesPage.selectedProfile.FlickstickDuration = (float)tb_ProfileFlickDuration.Value / 1000;
-        ProfilesPage.UpdateProfile();
-    }
-
-    private void SliderStickSensivity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (ProfilesPage.selectedProfile is null)
-            return;
-
-        // prevent update loop
-        if (updateLock.IsEntered())
-            return;
-
-        ProfilesPage.selectedProfile.FlickstickSensivity = (float)tb_ProfileStickSensitivity.Value;
         ProfilesPage.UpdateProfile();
     }
 

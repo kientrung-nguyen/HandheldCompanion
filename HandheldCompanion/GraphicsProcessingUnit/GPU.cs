@@ -1,7 +1,11 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using SharpDX.Direct3D9;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Management;
+using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -21,6 +25,10 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
         public event GPUScalingChangedEvent GPUScalingChanged;
         public delegate void GPUScalingChangedEvent(bool Supported, bool Enabled, int Mode);
+
+        // true: GPU is busy, false: GPU is free
+        public event StatusChangedEvent StatusChanged;
+        public delegate void StatusChangedEvent(bool status);
         #endregion
 
         public AdapterInformation adapterInformation;
@@ -31,6 +39,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
         protected const int UpdateInterval = 5000;
         protected Timer UpdateTimer;
+        protected bool GPUManagerMonitor => true; // ManagerFactory.settingsManager.GetBoolean("GPUManagerMonitor");
 
         protected const int TelemetryInterval = 1000;
         protected Timer TelemetryTimer;
@@ -46,10 +55,42 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         protected bool prevImageSharpening = false;
         protected int prevImageSharpeningSharpness = -1;
 
-        protected static bool halting = false;
-        protected static object updateLock = new();
-        protected static object telemetryLock = new();
-        public static object functionLock = new();
+        protected volatile bool halting = false;
+        protected object updateLock = new();
+        protected object telemetryLock = new();
+        protected object functionLock = new();
+
+        private Timer BusyTimer;
+        private bool busyEventRaised = false;
+
+        protected static HashSet<string> ProcessTargets = new HashSet<string>();
+        private static readonly object processTargetsLock = new object();
+
+        public static string serviceName = string.Empty;
+        protected static ServiceController serviceController;
+
+        public bool IsBusy
+        {
+            get
+            {
+                bool lockTaken = false;
+                try
+                {
+                    // Try to enter the lock immediately
+                    Monitor.TryEnter(functionLock, 0, ref lockTaken);
+                    // If we couldn't take the lock, it means someone else is holding it.
+                    return !lockTaken;
+                }
+                catch { return false; }
+                finally
+                {
+                    if (lockTaken)
+                        Monitor.Exit(functionLock);
+                }
+            }
+        }
+
+        private bool _disposed = false; // Prevent multiple disposals
 
         public enum UpdateGraphicsSettingsSource
         {
@@ -60,30 +101,42 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             AFMF,
         }
 
+        /// <summary>
+        /// Execute a function while managing the busy/free status.
+        /// A class-level timer is started before calling func().
+        /// If func() runs longer than 1 second, the timer elapses and raises StatusChanged(true).
+        /// When func() finishes, if busy status was raised, StatusChanged(false) is raised.
+        /// </summary>
         protected T Execute<T>(Func<T> func, T defaultValue)
         {
-            if (!halting && GPUManager.IsInitialized)
-                try
+            if (!halting && IsInitialized)
+            {
+                lock (functionLock)
                 {
-                    Task<T> task = Task.Run(() =>
+                    try
                     {
-                        lock (functionLock)
-                        {
-                            // make sure while we were waiting for the lock
-                            // that someone else didn't unitialize the GPU backend
-                            if (!halting && GPUManager.IsInitialized)
-                                return func();
-                            else
-                                return defaultValue;
-                        }
-                    });
-                    if (task.Wait(TimeSpan.FromSeconds(1)))
-                        return task.Result;
+                        // Reset flag
+                        busyEventRaised = false;
+
+                        // Reset timer
+                        BusyTimer.Stop();
+                        BusyTimer.Start();
+
+                        // Execute function
+                        T result = func();
+
+                        // Stop timer since func() has completed
+                        BusyTimer.Stop();
+
+                        // If the busy event was raised, signal that we're now free.
+                        if (busyEventRaised)
+                            StatusChanged?.Invoke(false);
+
+                        return result;
+                    }
+                    catch { }
                 }
-                catch (AccessViolationException)
-                { }
-                catch (Exception)
-                { }
+            }
 
             return defaultValue;
         }
@@ -91,6 +144,15 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         public GPU(AdapterInformation adapterInformation)
         {
             this.adapterInformation = adapterInformation;
+
+            // Initialize the busy timer with a 2 seconds interval and set AutoReset to false.
+            BusyTimer = new(2000) { AutoReset = false };
+            BusyTimer.Elapsed += BusyTimer_Elapsed;
+        }
+
+        ~GPU()
+        {
+            Dispose();
         }
 
         public override string ToString()
@@ -98,13 +160,19 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             return adapterInformation.Details.Description;
         }
 
+        protected virtual void BusyTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            busyEventRaised = true;
+            StatusChanged?.Invoke(true);
+        }
+
         public virtual void Start()
         {
             // release halting flag
             halting = false;
 
-            if (UpdateTimer != null && !UpdateTimer.Enabled)
-                UpdateTimer.Start();
+            if (UpdateTimer != null && !UpdateTimer.Enabled && GPUManagerMonitor)
+                StartMonitor();
 
             if (TelemetryTimer != null && !TelemetryTimer.Enabled)
                 TelemetryTimer.Start();
@@ -116,25 +184,83 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             halting = true;
 
             if (UpdateTimer != null && UpdateTimer.Enabled)
-                UpdateTimer.Stop();
+                StopMonitor();
 
             if (TelemetryTimer != null && TelemetryTimer.Enabled)
                 TelemetryTimer.Stop();
+
+            if (BusyTimer != null && BusyTimer.Enabled)
+                BusyTimer.Stop();
+        }
+
+        public virtual void StartMonitor()
+        {
+            UpdateTimer.Start();
+        }
+
+        public virtual void StopMonitor()
+        {
+            UpdateTimer.Stop();
+        }
+
+        /// <summary>
+        /// Terminates processes whose names appear in ProcessTargets.
+        /// </summary>
+        protected void TerminateConflictingProcesses()
+        {
+            // Attempt to obtain the lock immediately.
+            if (!Monitor.TryEnter(processTargetsLock))
+                return;
+
+            try
+            {
+                foreach (Process proc in Process.GetProcesses())
+                {
+                    if (ProcessTargets.Contains(proc.ProcessName))
+                    {
+                        // kill process
+                        proc.Kill();
+                        LogManager.LogError("{0} was killed to restore {1} library", proc.ProcessName, this.GetType().Name);
+
+                        // Remove the target so we don't try killing it again.
+                        ProcessTargets.Remove(proc.ProcessName);
+
+                        // If all targets are handled, exit early.
+                        if (ProcessTargets.Count == 0)
+                            return;
+                    }
+                }
+            }
+            catch { }
+            finally
+            {
+                Monitor.Exit(processTargetsLock);
+            }
         }
 
         protected virtual void OnIntegerScalingChanged(bool supported, bool enabled)
         {
             IntegerScalingChanged?.Invoke(supported, enabled);
+
+            prevIntegerScalingSupport = supported;
+            prevIntegerScaling = enabled;
         }
 
         protected virtual void OnImageSharpeningChanged(bool enabled, int sharpness)
         {
             ImageSharpeningChanged?.Invoke(enabled, sharpness);
+
+            prevImageSharpening = enabled;
+            prevImageSharpeningSharpness = sharpness;
         }
 
         protected virtual void OnGPUScalingChanged(bool supported, bool enabled, int mode)
         {
             GPUScalingChanged?.Invoke(supported, enabled, mode);
+
+            prevGPUScalingSupport = supported;
+            prevGPUScaling = enabled;
+            prevScalingMode = mode;
         }
 
         public virtual bool SetImageSharpening(bool enabled)
@@ -246,29 +372,83 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
         public virtual float GetVRAMUsage()
         {
-            ObjectQuery query = new ObjectQuery("SELECT AdapterRAM FROM Win32_VideoController");
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
-            ManagementObjectCollection queryCollection = searcher.Get();
-
-            // todo: we shouldn't loop through all video controllers but instead only look for "main" one
-            foreach (ManagementObject m in queryCollection)
-            {
-                object AdapterRAM = m["AdapterRAM"];
-                if (AdapterRAM is null)
-                    continue;
-
-                return Convert.ToUInt64(m["AdapterRAM"].ToString()) / 1024 / 1024;
-            }
-
             return 0.0f;
+        }
+
+        protected virtual void UpdateSettings()
+        { }
+
+        public static bool HasIntelGPU()
+        {
+            return CheckForGPU("intel");
+        }
+
+        public static bool HasAMDGPU()
+        {
+            return CheckForGPU("amd") || CheckForGPU("radeon");
+        }
+
+        public static bool HasNvidiaGPU()
+        {
+            return CheckForGPU("nvidia");
+        }
+
+        /// <summary>
+        /// Private helper method to check for a specific GPU vendor.
+        /// </summary>
+        private static bool CheckForGPU(string vendorKeyword)
+        {
+            string query = "SELECT Name FROM Win32_VideoController";
+
+            using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(query))
+            {
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    string name = obj["Name"]?.ToString()?.ToLower();
+
+                    if (!string.IsNullOrEmpty(name) && name.Contains(vendorKeyword.ToLower()))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public void Dispose()
         {
-            UpdateTimer?.Dispose();
-            TelemetryTimer?.Dispose();
-
+            Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            halting = true;
+
+            if (disposing)
+            {
+                // Free managed resources
+                UpdateTimer?.Stop();
+                UpdateTimer?.Dispose();
+                UpdateTimer = null;
+
+                TelemetryTimer?.Stop();
+                TelemetryTimer?.Dispose();
+                TelemetryTimer = null;
+
+                BusyTimer?.Stop();
+                BusyTimer?.Dispose();
+                BusyTimer = null;
+
+                // Clear event handlers to prevent memory leaks
+                IntegerScalingChanged = null;
+                ImageSharpeningChanged = null;
+                GPUScalingChanged = null;
+                StatusChanged = null;
+            }
+
+            _disposed = true;
         }
     }
 }

@@ -6,3 +6,7 @@ install/
 *Backup.csproj
 *tmp.csproj
 .idea/
+HandheldCompanion/SentryConfig.cs
+HandheldCompanion/SentryConfig.cs.bak
+cache/motherboard.json
+HandheldCompanion/SecretKeys.cs

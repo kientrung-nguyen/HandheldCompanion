@@ -44,7 +44,7 @@ namespace HandheldCompanion.Helpers
 
         private const string DllName = "GamepadMotion.dll";
 
-        public GamepadMotion(string deviceInstanceId, CalibrationMode calibrationMode)
+        public GamepadMotion(string deviceInstanceId, CalibrationMode calibrationMode = CalibrationMode.Manual /* | CalibrationMode.SensorFusion | CalibrationMode.Stillness */)
         {
             handle = CreateGamepadMotion();
 
@@ -52,14 +52,22 @@ namespace HandheldCompanion.Helpers
             this.deviceInstanceId = deviceInstanceId;
 
             // get previous calibration
-            calibration = IMUCalibration.GetCalibration(deviceInstanceId.ToUpper());
-            SetCalibrationOffset(calibration.xOffset, calibration.yOffset, calibration.zOffset, calibration.weight);
-            SetCalibrationMode(calibrationMode);
+            string deviceId = deviceInstanceId.ToUpper();
+            if (IMUCalibration.HasCalibration(deviceId))
+            {
+                calibration = IMUCalibration.GetCalibration(deviceId);
+                SetCalibrationOffset(calibration.xOffset, calibration.yOffset, calibration.zOffset, calibration.weight);
+                SetCalibrationMode(calibrationMode);
+            }
+            else
+            {
+                calibration = new();
+            }
         }
 
         ~GamepadMotion()
         {
-            Dispose(false);
+            Dispose();
         }
 
         public void Reset()
@@ -82,7 +90,7 @@ namespace HandheldCompanion.Helpers
             this.accelY = accelY;
             this.accelZ = accelZ;
 
-            if (deltaTimeSeconds != 0.0f)
+            if (deltaTimeSeconds >= 0.00001f)
                 this.deltaTime = deltaTimeSeconds;
 
             if (thresholdCalibration)
@@ -250,17 +258,13 @@ namespace HandheldCompanion.Helpers
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
             if (handle != IntPtr.Zero)
             {
                 DeleteGamepadMotion(handle);
                 handle = IntPtr.Zero;
             }
+
+            GC.SuppressFinalize(this);
         }
 
         [DllImport(DllName)]

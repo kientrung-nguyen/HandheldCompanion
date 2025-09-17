@@ -61,6 +61,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private const int WM_SETFOCUS = 0x0007;
     private const int WM_KILLFOCUS = 0x0008;
     private const int WM_NCACTIVATE = 0x0086;
+    private const int WM_INPUTLANGCHANGE = 0x0051;
     private const int WM_SYSCOMMAND = 0x0112;
     private const int WM_WINDOWPOSCHANGING = 0x0046;
     private const int WM_SHOWWINDOW = 0x0018;
@@ -304,7 +305,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        // do something
+        gamepadFocusManager.Loaded();
     }
 
     [DllImport("user32.dll")]

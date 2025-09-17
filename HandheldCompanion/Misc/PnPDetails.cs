@@ -18,7 +18,7 @@ public class PnPDetails
 
     public bool isVirtual;
     public bool isPhysical => !isVirtual;
-    public bool isBluetooth => EnumeratorName.Equals("BTHENUM");
+    public bool isBluetooth => EnumeratorName.Equals("BTHENUM") || EnumeratorName.Equals("BTHLEDEVICE");
     public bool isUSB => EnumeratorName.Equals("USB");
     public bool isDongle = false;
 
@@ -28,7 +28,6 @@ public class PnPDetails
     public string Name = string.Empty;
     public string SymLink = string.Empty;
     public string EnumeratorName = string.Empty;
-    public DateTimeOffset FirstInstallDate;
 
     public Guid InterfaceGuid;
 
@@ -64,20 +63,37 @@ public class PnPDetails
         return -1;
     }
 
-    public UsbPnPDevice GetUsbPnPDevice()
+    public DateTimeOffset GetLastArrivalDate()
+    {
+        PnPDevice device = GetPnPDevice();
+        if (device is null)
+            return new();
+
+        return device.GetProperty<DateTimeOffset>(DevicePropertyKey.Device_LastArrivalDate);
+    }
+
+    public UsbPnPDevice? GetUsbPnPDevice()
     {
         PnPDevice device = GetBasePnPDevice();
         if (device is null)
             return null;
 
-        // skip if bluetooth
-        if (isBluetooth)
+        // if device is HID, we need to get USB parent
+        string enumerator = device.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
+        if (Equals(enumerator, "HID"))
+        {
+            string device_parent = device.GetProperty<string>(DevicePropertyKey.Device_Parent);
+            device = PnPDevice.GetDeviceByInstanceId(device_parent);
+            enumerator = device.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
+        }
+
+        if (!Equals(enumerator, "USB"))
             return null;
 
         return device.ToUsbPnPDevice();
     }
 
-    public PnPDevice GetPnPDevice()
+    public PnPDevice? GetPnPDevice()
     {
         try
         {
@@ -88,7 +104,7 @@ public class PnPDetails
         return null;
     }
 
-    public PnPDevice GetBasePnPDevice()
+    public PnPDevice? GetBasePnPDevice()
     {
         try
         {
@@ -103,15 +119,8 @@ public class PnPDetails
     {
         UsbPnPDevice device = GetUsbPnPDevice();
 
-        try
-        {
-            if (device is not null)
-            {
-                device.CyclePort();
-                return true;
-            }
-        }
-        catch { }
+        if (device is not null)
+            try { device.CyclePort(); return true; } catch { }
 
         return false;
     }
@@ -130,15 +139,8 @@ public class PnPDetails
                 break;
         }
 
-        try
-        {
-            if (device is not null)
-            {
-                device.InstallNullDriver();
-                return true;
-            }
-        }
-        catch { }
+        if (device is not null)
+            try { device.InstallNullDriver(); return true; } catch { }
 
         return false;
     }
@@ -157,15 +159,8 @@ public class PnPDetails
                 break;
         }
 
-        try
-        {
-            if (device is not null)
-            {
-                device.InstallCustomDriver(driverName);
-                return true;
-            }
-        }
-        catch { }
+        if (device is not null)
+            try { device.InstallCustomDriver(driverName); return true; } catch { }
 
         return false;
     }
@@ -191,15 +186,8 @@ public class PnPDetails
                 break;
         }
 
-        try
-        {
-            if (device is not null)
-            {
-                device.Uninstall();
-                return true;
-            }
-        }
-        catch { }
+        if (device is not null)
+            try { device.Uninstall(); return true; } catch { }
 
         return false;
     }

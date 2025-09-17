@@ -1,8 +1,10 @@
 ﻿using HandheldCompanion.Controllers;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Shared;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Windows;
@@ -17,6 +19,8 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Navigation;
 using Frame = iNKORE.UI.WPF.Modern.Controls.Frame;
+using ListView = System.Windows.Controls.ListView;
+using ListViewItem = System.Windows.Controls.ListViewItem;
 using Page = System.Windows.Controls.Page;
 using Timer = System.Timers.Timer;
 
@@ -32,14 +36,15 @@ namespace HandheldCompanion.Managers
         public delegate void LostFocusEventHandler(string Name);
         #endregion
 
-        private GamepadWindow _currentWindow;
-        private string _currentName = string.Empty;
+        private GamepadWindow gamepadWindow;
+        private string windowName = string.Empty;
 
-        private ScrollViewer _currentScrollViewer;
-        private Frame _gamepadFrame;
-        private Page _gamepadPage;
+        private ScrollViewer scrollViewer;
+        private NavigationView navigationView;
 
-        private Timer _gamepadTimer;
+        private Frame gamepadFrame;
+        private Page gamepadPage;
+        private Timer gamepadTimer;
 
         // tooltip
         private static Timer tooltipTimer;
@@ -52,6 +57,7 @@ namespace HandheldCompanion.Managers
 
         private bool _goingBack;
         private bool _goingForward;
+        private bool _navigating;
 
         private bool _rendered;
         private object _rendering = new();
@@ -65,78 +71,137 @@ namespace HandheldCompanion.Managers
         // key: Window, store which window has focus
         private static ConcurrentDictionary<string, bool> _focused = new();
 
+        public static bool HasFocus()
+        {
+            return _focused.Any(w => w.Value);
+        }
+
+        private enum FocusSource
+        {
+            Visibility,
+            Activate,
+            Focus
+        }
+
         public UIGamepad(GamepadWindow gamepadWindow, Frame contentFrame)
         {
             // set current window
-            _currentWindow = gamepadWindow;
-            _currentName = gamepadWindow.Tag.ToString();
+            this.gamepadWindow = gamepadWindow;
+            this.gamepadWindow.ContentDialogOpened += ContentDialogOpened;
+            this.gamepadWindow.ContentDialogClosed += ContentDialogClosed;
 
-            _currentScrollViewer = _currentWindow.GetScrollViewer(_currentWindow);
+            this.windowName = gamepadWindow.Tag.ToString();
 
-            _currentWindow.GotFocus += _currentWindow_GotFocus;
-            _currentWindow.GotKeyboardFocus += _currentWindow_GotFocus;
-            _currentWindow.LostFocus += _currentWindow_LostFocus;
-
-            if (_currentWindow is OverlayQuickTools quickTools)
+            if (gamepadWindow is OverlayQuickTools quickTools)
             {
-                quickTools.GotGamepadWindowFocus += (sender) => _currentWindow_GotFocus(sender, new RoutedEventArgs());
-                quickTools.LostGamepadWindowFocus += (sender) => _currentWindow_LostFocus(sender, new RoutedEventArgs());
+                quickTools.GotGamepadWindowFocus += (sender) => WindowGotFocus(null, null, FocusSource.Visibility);
+                quickTools.LostGamepadWindowFocus += (sender) => WindowLostFocus(null, null, FocusSource.Visibility);
+            }
+            else if (gamepadWindow is MainWindow mainWindow)
+            {
+                mainWindow.GotFocus += (sender, e) => WindowGotFocus(sender, e, FocusSource.Focus);
+                mainWindow.LostFocus += (sender, e) => WindowLostFocus(sender, e, FocusSource.Focus);
+                mainWindow.Activated += (sender, e) => WindowGotFocus(sender, null, FocusSource.Activate);
+                mainWindow.Deactivated += (sender, e) => WindowLostFocus(sender, null, FocusSource.Activate);
+                mainWindow.StateChanged += (sender, e) =>
+                {
+                    switch (mainWindow.WindowState)
+                    {
+                        case WindowState.Normal:
+                        case WindowState.Maximized:
+                            WindowGotFocus(sender, null, FocusSource.Activate);
+                            break;
+                        case WindowState.Minimized:
+                            WindowLostFocus(sender, null, FocusSource.Activate);
+                            break;
+                    }
+                };
             }
 
-            _currentWindow.ContentDialogOpened += _currentWindow_ContentDialogOpened;
-            _currentWindow.ContentDialogClosed += _currentWindow_ContentDialogClosed;
-            _currentWindow.Activated += (sender, e) => _currentWindow_GotFocus(sender, new RoutedEventArgs());
-            _currentWindow.Deactivated += (sender, e) => _currentWindow_LostFocus(sender, new RoutedEventArgs());
+            gamepadFrame = contentFrame;
+            gamepadFrame.Navigated += ContentNavigated;
 
-            _gamepadFrame = contentFrame;
-            _gamepadFrame.Navigated += ContentFrame_Navigated;
-
-            _gamepadTimer = new Timer(25) { AutoReset = false };
-            _gamepadTimer.Elapsed += _gamepadFrame_PageRendered;
+            gamepadTimer = new Timer(250) { AutoReset = false };
+            gamepadTimer.Elapsed += ContentRendered;
 
             tooltipTimer = new Timer(2000) { AutoReset = false };
             tooltipTimer.Elapsed += TooltipTimer_Elapsed;
 
-            ControllerManager.InputsUpdated2 += InputsUpdated;
+            ControllerManager.InputsUpdated += InputsUpdated;
         }
 
-        private void _currentWindow_ContentDialogClosed(ContentDialog contentDialog)
+        public void Loaded()
+        {
+            this.scrollViewer = WPFUtils.FindVisualChild<ScrollViewer>(gamepadWindow);
+            this.navigationView = WPFUtils.FindVisualChild<NavigationView>(gamepadWindow);
+        }
+
+        private void ContentDialogClosed(ContentDialog contentDialog)
         {
             // set flag
             HasDialogOpen = false;
 
-            if (prevControl.TryGetValue(_gamepadPage.Tag, out Control control))
-                Focus(control);
+            if (prevControl.TryGetValue(gamepadPage.Tag, out Control control))
+            {
+                if (_focused[windowName])
+                    Focus(control);
+            }
         }
 
         private bool HasDialogOpen = false;
 
-        private void _currentWindow_ContentDialogOpened(ContentDialog contentDialog)
+        private void ContentDialogOpened(ContentDialog contentDialog)
         {
             // set flag
             HasDialogOpen = true;
 
-            var control = _currentWindow.controlElements.OfType<Button>().FirstOrDefault();
+            Control control = gamepadWindow.controlElements.OfType<Button>().FirstOrDefault();
             Focus(control);
         }
 
-        private void _currentWindow_GotFocus(object sender, RoutedEventArgs e)
+        private void WindowGotFocus(object sender, RoutedEventArgs e, FocusSource focusSource)
         {
             // already has focus
-            if (_focused.TryGetValue(_currentName, out bool isFocused) && isFocused)
+            if (_focused.TryGetValue(windowName, out bool isFocused) && isFocused)
                 return;
 
+            // check focus based on our scenarios
+            bool gamepadFocused = false;
+
+            WindowState windowState = gamepadWindow.WindowState;
+            if (windowState != WindowState.Minimized)
+            {
+                switch (focusSource)
+                {
+                    case FocusSource.Visibility:
+                        gamepadFocused = gamepadWindow.IsHitTestVisible && gamepadWindow.IsVisible;
+
+                        // only send gamepad inputs to quicktools if it's on main screen
+                        // this is important for dual screen devices
+                        if (gamepadWindow is OverlayQuickTools)
+                            gamepadFocused &= gamepadWindow.IsPrimary;
+                        break;
+                    case FocusSource.Activate:
+                        gamepadFocused = gamepadWindow.IsActive;
+                        break;
+                    case FocusSource.Focus:
+                        gamepadFocused = gamepadWindow.IsFocused;
+                        break;
+                }
+            }
+
             // set focus
-            _focused[_currentName] = _currentWindow.IsPrimary();
+            _focused[windowName] = gamepadFocused;
 
             // raise event
-            if (_focused[_currentName])
+            if (_focused[windowName])
             {
-                GotFocus?.Invoke(_currentName);
+                LogManager.LogDebug("GotFocus: {0}", windowName);
+                GotFocus?.Invoke(windowName);
 
                 foreach (string window in _focused.Keys)
                 {
-                    if (window.Equals(_currentName))
+                    if (window.Equals(windowName))
                         continue;
 
                     if (_focused.TryGetValue(window, out isFocused) && !isFocused)
@@ -146,16 +211,18 @@ namespace HandheldCompanion.Managers
                     _focused[window] = false;
 
                     // raise event
-
                     LostFocus?.Invoke(window);
                 }
             }
+
+            if (gamepadPage is not null && gamepadPage.IsLoaded)
+                ContentRendered(null, null);
         }
 
-        private void _currentWindow_LostFocus(object sender, RoutedEventArgs e)
+        private void WindowLostFocus(object sender, RoutedEventArgs e, FocusSource focusSource)
         {
             // doesn't have focus
-            if (_focused.TryGetValue(_currentName, out bool isFocused) && !isFocused)
+            if (_focused.TryGetValue(windowName, out bool isFocused) && !isFocused)
                 return;
 
             // check if sender is part of current window
@@ -164,22 +231,23 @@ namespace HandheldCompanion.Managers
                 Window yourParentWindow = Window.GetWindow((DependencyObject)e.OriginalSource);
 
                 // sender is part of parent window, return
-                if (yourParentWindow == _currentWindow)
+                if (yourParentWindow == gamepadWindow)
                     return;
             }
 
             // unset focus
-            _focused[_currentName] = false;
+            _focused[windowName] = false;
 
             // halt timer
-            _gamepadTimer.Stop();
+            gamepadTimer.Stop();
 
             // raise event
-            LostFocus?.Invoke(_currentName);
+            LogManager.LogDebug("LostFocus: {0}", windowName);
+            LostFocus?.Invoke(windowName);
 
             foreach (string window in _focused.Keys)
             {
-                if (window.Equals(_currentName))
+                if (window.Equals(windowName))
                     continue;
 
                 GamepadWindow gamepadWindow;
@@ -200,11 +268,17 @@ namespace HandheldCompanion.Managers
                 if (gamepadWindow.WindowState == WindowState.Minimized)
                     continue;
 
+                if (!gamepadWindow.IsActive && gamepadWindow is MainWindow)
+                    continue;
+
+                if (!gamepadWindow.IsPrimary)
+                    continue;
+
                 if (_focused.TryGetValue(window, out isFocused) && isFocused)
                     continue;
 
                 // set focus
-                _focused[window] = gamepadWindow.IsPrimary();
+                _focused[window] = true;
 
                 // raise event
                 if (_focused[window])
@@ -216,61 +290,66 @@ namespace HandheldCompanion.Managers
             tooltip.IsOpen = false;
         }
 
-        private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
+        private void ContentNavigated(object sender, NavigationEventArgs e)
         {
             lock (_rendering)
             {
                 // halt timer
-                _gamepadTimer.Stop();
+                gamepadTimer.Stop();
 
-                // set rendering state
+                // set state(s)
                 _rendered = false;
 
-                // remove state
-                _goingForward = false;
+                // remove state(s)
+                _navigating = false;
 
                 // store current Frame and listen to render events
-                if (_gamepadPage != (Page)_gamepadFrame.Content)
+                if (gamepadPage != (Page)gamepadFrame.Content)
                 {
-                    _gamepadFrame = (Frame)sender;
-                    _gamepadFrame.ContentRendered += _gamepadFrame_ContentRendered;
+                    // store navigation
+                    if (navigationView is not null && navigationView.SelectedItem is NavigationViewItem navigationViewItem)
+                        prevNavigation = navigationViewItem;
+
+                    gamepadFrame = (Frame)sender;
+                    gamepadFrame.ContentRendered += ContentRendering;
 
                     // store current Page
-                    _gamepadPage = (Page)_gamepadFrame.Content;
+                    gamepadPage = (Page)gamepadFrame.Content;
+                }
+                else
+                {
+                    // page already rendered
+                    ContentRendered(null, null);
                 }
             }
         }
 
-        private void _gamepadFrame_ContentRendered(object? sender, EventArgs e)
+        private void ContentRendering(object? sender, EventArgs e)
         {
-            _gamepadTimer.Stop();
-            _gamepadTimer.Start();
+            gamepadTimer.Stop();
+            gamepadTimer.Start();
         }
 
-        private void _gamepadFrame_PageRendered(object? sender, System.Timers.ElapsedEventArgs e)
+        private void ContentRendered(object? sender, System.Timers.ElapsedEventArgs e)
         {
             // stop listening for render events
-            _gamepadFrame.ContentRendered -= _gamepadFrame_ContentRendered;
+            gamepadFrame.ContentRendered -= ContentRendering;
 
             // UI thread
             UIHelper.TryInvoke(() =>
             {
                 // store top left navigation view item
-                if (prevNavigation is null)
-                    prevNavigation = WPFUtils.GetTopLeftControl<NavigationViewItem>(_currentWindow.controlElements);
-
-                // specific-cases
-                switch (_gamepadPage.Tag)
+                if (prevNavigation is null && navigationView.SelectedItem is NavigationViewItem navigationViewItem)
                 {
-                    case "layout":
-                    case "SettingsMode0":
-                    case "SettingsMode1":
-                    case "quickperformance":
-                        _goingForward = true;
-                        break;
+                    prevNavigation = navigationViewItem;
+                    _navigating = true;
                 }
 
-                if (prevControl.TryGetValue(_gamepadPage.Tag, out var control))
+                // update status
+                _navigating = _goingForward;
+
+                Control control;
+                if (prevControl.TryGetValue(gamepadPage.Tag, out control))
                 {
                     if (_goingBack)
                     {
@@ -279,33 +358,26 @@ namespace HandheldCompanion.Managers
                         // remove state
                         _goingBack = false;
                     }
-                    else if (_goingForward)
+                    else if (_navigating && control is not null)
                     {
-                        if (control is not null)
-                            Focus(control);
-                        else
-                        {
-                            control = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements);
-                            Focus(control);
-                        }
-
+                        Focus(control);
                     }
-                    else if (prevNavigation is null && _currentWindow.IsVisible && _currentWindow.WindowState != WindowState.Minimized)
+                    else if (_navigating && control is null)
                     {
-                        NavigationViewItem currentNavigationViewItem = (NavigationViewItem)WPFUtils.GetTopLeftControl<NavigationViewItem>(_currentWindow.controlElements);
-                        prevNavigation = currentNavigationViewItem;
-                        Focus(currentNavigationViewItem);
+                        control = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements);
+                        Focus(control);
                     }
                 }
-                else if (_goingForward)
+                else if (_navigating)
                 {
-                    control = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements);
+                    control = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements);
                     Focus(control);
                 }
 
                 // clear history on page swap
-                if (_gamepadPage is not null && _currentWindow is OverlayQuickTools)
-                    prevControl.Remove(_gamepadPage.Tag, out _);
+                if (gamepadPage is not null && gamepadWindow is OverlayQuickTools)
+                    if (prevControl.ContainsKey(gamepadPage.Tag))
+                        prevControl.Remove(gamepadPage.Tag, out _);
 
                 // set rendering state
                 _rendered = true;
@@ -357,10 +429,6 @@ namespace HandheldCompanion.Managers
             string controlType = control.GetType().Name;
             switch (controlType)
             {
-                case "NavigationViewItem":
-                    // update navigation
-                    prevNavigation = (NavigationViewItem)control;
-                    break;
                 case "ContentDialog":
                     return;
             }
@@ -379,24 +447,24 @@ namespace HandheldCompanion.Managers
             // set focus to control
             control.Focus();
             control.BringIntoView();
-
-            FocusManager.SetFocusedElement(_currentWindow, control);
-            _currentWindow.SetFocusedElement(control);
+            Keyboard.Focus(control);
+            FocusManager.SetFocusedElement(gamepadWindow, control);
+            gamepadWindow.SetFocusedElement(control);
         }
 
         public Control GetFocusedElement()
         {
-            IInputElement FocusedElement = forcedFocus is not null ? forcedFocus : FocusManager.GetFocusedElement(_currentWindow);
+            IInputElement FocusedElement = forcedFocus is not null ? forcedFocus : gamepadWindow.GetFocusedElement();
 
-            DependencyObject commonAncestor = VisualTreeHelperExtensions.FindCommonAncestor((DependencyObject)FocusedElement, _currentWindow);
+            DependencyObject commonAncestor = VisualTreeHelperExtensions.FindCommonAncestor((DependencyObject)FocusedElement, gamepadWindow);
             if (commonAncestor is null && forcedFocus is null)
             {
-                FocusManager.SetFocusedElement(_currentWindow, WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements));
-                FocusedElement = FocusManager.GetFocusedElement(_currentWindow);
+                FocusManager.SetFocusedElement(gamepadWindow, WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements));
+                FocusedElement = FocusManager.GetFocusedElement(gamepadWindow);
             }
 
             if (FocusedElement is null)
-                FocusedElement = _currentWindow;
+                FocusedElement = gamepadWindow;
 
             if (FocusedElement.Focusable && FocusedElement is Control)
             {
@@ -408,6 +476,7 @@ namespace HandheldCompanion.Managers
                 {
                     case "MainWindow":
                     case "OverlayQuickTools":
+                    case "ScrollViewer":
                     case "TouchScrollViewer":
                         {
                             // a new page opened
@@ -422,8 +491,8 @@ namespace HandheldCompanion.Managers
                     default:
                         {
                             // store current control if not part of a dialog
-                            if (_gamepadPage is not null && !HasDialogOpen)
-                                prevControl[_gamepadPage.Tag] = controlFocused;
+                            if (gamepadPage is not null && !HasDialogOpen)
+                                prevControl[gamepadPage.Tag] = controlFocused;
                         }
                         break;
                 }
@@ -436,8 +505,13 @@ namespace HandheldCompanion.Managers
                 else
                 {
                     // pick nearest navigation element
-                    return WPFUtils.GetTopLeftControl<NavigationViewItem>(_currentWindow.controlElements);
+                    return WPFUtils.GetTopLeftControl<NavigationViewItem>(gamepadWindow.controlElements);
                 }
+            }
+            else
+            {
+                // pick nearest navigation element
+                return WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements);
             }
 
             return null;
@@ -449,14 +523,18 @@ namespace HandheldCompanion.Managers
         // declare a DateTime variable to store the last time the button state changed
         private DateTime lastChangeTime;
 
-        private void InputsUpdated(ControllerState controllerState)
+        private void InputsUpdated(ControllerState controllerState, bool IsMapped)
         {
             // skip if page hasn't yet rendered
             if (!_rendered)
                 return;
 
+            // skip if inputs were remapped
+            if (!IsMapped)
+                return;
+
             // skip if page doesn't have focus
-            if (!_focused.TryGetValue(_currentName, out bool isFocused) || !isFocused)
+            if (!_focused.TryGetValue(windowName, out bool isFocused) || !isFocused)
                 return;
 
             // stop gamepad navigation when InputsManager is listening
@@ -506,133 +584,196 @@ namespace HandheldCompanion.Managers
             // UI thread
             UIHelper.TryInvoke(() =>
             {
-                // get current focused element
-                Control focusedElement = GetFocusedElement();
-                if (focusedElement is null)
-                    return;
-
-                string elementType = focusedElement.GetType().Name;
-
-                // set direction
-                WPFUtils.Direction direction = WPFUtils.Direction.None;
-
-                if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.B1))
+                try
                 {
-                    if (focusedElement is Button button)
+                    // get current focused element
+                    Control focusedElement = GetFocusedElement();
+                    if (focusedElement is null)
+                        return;
+
+                    string elementType = focusedElement.GetType().Name;
+
+                    // set direction
+                    WPFUtils.Direction direction = WPFUtils.Direction.None;
+
+                    if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.B1))
                     {
-                        // raise event
-                        button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-
-                        // execute command
-                        button.Command?.Execute(button.CommandParameter);
-                        Focus(button);
-                    }
-                    else if (focusedElement is RepeatButton repeatButton)
-                    {
-                        // raise event
-                        repeatButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-
-                        // execute command
-                        repeatButton.Command?.Execute(repeatButton.CommandParameter);
-                        Focus(repeatButton);
-                    }
-                    else if (focusedElement is ToggleButton toggleButton)
-                    {
-                        // raise event
-                        toggleButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-
-                        // execute command
-                        toggleButton.Command?.Execute(toggleButton.CommandParameter);
-                        Focus(toggleButton);
-
-                        // specific scenario
-                        if (toggleButton.Name.Equals("ExpanderHeader"))
+                        if (focusedElement is Button button)
                         {
-                            Expander Expander = WPFUtils.FindParent<Expander>(toggleButton);
-                            if (Expander is not null)
+                            Focus(button);
+
+                            if (focusedElement.Tag is ProfileViewModel profileViewModel)
                             {
                                 // set state
-                                Expander.IsExpanded = !Expander.IsExpanded;
+                                _goingForward = true;
+                            }
+                            else
+                            {
+                                switch (focusedElement.Tag)
+                                {
+                                    case "Navigation":
+                                        // set state
+                                        _goingForward = true;
+                                        break;
+                                    case "GoBack":
+                                        if (gamepadFrame.CanGoBack)
+                                        {
+                                            // set state
+                                            _goingBack = true;
+                                            _goingForward = false;
+                                            gamepadFrame.GoBack();
+                                        }
+                                        break;
+                                }
+                            }
+
+                            if (button.IsEnabled)
+                            {
+                                // raise event
+                                button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+
+                                // execute command
+                                button.Command?.Execute(button.CommandParameter);
                             }
                         }
-                        else if (toggleButton is RadioButton radioButton)
+                        else if (focusedElement is RepeatButton repeatButton)
                         {
-                            toggleButton.IsChecked = !toggleButton.IsChecked;
+                            Focus(repeatButton);
+
+                            if (repeatButton.IsEnabled)
+                            {
+                                // raise event
+                                repeatButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+
+                                // execute command
+                                repeatButton.Command?.Execute(repeatButton.CommandParameter);
+                            }
                         }
-                        else if (toggleButton.Command is not null)
+                        else if (focusedElement is ToggleButton toggleButton)
                         {
-                            // toggle state is managed by the command
+                            // raise event
+                            toggleButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+
+                            // execute command
+                            toggleButton.Command?.Execute(toggleButton.CommandParameter);
+                            Focus(toggleButton);
+
+                            // specific scenario
+                            if (toggleButton.Name.Equals("ExpanderHeader"))
+                            {
+                                Expander Expander = WPFUtils.FindParent<Expander>(toggleButton);
+                                if (Expander is not null)
+                                {
+                                    // set state
+                                    Expander.IsExpanded = !Expander.IsExpanded;
+                                }
+                            }
+                            else if (toggleButton is RadioButton radioButton)
+                            {
+                                toggleButton.IsChecked = !toggleButton.IsChecked;
+                            }
+                            else if (toggleButton.Command is not null)
+                            {
+                                // toggle state is managed by the command
+                            }
+                            else
+                            {
+                                toggleButton.IsChecked = !toggleButton.IsChecked;
+                            }
                         }
-                        else
+                        else if (focusedElement is SettingsCard settingsCard)
                         {
-                            toggleButton.IsChecked = !toggleButton.IsChecked;
+                            if (settingsCard.IsClickEnabled)
+                            {
+                                Focus(settingsCard);
+
+                                // raise event
+                                settingsCard.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+
+                                // execute command
+                                settingsCard.Command?.Execute(settingsCard.CommandParameter);
+
+                                switch (focusedElement.Tag)
+                                {
+                                    case "Navigation":
+                                        // set state
+                                        _goingForward = true;
+                                        break;
+                                    case "GoBack":
+                                        if (gamepadFrame.CanGoBack)
+                                        {
+                                            // set state
+                                            _goingBack = true;
+                                            _goingForward = false;
+                                            gamepadFrame.GoBack();
+                                        }
+                                        break;
+                                }
+                            }
                         }
-                    }
-                    else if (focusedElement is ToggleSwitch toggleSwitch)
-                    {
-                        // set state
-                        toggleSwitch.IsOn = !toggleSwitch.IsOn;
-                    }
-                    else if (focusedElement is RadioButton radioButton)
-                    {
-                        // set state
-                        radioButton.IsChecked = !radioButton.IsChecked;
-
-                        radioButton.Command?.Execute(radioButton.CommandParameter);
-                    }
-                    else if (focusedElement is CheckBox checkBox)
-                    {
-                        // set state
-                        checkBox.IsChecked = !checkBox.IsChecked;
-
-                        checkBox.Command?.Execute(checkBox.CommandParameter);
-                    }
-                    else if (focusedElement is NavigationViewItem navigationViewItem)
-                    {
-                        // play sound
-                        UISounds.PlayOggFile(UISounds.Expanded);
-
-                        // set state
-                        _goingForward = true;
-
-                        if (prevControl.TryGetValue(_gamepadPage.Tag, out Control control) && control is not NavigationViewItem)
+                        else if (focusedElement is ToggleSwitch toggleSwitch)
                         {
-                            Focus(control);
+                            // set state
+                            toggleSwitch.IsOn = !toggleSwitch.IsOn;
+                        }
+                        else if (focusedElement is RadioButton radioButton)
+                        {
+                            // set state
+                            radioButton.IsChecked = !radioButton.IsChecked;
+
+                            radioButton.Command?.Execute(radioButton.CommandParameter);
+                        }
+                        else if (focusedElement is CheckBox checkBox)
+                        {
+                            // set state
+                            checkBox.IsChecked = !checkBox.IsChecked;
+
+                            checkBox.Command?.Execute(checkBox.CommandParameter);
+                        }
+                        else if (focusedElement is NavigationViewItem navigationViewItem)
+                        {
+                            // play sound
+                            UISounds.PlayOggFile(UISounds.Expanded);
+
+                            // set state
+                            _navigating = true;
+
+                            if (prevControl.TryGetValue(gamepadPage.Tag, out Control control) && control is not NavigationViewItem)
+                            {
+                                Focus(control);
+                                return;
+                            }
+                            else
+                            {
+                                // get the nearest non-navigation control
+                                focusedElement = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements);
+                                Focus(focusedElement);
+                                return;
+                            }
+                        }
+                        else if (focusedElement is ComboBox comboBox)
+                        {
+                            comboBox.DropDownClosed += (sender, e) =>
+                            {
+                                Focus(comboBox, null, true);
+                            };
+
+                            // set state
+                            comboBox.IsDropDownOpen = !comboBox.IsDropDownOpen;
+
+                            // get currently selected control 
+                            int idx = comboBox.SelectedIndex;
+                            if (idx != -1)
+                                focusedElement = (ComboBoxItem)comboBox.ItemContainerGenerator.ContainerFromIndex(idx);
+
+                            Focus(focusedElement, comboBox, true);
                             return;
                         }
-                        else
+                        else if (focusedElement is ComboBoxItem comboBoxItem)
                         {
-                            // get the nearest non-navigation control
-                            focusedElement = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements);
-                            Focus(focusedElement);
-                            return;
-                        }
-                    }
-                    else if (focusedElement is ComboBox comboBox)
-                    {
-                        comboBox.DropDownClosed += (sender, e) =>
-                        {
-                            Focus(comboBox, null, true);
-                        };
-
-                        // set state
-                        comboBox.IsDropDownOpen = !comboBox.IsDropDownOpen;
-
-                        // get currently selected control 
-                        int idx = comboBox.SelectedIndex;
-                        if (idx != -1)
-                            focusedElement = (ComboBoxItem)comboBox.ItemContainerGenerator.ContainerFromIndex(idx);
-
-                        Focus(focusedElement, comboBox, true);
-                        return;
-                    }
-                    else if (focusedElement is ComboBoxItem comboBoxItem)
-                    {
-                        // get the associated ComboBox
-                        if (ItemsControl.ItemsControlFromItemContainer(focusedElement) is ComboBox itemComboBox)
-                        {
-                            comboBox = itemComboBox;
-                            if (comboBox.IsDropDownOpen && comboBoxItem.IsEnabled)
+                            // get the associated ComboBox
+                            comboBox = ItemsControl.ItemsControlFromItemContainer(focusedElement) as ComboBox;
+                            if (comboBox is not null && comboBox.IsDropDownOpen && comboBoxItem.IsEnabled)
                             {
                                 int idx = comboBox.Items.IndexOf(comboBoxItem);
                                 if (idx == -1)
@@ -643,324 +784,383 @@ namespace HandheldCompanion.Managers
 
                                 Focus(comboBox);
                             }
-                        }
-                        return;
-                    }
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.B2))
-                {
-                    // hide dialog, if any
-                    if (_currentWindow.currentDialog is not null)
-                    {
-                        _currentWindow.currentDialog.Hide();
-                        return;
-                    }
-
-                    // lazy
-                    // todo: implement proper RoutedEvent call
-                    switch (elementType)
-                    {
-                        default:
-                            {
-                                switch (_gamepadPage.Tag)
-                                {
-                                    default:
-                                        {
-                                            if (HasDialogOpen && prevControl.TryGetValue(_gamepadPage, out var control))
-                                                Focus(control);
-                                            else
-                                                Focus(prevNavigation);
-                                        }
-                                        return;
-
-                                    // todo: shouldn't be hardcoded
-                                    case "layout":
-                                    case "SettingsMode0":
-                                    case "SettingsMode1":
-                                    case "quickperformance":
-                                        {
-                                            // set state
-                                            _goingBack = true;
-
-                                            // play sound
-                                            UISounds.PlayOggFile(UISounds.Collapse);
-
-                                            // go back to previous page
-                                            if (_gamepadFrame.CanGoBack)
-                                                _gamepadFrame.GoBack();
-                                            else
-                                            {
-                                                _currentWindow.Close();
-                                            }
-                                        }
-                                        return;
-                                }
-                            }
-                            break;
-
-                        case "ComboBox":
-                            {
-                                ComboBox comboBox = (ComboBox)focusedElement;
-                                switch (comboBox.IsDropDownOpen)
-                                {
-                                    case true:
-                                        comboBox.IsDropDownOpen = false;
-                                        break;
-                                    case false:
-                                        {
-                                            switch (_gamepadPage.Tag)
-                                            {
-                                                // todo: shouldn't be hardcoded
-                                                case "quickperformance":
-                                                    {
-                                                        // set state
-                                                        _goingBack = true;
-
-                                                        // go back to previous page
-                                                        if (_gamepadFrame.CanGoBack)
-                                                            _gamepadFrame.GoBack();
-                                                        else
-                                                        {
-                                                            _currentWindow.Close();
-                                                        }
-                                                    }
-                                                    break;
-                                                default:
-                                                    // restore previous NavigationViewItem
-                                                    if (prevNavigation is not null)
-                                                        Focus(prevNavigation);
-                                                    break;
-                                            }
-                                        }
-                                        return;
-                                }
-                            }
-                            break;
-
-                        case "ComboBoxItem":
-                            {
-                                if (ItemsControl.ItemsControlFromItemContainer(focusedElement) is ComboBox comboBox)
-                                    comboBox.IsDropDownOpen = false;
-                            }
                             return;
-
-                        case "NavigationViewItem":
-                            {
-                                switch (_gamepadPage.Tag)
-                                {
-                                    // todo: shouldn't be hardcoded
-                                    case "layout":
-                                    case "SettingsMode0":
-                                    case "SettingsMode1":
-                                    case "quickperformance":
-                                        {
-                                            // set state
-                                            _goingBack = true;
-
-                                            // play sound
-                                            UISounds.PlayOggFile(UISounds.Collapse);
-
-                                            // go back to previous page
-                                            if (_gamepadFrame.CanGoBack)
-                                                _gamepadFrame.GoBack();
-                                        }
-                                        return;
-                                }
-
-                                if (_currentWindow is OverlayQuickTools overlayQuickTools)
-                                    overlayQuickTools.ToggleVisibility();
-                            }
-                            break;
-                    }
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.B4))
-                {
-                    switch (elementType)
-                    {
-                        case "Button":
-                            {
-                                // To get the first RadioButton in the list, if any
-                                if (WPFUtils.FindChildren(focusedElement).FirstOrDefault(c => c is RadioButton) is RadioButton firstRadioButton)
-                                    firstRadioButton.IsChecked = true;
-                            }
-                            break;
-                    }
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.L1))
-                {
-                    if (_currentWindow.currentDialog is not null)
-                        return;
-
-                    if (prevNavigation is not null)
-                    {
-                        elementType = prevNavigation.GetType().Name;
-                        focusedElement = prevNavigation;
-
-                        direction = WPFUtils.Direction.Left;
-                    }
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.R1))
-                {
-                    if (_currentWindow.currentDialog is not null)
-                        return;
-
-                    if (prevNavigation is not null)
-                    {
-                        elementType = prevNavigation.GetType().Name;
-                        focusedElement = prevNavigation;
-
-                        direction = WPFUtils.Direction.Right;
-                    }
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.DPadUp) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftStickUp) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftPadClickUp))
-                {
-                    direction = WPFUtils.Direction.Up;
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.DPadDown) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftStickDown) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftPadClickDown))
-                {
-                    direction = WPFUtils.Direction.Down;
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.DPadLeft) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftStickLeft) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftPadClickLeft))
-                {
-                    direction = WPFUtils.Direction.Left;
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.DPadRight) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftStickRight) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftPadClickRight))
-                {
-                    direction = WPFUtils.Direction.Right;
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.RightStickUp) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.RightPadClickUp))
-                {
-                    _currentScrollViewer?.ScrollToVerticalOffset(_currentScrollViewer.VerticalOffset - 50);
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.RightStickDown) || controllerState.ButtonState.Buttons.Contains(ButtonFlags.RightPadClickDown))
-                {
-                    _currentScrollViewer?.ScrollToVerticalOffset(_currentScrollViewer.VerticalOffset + 50);
-                }
-                else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.Start))
-                {
-                    if (_currentWindow is MainWindow mainWindow)
-                    {
-                        switch (mainWindow.navView.IsPaneOpen)
-                        {
-                            case false:
-                                if (prevNavigation is not null)
-                                    Focus(prevNavigation);
-                                break;
-                            case true:
-                                {
-                                    if (prevControl.TryGetValue(_gamepadPage.Tag, out Control control) && control is not NavigationViewItem)
-                                        Focus(control);
-                                    else
-                                    {
-                                        // get the nearest non-navigation control
-                                        focusedElement = WPFUtils.GetTopLeftControl<Control>(_currentWindow.controlElements);
-                                        Focus(focusedElement);
-                                    }
-                                }
-                                break;
                         }
-
-                        mainWindow.navView.IsPaneOpen = !mainWindow.navView.IsPaneOpen;
-                        return;
-                    }
-                }
-
-                // navigation
-                if (direction != WPFUtils.Direction.None)
-                {
-                    switch (elementType)
-                    {
-                        case "NavigationViewItem":
+                        else if (focusedElement is ListBoxItem listBoxItem)
+                        {
+                            // get the associated ComboBox
+                            ListBox listBox = ItemsControl.ItemsControlFromItemContainer(focusedElement) as ListBox;
+                            if (listBox is not null && listBox.IsEnabled)
                             {
-                                focusedElement = WPFUtils.GetClosestControl<NavigationViewItem>(focusedElement, _currentWindow.controlElements, direction);
+                                // leave ListBox and get below control
+                                // todo: we could look for the neareast control with a specific tag, like in HTML with Submit button from a form ?
+                                focusedElement = WPFUtils.GetClosestControl<Control>(listBox, gamepadWindow.controlElements, WPFUtils.Direction.Down);
                                 Focus(focusedElement);
                             }
                             return;
+                        }
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.B2))
+                    {
+                        // hide dialog, if any
+                        if (gamepadWindow.currentDialog is not null)
+                        {
+                            gamepadWindow.currentDialog.Hide();
+                            return;
+                        }
 
-                        case "ComboBox":
-                            {
-                                ComboBox comboBox = (ComboBox)focusedElement;
-                                int idx = comboBox.SelectedIndex;
-
-                                if (comboBox.IsDropDownOpen && idx != -1)
+                        // lazy
+                        // todo: implement proper RoutedEvent call
+                        switch (elementType)
+                        {
+                            default:
                                 {
-                                    focusedElement = (ComboBoxItem)comboBox.ItemContainerGenerator.ContainerFromIndex(idx);
-                                    Focus(focusedElement, comboBox, true);
-                                    return;
-                                }
-                            }
-                            break;
-
-                        case "ComboBoxItem":
-                            {
-                                if (focusedElement is ComboBoxItem comboBoxItem)
-                                {
-                                    if (ItemsControl.ItemsControlFromItemContainer(focusedElement) is ComboBox comboBox && comboBox.IsDropDownOpen)
+                                    switch (gamepadPage.Tag)
                                     {
-                                        int idx = comboBox.Items.IndexOf(comboBoxItem);
-                                        if (idx == -1)
-                                            idx = comboBox.Items.IndexOf(comboBoxItem.Content);
+                                        default:
+                                            {
+                                                if (HasDialogOpen && prevControl.TryGetValue(gamepadPage, out Control control))
+                                                {
+                                                    Focus(control);
+                                                    return;
+                                                }
+                                            }
+                                            break;
+                                    }
+                                }
+                                break;
 
-                                        while (true) // Loop to skip disabled items
+                            case "ComboBox":
+                                {
+                                    ComboBox comboBox = (ComboBox)focusedElement;
+                                    switch (comboBox.IsDropDownOpen)
+                                    {
+                                        case true:
+                                            {
+                                                comboBox.IsDropDownOpen = false;
+                                                return;
+                                            }
+                                            break;
+                                    }
+                                }
+                                break;
+
+                            case "ComboBoxItem":
+                                {
+                                    if (ItemsControl.ItemsControlFromItemContainer(focusedElement) is ComboBox comboBox)
+                                    {
+                                        comboBox.IsDropDownOpen = false;
+                                        return;
+                                    }
+                                }
+                                break;
+
+                            case "NavigationViewItem":
+                                {
+                                    if (gamepadWindow is OverlayQuickTools overlayQuickTools)
+                                    {
+                                        overlayQuickTools.ToggleVisibility();
+                                        return;
+                                    }
+                                }
+                                break;
+                        }
+
+                        // go back to previous page
+                        if (_goingForward)
+                        {
+                            if (gamepadFrame.CanGoBack)
+                            {
+                                // set state
+                                _goingBack = true;
+                                _goingForward = false;
+                                gamepadFrame.GoBack();
+                            }
+                        }
+                        else if (prevNavigation is not null)
+                            Focus(prevNavigation);
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.B4))
+                    {
+                        switch (elementType)
+                        {
+                            case "Button":
+                                {
+                                    if (focusedElement.Tag is ProfileViewModel profileViewModel)
+                                    {
+                                        profileViewModel.StartProcessCommand.Execute(null);
+                                    }
+                                    else
+                                    {
+                                        // To get the first RadioButton in the list, if any
+                                        RadioButton firstRadioButton = WPFUtils.FindChildren(focusedElement).FirstOrDefault(c => c is RadioButton) as RadioButton;
+                                        if (firstRadioButton is not null)
+                                            firstRadioButton.IsChecked = true;
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.L1))
+                    {
+                        if (gamepadWindow.currentDialog is not null)
+                            return;
+
+                        if (prevNavigation is not null)
+                        {
+                            elementType = prevNavigation.GetType().Name;
+                            focusedElement = prevNavigation;
+
+                            direction = WPFUtils.Direction.Left;
+                        }
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.R1))
+                    {
+                        if (gamepadWindow.currentDialog is not null)
+                            return;
+
+                        if (prevNavigation is not null)
+                        {
+                            elementType = prevNavigation.GetType().Name;
+                            focusedElement = prevNavigation;
+
+                            direction = WPFUtils.Direction.Right;
+                        }
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.DPadUp) /*|| controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftStickUp)*/ || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftPadClickUp))
+                    {
+                        direction = WPFUtils.Direction.Up;
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.DPadDown) /*|| controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftStickDown) */ || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftPadClickDown))
+                    {
+                        direction = WPFUtils.Direction.Down;
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.DPadLeft) /*|| controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftStickLeft) */ || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftPadClickLeft))
+                    {
+                        direction = WPFUtils.Direction.Left;
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.DPadRight) /*|| controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftStickRight) */ || controllerState.ButtonState.Buttons.Contains(ButtonFlags.LeftPadClickRight))
+                    {
+                        direction = WPFUtils.Direction.Right;
+                    }
+                    else if (/*controllerState.ButtonState.Buttons.Contains(ButtonFlags.RightStickUp) ||*/ controllerState.ButtonState.Buttons.Contains(ButtonFlags.RightPadClickUp))
+                    {
+                        scrollViewer?.ScrollToVerticalOffset(scrollViewer.VerticalOffset - 50);
+                    }
+                    else if (/*controllerState.ButtonState.Buttons.Contains(ButtonFlags.RightStickDown) ||*/ controllerState.ButtonState.Buttons.Contains(ButtonFlags.RightPadClickDown))
+                    {
+                        scrollViewer?.ScrollToVerticalOffset(scrollViewer.VerticalOffset + 50);
+                    }
+                    else if (controllerState.ButtonState.Buttons.Contains(ButtonFlags.Start))
+                    {
+                        if (gamepadWindow is MainWindow mainWindow)
+                        {
+                            switch (mainWindow.navView.IsPaneOpen)
+                            {
+                                case false:
+                                    if (prevNavigation is not null)
+                                        Focus(prevNavigation);
+                                    break;
+                                case true:
+                                    {
+                                        if (prevControl.TryGetValue(gamepadPage.Tag, out Control control) && control is not NavigationViewItem)
+                                            Focus(control);
+                                        else
                                         {
-                                            switch (direction)
-                                            {
-                                                case WPFUtils.Direction.Up:
-                                                    idx--;
-                                                    break;
-
-                                                case WPFUtils.Direction.Down:
-                                                    idx++;
-                                                    break;
-                                            }
-
-                                            // Ensure index is within bounds
-                                            if (idx < 0 || idx >= comboBox.Items.Count)
-                                            {
-                                                // We've reached the top or bottom, so stop the loop
-                                                break;
-                                            }
-
-                                            // Get the ComboBoxItem at the new index
-                                            focusedElement = (ComboBoxItem)comboBox.ItemContainerGenerator.ContainerFromIndex(idx);
-
-                                            // Check if the focused element is enabled
-                                            if (focusedElement != null && focusedElement.IsEnabled)
-                                            {
-                                                // If the element is enabled, focus it and break out of the loop
-                                                Focus(focusedElement, comboBox, true);
-                                                break;
-                                            }
-
-                                            // If the element is not enabled, continue to the next item in the loop
+                                            // get the nearest non-navigation control
+                                            focusedElement = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements);
+                                            Focus(focusedElement);
                                         }
                                     }
-                                    return;
-                                }
+                                    break;
                             }
-                            break;
 
-                        case "Slider":
-                            {
-                                switch (direction)
-                                {
-                                    case WPFUtils.Direction.Left:
-                                        ((Slider)focusedElement).Value -= ((Slider)focusedElement).TickFrequency;
-                                        Focus(focusedElement);
-                                        return;
-                                    case WPFUtils.Direction.Right:
-                                        ((Slider)focusedElement).Value += ((Slider)focusedElement).TickFrequency;
-                                        Focus(focusedElement);
-                                        return;
-                                }
-                            }
-                            break;
+                            mainWindow.navView.IsPaneOpen = !mainWindow.navView.IsPaneOpen;
+                            return;
+                        }
                     }
 
-                    // default
-                    focusedElement = WPFUtils.GetClosestControl<Control>(focusedElement, _currentWindow.controlElements, direction, [typeof(NavigationViewItem)]);
-                    Focus(focusedElement);
+                    // navigation
+                    if (direction != WPFUtils.Direction.None)
+                    {
+                        switch (elementType)
+                        {
+                            case "NavigationViewItem":
+                                {
+                                    if (focusedElement is not null)
+                                    {
+                                        focusedElement = WPFUtils.GetClosestControl<NavigationViewItem>(focusedElement, gamepadWindow.controlElements, direction);
+                                        Focus(focusedElement);
+                                    }
+                                }
+                                return;
+
+                            case "ListView":
+                                {
+                                    ListView listView = (ListView)focusedElement;
+                                    int idx = listView.SelectedIndex;
+
+                                    if (idx != -1)
+                                    {
+                                        focusedElement = (ListViewItem)listView.ItemContainerGenerator.ContainerFromIndex(idx);
+                                        Focus(focusedElement, listView, true);
+                                        return;
+                                    }
+                                }
+                                break;
+
+                            case "ListViewItem":
+                                {
+                                    if (focusedElement is ListViewItem listViewItem)
+                                    {
+                                        if (ItemsControl.ItemsControlFromItemContainer(focusedElement) is ListView listView)
+                                        {
+                                            int idx = listView.Items.IndexOf(listViewItem);
+                                            if (idx == -1)
+                                                idx = listView.Items.IndexOf(listViewItem.Content);
+
+                                            while (true) // Loop to skip disabled items
+                                            {
+                                                switch (direction)
+                                                {
+                                                    case WPFUtils.Direction.Up:
+                                                        idx--;
+                                                        break;
+
+                                                    case WPFUtils.Direction.Down:
+                                                        idx++;
+                                                        break;
+                                                }
+
+                                                // Ensure index is within bounds
+                                                if (idx < 0 || idx >= listView.Items.Count)
+                                                {
+                                                    focusedElement = WPFUtils.GetClosestControl<Control>(listView, gamepadWindow.controlElements, direction, [typeof(Control)]);
+                                                    Focus(focusedElement);
+                                                    return;
+                                                }
+
+                                                // Get the ListViewItem at the new index
+                                                focusedElement = (ListViewItem)listView.ItemContainerGenerator.ContainerFromIndex(idx);
+
+                                                // Check if the focused element is enabled
+                                                if (focusedElement != null && focusedElement.IsEnabled)
+                                                {
+                                                    // If the element is enabled, focus it and break out of the loop
+                                                    Focus(focusedElement, listView, true);
+                                                    break;
+                                                }
+
+                                                // If the element is not enabled, continue to the next item in the loop
+                                            }
+                                        }
+                                        return;
+                                    }
+                                }
+                                break;
+
+                            case "ComboBox":
+                                {
+                                    ComboBox comboBox = (ComboBox)focusedElement;
+                                    int idx = comboBox.SelectedIndex;
+
+                                    if (comboBox.IsDropDownOpen && idx != -1)
+                                    {
+                                        focusedElement = (ComboBoxItem)comboBox.ItemContainerGenerator.ContainerFromIndex(idx);
+                                        Focus(focusedElement, comboBox, true);
+                                        return;
+                                    }
+                                }
+                                break;
+
+                            case "ComboBoxItem":
+                                {
+                                    if (focusedElement is ComboBoxItem comboBoxItem)
+                                    {
+                                        if (ItemsControl.ItemsControlFromItemContainer(focusedElement) is ComboBox comboBox)
+                                        {
+                                            if (comboBox.IsDropDownOpen)
+                                            {
+                                                int idx = comboBox.Items.IndexOf(comboBoxItem);
+                                                if (idx == -1)
+                                                    idx = comboBox.Items.IndexOf(comboBoxItem.Content);
+
+                                                while (true) // Loop to skip disabled items
+                                                {
+                                                    switch (direction)
+                                                    {
+                                                        case WPFUtils.Direction.Up:
+                                                            idx--;
+                                                            break;
+
+                                                        case WPFUtils.Direction.Down:
+                                                            idx++;
+                                                            break;
+                                                    }
+
+                                                    // Ensure index is within bounds
+                                                    if (idx < 0 || idx >= comboBox.Items.Count)
+                                                    {
+                                                        // We've reached the top or bottom, so stop the loop
+                                                        break;
+                                                    }
+
+                                                    // Get the ComboBoxItem at the new index
+                                                    focusedElement = (ComboBoxItem)comboBox.ItemContainerGenerator.ContainerFromIndex(idx);
+
+                                                    // Check if the focused element is enabled
+                                                    if (focusedElement != null && focusedElement.IsEnabled)
+                                                    {
+                                                        // If the element is enabled, focus it and break out of the loop
+                                                        Focus(focusedElement, comboBox, true);
+                                                        break;
+                                                    }
+
+                                                    // If the element is not enabled, continue to the next item in the loop
+                                                }
+                                            }
+                                        }
+                                        return;
+                                    }
+                                }
+                                break;
+
+                            case "Slider":
+                                {
+                                    switch (direction)
+                                    {
+                                        case WPFUtils.Direction.Left:
+                                            ((Slider)focusedElement).Value -= ((Slider)focusedElement).TickFrequency;
+                                            Focus(focusedElement);
+                                            return;
+                                        case WPFUtils.Direction.Right:
+                                            ((Slider)focusedElement).Value += ((Slider)focusedElement).TickFrequency;
+                                            Focus(focusedElement);
+                                            return;
+                                    }
+                                }
+                                break;
+                        }
+
+                        // default
+                        if (focusedElement is not null)
+                        {
+                            focusedElement = WPFUtils.GetClosestControl<Control>(focusedElement, gamepadWindow.controlElements, direction, [typeof(NavigationViewItem)]);
+
+                            if (focusedElement is ListView listView)
+                            {
+                                int idx = listView.SelectedIndex;
+                                if (idx == -1 && listView.Items.Count != 0) idx = 0;
+
+                                if (idx != -1)
+                                    focusedElement = (ListViewItem)listView.ItemContainerGenerator.ContainerFromIndex(idx);
+                            }
+
+                            Focus(focusedElement);
+                        }
+                    }
                 }
+                catch { }
             });
         }
     }

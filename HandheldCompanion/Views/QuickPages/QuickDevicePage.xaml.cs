@@ -386,11 +386,11 @@ public partial class QuickDevicePage : Page
 
     private void Toggle_LegionGoFanOverride_Toggled(object sender, RoutedEventArgs e)
     {
+        ToggleSwitch toggleSwitch = (ToggleSwitch)sender;
         if (IDevice.GetCurrent() is LegionGo device)
-        {
-            ToggleSwitch toggleSwitch = (ToggleSwitch)sender;
-            device.SetFanFullSpeedAsync(toggleSwitch.IsOn);
-        }
+            device.SetFanFullSpeed(toggleSwitch.IsOn);
+        //else if (IDevice.GetCurrent() is ClawA2VM claw8)
+        //    claw8.SetFanFullSpeed(toggleSwitch.IsOn);
     }
 
     private void NightLightToggle_Toggled(object sender, RoutedEventArgs e)

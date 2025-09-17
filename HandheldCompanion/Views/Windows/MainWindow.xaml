@@ -4,16 +4,18 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:emoji="http://schemas.inkore.net/lib/ui/wpf/emojis"
     xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
+    xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Title="{l:Static resx:Resources.MainWindow_HandheldCompanion}"
     Width="1280"
     Height="720"
-    MinWidth="700"
-    MinHeight="500"
+    MinWidth="960"
+    MinHeight="640"
     d:Visibility="Visible"
     ui:ThemeManager.IsThemeAware="True"
     ui:WindowHelper.SystemBackdropType="Mica"
@@ -24,10 +26,16 @@
     Loaded="Window_Loaded"
     PreviewGotKeyboardFocus="GamepadWindow_PreviewGotKeyboardFocus"
     PreviewLostKeyboardFocus="GamepadWindow_PreviewLostKeyboardFocus"
+    SnapsToDevicePixels="True"
     StateChanged="Window_StateChanged"
+    UseLayoutRounding="True"
     Visibility="Collapsed"
     WindowState="Minimized"
     mc:Ignorable="d">
+
+    <Window.TaskbarItemInfo>
+        <TaskbarItemInfo x:Name="TaskbarItem" />
+    </Window.TaskbarItemInfo>
 
     <ui:NavigationView
         Name="navView"
@@ -139,8 +147,8 @@
                 <ui:NavigationViewItem.InfoBadge>
                     <ui:InfoBadge
                         Name="HasNotifications"
-                        Background="Red"
-                        Foreground="White" />
+                        d:Visibility="Visible"
+                        Visibility="Collapsed" />
                 </ui:NavigationViewItem.InfoBadge>
             </ui:NavigationViewItem>
 
@@ -223,13 +231,14 @@
                                 Name="PaneText"
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource BodyTextBlockStyle}"
+                                Style="{StaticResource BaseTextBlockStyle}"
                                 Text="Open navigation" />
                         </ikw:SimpleStackPanel>
 
                         <!--  Select  -->
                         <ikw:SimpleStackPanel
                             Name="GamepadUISelect"
+                            d:Visibility="Visible"
                             Orientation="Horizontal"
                             Spacing="2"
                             Visibility="Collapsed">
@@ -250,12 +259,13 @@
                                 Name="GamepadUISelectDesc"
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource BodyTextBlockStyle}" />
+                                Style="{StaticResource BaseTextBlockStyle}" />
                         </ikw:SimpleStackPanel>
 
                         <!--  Back  -->
                         <ikw:SimpleStackPanel
                             Name="GamepadUIBack"
+                            d:Visibility="Visible"
                             Orientation="Horizontal"
                             Spacing="2"
                             Visibility="Collapsed">
@@ -276,12 +286,13 @@
                                 Name="GamepadUIBackDesc"
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource BodyTextBlockStyle}" />
+                                Style="{StaticResource BaseTextBlockStyle}" />
                         </ikw:SimpleStackPanel>
 
                         <!--  Toggle  -->
                         <ikw:SimpleStackPanel
                             Name="GamepadUIToggle"
+                            d:Visibility="Visible"
                             Orientation="Horizontal"
                             Spacing="2"
                             Visibility="Collapsed">
@@ -302,7 +313,7 @@
                                 Name="GamepadUIToggleDesc"
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource BodyTextBlockStyle}" />
+                                Style="{StaticResource BaseTextBlockStyle}" />
                         </ikw:SimpleStackPanel>
                     </ikw:SimpleStackPanel>
                 </Border>

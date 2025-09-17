@@ -3,6 +3,7 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Data;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -13,7 +14,10 @@ namespace HandheldCompanion.ViewModels
 
         public SettingsMode0ViewModel()
         {
-            HotkeysManager.Updated += HotkeysManager_Updated;
+            // Enable thread-safe access to the collection
+            BindingOperations.EnableCollectionSynchronization(HotkeysList, new object());
+
+            ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
             InputsManager.StartedListening += InputsManager_StartedListening;
             InputsManager.StoppedListening += InputsManager_StoppedListening;
         }
@@ -23,7 +27,7 @@ namespace HandheldCompanion.ViewModels
             if (hotkey.ButtonFlags != gyroButtonFlags)
                 return;
 
-            HotkeyViewModel? foundHotkey = HotkeysList.ToList().FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+            HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
             if (foundHotkey is null)
                 HotkeysList.SafeAdd(new HotkeyViewModel(hotkey));
             else

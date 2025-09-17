@@ -1,16 +1,26 @@
-﻿using HandheldCompanion.Actions;
+﻿using GregsStack.InputSimulatorStandard.Native;
+using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Extensions;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
-using HandheldCompanion.Views;
+using HandheldCompanion.Utils;
+using SharpDX.XInput;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Input;
 
 namespace HandheldCompanion.ViewModels
 {
     public class TriggerMappingViewModel : MappingViewModel
     {
+        private static readonly HashSet<MouseActionsType> _unsupportedMouseActionTypes =
+        [
+            MouseActionsType.Move,
+            MouseActionsType.Scroll
+        ];
+
         public int Trigger2TriggerInnerDeadzone
         {
             get => (Action is TriggerActions triggerAction) ? triggerAction.AxisDeadZoneInner : 0;
@@ -50,20 +60,33 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public TriggerMappingViewModel(AxisLayoutFlags value) : base(value)
+        // default mapping can't be shifted
+        public int ShiftIndex
         {
+            get => Action is not null ? (int)Action.ShiftSlot : 0;
+            set
+            {
+                if (Action is not null && value != ShiftIndex)
+                {
+                    Action.ShiftSlot = (ShiftSlot)value;
+                    OnPropertyChanged(nameof(ShiftIndex));
+                }
+            }
         }
 
-        protected override void UpdateController(IController controller)
+        private TriggerStackViewModel _parentStack;
+
+        public ICommand ButtonCommand { get; private set; }
+
+        public TriggerMappingViewModel(TriggerStackViewModel parentStack, AxisLayoutFlags value) : base(value)
         {
-            var flag = (AxisLayoutFlags)Value;
+            _parentStack = parentStack;
 
-            IsSupported = controller.HasSourceAxis(flag);
-
-            if (IsSupported)
+            ButtonCommand = new DelegateCommand(() =>
             {
-                UpdateIcon(controller.GetGlyphIconInfo(flag, 28));
-            }
+                if (Action is not null) Delete();
+                _parentStack.RemoveMapping(this);
+            });
         }
 
         protected override void ActionTypeChanged(ActionType? newActionType = null)
@@ -77,18 +100,69 @@ namespace HandheldCompanion.ViewModels
                 return;
             }
 
-            if (actionType == ActionType.Trigger)
+            // get current controller
+            IController controller = ControllerManager.GetDefault(true);
+
+            // Build Targets
+            List<MappingTargetViewModel> targets = new List<MappingTargetViewModel>();
+
+            if (actionType == ActionType.Button)
             {
-                if (Action is null || Action is not TriggerActions)
+                if (Action is null || Action is not ButtonActions)
+                    Action = new ButtonActions() { motionThreshold = Gamepad.TriggerThreshold, motionDirection = MotionDirection.Up };
+
+                MappingTargetViewModel? matchingTargetVm = null;
+                foreach (var button in controller.GetTargetButtons())
                 {
-                    Action = new TriggerActions();
+                    var mappingTargetVm = new MappingTargetViewModel
+                    {
+                        Tag = button,
+                        Content = controller.GetButtonName(button)
+                    };
+                    targets.Add(mappingTargetVm);
+
+                    if (button == ((ButtonActions)Action).Button)
+                        matchingTargetVm = mappingTargetVm;
                 }
 
-                // get current controller
-                var controller = ControllerManager.GetPlaceholderController();
+                Targets.ReplaceWith(targets);
+                SelectedTarget = matchingTargetVm ?? Targets.First();
+            }
+            else if (actionType == ActionType.Keyboard)
+            {
+                if (Action is null || Action is not KeyboardActions)
+                    Action = new KeyboardActions { motionThreshold = Gamepad.TriggerThreshold, motionDirection = MotionDirection.Up };
 
-                // Build Targets
-                var targets = new List<MappingTargetViewModel>();
+                Targets.ReplaceWith(_keyboardKeysTargets);
+                SelectedTarget = _keyboardKeysTargets.FirstOrDefault(e => e.Tag.Equals(((KeyboardActions)Action).Key)) ?? _keyboardKeysTargets.First();
+            }
+            else if (actionType == ActionType.Mouse)
+            {
+                if (Action is null || Action is not MouseActions)
+                    Action = new MouseActions { motionThreshold = Gamepad.TriggerThreshold, motionDirection = MotionDirection.Up };
+
+                MappingTargetViewModel? matchingTargetVm = null;
+                foreach (var mouseType in Enum.GetValues<MouseActionsType>().Except(_unsupportedMouseActionTypes))
+                {
+                    var mappingTargetVm = new MappingTargetViewModel
+                    {
+                        Tag = mouseType,
+                        Content = EnumUtils.GetDescriptionFromEnumValue(mouseType)
+                    };
+                    targets.Add(mappingTargetVm);
+
+                    if (mouseType == ((MouseActions)Action).MouseType)
+                        matchingTargetVm = mappingTargetVm;
+                }
+
+                // Update list and selected target
+                Targets.ReplaceWith(targets);
+                SelectedTarget = matchingTargetVm ?? Targets.First();
+            }
+            else if (actionType == ActionType.Trigger)
+            {
+                if (Action is null || Action is not TriggerActions)
+                    Action = new TriggerActions();
 
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var axis in controller.GetTargetTriggers())
@@ -101,13 +175,19 @@ namespace HandheldCompanion.ViewModels
                     targets.Add(mappingTargetVm);
 
                     if (axis == ((TriggerActions)Action).Axis)
-                    {
                         matchingTargetVm = mappingTargetVm;
-                    }
                 }
 
                 Targets.ReplaceWith(targets);
                 SelectedTarget = matchingTargetVm ?? Targets.First();
+            }
+            else if (actionType == ActionType.Inherit)
+            {
+                if (Action is null || Action is not InheritActions)
+                    Action = new InheritActions();
+
+                // Update list and selected target
+                Targets.Clear();
             }
 
             // Refresh mapping
@@ -121,30 +201,38 @@ namespace HandheldCompanion.ViewModels
 
             switch (Action.actionType)
             {
+                case ActionType.Button:
+                    ((ButtonActions)Action).Button = (ButtonFlags)SelectedTarget.Tag;
+                    break;
+
+                case ActionType.Keyboard:
+                    ((KeyboardActions)Action).Key = (VirtualKeyCode)SelectedTarget.Tag;
+                    break;
+
                 case ActionType.Trigger:
                     ((TriggerActions)Action).Axis = (AxisLayoutFlags)SelectedTarget.Tag;
+                    break;
+
+                case ActionType.Mouse:
+                    ((MouseActions)Action).MouseType = (MouseActionsType)SelectedTarget.Tag;
                     break;
             }
         }
 
         protected override void Update()
         {
-            if (Action is null) return;
-            MainWindow.layoutPage.CurrentLayout.UpdateLayout((AxisLayoutFlags)Value, Action);
+            _parentStack.UpdateFromMapping();
         }
 
         protected override void Delete()
         {
             Action = null;
-            MainWindow.layoutPage.CurrentLayout.RemoveLayout((AxisLayoutFlags)Value);
+            _parentStack.UpdateFromMapping();
         }
 
+        // Done from AxisStack
         protected override void UpdateMapping(Layout layout)
         {
-            if (layout.AxisLayout.TryGetValue((AxisLayoutFlags)Value, out var newAction))
-                SetAction(newAction, false);
-            else
-                Reset();
         }
     }
 }

@@ -1,77 +1,149 @@
-﻿using HandheldCompanion.Processors.Intel;
+﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Processors.Intel;
+using System;
 
 namespace HandheldCompanion.Processors;
 
 public class IntelProcessor : Processor
 {
-    public string family;
+    public readonly IntelSignature Signature;
     public KX platform = new();
+
+    public enum IntelMicroArch
+    {
+        Unknown = 0,
+        LunarLake = 1,
+    }
+
+    public readonly IntelMicroArch MicroArch;
+
+    public struct IntelSignature
+    {
+        public uint Raw;      // e.g. 0x000B06D1
+        public int Family;    // adjusted per Intel rules
+        public int Model;     // adjusted per Intel rules
+        public int Stepping;  // low 4 bits
+    }
 
     public IntelProcessor()
     {
-        IsInitialized = platform.init();
-        if (IsInitialized)
-        {
-            family = ProcessorID.Substring(ProcessorID.Length - 5);
+        bool platformInit = platform.init();
 
-            switch (family)
-            {
-                default:
-                case "206A7": // SandyBridge
-                case "306A9": // IvyBridge
-                case "40651": // Haswell
-                case "306D4": // Broadwell
-                case "406E3": // Skylake
-                case "906ED": // CoffeeLake
-                case "806E9": // AmberLake
-                case "706E5": // IceLake
-                case "806C1": // TigerLake U
-                case "806C2": // TigerLake U Refresh
-                case "806D1": // TigerLake H
-                case "906A2": // AlderLake-P
-                case "906A3": // AlderLake-P
-                case "906A4": // AlderLake-P
-                case "90672": // AlderLake-S
-                case "90675": // AlderLake-S
-                    CanChangeTDP = true;
-                    CanChangeGPU = true;
-                    break;
-            }
+        // Decode ProcessorID
+        Signature = DecodeSignature(ProcessorID);
+
+        // Identify micro-arch (avoid pinning to a single stepping)
+        // Family 0x06 is Intel Core family; Model values vary by gen/step.
+        // Keep this set extensible if you learn more model codes.
+        if (Signature.Family == 0x06 && Signature.Model == 0xBD)
+            MicroArch = IntelMicroArch.LunarLake;
+        else
+            MicroArch = IntelMicroArch.Unknown;
+
+        // Capabilities
+        CanChangeTDP = platformInit || HasOEMCPU;
+        CanChangeGPU = platformInit || HasOEMGPU;
+
+        IsInitialized = CanChangeTDP || CanChangeGPU;
+    }
+
+    private static IntelSignature DecodeSignature(string processorId)
+    {
+        var sig = new IntelSignature();
+
+        if (string.IsNullOrWhiteSpace(processorId) || processorId.Length < 16)
+            return sig;
+
+        try
+        {
+            // first 8 = feature bits (unused here), last 8 = signature
+            sig.Raw = Convert.ToUInt32(processorId.Substring(8), 16);
+
+            int stepping = (int)(sig.Raw & 0xF);
+            int model = (int)((sig.Raw >> 4) & 0xF);
+            int family = (int)((sig.Raw >> 8) & 0xF);
+            int extModel = (int)((sig.Raw >> 16) & 0xF);
+            int extFamily = (int)((sig.Raw >> 20) & 0xFF);
+
+            // Intel adjustments
+            if (family == 0x0F) family += extFamily;
+            if (family == 0x06 || family == 0x0F) model += (extModel << 4);
+
+            sig.Stepping = stepping;
+            sig.Model = model;
+            sig.Family = family;
         }
+        catch { }
+
+        return sig;
     }
 
     public override void SetTDPLimit(PowerType type, double limit, bool immediate, int result)
     {
         lock (updateLock)
         {
-            var error = 0;
+            if (!CanChangeTDP) return;
 
-            switch (type)
+            IDevice device = IDevice.GetCurrent();
+
+            // MSI Claw quirk
+            bool forceOEM = device is ClawA1M claw && claw.GetOverBoost();
+
+            if (HasOEMCPU && (UseOEM || forceOEM))
             {
-                case PowerType.Slow:
-                    error = platform.set_long_limit((int)limit);
-                    break;
-                case PowerType.Fast:
-                    error = platform.set_short_limit((int)limit);
-                    break;
+                switch (type)
+                {
+                    case PowerType.Slow: device.set_long_limit((int)limit); break;
+                    case PowerType.Fast: device.set_short_limit((int)limit); break;
+                }
+            }
+            else
+            {
+                switch (type)
+                {
+                    case PowerType.Slow: result = platform.set_long_limit((int)limit); break;
+                    case PowerType.Fast: result = platform.set_short_limit((int)limit); break;
+                }
             }
 
-            base.SetTDPLimit(type, limit, immediate, error);
+            base.SetTDPLimit(type, limit, immediate, result);
         }
     }
 
     public void SetMSRLimit(double PL1, double PL2)
     {
-        platform.set_msr_limits((int)PL1, (int)PL2);
+        lock (updateLock)
+        {
+            if (!CanChangeTDP) return;
+
+            if (HasOEMCPU && UseOEM)
+            {
+                // OEM path if/when implemented
+            }
+            else
+            {
+                platform.set_msr_limits((int)PL1, (int)PL2);
+            }
+        }
     }
 
     public override void SetGPUClock(double clock, bool immediate, int result)
     {
         lock (updateLock)
         {
-            var error = platform.set_gfx_clk((int)clock);
+            if (!CanChangeGPU) return;
 
-            base.SetGPUClock(clock, immediate, error);
+            if (HasOEMGPU)
+            {
+                // OEM path if/when implemented
+            }
+            else
+            {
+                result = platform.set_gfx_clk((int)clock);
+            }
+
+            base.SetGPUClock(clock, immediate, result);
         }
     }
+
 }

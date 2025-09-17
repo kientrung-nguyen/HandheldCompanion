@@ -1,7 +1,6 @@
 ﻿using GregsStack.InputSimulatorStandard.Native;
 using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
-using HandheldCompanion.Devices;
 using HandheldCompanion.Extensions;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
@@ -15,8 +14,6 @@ namespace HandheldCompanion.ViewModels
 {
     public class ButtonMappingViewModel : MappingViewModel
     {
-        private static List<MappingTargetViewModel> _keyboardKeysTargets = [];
-
         private static HashSet<MouseActionsType> _unsupportedMouseActionTypes =
         [
             MouseActionsType.Move,
@@ -46,12 +43,9 @@ namespace HandheldCompanion.ViewModels
         // default mapping can't be shifted
         public int ShiftIndex
         {
-            get => IsInitialMapping ? 0 : Action is not null ? (int)Action.ShiftSlot : 0;
+            get => Action is not null ? (int)Action.ShiftSlot : 0;
             set
             {
-                if (IsInitialMapping)
-                    return;
-
                 if (Action is not null && value != ShiftIndex)
                 {
                     Action.ShiftSlot = (ShiftSlot)value;
@@ -166,6 +160,19 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        public float TriggerOutput
+        {
+            get => Action is not null ? Action.motionThreshold : 0;
+            set
+            {
+                if (Action is not null && value != TriggerOutput)
+                {
+                    Action.motionThreshold = value;
+                    OnPropertyChanged(nameof(TriggerOutput));
+                }
+            }
+        }
+
         public bool Toggle
         {
             get => Action is not null && Action.Toggle;
@@ -222,58 +229,17 @@ namespace HandheldCompanion.ViewModels
 
         private ButtonStackViewModel _parentStack;
 
-        public bool IsInitialMapping { get; set; } = false;
-
         public ICommand ButtonCommand { get; private set; }
 
-        public ButtonMappingViewModel(ButtonStackViewModel parentStack, ButtonFlags button, bool isInitialMapping = false) : base(button)
+        public ButtonMappingViewModel(ButtonStackViewModel parentStack, ButtonFlags button) : base(button)
         {
             _parentStack = parentStack;
-            IsInitialMapping = isInitialMapping;
 
             ButtonCommand = new DelegateCommand(() =>
             {
-                if (IsInitialMapping)
-                    _parentStack.AddMapping();
-                else
-                {
-                    if (Action is not null) Delete();
-                    _parentStack.RemoveMapping(this);
-                }
+                if (Action is not null) Delete();
+                _parentStack.RemoveMapping(this);
             });
-
-            // Lazy initialize to avoid re-creating target for Keyboard targets
-            if (_keyboardKeysTargets.Count == 0)
-            {
-                foreach (KeyFlags key in KeyFlagsOrder.arr)
-                {
-                    _keyboardKeysTargets.Add(new MappingTargetViewModel
-                    {
-                        Tag = (VirtualKeyCode)key,
-                        Content = EnumUtils.GetDescriptionFromEnumValue(key)
-                    });
-                }
-            }
-
-            if (isInitialMapping)
-            {
-                var controller = ControllerManager.GetTargetController();
-                if (controller is not null) UpdateController(controller);
-            }
-
-            if (OEM.Contains(button))
-            {
-                UpdateIcon(IDevice.GetCurrent().GetGlyphIconInfo(button, 28));
-            }
-        }
-
-        protected override void UpdateController(IController controller)
-        {
-            var flag = (ButtonFlags)Value;
-            if (OEM.Contains(flag))
-                return;
-
-            UpdateIcon(controller.GetGlyphIconInfo(flag, 28));
         }
 
         protected override void ActionTypeChanged(ActionType? newActionType = null)
@@ -287,18 +253,18 @@ namespace HandheldCompanion.ViewModels
                 return;
             }
 
-            var fallbackPressType = (PressType)_pressTypeFallbackIndex;
+            // get current controller
+            IController controller = ControllerManager.GetDefault(true);
+
+            // Build Targets
+            List<MappingTargetViewModel> targets = new List<MappingTargetViewModel>();
+
+            PressType fallbackPressType = (PressType)_pressTypeFallbackIndex;
 
             if (actionType == ActionType.Button)
             {
                 if (Action is null || Action is not ButtonActions)
                     Action = new ButtonActions() { pressType = fallbackPressType };
-
-                // get current controller
-                var controller = ControllerManager.GetPlaceholderController();
-
-                // Build Targets
-                var targets = new List<MappingTargetViewModel>();
 
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var button in controller.GetTargetButtons())
@@ -311,13 +277,11 @@ namespace HandheldCompanion.ViewModels
                     targets.Add(mappingTargetVm);
 
                     if (button == ((ButtonActions)Action).Button)
-                    {
                         matchingTargetVm = mappingTargetVm;
-                    }
                 }
 
                 Targets.ReplaceWith(targets);
-                if (matchingTargetVm != null) SelectedTarget = matchingTargetVm;
+                SelectedTarget = matchingTargetVm ?? Targets.First();
             }
             else if (actionType == ActionType.Keyboard)
             {
@@ -332,9 +296,6 @@ namespace HandheldCompanion.ViewModels
                 if (Action is null || Action is not MouseActions)
                     Action = new MouseActions() { pressType = fallbackPressType };
 
-                // Build Targets
-                var targets = new List<MappingTargetViewModel>();
-
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var mouseType in Enum.GetValues<MouseActionsType>().Except(_unsupportedMouseActionTypes))
                 {
@@ -346,27 +307,51 @@ namespace HandheldCompanion.ViewModels
                     targets.Add(mappingTargetVm);
 
                     if (mouseType == ((MouseActions)Action).MouseType)
-                    {
                         matchingTargetVm = mappingTargetVm;
-                    }
                 }
 
                 // Update list and selected target
                 Targets.ReplaceWith(targets);
-                if (matchingTargetVm != null) SelectedTarget = matchingTargetVm;
+                SelectedTarget = matchingTargetVm ?? Targets.First();
+            }
+            else if (actionType == ActionType.Trigger)
+            {
+                if (Action is null || Action is not TriggerActions)
+                    Action = new TriggerActions() { motionThreshold = 125 };
+
+                MappingTargetViewModel? matchingTargetVm = null;
+                foreach (var axis in controller.GetTargetTriggers())
+                {
+                    var mappingTargetVm = new MappingTargetViewModel
+                    {
+                        Tag = axis,
+                        Content = controller.GetAxisName(axis)
+                    };
+                    targets.Add(mappingTargetVm);
+
+                    if (axis == ((TriggerActions)Action).Axis)
+                        matchingTargetVm = mappingTargetVm;
+                }
+
+                Targets.ReplaceWith(targets);
+                SelectedTarget = matchingTargetVm ?? Targets.First();
             }
             else if (actionType == ActionType.Shift)
             {
                 if (Action is null || Action is not ShiftActions)
                     Action = new ShiftActions(ShiftSlot.ShiftA);
 
-                // Build Targets
-                var targets = new List<MappingTargetViewModel>();
-
                 MappingTargetViewModel? matchingTargetVm = null;
-                foreach (var shiftSlot in Enum.GetValues<ShiftSlot>())
+                foreach (ShiftSlot shiftSlot in Enum.GetValues<ShiftSlot>())
                 {
-                    var mappingTargetVm = new MappingTargetViewModel
+                    switch (shiftSlot)
+                    {
+                        case ShiftSlot.None:
+                        case ShiftSlot.Any:
+                            continue;
+                    }
+
+                    MappingTargetViewModel mappingTargetVm = new MappingTargetViewModel
                     {
                         Tag = shiftSlot,
                         Content = EnumUtils.GetDescriptionFromEnumValue(shiftSlot)
@@ -374,14 +359,21 @@ namespace HandheldCompanion.ViewModels
                     targets.Add(mappingTargetVm);
 
                     if (shiftSlot == ((ShiftActions)Action).ShiftSlot)
-                    {
                         matchingTargetVm = mappingTargetVm;
-                    }
                 }
 
                 // Update list and selected target
                 Targets.ReplaceWith(targets);
-                if (matchingTargetVm != null) SelectedTarget = matchingTargetVm;
+                // Pick Any if matchingTargetVm is null
+                SelectedTarget = matchingTargetVm ?? Targets.Last();
+            }
+            else if (actionType == ActionType.Inherit)
+            {
+                if (Action is null || Action is not InheritActions)
+                    Action = new InheritActions();
+
+                // Update list and selected target
+                Targets.Clear();
             }
 
             // Refresh mapping
@@ -410,9 +402,12 @@ namespace HandheldCompanion.ViewModels
                 case ActionType.Shift:
                     ((ShiftActions)Action).ShiftSlot = (ShiftSlot)SelectedTarget.Tag;
                     break;
+
+                case ActionType.Trigger:
+                    ((TriggerActions)Action).Axis = (AxisLayoutFlags)SelectedTarget.Tag;
+                    break;
             }
         }
-
 
         protected override void Update()
         {
@@ -424,7 +419,6 @@ namespace HandheldCompanion.ViewModels
             Action = null;
             _parentStack.UpdateFromMapping();
         }
-
 
         // Done from ButtonStack
         protected override void UpdateMapping(Layout layout)

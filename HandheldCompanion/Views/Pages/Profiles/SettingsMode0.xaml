@@ -20,7 +20,7 @@
         <ikw:SimpleStackPanel Spacing="12">
 
             <!--  World space options  -->
-            <ikw:SimpleStackPanel Spacing="6">
+            <ikw:SimpleStackPanel Spacing="3">
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.SettingsMode0_CameraOptions}" />
 
                 <!--  Sensivity X  -->
@@ -55,9 +55,9 @@
                         <DockPanel
                             Grid.Column="1"
                             Margin="12,0,0,0"
-                            ScrollViewer.PanningMode="HorizontalOnly">
+                           >
                             <TextBox
-                                Height="32"
+                                Height="31"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 HorizontalContentAlignment="Center"
@@ -74,7 +74,6 @@
                                 Maximum="3.0"
                                 Minimum="0.1"
                                 SmallChange="0.1"
-                                Style="{DynamicResource SliderStyle1}"
                                 TickFrequency="0.1"
                                 TickPlacement="BottomRight"
                                 ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
@@ -116,9 +115,9 @@
                         <DockPanel
                             Grid.Column="1"
                             Margin="12,0,0,0"
-                            ScrollViewer.PanningMode="HorizontalOnly">
+                           >
                             <TextBox
-                                Height="32"
+                                Height="31"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 HorizontalContentAlignment="Center"
@@ -135,7 +134,6 @@
                                 Maximum="3.0"
                                 Minimum="0.1"
                                 SmallChange="0.1"
-                                Style="{DynamicResource SliderStyle1}"
                                 TickFrequency="0.1"
                                 TickPlacement="BottomRight"
                                 ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
@@ -183,9 +181,9 @@
                                 <DockPanel
                                     Grid.Column="1"
                                     Margin="12,0,0,0"
-                                    ScrollViewer.PanningMode="HorizontalOnly">
+                                   >
                                     <TextBox
-                                        Height="32"
+                                        Height="31"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Center"
                                         HorizontalContentAlignment="Center"
@@ -202,7 +200,6 @@
                                         LargeChange="0.5"
                                         Maximum="3.0"
                                         Minimum="0.1"
-                                        Style="{DynamicResource SliderStyle1}"
                                         TickFrequency="0.1"
                                         TickPlacement="BottomRight"
                                         ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
@@ -272,7 +269,7 @@
                                                         </Style>
                                                     </ToggleButton.Resources>
 
-                                                    <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="6">
+                                                    <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3">
                                                         <ui:ItemsRepeater ItemsSource="{Binding ButtonGlyphs}">
                                                             <ui:ItemsRepeater.Style>
                                                                 <Style TargetType="ui:ItemsRepeater">
@@ -359,159 +356,10 @@
                         </ikw:SimpleStackPanel>
                     </Expander.Content>
                 </Expander>
-
-                <!--  Flick Stick settings  -->
-                <Expander
-                    Name="Expander_FlickStick"
-                    HorizontalAlignment="Stretch"
-                    Expanded="Expander_Expanded">
-                    <Expander.Header>
-                        <DockPanel Margin="0,12,12,12">
-                            <ui:FontIcon
-                                Height="40"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xE759;" />
-
-                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.SettingsMode0_FlickStick}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.SettingsMode0_FlickStickDesc}"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
-                        </DockPanel>
-                    </Expander.Header>
-
-                    <Expander.Content>
-                        <ikw:SimpleStackPanel Margin="30,0,0,0" Spacing="12">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="9*" MinWidth="200" />
-                                    <ColumnDefinition MinWidth="80" />
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource BodyTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.SettingsMode0_FlickStickEnable}" />
-
-                                <ui:ToggleSwitch
-                                    Name="Toggle_FlickStick"
-                                    Grid.Column="1"
-                                    Toggled="Toggle_FlickStick_Toggled" />
-                            </Grid>
-
-                            <!--  Separator  -->
-                            <Separator
-                                Margin="-46,0,-16,0"
-                                BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                BorderThickness="0,1,0,0" />
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="5*" MinWidth="200" />
-                                    <ColumnDefinition Width="5*" MinWidth="200" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Orientation="Vertical">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.SettingsMode0_FlickDuration}" />
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.SettingsMode0_FlickDurationDesc}"
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-
-                                <DockPanel
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    ScrollViewer.PanningMode="HorizontalOnly">
-                                    <TextBox
-                                        Height="32"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        HorizontalContentAlignment="Center"
-                                        IsReadOnly="True"
-                                        Text="{Binding Value, StringFormat={}{0:N0} ms, ElementName=tb_ProfileFlickDuration, Mode=OneWay}" />
-                                    <Slider
-                                        x:Name="tb_ProfileFlickDuration"
-                                        Margin="6,0,0,0"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Center"
-                                        AutoToolTipPrecision="0"
-                                        IsMoveToPointEnabled="True"
-                                        IsSnapToTickEnabled="True"
-                                        LargeChange="10"
-                                        Maximum="800"
-                                        Minimum="100"
-                                        Style="{DynamicResource SliderStyle1}"
-                                        TickFrequency="10"
-                                        TickPlacement="BottomRight"
-                                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                        ValueChanged="SliderFlickDuration_ValueChanged"
-                                        Value="10" />
-                                </DockPanel>
-                            </Grid>
-
-                            <!--  Separator  -->
-                            <Separator
-                                Margin="-46,0,-16,0"
-                                BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                BorderThickness="0,1,0,0" />
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="5*" MinWidth="200" />
-                                    <ColumnDefinition Width="5*" MinWidth="200" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Orientation="Vertical">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.SettingsMode0_StickSensitivtity}" />
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.SettingsMode0_StickSensitivtityDesc}"
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-
-                                <DockPanel
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    ScrollViewer.PanningMode="HorizontalOnly">
-                                    <TextBox
-                                        Height="32"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        HorizontalContentAlignment="Center"
-                                        IsReadOnly="True"
-                                        Text="{Binding Value, StringFormat={}{0:N1}, ElementName=tb_ProfileStickSensitivity, Mode=OneWay}" />
-                                    <Slider
-                                        x:Name="tb_ProfileStickSensitivity"
-                                        Margin="6,0,0,0"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Center"
-                                        AutoToolTipPrecision="1"
-                                        IsMoveToPointEnabled="True"
-                                        IsSnapToTickEnabled="True"
-                                        LargeChange="0.1"
-                                        Maximum="10"
-                                        Minimum="0.1"
-                                        Style="{DynamicResource SliderStyle1}"
-                                        TickFrequency="0.1"
-                                        TickPlacement="BottomRight"
-                                        ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                        ValueChanged="SliderStickSensivity_ValueChanged"
-                                        Value="10" />
-                                </DockPanel>
-                            </Grid>
-                        </ikw:SimpleStackPanel>
-                    </Expander.Content>
-                </Expander>
             </ikw:SimpleStackPanel>
 
             <!--  Custom response curve  -->
-            <ikw:SimpleStackPanel Spacing="6">
+            <ikw:SimpleStackPanel Spacing="3">
                 <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.SettingsMode0_CustomResponseCurve}" />
 
                 <Border
@@ -524,7 +372,7 @@
                             HorizontalAlignment="Center"
                             Background="{DynamicResource ExpanderHeaderBackground}"
                             Orientation="Horizontal"
-                            ScrollViewer.PanningMode="HorizontalOnly"
+                           
                             Spacing="12">
                             <Label VerticalAlignment="Center" Content="{l:Static resx:Resources.SettingsMode0_CustomResponseCurveGameOutput}">
                                 <Label.LayoutTransform>

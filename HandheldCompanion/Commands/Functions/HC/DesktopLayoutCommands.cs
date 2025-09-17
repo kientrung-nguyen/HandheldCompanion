@@ -15,7 +15,7 @@ namespace HandheldCompanion.Commands.Functions.HC
             base.Glyph = "\uE961";
             base.OnKeyUp = true;
 
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         }
 
         private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
@@ -30,13 +30,13 @@ namespace HandheldCompanion.Commands.Functions.HC
 
         public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
         {
-            bool value = !SettingsManager.Get<bool>(SettingsName);
-            SettingsManager.Set(SettingsName, value, false);
+            bool value = !ManagerFactory.settingsManager.Get<bool>(SettingsName);
+            ManagerFactory.settingsManager.Set(SettingsName, value, false);
 
             base.Execute(IsKeyDown, IsKeyUp, false);
         }
 
-        public override bool IsToggled => SettingsManager.Get<bool>(SettingsName);
+        public override bool IsToggled => ManagerFactory.settingsManager.Get<bool>(SettingsName);
 
         public override object Clone()
         {
@@ -55,7 +55,7 @@ namespace HandheldCompanion.Commands.Functions.HC
 
         public override void Dispose()
         {
-            SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
             base.Dispose();
         }
     }

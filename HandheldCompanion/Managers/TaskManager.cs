@@ -24,7 +24,7 @@ public static class TaskManager
     {
     }
 
-    public static async System.Threading.Tasks.Task Start(string Executable)
+    public static void Start(string Executable)
     {
         if (IsInitialized)
             return;
@@ -56,17 +56,20 @@ public static class TaskManager
             taskDefinition.Actions.Add(new ExecAction(TaskExecutable));
 
             task = TaskService.Instance.RootFolder.RegisterTaskDefinition(TaskName, taskDefinition);
-            task.Enabled = SettingsManager.Get<bool>("RunAtStartup");
+            task.Enabled = ManagerFactory.settingsManager.Get<bool>("RunAtStartup");
         }
         catch { }
 
-        // manage events
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-
         // raise events
-        if (SettingsManager.IsInitialized)
+        switch (ManagerFactory.settingsManager.Status)
         {
-            SettingsManager_SettingValueChanged("RunAtStartup", SettingsManager.Get<string>("RunAtStartup"), false);
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
         }
 
         IsInitialized = true;
@@ -75,13 +78,28 @@ public static class TaskManager
         LogManager.LogInformation("{0} has started", "TaskManager");
     }
 
+    private static void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+    private static void QuerySettings()
+    {
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        SettingsManager_SettingValueChanged("RunAtStartup", ManagerFactory.settingsManager.GetString("RunAtStartup"), false);
+    }
+
     public static void Stop()
     {
         if (!IsInitialized)
             return;
 
         // manage events
-        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
 
         IsInitialized = false;
 

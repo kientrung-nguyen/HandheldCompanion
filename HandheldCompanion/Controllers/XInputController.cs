@@ -2,11 +2,11 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using SharpDX.XInput;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+using System.Text;
 using System.Windows.Media;
-using static HandheldCompanion.Managers.TimerManager;
 
 namespace HandheldCompanion.Controllers;
 
@@ -16,13 +16,16 @@ public class XInputController : IController
     private Gamepad Gamepad;
 
     private XInputStateSecret State;
+    public static int MaxControllers = 4;
 
     public XInputController()
     { }
 
     public XInputController(PnPDetails details)
     {
-        AttachController(details.XInputUserIndex);
+        if (details is null)
+            throw new Exception("XInputController PnPDetails is null");
+
         AttachDetails(details);
 
         // UI
@@ -30,6 +33,33 @@ public class XInputController : IController
         ColoredButtons.Add(ButtonFlags.B2, Color.FromArgb(255, 217, 65, 38));
         ColoredButtons.Add(ButtonFlags.B3, Color.FromArgb(255, 26, 159, 255));
         ColoredButtons.Add(ButtonFlags.B4, Color.FromArgb(255, 255, 200, 44));
+
+        // Capabilities
+        Capabilities |= ControllerCapabilities.Rumble;
+    }
+
+    public override void AttachDetails(PnPDetails details)
+    {
+        AttachController(details.XInputUserIndex);
+
+        base.AttachDetails(details);
+    }
+
+    ~XInputController()
+    {
+        Dispose();
+    }
+
+    public override void Dispose()
+    {
+        Unplug();
+
+        // don't dispose dummy controllers
+        if (IsDummy())
+            return;
+
+        Controller = null;
+        base.Dispose();
     }
 
     public override string ToString()
@@ -40,10 +70,10 @@ public class XInputController : IController
         return $"XInput Controller {(UserIndex)UserIndex}";
     }
 
-    public virtual void UpdateInputs(long ticks, float delta, bool commit)
+    public override void Tick(long ticks, float delta, bool commit)
     {
-        // update secret state
-        XInputGetStateSecret14(UserIndex, out State);
+        if (Inputs is null || IsBusy || !IsPlugged || IsDisposing || IsDisposed)
+            return;
 
         ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);
 
@@ -52,6 +82,9 @@ public class XInputController : IController
         {
             try
             {
+                // update secret state
+                XInputGetStateSecret14(UserIndex, out State);
+
                 // update gamepad state
                 Gamepad = Controller.GetState().Gamepad;
 
@@ -81,20 +114,10 @@ public class XInputController : IController
                 Inputs.ButtonState[ButtonFlags.DPadRight] = Gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight);
 
                 // Left Stick
-                Inputs.ButtonState[ButtonFlags.LeftStickLeft] = Gamepad.LeftThumbX < -Gamepad.LeftThumbDeadZone;
-                Inputs.ButtonState[ButtonFlags.LeftStickRight] = Gamepad.LeftThumbX > Gamepad.LeftThumbDeadZone;
-                Inputs.ButtonState[ButtonFlags.LeftStickDown] = Gamepad.LeftThumbY < -Gamepad.LeftThumbDeadZone;
-                Inputs.ButtonState[ButtonFlags.LeftStickUp] = Gamepad.LeftThumbY > Gamepad.LeftThumbDeadZone;
-
                 Inputs.AxisState[AxisFlags.LeftStickX] = Gamepad.LeftThumbX;
                 Inputs.AxisState[AxisFlags.LeftStickY] = Gamepad.LeftThumbY;
 
                 // Right Stick
-                Inputs.ButtonState[ButtonFlags.RightStickLeft] = Gamepad.RightThumbX < -Gamepad.RightThumbDeadZone;
-                Inputs.ButtonState[ButtonFlags.RightStickRight] = Gamepad.RightThumbX > Gamepad.RightThumbDeadZone;
-                Inputs.ButtonState[ButtonFlags.RightStickDown] = Gamepad.RightThumbY < -Gamepad.RightThumbDeadZone;
-                Inputs.ButtonState[ButtonFlags.RightStickUp] = Gamepad.RightThumbY > Gamepad.RightThumbDeadZone;
-
                 Inputs.AxisState[AxisFlags.RightStickX] = Gamepad.RightThumbX;
                 Inputs.AxisState[AxisFlags.RightStickY] = Gamepad.RightThumbY;
 
@@ -107,7 +130,7 @@ public class XInputController : IController
         }
 
         if (commit)
-            base.UpdateInputs(ticks, delta);
+            base.Tick(ticks, delta);
     }
 
     public override bool IsConnected()
@@ -134,36 +157,10 @@ public class XInputController : IController
         catch { }
     }
 
-    public override void Plug()
-    {
-        TimerManager.Tick += (ticks, delta) => UpdateInputs(ticks, delta, true);
-        base.Plug();
-    }
-
-    public override void Unplug()
-    {
-        TimerManager.Tick -= (ticks, delta) => UpdateInputs(ticks, delta, true);
-        base.Unplug();
-    }
-
     public static UserIndex TryGetUserIndex(PnPDetails details)
     {
-        XInputCapabilitiesEx capabilitiesEx = new();
-
-        for (int idx = 0; idx < 4; idx++)
-        {
-            if (XInputGetCapabilitiesEx(1, idx, 0, ref capabilitiesEx) == 0)
-            {
-                if (capabilitiesEx.ProductId != details.ProductID || capabilitiesEx.VendorId != details.VendorID)
-                    continue;
-
-                var devices = DeviceManager.GetDetails(capabilitiesEx.VendorId, capabilitiesEx.ProductId);
-                if (devices.FirstOrDefault() is not null)
-                    return (UserIndex)idx;
-            }
-        }
-
-        return SharpDX.XInput.UserIndex.Any;
+        List<PnPDetails> tempList = ManagerFactory.deviceManager.PnPDevices.Values.Where(device => device.isXInput).OrderBy(device => device.XInputUserIndex).OrderBy(device => device.XInputDeviceIdx).ToList();
+        return (UserIndex)tempList.IndexOf(details);
     }
 
     public virtual void AttachController(byte userIndex)
@@ -183,21 +180,6 @@ public class XInputController : IController
     public override void Unhide(bool powerCycle = true)
     {
         base.Unhide(powerCycle);
-    }
-
-    public virtual new bool IsWireless
-    {
-        get
-        {
-            string enumerator = Details.EnumeratorName;
-            switch (enumerator)
-            {
-                default:
-                    return false;
-                case "BTHENUM":
-                    return true;
-            }
-        }
     }
 
     public override string GetGlyph(ButtonFlags button)
@@ -395,5 +377,18 @@ public class XInputController : IController
 
     [DllImport("xinput1_4.dll", EntryPoint = "#104")]
     protected static extern int XInputGetBaseBusInformation(int dwUserIndex, ref XInputBaseBusInformation pInfo);
+
+    // DWORD WINAPI OpenXInputGetDevicePath(
+    //   DWORD  dwUserIndex,
+    //   LPWSTR pDevicePath,
+    //   UINT*  pPathSize
+    // );
+    [DllImport("xinput1_4.dll", EntryPoint = "#109")]
+    public static extern uint XInputGetDevicePath(
+        uint dwUserIndex,
+        [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 2)]
+        StringBuilder      pDevicePath,
+        ref uint pPathSize
+    );
     #endregion
 }

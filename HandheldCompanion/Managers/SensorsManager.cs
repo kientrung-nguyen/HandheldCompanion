@@ -31,33 +31,57 @@ namespace HandheldCompanion.Managers
         {
         }
 
-        public static async Task Start()
+        public static void Start()
         {
             if (IsInitialized)
                 return;
 
             // manage events
-            DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceArrived;
-            DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceRemoved;
+            ManagerFactory.deviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceArrived;
+            ManagerFactory.deviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceRemoved;
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
             ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
-            if (DeviceManager.IsInitialized)
+            // raise events
+            switch (ManagerFactory.settingsManager.Status)
+            {
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QuerySettings();
+                    break;
+            }
+
+            if (ManagerFactory.deviceManager.IsRunning)
             {
                 DeviceManager_UsbDeviceArrived(null, Guid.Empty);
             }
 
             if (ControllerManager.HasTargetController)
-            {
-                ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
-            }
+                ControllerManager_ControllerSelected(ControllerManager.GetTarget());
 
             IsInitialized = true;
             Initialized?.Invoke();
 
             LogManager.LogInformation("{0} has started", "SensorsManager");
-            return;
+        }
+
+        private static void SettingsManager_Initialized()
+        {
+            QuerySettings();
+        }
+
+        private static void QuerySettings()
+        {
+            // manage events
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+            // raise events
+            SettingsManager_SettingValueChanged("SensorPlacement", ManagerFactory.settingsManager.Get<string>("SensorPlacement"), false);
+            SettingsManager_SettingValueChanged("SensorPlacementUpsideDown", ManagerFactory.settingsManager.Get<string>("SensorPlacementUpsideDown"), false);
+            SettingsManager_SettingValueChanged("SensorSelection", ManagerFactory.settingsManager.Get<string>("SensorSelection"), false);
         }
 
         public static void Stop()
@@ -68,11 +92,12 @@ namespace HandheldCompanion.Managers
             StopListening();
 
             // manage events
-            DeviceManager.UsbDeviceArrived -= DeviceManager_UsbDeviceArrived;
-            DeviceManager.UsbDeviceRemoved -= DeviceManager_UsbDeviceRemoved;
+            ManagerFactory.deviceManager.UsbDeviceArrived -= DeviceManager_UsbDeviceArrived;
+            ManagerFactory.deviceManager.UsbDeviceRemoved -= DeviceManager_UsbDeviceRemoved;
             ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
             ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
-            SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+            ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
 
             IsInitialized = false;
 
@@ -86,7 +111,7 @@ namespace HandheldCompanion.Managers
 
             // select controller as current sensor if current sensor selection is none
             if (Controller.Capabilities.HasFlag(ControllerCapabilities.MotionSensor))
-                SettingsManager.Set("SensorSelection", (int)SensorFamily.Controller);
+                ManagerFactory.settingsManager.Set("SensorSelection", (int)SensorFamily.Controller);
             else
                 PickNextSensor();
         }
@@ -119,16 +144,16 @@ namespace HandheldCompanion.Managers
         private static void PickNextSensor()
         {
             // get current controller
-            IController controller = ControllerManager.GetTargetController();
+            IController? controller = ControllerManager.GetTarget();
 
             if (controller is not null && controller.HasMotionSensor())
-                SettingsManager.Set("SensorSelection", (int)SensorFamily.Controller);
+                ManagerFactory.settingsManager.Set("SensorSelection", (int)SensorFamily.Controller);
             else if (IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.InternalSensor))
-                SettingsManager.Set("SensorSelection", (int)SensorFamily.Windows);
+                ManagerFactory.settingsManager.Set("SensorSelection", (int)SensorFamily.Windows);
             else if (IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.ExternalSensor))
-                SettingsManager.Set("SensorSelection", (int)SensorFamily.SerialUSBIMU);
+                ManagerFactory.settingsManager.Set("SensorSelection", (int)SensorFamily.SerialUSBIMU);
             else
-                SettingsManager.Set("SensorSelection", (int)SensorFamily.None);
+                ManagerFactory.settingsManager.Set("SensorSelection", (int)SensorFamily.None);
         }
 
         private static void DeviceManager_UsbDeviceArrived(PnPDevice device, Guid IntefaceGuid)
@@ -138,7 +163,7 @@ namespace HandheldCompanion.Managers
 
             // select serial usb as current sensor if current sensor selection is none
             if (sensorFamily == SensorFamily.None)
-                SettingsManager.Set("SensorSelection", (int)SensorFamily.SerialUSBIMU);
+                ManagerFactory.settingsManager.Set("SensorSelection", (int)SensorFamily.SerialUSBIMU);
         }
 
         private static void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
@@ -191,8 +216,8 @@ namespace HandheldCompanion.Managers
                                         break;
                                     }
 
-                                    SerialPlacement placement = (SerialPlacement)SettingsManager.Get<int>("SensorPlacement");
-                                    bool upsidedown = SettingsManager.Get<bool>("SensorPlacementUpsideDown");
+                                    SerialPlacement placement = (SerialPlacement)ManagerFactory.settingsManager.Get<int>("SensorPlacement");
+                                    bool upsidedown = ManagerFactory.settingsManager.Get<bool>("SensorPlacementUpsideDown");
 
                                     USBSensor.Open();
                                     USBSensor.SetSensorPlacement(placement);
@@ -203,7 +228,7 @@ namespace HandheldCompanion.Managers
                             case SensorFamily.Controller:
                                 {
                                     // get current controller
-                                    IController controller = ControllerManager.GetTargetController();
+                                    IController controller = ControllerManager.GetTarget();
                                     if (controller is null || !controller.Capabilities.HasFlag(ControllerCapabilities.MotionSensor))
                                     {
                                         PickNextSensor();
@@ -231,26 +256,10 @@ namespace HandheldCompanion.Managers
             Accelerometer?.StopListening();
         }
 
-        private static double prevTimestamp = 0.0d;
         public static void UpdateReport(ControllerState controllerState, GamepadMotion gamepadMotion, ref float delta)
         {
             Vector3 accel = Accelerometer is not null ? Accelerometer.GetCurrentReading().reading : Vector3.Zero;
             Vector3 gyro = Gyrometer is not null ? Gyrometer.GetCurrentReading().reading : Vector3.Zero;
-
-            /*
-            double timestamp = Gyrometer is not null ? Gyrometer.GetCurrentReading().timestamp : 0.0d;
-            if (timestamp != prevTimestamp)
-            {
-                double TotalMilliseconds = Gyrometer is not null ? timestamp : 0.0d;
-                double DeltaSeconds = (TotalMilliseconds - prevTimestamp) / 1000.0d;
-
-                // replace delta with sensor value
-                delta = (float)DeltaSeconds;
-
-                // update previous timestamp
-                prevTimestamp = TotalMilliseconds;
-            }
-            */
 
             // store motion
             controllerState.GyroState.SetGyroscope(gyro.X, gyro.Y, gyro.Z);
@@ -284,7 +293,7 @@ namespace HandheldCompanion.Managers
             };
 
             // display calibration dialog
-            dialog.Show();
+            dialog.ShowAsync();
 
             // skip if empty
             if (gamepadMotions.Count == 0)
@@ -300,78 +309,31 @@ namespace HandheldCompanion.Managers
             {
                 dialog.UpdateContent($"Calibrating {gamepadMotion.deviceInstanceId} stationary sensor noise and drift correction...");
 
-                // reset motion values
-                gamepadMotion.ResetMotion();
+                gamepadMotion.ResetContinuousCalibration();
+                gamepadMotion.SetCalibrationMode(CalibrationMode.Stillness | CalibrationMode.SensorFusion);
 
                 // wait until device is steady
-                DateTime timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
-                while (DateTime.Now < timeout && !gamepadMotion.GetAutoCalibrationIsSteady())
-                    await Task.Delay(100); // Captures synchronization context
+                float confidence = 0.0f;
 
-                // device is either too shaky or stalled
-                bool IsSteady = gamepadMotion.GetAutoCalibrationIsSteady();
-                if (!IsSteady)
+                Task timeout = Task.Delay(TimeSpan.FromSeconds(5));
+                while (!timeout.IsCompleted)
                 {
-                    gamepadMotion.GetCalibratedGyro(out float x, out float y, out float z);
+                    confidence = gamepadMotion.GetAutoCalibrationConfidence();
+                    if (confidence == 1.0f)
+                        break;
 
-                    // display message
-                    if (x == 0 && y == 0 && z == 0)
-                        dialog.UpdateContent($"Calibration failed: device is silent.");
-                    else
-                        dialog.UpdateContent($"Calibration device is silent or unsteady.");
-
-                    // wait a bit
-                    await Task.Delay(2000); // Captures synchronization context
-
-                    break;
+                    await Task.Delay(10);
                 }
-
-                // start continuous calibration
-                gamepadMotion.StartContinuousCalibration();
-
-                // give gamepad motion 3 seconds to get values
-                timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
-                while (DateTime.Now < timeout)
-                    await Task.Delay(100); // Captures synchronization context
-
-                // halt continuous calibration
-                gamepadMotion.PauseContinuousCalibration();
-
-                // get continuous calibration confidence
-                float confidence = gamepadMotion.GetAutoCalibrationConfidence();
 
                 // get/set calibration offsets
                 gamepadMotion.GetCalibrationOffset(out float xOffset, out float yOffset, out float zOffset);
                 gamepadMotion.SetCalibrationOffset(xOffset, yOffset, zOffset, (int)(confidence * 10.0f));
 
-                /*
-                dialog.UpdateTitle("Please take back the controller in hands and get ready to shake it.");
-
-                for (int i = 4; i > 0; i--)
-                {
-                    dialog.UpdateContent($"Threshold calibration will start in {i} seconds.");
-                    await Task.Delay(1000);
-                }
-
-                dialog.UpdateContent("Shake the device in all direction...");
-
-                // reset motion values
-                gamepadMotion.ResetThresholdCalibration();
-                gamepadMotion.StartThresholdCalibration();
-
-                // wait until device is steady
-                timeout = DateTime.Now.Add(TimeSpan.FromSeconds(3));
-                while (DateTime.Now < timeout)
-                    await Task.Delay(100);
-
-                gamepadMotion.PauseThresholdCalibration();
-
-                // get calibration offsets
-                gamepadMotion.SetCalibrationThreshold(gamepadMotion.maxGyro, gamepadMotion.maxAccel);
-                */
-
                 // store calibration offsets
                 IMUCalibration.StoreCalibration(gamepadMotion.deviceInstanceId, gamepadMotion.GetCalibration());
+
+                // restore calibration mode
+                gamepadMotion.SetCalibrationMode(CalibrationMode.Manual);
 
                 // display message
                 dialog.UpdateContent($"Calibration succeeded: stationary sensor noise recorded. Drift correction found. Confidence: {confidence * 100.0f}%");

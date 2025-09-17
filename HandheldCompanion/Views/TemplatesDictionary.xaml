@@ -11,6 +11,7 @@
     <converters:InverseAppThemeConverter x:Key="InverseAppThemeConverter" />
     <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+    <converters:DrawingImageToImageSourceConverter x:Key="DrawingImageToImageSourceConverter" />
     <converters:IndexToVisibilityConverter x:Key="IndexToVisibilityConverter" />
     <converters:IsEnabledConverter x:Key="IsEnabledConverter" />
     <converters:PercentageConverter x:Key="PercentageConverter" />

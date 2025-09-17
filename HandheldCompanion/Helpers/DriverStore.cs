@@ -1,10 +1,11 @@
-﻿using HandheldCompanion.Shared;
+﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
-using static PInvoke.Kernel32;
 
 namespace HandheldCompanion.Helpers
 {
@@ -12,6 +13,8 @@ namespace HandheldCompanion.Helpers
     {
         private static string DriversPath = Path.Combine(MainWindow.SettingsPath, "drivers.json");
         private static Dictionary<string, string> Drivers = [];
+
+        private const string SettingsName = "KnownDrivers";
 
         static DriverStore()
         {
@@ -22,6 +25,25 @@ namespace HandheldCompanion.Helpers
         public static IEnumerable<string> GetDrivers()
         {
             return Drivers.Values;
+        }
+
+        public static StringCollection GetKnownDrivers()
+        {
+            StringCollection stringCollection = ManagerFactory.settingsManager.Get<StringCollection>(SettingsName);
+            if (stringCollection is null)
+                stringCollection = new();
+
+            return stringCollection;
+        }
+
+        public static void StoreKnownDriver(string driverName)
+        {
+            StringCollection stringCollection = GetKnownDrivers();
+            if (!stringCollection.Contains(driverName))
+            {
+                stringCollection.Add(driverName);
+                ManagerFactory.settingsManager.Set(SettingsName, stringCollection);
+            }
         }
 
         public static IEnumerable<string> GetPaths()
@@ -37,20 +59,21 @@ namespace HandheldCompanion.Helpers
 
         private static Dictionary<string, string> DeserializeDriverStore()
         {
+            Dictionary<string, string>? result = new();
             if (!File.Exists(DriversPath))
-                return [];
+                return result;
 
             try
             {
                 string json = File.ReadAllText(DriversPath);
-                return JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                result = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
             }
             catch (Exception ex)
             {
                 LogManager.LogError("Could not retrieve drivers store {0}", ex.Message);
             }
 
-            return [];
+            return result ?? new Dictionary<string, string>(); // Ensure it's never null
         }
 
         public static string GetDriverFromDriverStore(string path)
@@ -61,13 +84,16 @@ namespace HandheldCompanion.Helpers
             return "xusb22.inf";
         }
 
-        public static void AddOrUpdateDriverStore(string path, string calibration)
+        public static void AddOrUpdateDriverStore(string path, string driverName)
         {
             // upcase
             path = path.ToUpper();
 
             // update array
-            Drivers[path] = calibration;
+            Drivers[path] = driverName;
+
+            // update settings (failsafe)
+            StoreKnownDriver(driverName);
 
             // serialize store
             SerializeDriverStore();

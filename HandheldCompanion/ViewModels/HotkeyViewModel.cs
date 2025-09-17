@@ -4,8 +4,10 @@ using HandheldCompanion.Commands.Functions.Windows;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Extensions;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Properties;
 using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels.Controls;
 using System;
@@ -22,14 +24,17 @@ using System.Windows.Input;
 using System.Windows.Media;
 using WindowsInput.Events;
 using static HandheldCompanion.Commands.ICommands;
-using Application = System.Windows.Application;
 
 namespace HandheldCompanion.ViewModels
 {
     public class HotkeyViewModel : BaseViewModel
     {
         public ObservableCollection<FontIconViewModel> ButtonGlyphs { get; set; } = [];
-        public ObservableCollection<ComboBoxItemViewModel> FunctionItems { get; set; } = [];
+
+        private List<Type> _functionTypes;
+
+        private ObservableCollection<ComboBoxItemViewModel> _functionItems = [];
+        public ListCollectionView FunctionCollectionView { get; set; }
 
         private Hotkey _Hotkey;
         public Hotkey Hotkey
@@ -44,6 +49,8 @@ namespace HandheldCompanion.ViewModels
                 _Hotkey.command.Executed += Command_Executed;
                 _Hotkey.command.Updated += Command_Updated;
 
+                // refresh all properties
+                OnPropertyChanged(string.Empty);
                 OnPropertyChanged(nameof(Hotkey));
                 OnPropertyChanged(nameof(IsPinned));
                 OnPropertyChanged(nameof(CommandTypeIndex));
@@ -91,7 +98,7 @@ namespace HandheldCompanion.ViewModels
                         cycleSubProfileCommands.CycleIndex = value;
 
                     OnPropertyChanged(nameof(CyclingDirection));
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
                 }
             }
         }
@@ -111,6 +118,7 @@ namespace HandheldCompanion.ViewModels
         private void Command_Updated(ICommands command)
         {
             OnPropertyChanged(nameof(LiveGlyph));
+            OnPropertyChanged(nameof(LiveName));
             OnPropertyChanged(nameof(IsEnabled));
             OnPropertyChanged(nameof(IsToggled));
         }
@@ -124,6 +132,7 @@ namespace HandheldCompanion.ViewModels
 
         public string Glyph => Hotkey.command.Glyph;
         public string LiveGlyph => Hotkey.command.LiveGlyph;
+        public string LiveName => CanCustom ? CustomName : Hotkey.command.LiveName;
         public string FontFamily => Hotkey.command.FontFamily;
 
         public string CustomName
@@ -138,7 +147,7 @@ namespace HandheldCompanion.ViewModels
                 {
                     Hotkey.Name = value;
                     OnPropertyChanged(nameof(CustomName));
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
                 }
             }
         }
@@ -178,6 +187,7 @@ namespace HandheldCompanion.ViewModels
         }
 
         public bool IsPinned => Hotkey.IsPinned;
+        public bool CanUnpin => Hotkey.command.CanUnpin;
 
         private bool _IsListening = false;
         public bool IsListening => _IsListening;
@@ -222,7 +232,7 @@ namespace HandheldCompanion.ViewModels
         {
             get
             {
-                return _KeyboardOutputChord;
+                return string.IsNullOrEmpty(_KeyboardOutputChord) ? Resources.Hotkey_OutputDefineTip : _KeyboardOutputChord;
             }
             set
             {
@@ -267,9 +277,7 @@ namespace HandheldCompanion.ViewModels
                             Hotkey.command = new EmptyCommands();
                             break;
                         case CommandType.Function:
-                            // pick first available function command
-                            int index = FunctionCommands.Functions.FindIndex(item => item is Type);
-                            FunctionIndex = index;
+                            FunctionIndex = 1;
                             break;
                         case CommandType.Keyboard:
                             Hotkey.command = new KeyboardCommands();
@@ -283,7 +291,7 @@ namespace HandheldCompanion.ViewModels
                     CustomName = Hotkey.command.Name;
 
                     OnPropertyChanged(nameof(CommandTypeIndex));
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
                 }
             }
         }
@@ -293,8 +301,8 @@ namespace HandheldCompanion.ViewModels
             get
             {
                 Type typeToSearch = Hotkey.command.GetType();
-                if (FunctionCommands.Functions.Contains(typeToSearch))
-                    return FunctionCommands.Functions.IndexOf(typeToSearch);
+                if (_functionTypes.Contains(typeToSearch))
+                    return _functionTypes.IndexOf(typeToSearch);
                 else
                     return 0;
             }
@@ -302,14 +310,14 @@ namespace HandheldCompanion.ViewModels
             {
                 if (value != FunctionIndex)
                 {
-                    Type typeToCreate = (Type)FunctionCommands.Functions[value];
+                    Type typeToCreate = _functionTypes[value];
                     Hotkey.command = Activator.CreateInstance(typeToCreate) as ICommands;
 
                     // reset custom name
                     CustomName = Hotkey.command.Name;
 
                     OnPropertyChanged(nameof(FunctionIndex));
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
                 }
             }
         }
@@ -328,6 +336,29 @@ namespace HandheldCompanion.ViewModels
                     _Chord = value;
                     OnPropertyChanged(nameof(Chord));
                 }
+            }
+        }
+
+        public int WindowPageIndex
+        {
+            get
+            {
+                if (Hotkey.command is QuickToolsCommands quickToolsCommands)
+                    return quickToolsCommands.PageIndex;
+                else if (Hotkey.command is MainWindowCommands windowCommands)
+                    return windowCommands.PageIndex;
+
+                return 0;
+            }
+            set
+            {
+                if (Hotkey.command is QuickToolsCommands quickToolsCommands)
+                    quickToolsCommands.PageIndex = value;
+                else if (Hotkey.command is MainWindowCommands windowCommands)
+                    windowCommands.PageIndex = value;
+
+                OnPropertyChanged(nameof(WindowPageIndex));
+                ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
             }
         }
 
@@ -353,10 +384,13 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    executableCommand.Arguments = value;
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    if (executableCommand.Arguments != value)
+                    {
+                        executableCommand.Arguments = value;
+                        OnPropertyChanged(nameof(ExecutableArguments));
 
-                    // OnPropertyChanged(nameof(ExecutableArguments));
+                        ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    }
                 }
             }
         }
@@ -373,10 +407,13 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    executableCommand.windowStyle = (ProcessWindowStyle)value;
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    if (executableCommand.windowStyle != (ProcessWindowStyle)value)
+                    {
+                        executableCommand.windowStyle = (ProcessWindowStyle)value;
+                        OnPropertyChanged(nameof(ExecutableWindowStyle));
 
-                    // OnPropertyChanged(nameof(ExecutableWindowStyle));
+                        ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    }
                 }
             }
         }
@@ -393,10 +430,13 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is ExecutableCommands executableCommand)
                 {
-                    executableCommand.RunAs = value;
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    if (executableCommand.RunAs != value)
+                    {
+                        executableCommand.RunAs = value;
+                        OnPropertyChanged(nameof(ExecutableRunAs));
 
-                    // OnPropertyChanged(nameof(ExecutableRunAs));
+                        ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    }
                 }
             }
         }
@@ -413,14 +453,20 @@ namespace HandheldCompanion.ViewModels
             {
                 if (Hotkey.command is OnScreenKeyboardLegacyCommands keyboardCommands)
                 {
-                    keyboardCommands.KeyboardPosition = value;
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    if (keyboardCommands.KeyboardPosition != value)
+                    {
+                        keyboardCommands.KeyboardPosition = value;
+                        OnPropertyChanged(nameof(OnScreenKeyboardLegacyPosition));
+
+                        ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    }
                 }
             }
         }
 
         public bool IsToggled => Hotkey.command.IsToggled;
         public bool IsEnabled => Hotkey.command.IsEnabled;
+        public bool CanCustom => Hotkey.command.CanCustom;
 
         public ICommand DefineButtonCommand { get; private set; }
         public ICommand PinButtonCommand { get; private set; }
@@ -437,30 +483,44 @@ namespace HandheldCompanion.ViewModels
 
             // Enable thread-safe access to the collection
             BindingOperations.EnableCollectionSynchronization(ButtonGlyphs, new object());
-            BindingOperations.EnableCollectionSynchronization(FunctionItems, new object());
 
-            // Fill initial data
-            foreach (object value in FunctionCommands.Functions)
+            _functionTypes = FunctionCommands.Functions.Where(item => item is Type type && type.IsAssignableTo(typeof(FunctionCommands))).Cast<Type>().ToList();
+            UIHelper.TryInvoke(() =>
             {
-                if (value is string)
+                FunctionCollectionView = new ListCollectionView(_functionItems);
+                FunctionCollectionView.GroupDescriptions.Add(new PropertyGroupDescription("Category"));
+                // Fill initial data
+                string currentCategory = "Ungrouped";
+                foreach (object value in FunctionCommands.Functions)
                 {
-                    string category = Convert.ToString(value);
-                    FunctionItems.SafeAdd(new ComboBoxItemViewModel(category, false));
-                }
-                else
-                {
-                    Type function = value as Type;
-                    if (function == typeof(Separator))
+                    if (value is string)
                     {
-                        FunctionItems.SafeAdd(new ComboBoxItemViewModel(string.Empty, false));
+                        currentCategory = Convert.ToString(value);
                     }
                     else
                     {
-                        ICommands command = Activator.CreateInstance(function) as ICommands;
-                        FunctionItems.SafeAdd(new ComboBoxItemViewModel(command.Name, true));
+                        Type function = value as Type;
+                        if (function == typeof(Separator))
+                        {
+                            _functionItems.Add(new ComboBoxItemViewModel(string.Empty, false, string.Empty));
+                        }
+                        else
+                        {
+                            var instance = Activator.CreateInstance(function);
+                            ICommands command = (ICommands)instance!;
+                            IDisposable? disposable = instance as IDisposable;
+
+                            bool canUnpin = command.CanUnpin;
+                            bool isSupported = command.deviceType is null || (command.deviceType == IDevice.GetCurrent().GetType());
+                            bool isEnabled = canUnpin && isSupported;
+
+                            _functionItems.Add(new ComboBoxItemViewModel(command.Name, isEnabled, currentCategory));
+
+                            disposable?.Dispose();
+                        }
                     }
                 }
-            }
+            });
 
             DefineButtonCommand = new DelegateCommand(async () =>
             {
@@ -473,12 +533,12 @@ namespace HandheldCompanion.ViewModels
             PinButtonCommand = new DelegateCommand(async () =>
             {
                 Hotkey.IsPinned = !Hotkey.IsPinned;
-                HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
             });
 
             DeleteHotkeyCommand = new DelegateCommand(async () =>
             {
-                HotkeysManager.DeleteHotkey(Hotkey);
+                ManagerFactory.hotkeysManager.DeleteHotkey(Hotkey);
             });
 
             DefineOutputCommand = new DelegateCommand(async () =>
@@ -501,7 +561,7 @@ namespace HandheldCompanion.ViewModels
                     if (Hotkey.command is ExecutableCommands executableCommand)
                     {
                         executableCommand.Path = openFileDialog.FileName;
-                        HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                        ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
                     }
                 }
             });
@@ -514,7 +574,7 @@ namespace HandheldCompanion.ViewModels
             EraseButtonCommand = new DelegateCommand(async () =>
             {
                 Hotkey.inputsChord = new();
-                HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
             });
 
             EraseOutputButtonCommand = new DelegateCommand(async () =>
@@ -522,7 +582,7 @@ namespace HandheldCompanion.ViewModels
                 if (Hotkey.command is KeyboardCommands keyboardCommands)
                 {
                     keyboardCommands.outputChord = new();
-                    HotkeysManager.UpdateOrCreateHotkey(Hotkey);
+                    ManagerFactory.hotkeysManager.UpdateOrCreateHotkey(Hotkey);
                 }
             });
         }
@@ -532,17 +592,17 @@ namespace HandheldCompanion.ViewModels
             foreach (FontIconViewModel FontIconViewModel in ButtonGlyphs.ToList())
                 ButtonGlyphs.SafeRemove(FontIconViewModel);
 
-            IController? controller = ControllerManager.GetTargetController();
-            if (controller is null)
-                controller = ControllerManager.GetPlaceholderController();
+            IController controller = ControllerManager.GetTargetOrDefault();
 
             // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 foreach (ButtonFlags buttonFlags in Hotkey.inputsChord.ButtonState.Buttons)
                 {
                     string glyphString = string.Empty;
-                    Brush glyphColor = new SolidColorBrush(controller.GetGlyphColor(buttonFlags));
+
+                    var color = controller.GetGlyphColor(buttonFlags);
+                    Brush? glyphColor = color.HasValue ? new SolidColorBrush(color.Value) : null;
 
                     switch (buttonFlags)
                     {

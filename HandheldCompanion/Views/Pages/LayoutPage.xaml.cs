@@ -1,10 +1,12 @@
 using HandheldCompanion.Controllers;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.ViewModels;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -78,16 +80,40 @@ public partial class LayoutPage : Page
             { "GyroPage", ( gyroPage, navGyro ) },
         };
 
-        // manage events
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ProfileManager.Updated += ProfileManager_Updated;
-
-        // raise events
-        if (ControllerManager.HasTargetController)
+        foreach (ILayoutPage page in pages.Values.Select(p => p.Item1))
         {
-            ControllerManager_ControllerSelected(ControllerManager.GetTargetController());
+            if (page.DataContext is BaseViewModel baseViewModel)
+                baseViewModel.PropertyChanged += (sender, e) => BaseViewModel_PropertyChanged(page, e);
+
+            // force raise event, in case page is already loaded
+            BaseViewModel_PropertyChanged(page, new PropertyChangedEventArgs("IsEnabled"));
         }
+
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        ManagerFactory.profileManager.Updated += ProfileManager_Updated;
+    }
+
+    private void BaseViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case "IsEnabled":
+                break;
+            default:
+                return;
+        }
+
+        // UI thread
+        UIHelper.TryInvoke(() =>
+        {
+            if (sender is ILayoutPage layoutPage)
+            {
+                string key = pages.FirstOrDefault(kvp => kvp.Value.Item1 == layoutPage).Key;
+                NavigationViewItem navItem = pages[key].Item2;
+                navItem.IsEnabled = layoutPage.IsEnabled();
+            }
+        });
     }
 
     private void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
@@ -95,7 +121,7 @@ public partial class LayoutPage : Page
         if (!MainWindow.CurrentPageName.Equals("LayoutPage"))
             return;
 
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (source)
             {
@@ -109,23 +135,10 @@ public partial class LayoutPage : Page
         });
     }
 
-    private void ControllerManager_ControllerSelected(IController controller)
-    {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            // cascade update to (sub)pages
-            foreach (var page in pages.Values)
-            {
-                page.Item2.IsEnabled = page.Item1.IsEnabled();
-            }
-        });
-    }
-
     private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (name)
             {
@@ -142,6 +155,11 @@ public partial class LayoutPage : Page
 
     public void Page_Closed()
     {
+        ((LayoutPageViewModel)DataContext).Dispose();
+
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.profileManager.Updated -= ProfileManager_Updated;
     }
 
     private void Expander_Expanded(object sender, RoutedEventArgs e)
@@ -152,18 +170,12 @@ public partial class LayoutPage : Page
     public void UpdateLayout(Layout layout)
     {
         currentTemplate.Layout = layout;
-
         UpdatePages();
     }
 
     public void UpdateLayoutTemplate(LayoutTemplate layoutTemplate)
     {
-        // TODO: Not entirely sure what is going on here, but the old templates were still sending
-        // events. Shouldn't they be destroyed? Either there is a bug or I don't understand something
-        // in C# (probably the latter). Either way this handles/fixes/workarounds the issue.
-        if (layoutTemplate.Layout != currentTemplate.Layout)
-            currentTemplate = layoutTemplate;
-
+        currentTemplate = layoutTemplate;
         UpdatePages();
     }
 
@@ -174,70 +186,60 @@ public partial class LayoutPage : Page
         // levels (pages and mappings) could potentially be blocked for optimization.
         lock (updateLock)
         {
-            // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                // Invoke Layout Updated to trigger ViewModel updates
-                LayoutUpdated?.Invoke(currentTemplate.Layout);
+            // Invoke Layout Updated to trigger ViewModel updates
+            LayoutUpdated?.Invoke(currentTemplate.Layout);
 
+            // UI thread
+            UIHelper.TryInvoke(() =>
+            {
                 // clear layout selection
                 cB_Layouts.SelectedValue = null;
-
-                CheckBoxDefaultLayout.IsChecked = currentTemplate.Layout.IsDefaultLayout;
-                CheckBoxDefaultLayout.IsEnabled = currentTemplate.Layout != LayoutManager.GetDesktop();
             });
         }
     }
 
     private async void ButtonApplyLayout_Click(object sender, RoutedEventArgs e)
     {
-        if (cB_Layouts.SelectedItem is null)
-            return;
-
-        if (cB_Layouts.SelectedItem is not ComboBoxItem)
-            return;
-
-        // get parent
-        var parent = cB_Layouts.SelectedItem as ComboBoxItem;
-
-        if (parent.Content is not LayoutTemplate)
-            return;
-
-        Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+        if (cB_Layouts.SelectedItem is LayoutTemplateViewModel layoutTemplateViewModel)
         {
-            Title = string.Format(Properties.Resources.ProfilesPage_AreYouSureApplyTemplate1, currentTemplate.Name),
-            Content = string.Format(Properties.Resources.ProfilesPage_AreYouSureApplyTemplate2, currentTemplate.Name),
-            DefaultButton = ContentDialogButton.Close,
-            CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
-            PrimaryButtonText = Properties.Resources.ProfilesPage_Yes
-        }.ShowAsync();
+            Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+            {
+                Title = string.Format(Properties.Resources.ProfilesPage_AreYouSureApplyTemplate1, currentTemplate.Name),
+                Content = string.Format(Properties.Resources.ProfilesPage_AreYouSureApplyTemplate2, currentTemplate.Name),
+                DefaultButton = ContentDialogButton.Close,
+                CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+                PrimaryButtonText = Properties.Resources.ProfilesPage_Yes
+            }.ShowAsync();
 
-        await dialogTask; // sync call
+            await dialogTask; // sync call
 
-        switch (dialogTask.Result)
-        {
-            case ContentDialogResult.Primary:
-                {
-                    // do not overwrite currentTemplate and currentTemplate.Layout as a whole
-                    // because they both have important Update notifitications set
+            switch (dialogTask.Result)
+            {
+                case ContentDialogResult.Primary:
+                    {
+                        // get template
+                        LayoutTemplate layoutTemplate = layoutTemplateViewModel.LayoutTemplate;
 
-                    // get template
-                    LayoutTemplate layoutTemplate = (LayoutTemplate)parent.Content;
-                    var newLayout = layoutTemplate.Layout.Clone() as Layout;
-                    currentTemplate.Layout.AxisLayout = newLayout.AxisLayout;
-                    currentTemplate.Layout.ButtonLayout = newLayout.ButtonLayout;
-                    currentTemplate.Layout.GyroLayout = newLayout.GyroLayout;
+                        // do not overwrite currentTemplate and currentTemplate.Layout as a whole
+                        // because they both have important Update notifitications set
+                        using (Layout? newLayout = layoutTemplate.Layout.Clone() as Layout)
+                        {
+                            currentTemplate.Layout.AxisLayout = CloningHelper.DeepClone(newLayout.AxisLayout);
+                            currentTemplate.Layout.ButtonLayout = CloningHelper.DeepClone(newLayout.ButtonLayout);
+                            currentTemplate.Layout.GyroLayout = CloningHelper.DeepClone(newLayout.GyroLayout);
+                        }
 
-                    currentTemplate.Name = layoutTemplate.Name;
-                    currentTemplate.Description = layoutTemplate.Description;
-                    currentTemplate.Guid = layoutTemplate.Guid; // not needed
+                        currentTemplate.Name = layoutTemplate.Name;
+                        currentTemplate.Description = layoutTemplate.Description;
+                        currentTemplate.Guid = layoutTemplate.Guid; // not needed
 
-                    // the whole layout has been updated without notification, trigger one
-                    currentTemplate.Layout.UpdateLayout();
+                        // the whole layout has been updated without notification, trigger one
+                        currentTemplate.Layout.UpdateLayout();
 
-                    UpdatePages();
-                }
-                break;
+                        UpdatePages();
+                    }
+                    break;
+            }
         }
     }
 
@@ -251,11 +253,13 @@ public partial class LayoutPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("LayoutFilterOnDevice", CheckBoxDeviceLayouts.IsChecked);
+        ManagerFactory.settingsManager.Set("LayoutFilterOnDevice", CheckBoxDeviceLayouts.IsChecked);
     }
 
     private void LayoutExportButton_Click(object sender, RoutedEventArgs e)
     {
+        LayoutFlyout.Hide();
+
         LayoutTemplate newLayout = new()
         {
             Layout = currentTemplate.Layout,
@@ -269,8 +273,6 @@ public partial class LayoutPage : Page
 
         if (newLayout.Name == string.Empty)
         {
-            LayoutFlyout.Hide();
-
             // todo: translate me
             _ = new Dialog(MainWindow.GetCurrent())
             {
@@ -283,9 +285,9 @@ public partial class LayoutPage : Page
         }
 
         if (ExportForCurrent.IsChecked == true)
-            newLayout.ControllerType = ControllerManager.GetTargetController()?.GetType();
+            newLayout.ControllerType = ControllerManager.GetTarget()?.GetType();
 
-        LayoutManager.SerializeLayoutTemplate(newLayout);
+        ManagerFactory.layoutManager.SerializeLayoutTemplate(newLayout);
 
         // todo: translate me
         _ = new Dialog(MainWindow.GetCurrent())
@@ -387,24 +389,8 @@ public partial class LayoutPage : Page
                 navView.SelectedItem = NavViewItem;
 
             string header = currentTemplate.Product.Length > 0 ?
-                    "Profile: " + currentTemplate.Product : "Layout: Desktop";
+                    $"{Properties.Resources.LayoutPage_Profile}: " + currentTemplate.Product : $"{Properties.Resources.LayoutPage_LaytouDesktop}";
             parentNavView.Header = new TextBlock() { Text = header };
-        }
-    }
-
-    private void CheckBoxDefaultLayout_Checked(object sender, RoutedEventArgs e)
-    {
-        var isDefaultLayout = (bool)CheckBoxDefaultLayout.IsChecked;
-        var prevDefaultLayoutProfile = ProfileManager.GetProfileWithDefaultLayout();
-
-        currentTemplate.Layout.IsDefaultLayout = isDefaultLayout;
-        currentTemplate.Layout.UpdateLayout();
-
-        // If option is enabled and a different default layout profile exists, we want to set option false on prev profile.
-        if (isDefaultLayout && prevDefaultLayoutProfile != null && prevDefaultLayoutProfile.Layout != currentTemplate.Layout)
-        {
-            prevDefaultLayoutProfile.Layout.IsDefaultLayout = false;
-            ProfileManager.UpdateOrCreateProfile(prevDefaultLayoutProfile);
         }
     }
 }

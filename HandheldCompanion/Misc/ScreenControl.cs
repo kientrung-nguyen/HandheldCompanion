@@ -128,39 +128,47 @@ public static class ScreenControl
 
     public static void Auto()
     {
-        if (!SettingsManager.IsInitialized) return;
-        if (!SettingsManager.Get<bool>("ScreenFrequencyAuto")) return;
-        if (internalDisplay is null || internalDisplay.DisplayScreen is null || !internalDisplay.DisplayScreen.IsPrimary) return;
+        // raise events
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                return;
+            case ManagerStatus.Initialized:
+                if (!ManagerFactory.settingsManager.Get<bool>("ScreenFrequencyAuto")) return;
+                if (internalDisplay is null || internalDisplay.DisplayScreen is null || !internalDisplay.DisplayScreen.IsPrimary) return;
 
-        if (SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online)
-        {
-            if (internalDisplay.DisplayScreen.GetPossibleSettings()
-                .Where(setting =>
-                    setting.Resolution.Width == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Width &&
-                    setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
-                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth &&
-                    setting.Frequency > internalDisplay.DisplayScreen.CurrentSetting.Frequency)
-                .DistinctBy(setting => setting.Frequency)
-                .OrderByDescending(setting => setting.Frequency).FirstOrDefault() is DisplayPossibleSetting higherFrequency)
-            {
-                if (Set(internalDisplay, higherFrequency))
-                    ScreenBrightness.Set(100);
-            }
-        }
-        else
-        {
-            if (internalDisplay.DisplayScreen.GetPossibleSettings()
-                .Where(setting =>
-                    setting.Resolution.Width == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Width &&
-                    setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
-                    setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth &&
-                    setting.Frequency < internalDisplay.DisplayScreen.CurrentSetting.Frequency)
-                .DistinctBy(setting => setting.Frequency)
-                .OrderByDescending(setting => setting.Frequency).FirstOrDefault() is DisplayPossibleSetting lowerFrequency)
-            {
-                if (Set(internalDisplay, lowerFrequency))
-                    ScreenBrightness.Set(85);
-            }
+                if (SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online)
+                {
+                    if (internalDisplay.DisplayScreen.GetPossibleSettings()
+                        .Where(setting =>
+                            setting.Resolution.Width == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Width &&
+                            setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
+                            setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth &&
+                            setting.Frequency > internalDisplay.DisplayScreen.CurrentSetting.Frequency)
+                        .DistinctBy(setting => setting.Frequency)
+                        .OrderByDescending(setting => setting.Frequency).FirstOrDefault() is DisplayPossibleSetting higherFrequency)
+                    {
+                        if (Set(internalDisplay, higherFrequency))
+                            ScreenBrightness.Set(100);
+                    }
+                }
+                else
+                {
+                    if (internalDisplay.DisplayScreen.GetPossibleSettings()
+                        .Where(setting =>
+                            setting.Resolution.Width == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Width &&
+                            setting.Resolution.Height == internalDisplay.DisplayScreen.CurrentSetting.Resolution.Height &&
+                            setting.ColorDepth == internalDisplay.DisplayScreen.CurrentSetting.ColorDepth &&
+                            setting.Frequency < internalDisplay.DisplayScreen.CurrentSetting.Frequency)
+                        .DistinctBy(setting => setting.Frequency)
+                        .OrderByDescending(setting => setting.Frequency).FirstOrDefault() is DisplayPossibleSetting lowerFrequency)
+                    {
+                        if (Set(internalDisplay, lowerFrequency))
+                            ScreenBrightness.Set(85);
+                    }
+                }
+                break;
         }
     }
 

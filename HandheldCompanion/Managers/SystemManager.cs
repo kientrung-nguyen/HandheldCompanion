@@ -149,7 +149,7 @@ public static class SystemManager
         AutoRoutine();
     }
 
-    public static async Task Start()
+    public static void Start()
     {
         if (IsInitialized)
             return;
@@ -168,7 +168,6 @@ public static class SystemManager
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
 
         LogManager.LogInformation("{0} has started", "PowerManager");
-        return;
     }
 
     public static void Stop()

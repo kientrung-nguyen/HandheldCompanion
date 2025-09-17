@@ -1,9 +1,11 @@
-﻿using HandheldCompanion.Shared;
+﻿using GameLib.Core;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Security;
@@ -19,8 +21,13 @@ public enum PlatformType
     Origin = 2,
     UbisoftConnect = 3,
     GOG = 4,
-    RTSS = 5,
-    LibreHardwareMonitor,
+    BattleNet = 5,
+    Epic = 6,
+    RiotGames = 7,
+    Rockstar = 8,
+
+    RTSS = 20,
+    LibreHardwareMonitor = 21,
 }
 
 public enum PlatformStatus
@@ -38,24 +45,22 @@ public abstract class IPlatform : IDisposable
 {
     protected readonly object updateLock = new();
 
-    private bool _IsInstalled;
-
     private Process _Process;
-    protected string ExecutableName;
-    protected string RunningName;
-    protected string ExecutablePath;
+
+    public virtual string Name { get; set; }
+    public virtual string ExecutableName { get; set; }
+    public virtual string InstallPath { get; set; }
+    public virtual string ExecutablePath { get; set; }
+    public virtual bool IsInstalled { get; set; }
+
     protected Version ExpectedVersion;
 
-    public List<string> Executables => new() { ExecutableName, RunningName };
-
-    protected string InstallPath;
     protected bool IsStarting;
 
     protected bool KeepAlive;
     protected int MaxTentative = 3;
 
     protected List<string> Modules = [];
-    protected string Name;
 
     public PlatformType PlatformType;
 
@@ -77,7 +82,7 @@ public abstract class IPlatform : IDisposable
                 if (_Process is not null)
                     return _Process;
 
-                var processes = ProcessUtils.GetProcessesByExecutable(RunningName);
+                var processes = ProcessUtils.GetProcessesByExecutable(ExecutableName);
                 if (processes.Length == 0)
                     return null;
 
@@ -94,22 +99,6 @@ public abstract class IPlatform : IDisposable
             {
                 return null;
             }
-        }
-    }
-
-    public bool IsInstalled
-    {
-        get => _IsInstalled;
-
-        set
-        {
-            _IsInstalled = value;
-
-            // raise event
-            if (value)
-                SetStatus(PlatformStatus.Ready);
-            else
-                SetStatus(PlatformStatus.Stalled);
         }
     }
 
@@ -259,6 +248,9 @@ public abstract class IPlatform : IDisposable
         return true;
     }
 
+    public virtual void Refresh()
+    { }
+
     protected virtual void Process_Exited(object? sender, EventArgs e)
     {
         LogManager.LogDebug("{0} has exited", GetType());
@@ -317,7 +309,7 @@ public abstract class IPlatform : IDisposable
                 process.EnableRaisingEvents = true;
                 process.Exited += Process_Exited;
 
-                process.WaitForInputIdle();
+                process.WaitForInputIdle(3000);
 
                 // (re)start watchdog
                 PlatformWatchdog.Start();
@@ -360,6 +352,16 @@ public abstract class IPlatform : IDisposable
         {
             return false;
         }
+    }
+
+    public virtual IEnumerable<IGame> GetGames()
+    {
+        return new List<IGame>();
+    }
+
+    public virtual Image GetLogo()
+    {
+        return null;
     }
 
     public bool IsFileOverwritten(string FilePath, byte[] content)
