@@ -9,8 +9,10 @@ using PowerManagerAPI;
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Windows.Forms;
 using PowerSchemeAPI = PowerManagerAPI.PowerManager;
 using Timer = System.Timers.Timer;
 
@@ -43,15 +45,6 @@ public enum CPUBoostLevel
     EfficientAgressive = 4,
     AggressiveAtGuaranteed = 5,
     EfficientAggressiveAtGuaranteed = 6
-}
-
-public enum CoreParkingMode
-{
-    AllCoresAuto,
-    AllCoresPrefPCore,
-    AllCoresPrefECore,
-    OnlyPCore,
-    OnlyECore,
 }
 
 public static class PerformanceManager
@@ -127,10 +120,12 @@ public static class PerformanceManager
     private static double[] currentTDP = new double[5]; // used to store current TDP
     private static readonly double[] storedTDP = new double[3]; // used to store TDP
     private static int tdpWatchdogCounter;
+	
+    private const string dllName = "WinRing0x64.dll";
 
     private static bool IsInitialized;
     public static event InitializedEventHandler Initialized;
-    public delegate void InitializedEventHandler();
+    public delegate void InitializedEventHandler(bool CanChangeTDP, bool CanChangeGPU);
 
     static PerformanceManager()
     {
@@ -148,7 +143,7 @@ public static class PerformanceManager
         autotdpWatchdog.Elapsed += autotdpWatchdog_Elapsed;
     }
 
-    public static async Task Start()
+    public static void Start()
     {
         if (IsInitialized)
             return;
@@ -159,38 +154,62 @@ public static class PerformanceManager
         // initialize processor
         processor = Processor.GetCurrent();
 
-        if (processor is not null && processor.IsInitialized)
-        {
-            processor.StatusChanged += Processor_StatusChanged;
-            processor.Initialize();
-        }
-        else
-        {
-            ProcessorStatusChanged?.Invoke(false, false);
-        }
-
-        // manage events
-        PowerProfileManager.Applied += PowerProfileManager_Applied;
-        PowerProfileManager.Discarded += PowerProfileManager_Discarded;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-
         // raise events
-        if (PowerProfileManager.IsInitialized)
+        switch (ManagerFactory.powerProfileManager.Status)
         {
-            PowerProfileManager_Applied(PowerProfileManager.GetCurrent(), UpdateSource.Background);
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.powerProfileManager.Initialized += PowerProfileManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryPowerProfile();
+                break;
         }
 
-        // raise events
-        if (SettingsManager.IsInitialized)
+        switch (ManagerFactory.settingsManager.Status)
         {
-            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", SettingsManager.Get<string>("ConfigurableTDPOverrideDown"), false);
-            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", SettingsManager.Get<string>("ConfigurableTDPOverrideUp"), false);
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
         }
 
         IsInitialized = true;
-        Initialized?.Invoke();
+        Initialized?.Invoke(processor?.CanChangeTDP ?? false, processor?.CanChangeGPU ?? false);
 
         LogManager.LogInformation("{0} has started", "PerformanceManager");
+    }
+
+    private static void QueryPowerProfile()
+    {
+        // manage events
+        ManagerFactory.powerProfileManager.Applied += PowerProfileManager_Applied;
+        ManagerFactory.powerProfileManager.Discarded += PowerProfileManager_Discarded;
+
+        PowerProfileManager_Applied(ManagerFactory.powerProfileManager.GetCurrent(), UpdateSource.Background);
+    }
+
+    private static void PowerProfileManager_Initialized()
+    {
+        QueryPowerProfile();
+    }
+
+    private static void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+    private static void QuerySettings()
+    {
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", ManagerFactory.settingsManager.Get<string>("ConfigurableTDPOverrideDown"), false);
+        SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", ManagerFactory.settingsManager.Get<string>("ConfigurableTDPOverrideUp"), false);
     }
 
     public static void Stop()
@@ -200,10 +219,7 @@ public static class PerformanceManager
 
         // halt processor
         if (processor is not null && processor.IsInitialized)
-        {
-            processor.StatusChanged -= Processor_StatusChanged;
             processor.Stop();
-        }
 
         // halt watchdogs
         autotdpWatchdog.Stop();
@@ -211,10 +227,17 @@ public static class PerformanceManager
         gfxWatchdog.Stop();
         cpuWatchdog.Stop();
 
+        // dismount WinRing0x64.dll, and WinRing0x64.sys hopefully...
+        nint Module = GetModuleHandle(dllName);
+        if (Module != IntPtr.Zero)
+            FreeLibrary(Module);
+
         // manage events
-        PowerProfileManager.Applied -= PowerProfileManager_Applied;
-        PowerProfileManager.Discarded -= PowerProfileManager_Discarded;
-        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.powerProfileManager.Applied -= PowerProfileManager_Applied;
+        ManagerFactory.powerProfileManager.Discarded -= PowerProfileManager_Discarded;
+        ManagerFactory.powerProfileManager.Initialized -= PowerProfileManager_Initialized;
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
 
         IsInitialized = false;
 
@@ -279,7 +302,6 @@ public static class PerformanceManager
             // and max limit for AutoTDP
             if (profile.TDPOverrideValues is not null)
                 AutoTDP = AutoTDPMax = profile.TDPOverrideValues[0];
-
         }
         else
         {
@@ -297,7 +319,7 @@ public static class PerformanceManager
 
             // manual TDP override is not set
             // use the settings max limit for AutoTDP
-            AutoTDP = AutoTDPMax = SettingsManager.Get<int>("ConfigurableTDPOverrideUp");
+            AutoTDP = AutoTDPMax = ManagerFactory.settingsManager.Get<int>("ConfigurableTDPOverrideUp");
         }
 
         // apply profile defined AutoTDP
@@ -345,6 +367,9 @@ public static class PerformanceManager
             // restore default EPP
             RequestEPP(0x00000032);
         }
+
+        // apply profile defined CPU Core Parking
+        RequestCoreParkingMode(profile.CPUParkingMode);
 
         // apply profile defined CPU Core Count
         if (profile.CPUCoreEnabled)
@@ -439,8 +464,12 @@ public static class PerformanceManager
         AutoGPUClockMin = Math.Clamp(gpuClockMin, Math.Min(gpuClockMin, AutoGPUClockMax), AutoGPUClockMax);
     }
 
-    private static void PowerProfileManager_Discarded(PowerProfile profile)
+    private static void PowerProfileManager_Discarded(PowerProfile profile, bool swapped)
     {
+        // don't bother discarding settings, new one will be enforce shortly
+        if (swapped)
+            return;
+
         currentProfile = null;
 
         // restore default TDP
@@ -477,7 +506,10 @@ public static class PerformanceManager
             // restore default EPP
             RequestEPP(0x00000032);
         }
-
+		
+        // restore default CPU Core Parking
+        RequestCoreParkingMode(CoreParkingMode.AllCoresAuto);
+		
         // unapply profile defined CPU Core Count
         if (profile.CPUCoreEnabled)
         {
@@ -497,7 +529,7 @@ public static class PerformanceManager
     private static void RestoreTDP(bool immediate)
     {
         // On power status change, force refresh TDP and AutoTDP
-        PowerProfile profile = PowerProfileManager.GetDefault();
+        var profile = ManagerFactory.powerProfileManager.GetDefault(SystemInformation.PowerStatus.PowerLineStatus);
         RequestTDP(profile.TDPOverrideValues, immediate);
 
         if (profile.TDPOverrideValues is not null)
@@ -519,7 +551,12 @@ public static class PerformanceManager
         if (processor is null || !processor.IsInitialized)
             return;
 
-        if (!PlatformManager.RTSS.HasHook())
+        // we're not ready yet
+        if (!ManagerFactory.platformManager.IsReady)
+            return;
+
+        var hasHook = PlatformManager.RTSS?.HasHook() ?? false;
+        if (!hasHook)
         {
             autotdpWatchdog.Interval = INTERVAL_DEGRADED;
             RestoreTDP(true);
@@ -537,9 +574,11 @@ public static class PerformanceManager
                 bool TDPdone = false;
                 bool MSRdone = true;
                 bool forcedUpdate = false;
+                double unclampedProcessValueFPS = 0.0;
 
                 // todo: Store fps for data gathering from multiple points (OSD, Performance)
-                var processValueFPS = PlatformManager.RTSS.GetFramerate(true);
+                var framerate = PlatformManager.RTSS?.GetFramerate(true) ?? 0.0d;
+                var processValueFPS = unclampedProcessValueFPS = framerate;
                 if (processValueFPS == 0)
                     return;
 
@@ -598,6 +637,7 @@ public static class PerformanceManager
                     }
                 }
             }
+            catch { }
             finally
             {
                 // release lock
@@ -822,6 +862,7 @@ public static class PerformanceManager
                     }
                 }
             }
+            catch { }
             finally
             {
                 // release lock
@@ -830,7 +871,7 @@ public static class PerformanceManager
         }
     }
 
-    private static async void tdpWatchdog_Elapsed(object? sender, ElapsedEventArgs e)
+    private static void tdpWatchdog_Elapsed(object? sender, ElapsedEventArgs e)
     {
         if (processor is null || !processor.IsInitialized)
             return;
@@ -875,7 +916,7 @@ public static class PerformanceManager
                     if (ReadTDP != TDP || forcedUpdate)
                         RequestTDP((PowerType)idx, TDP, true);
 
-                    await Task.Delay(20).ConfigureAwait(false); // Avoid blocking the synchronization context
+                    Thread.Sleep(200);
                 }
 
                 // are we done ?
@@ -912,6 +953,7 @@ public static class PerformanceManager
                     }
                 }
             }
+            catch { }
             finally
             {
                 // release lock
@@ -981,6 +1023,7 @@ public static class PerformanceManager
                     }
                 }
             }
+            catch { }
             finally
             {
                 // release lock
@@ -1073,7 +1116,7 @@ public static class PerformanceManager
         for (int idx = (int)PowerType.Slow; idx <= (int)PowerType.Fast; idx++)
         {
             RequestTDP((PowerType)idx, values[idx], immediate);
-            await Task.Delay(20).ConfigureAwait(false); // Avoid blocking the synchronization context
+            await Task.Delay(200).ConfigureAwait(false); // Avoid blocking the synchronization context
         }
     }
 
@@ -1127,6 +1170,56 @@ public static class PerformanceManager
         }
     }
 
+    private static void RequestCoreParkingMode(CoreParkingMode coreParkingMode)
+    {
+        /*
+         * HETEROGENEOUS_POLICY values:
+         * 0: Default (no explicit preference)
+         * 1: Prefer heterogeneous scheduling (allows mixed cores based on scheduling hints)
+         * 2: Prefer E-cores exclusively (favor efficiency and battery life)
+         * 3: Prefer P-cores exclusively (favor performance at all costs)
+         
+         * HETEROGENEOUS_THREAD_SCHEDULING_POLICY and HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY values: These settings instruct Windows Scheduler about how aggressively it should favor either core type for regular or short-lived threads:
+         * 1: Strongly Prefer P-Cores (high-performance cores only)
+         * 2: Prefer P-Cores (favor P-Cores but allow E-Cores occasionally)
+         * 3: Strongly Prefer E-Cores (efficiency cores only)
+         * 4: Prefer E-Cores (favor E-Cores but allow P-Cores occasionally)
+         * 5: No specific preference (Windows decides automatically)
+         */
+
+        switch (coreParkingMode)
+        {
+            case CoreParkingMode.AllCoresPrefPCore:
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 1U, 1U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 2U, 2U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 2U, 2U);
+                break;
+            case CoreParkingMode.AllCoresPrefECore:
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 1U, 1U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 4U, 4U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 4U, 4U);
+                break;
+            case CoreParkingMode.OnlyPCore:
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 3U, 3U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 1U, 1U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 1U, 1U);
+                break;
+            case CoreParkingMode.OnlyECore:
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 2U, 2U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 3U, 3U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 3U, 3U);
+                break;
+            default:
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 0U, 0U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 5U, 5U);
+                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 5U, 5U);
+                break;
+        }
+
+        LogManager.LogDebug("User requested Core Parking Mode: {0}", coreParkingMode);
+    }
+
+    [Obsolete("This function is deprecated and will be removed in future versions.")]
     private static void RequestEPP(uint eppValue)
     {
         currentEPP = eppValue;
@@ -1289,41 +1382,33 @@ public static class PerformanceManager
     [DllImportAttribute("powrprof.dll", EntryPoint = "PowerSetActiveOverlayScheme")]
     private static extern uint PowerSetActiveOverlayScheme(Guid OverlaySchemeGuid);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern IntPtr LoadLibrary(string lpFileName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool FreeLibrary(IntPtr hModule);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string lpModuleName);
+
     #endregion
 
     #region events
 
     public static event LimitChangedHandler PowerLimitChanged;
-
     public delegate void LimitChangedHandler(PowerType type, int limit);
 
     public static event ValueChangedHandler PowerValueChanged;
-
     public delegate void ValueChangedHandler(PowerType type, float value);
 
-    public static event StatusChangedHandler ProcessorStatusChanged;
-
-    public delegate void StatusChangedHandler(bool CanChangeTDP, bool CanChangeGPU);
-
     public static event PowerModeChangedEventHandler PowerModeChanged;
-
     public delegate void PowerModeChangedEventHandler(int idx);
 
     public static event PerfBoostModeChangedEventHandler PerfBoostModeChanged;
-
     public delegate void PerfBoostModeChangedEventHandler(uint value);
 
     public static event EPPChangedEventHandler EPPChanged;
-
     public delegate void EPPChangedEventHandler(uint EPP);
-
-    #endregion
-
-    #region events
-    private static void Processor_StatusChanged(bool CanChangeTDP, bool CanChangeGPU)
-    {
-        ProcessorStatusChanged?.Invoke(CanChangeTDP, CanChangeGPU);
-    }
 
     #endregion
 }

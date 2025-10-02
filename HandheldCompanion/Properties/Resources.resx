@@ -334,108 +334,6 @@
   <data name="Hotkey_suspendResumeTaskDesc" xml:space="preserve">
     <value>Suspend or resume the foreground application</value>
   </data>
-  <data name="InputsHotkey_decreaseTDP" xml:space="preserve">
-    <value>Decrease thermal power limit (TDP)</value>
-  </data>
-  <data name="InputsHotkey_decreaseTDPDesc" xml:space="preserve">
-    <value>Decrease system or currently applied profile TDP by one watt</value>
-  </data>
-  <data name="InputsHotkey_fallbackInput" xml:space="preserve">
-    <value>Press to define trigger</value>
-  </data>
-  <data name="InputsHotkey_fallbackOutput" xml:space="preserve">
-    <value>Press to define keyboard output</value>
-  </data>
-  <data name="InputsHotkey_increaseTDP" xml:space="preserve">
-    <value>Increase thermal power limit (TDP)</value>
-  </data>
-  <data name="InputsHotkey_increaseTDPDesc" xml:space="preserve">
-    <value>Increase system or currently applied profile TDP by one watt</value>
-  </data>
-  <data name="InputsHotkey_overlayGamepad" xml:space="preserve">
-    <value>Display 3D controller</value>
-  </data>
-  <data name="InputsHotkey_overlayGamepadDesc" xml:space="preserve">
-    <value>Change 3D hotkey by pressing a button or a special key</value>
-  </data>
-  <data name="InputsHotkey_overlayTrackpads" xml:space="preserve">
-    <value>Display virtual trackpads</value>
-  </data>
-  <data name="InputsHotkey_overlayTrackpadsDesc" xml:space="preserve">
-    <value>Change hotkey by pressing a button or a special key</value>
-  </data>
-  <data name="InputsHotkey_quickTools" xml:space="preserve">
-    <value>Summon quick tools window</value>
-  </data>
-  <data name="InputsHotkey_quickToolsDesc" xml:space="preserve">
-    <value>Change hotkey by pressing a button or a special key</value>
-  </data>
-  <data name="InputsHotkey_shortcutCustom" xml:space="preserve">
-    <value>Custom shortcut</value>
-  </data>
-  <data name="InputsHotkey_shortcutCustomDesc" xml:space="preserve">
-    <value>Change hotkey by pressing a button or a special key</value>
-  </data>
-  <data name="InputsHotkey_shortcutDesktop" xml:space="preserve">
-    <value>Display and hide the desktop</value>
-  </data>
-  <data name="InputsHotkey_shortcutDesktopDesc" xml:space="preserve">
-    <value>Press this key: Windows + D</value>
-  </data>
-  <data name="InputsHotkey_shortcutESC" xml:space="preserve">
-    <value>Escape</value>
-  </data>
-  <data name="InputsHotkey_shortcutESCDesc" xml:space="preserve">
-    <value>Press this key: Escape</value>
-  </data>
-  <data name="InputsHotkey_shortcutExpand" xml:space="preserve">
-    <value>Switches between window and full screen</value>
-  </data>
-  <data name="InputsHotkey_shortcutExpandDesc" xml:space="preserve">
-    <value>Press this key: Alt + Enter</value>
-  </data>
-  <data name="InputsHotkey_shortcutGuide" xml:space="preserve">
-    <value>Guide or PS button</value>
-  </data>
-  <data name="InputsHotkey_shortcutGuideDesc" xml:space="preserve">
-    <value>Simulate a Xbox Guide or Sony PS button input</value>
-  </data>
-  <data name="InputsHotkey_shortcutKeyboard" xml:space="preserve">
-    <value>Display touch keyboard</value>
-  </data>
-  <data name="InputsHotkey_shortcutKeyboardDesc" xml:space="preserve">
-    <value>Change hotkey by pressing a button or a special key</value>
-  </data>
-  <data name="InputsHotkey_shortcutKillApp" xml:space="preserve">
-    <value>Force application shutdown</value>
-  </data>
-  <data name="InputsHotkey_shortcutKillAppDesc" xml:space="preserve">
-    <value>Change hotkey by pressing a button or a special key</value>
-  </data>
-  <data name="InputsHotkey_shortcutMainwindow" xml:space="preserve">
-    <value>Display and hide main window</value>
-  </data>
-  <data name="InputsHotkey_shortcutMainwindowDesc" xml:space="preserve">
-    <value>Change hotkey by pressing a button or a special key</value>
-  </data>
-  <data name="InputsHotkey_shortcutTaskManager" xml:space="preserve">
-    <value>Open Task Manager</value>
-  </data>
-  <data name="InputsHotkey_shortcutTaskManagerDesc" xml:space="preserve">
-    <value>Press this key: Ctrl + Shift + Esc</value>
-  </data>
-  <data name="InputsHotkey_shortcutTaskview" xml:space="preserve">
-    <value>Open Task view</value>
-  </data>
-  <data name="InputsHotkey_shortcutTaskviewDesc" xml:space="preserve">
-    <value>Press this key: Windows + Tab</value>
-  </data>
-  <data name="InputsHotkey_suspendResumeTask" xml:space="preserve">
-    <value>Toggle Applications</value>
-  </data>
-  <data name="InputsHotkey_suspendResumeTaskDesc" xml:space="preserve">
-    <value>Suspend or resume the foreground application</value>
-  </data>
   <data name="MainWindow_HandheldCompanion" xml:space="preserve">
     <value>Handheld Companion</value>
   </data>
@@ -1245,54 +1143,6 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="Hotkey_increaseVolumeDesc" xml:space="preserve">
     <value>Increase the system volume by 2%</value>
   </data>
-  <data name="InputsHotkey_DesktopLayoutEnabled" xml:space="preserve">
-    <value>Desktop layout</value>
-  </data>
-  <data name="InputsHotkey_DesktopLayoutEnabledDesc" xml:space="preserve">
-    <value>Toggle Desktop controller layout</value>
-  </data>
-  <data name="InputsHotkey_shortcutControlCenter" xml:space="preserve">
-    <value>Display Action center</value>
-  </data>
-  <data name="InputsHotkey_shortcutControlCenterDesc" xml:space="preserve">
-    <value>Display and hide Windows Action center</value>
-  </data>
-  <data name="InputsHotkey_QuietModeToggled" xml:space="preserve">
-    <value>Fan override</value>
-  </data>
-  <data name="InputsHotkey_QuietModeToggledDesc" xml:space="preserve">
-    <value>Set the fan duty cycle to user-defined value</value>
-  </data>
-  <data name="InputsHotkey_OnScreenDisplay" xml:space="preserve">
-    <value>On-screen display</value>
-  </data>
-  <data name="InputsHotkey_OnScreenDisplayDesc" xml:space="preserve">
-    <value>Enable on-screen display support</value>
-  </data>
-  <data name="InputsHotkey_decreaseBrightness" xml:space="preserve">
-    <value>Decrease brightness</value>
-  </data>
-  <data name="InputsHotkey_decreaseBrightnessDesc" xml:space="preserve">
-    <value>Decrease the current display brightness by 5%</value>
-  </data>
-  <data name="InputsHotkey_decreaseVolume" xml:space="preserve">
-    <value>Decrease volume</value>
-  </data>
-  <data name="InputsHotkey_decreaseVolumeDesc" xml:space="preserve">
-    <value>Decrease the system volume by 5%</value>
-  </data>
-  <data name="InputsHotkey_increaseBrightness" xml:space="preserve">
-    <value>Increase brightness</value>
-  </data>
-  <data name="InputsHotkey_increaseBrightnessDesc" xml:space="preserve">
-    <value>Increase the current display brightness by 5%</value>
-  </data>
-  <data name="InputsHotkey_increaseVolume" xml:space="preserve">
-    <value>Increase volume</value>
-  </data>
-  <data name="InputsHotkey_increaseVolumeDesc" xml:space="preserve">
-    <value>Increase the system volume by 5%</value>
-  </data>
   <data name="ProfilesPage_AutoTDP" xml:space="preserve">
     <value>Automatic TDP</value>
   </data>
@@ -1336,12 +1186,6 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Open Snipping tool</value>
   </data>
   <data name="Hotkey_PrintScreenDesc" xml:space="preserve">
-    <value>Press this key: Windows + Shift + S</value>
-  </data>
-  <data name="InputsHotkey_shortcutPrintScreen" xml:space="preserve">
-    <value>Open Snipping tool</value>
-  </data>
-  <data name="InputsHotkey_shortcutPrintScreenDesc" xml:space="preserve">
     <value>Press this key: Windows + Shift + S</value>
   </data>
   <data name="MainWindow_navHotkeys" xml:space="preserve">
@@ -1419,30 +1263,6 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="Dialog_ForceRestartTitle" xml:space="preserve">
     <value>Restart required</value>
   </data>
-  <data name="SettingsPage_ControllerManagementDependencyPrimary" xml:space="preserve">
-    <value>Yes</value>
-  </data>
-  <data name="SettingsPage_ControllerManagementDependencySecondary" xml:space="preserve">
-    <value>No</value>
-  </data>
-  <data name="SettingsPage_ControllerManagementDependencyText" xml:space="preserve">
-    <value>Disabling this setting will also disable "Improve virtual controller detection". Do you want to continue?</value>
-  </data>
-  <data name="SettingsPage_ControllerManagementDependencyTitle" xml:space="preserve">
-    <value>Warning</value>
-  </data>
-  <data name="MainWindow_ControllerManagementClosePrimary" xml:space="preserve">
-    <value>Yes</value>
-  </data>
-  <data name="MainWindow_ControllerManagementCloseSecondary" xml:space="preserve">
-    <value>No</value>
-  </data>
-  <data name="MainWindow_ControllerManagementCloseText" xml:space="preserve">
-    <value>Improve virtual controller detection might not work if you close Handheld Companion. Are you sure ?</value>
-  </data>
-  <data name="MainWindow_ControllerManagementCloseTitle" xml:space="preserve">
-    <value>Warning</value>
-  </data>
   <data name="AboutPage_Manufacturer" xml:space="preserve">
     <value>Manufacturer</value>
   </data>
@@ -1477,7 +1297,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>You have no physical controller connected. No inputs will be sent to HC or its service.</value>
   </data>
   <data name="ControllerPage_NoPhysicalControllerDetectedAction" xml:space="preserve">
-    <value>Please make sure you connected a compatible XInput or DInput device.</value>
+    <value>Please make sure you connected a compatible XInput or DirectInput device.</value>
   </data>
   <data name="ControllerPage_NoPhysicalControllerDetectedWarning" xml:space="preserve">
     <value>No physical controller detected</value>
@@ -1671,28 +1491,13 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="ProfilesPage_PowerLimitTarget" xml:space="preserve">
     <value>Power limit target</value>
   </data>
-  <data name="SettingsPage_NativeDisplayOrientation" xml:space="preserve">
-    <value>Native display orientation</value>
-  </data>
-  <data name="SettingsPage_NativeDisplayOrientationDesc" xml:space="preserve">
-    <value>Some features depend on knowing the native display orientation to work properly. If this was not detected properly, set your display's orientation to the orientation that matches your controller, then click Detect</value>
-  </data>
-  <data name="SettingsPage_NativeDisplayOrientationDetect" xml:space="preserve">
-    <value>Detect</value>
-  </data>
-  <data name="SettingsPage_NativeDisplayOrientationNotSet" xml:space="preserve">
-    <value>Not set</value>
-  </data>
   <data name="QuickPerformancePage_CPUBoostMode" xml:space="preserve">
     <value>CPU boost mode</value>
   </data>
   <data name="QuickPerformancePage_CPUBoostModeDesc" xml:space="preserve">
     <value>Set current CPU boost mode</value>
   </data>
-  <data name="QuickSettingsPage_DisplayResolution" xml:space="preserve">
-    <value>Display resolution</value>
-  </data>
-  <data name="QuickSettingsPage_DisplayResolutionDesc" xml:space="preserve">
+  <data name="QuickDevicePage_DisplayResolutionDesc" xml:space="preserve">
     <value>Adjust main display resolution</value>
   </data>
   <data name="QuickPerformancePage_FanOverride" xml:space="preserve">
@@ -1817,27 +1622,6 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   </data>
   <data name="Enum_AYANEOAIRPro_ButtonFlags_OEM4" xml:space="preserve">
     <value>LC</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_B1" xml:space="preserve">
-    <value>Cross</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_B2" xml:space="preserve">
-    <value>Circle</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_B3" xml:space="preserve">
-    <value>Square</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_B4" xml:space="preserve">
-    <value>Triangle</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_Back" xml:space="preserve">
-    <value>Share</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_Special" xml:space="preserve">
-    <value>Sony</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_Start" xml:space="preserve">
-    <value>Options</value>
   </data>
   <data name="Enum_HIDmode_DualShock4Controller" xml:space="preserve">
     <value>Emulated DualShock 4 controller</value>
@@ -2395,7 +2179,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Back</value>
   </data>
   <data name="MainWindow_Exit" xml:space="preserve">
-    <value>Quit</value>
+    <value>Exit</value>
   </data>
   <data name="MainWindow_MainWindow" xml:space="preserve">
     <value>Main Window</value>
@@ -2515,7 +2299,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Default power and fan speed for optimal performance, temperature, noise, and battery life.</value>
   </data>
   <data name="PowerProfileDefaultName" xml:space="preserve">
-    <value>Default (Plugged in)</value>
+    <value>Default</value>
   </data>
   <data name="PowerProfileManualDescription" xml:space="preserve">
     <value>User-defined power and fan speed.</value>
@@ -2571,10 +2355,10 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="QuickApplicationsPage_Title" xml:space="preserve">
     <value>Applications</value>
   </data>
-  <data name="QuickSettingsPage_DisplayFrequency" xml:space="preserve">
+  <data name="QuickDevicePage_DisplayFrequency" xml:space="preserve">
     <value>Refresh rate</value>
   </data>
-  <data name="QuickSettingsPage_DisplayFrequencyDesc" xml:space="preserve">
+  <data name="QuickDevicePage_DisplayFrequencyDesc" xml:space="preserve">
     <value>Adjust main refresh rate</value>
   </data>
   <data name="ProfilesPage_FanSettings" xml:space="preserve">
@@ -2817,25 +2601,13 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="ProfilesPage_PowerSettings" xml:space="preserve">
     <value>Power settings</value>
   </data>
-  <data name="QuickSettingsPage_ResolutionOverrideWarning" xml:space="preserve">
+  <data name="QuickDevicePage_ResolutionOverrideWarning" xml:space="preserve">
     <value>Resolution is currently overridden by profile</value>
-  </data>
-  <data name="SettingsPage_QuickToolsWindowLocationLeft" xml:space="preserve">
-    <value>Left</value>
-  </data>
-  <data name="SettingsPage_QuickToolsWindowLocationRight" xml:space="preserve">
-    <value>Right</value>
   </data>
   <data name="Hotkey_OnScreenDisplayToggle" xml:space="preserve">
     <value>On Screen Overlay</value>
   </data>
   <data name="Hotkey_OnScreenDisplayToggleDesc" xml:space="preserve">
-    <value>Toggle on screen overlay</value>
-  </data>
-  <data name="InputsHotkey_OnScreenDisplayToggle" xml:space="preserve">
-    <value>On Screen Overlay</value>
-  </data>
-  <data name="InputsHotkey_OnScreenDisplayToggleDesc" xml:space="preserve">
     <value>Toggle on screen overlay</value>
   </data>
   <data name="ProfilesPage_GPUScaling" xml:space="preserve">
@@ -2956,7 +2728,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Device settings</value>
   </data>
   <data name="AboutPage_UnsupportedDevice" xml:space="preserve">
-    <value>Oups, it appears your device is not supported yet. The software might not run as expected.</value>
+    <value>Oops, it appears your device is not supported yet. The software might not run as expected.</value>
   </data>
   <data name="Enum_LegionController_ButtonFlags_RightPadClick" xml:space="preserve">
     <value>Double tap</value>
@@ -2974,7 +2746,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Local space</value>
   </data>
   <data name="Enum_MotionInput_LocalSpace_Desc" xml:space="preserve">
-    <value>Input is based on the controller’s orientation, independent of the game world or character.</value>
+    <value>Input is based on the controller's orientation, independent of the game world or character.</value>
   </data>
   <data name="SettingsPage_SensorCalibration" xml:space="preserve">
     <value>Sensor calibration</value>
@@ -3046,7 +2818,25 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Battery Charge Limit</value>
   </data>
   <data name="DevicePage_BatteryChargeLimit_Desc" xml:space="preserve">
-    <value>Extend the battery lifespan by setting the maximum charge level of the battery to 80%</value>
+    <value>Extend the battery lifespan by setting the maximum charge level of the battery</value>
+  </data>
+  <data name="DevicePage_BatteryChargeLimitPercent_Desc" xml:space="preserve">
+    <value>Define maximum battery charge level percentage</value>
+  </data>
+  <data name="DevicePage_BatteryBypassCharging" xml:space="preserve">
+    <value>Battery Bypass Charging</value>
+  </data>
+  <data name="DevicePage_BatteryBypassCharging_Desc" xml:space="preserve">
+    <value>Extend the battery lifespan by setting bypass charging</value>
+  </data>
+  <data name="BatteryBypassPreset_Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="BatteryBypassPreset_ResumeOnSleepShutdown" xml:space="preserve">
+    <value>Enabled (Resume charging on Sleep and Shutdown)</value>
+  </data>
+  <data name="BatteryBypassPreset_AlwaysOn" xml:space="preserve">
+    <value>Always On</value>
   </data>
   <data name="PowerProfileOneXPlayerX1IntelBestPerformance" xml:space="preserve">
     <value>Super Performance</value>
@@ -3075,23 +2865,23 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="ControllerPage_ControllerManagement_Content" xml:space="preserve">
     <value>Initializing controller reconfiguration… Please wait.</value>
   </data>
-  <data name="ControllerPage_ControllerManagment_Attempting" xml:space="preserve">
-    <value>Attempting to reorder controllers, please hold on...</value>
+  <data name="ControllerPage_ControllerManagement_Attempt0" xml:space="preserve">
+    <value>We are reordering controllers to improve game compatibility. Please wait a moment.</value>
   </data>
-  <data name="ControllerPage_ControllerManagment_Done" xml:space="preserve">
+  <data name="ControllerPage_ControllerManagement_Success" xml:space="preserve">
     <value>Controller reordering complete. Thank you for your patience.</value>
   </data>
-  <data name="ControllerPage_ControllerManagment_Failed" xml:space="preserve">
-    <value>We've failed to reorder your controllers. For maximum compatibility, we encourage you to restart HandheldCompanion</value>
+  <data name="ControllerPage_ControllerManagement_Failed" xml:space="preserve">
+    <value>We've failed to reorder your controllers. For maximum compatibility, we encourage you to restart Handheld Companion.</value>
   </data>
-  <data name="ControllerPage_ControllerManagment_FinalAttempt" xml:space="preserve">
-    <value>Final attempt to reorder controllers, stand by...</value>
+  <data name="ControllerPage_ControllerManagement_Attempt3" xml:space="preserve">
+    <value>One last attempt to reorder controllers. We're doing everything we can!</value>
   </data>
-  <data name="ControllerPage_ControllerManagment_RedOrGreen" xml:space="preserve">
-    <value>Red or green, red or green, which do I cut?!</value>
+  <data name="ControllerPage_ControllerManagement_Attempt2" xml:space="preserve">
+    <value>Almost there! We're making another adjustment to optimize controller settings.</value>
   </data>
-  <data name="ControllerPage_ControllerManagment_Reordering" xml:space="preserve">
-    <value>Reordering in progress, hang tight...</value>
+  <data name="ControllerPage_ControllerManagement_Attempt1" xml:space="preserve">
+    <value>Adjustments are still in progress. We'll get this right for your games.</value>
   </data>
   <data name="SettingsPage_ScreenRotation_FlippedLandscape" xml:space="preserve">
     <value>Flipped Landscape</value>
@@ -3121,7 +2911,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Export layout</value>
   </data>
   <data name="PerformancePage_CPUBoost_Aggressive" xml:space="preserve">
-    <value>Agressive</value>
+    <value>Aggressive</value>
   </data>
   <data name="PerformancePage_CPUBoost_Disabled" xml:space="preserve">
     <value>Disabled</value>
@@ -3330,72 +3120,6 @@ Thank you for using HC and helping us make it better.</value>
   <data name="ControllerPage_SteamControllerModeExclusive" xml:space="preserve">
     <value>Exclusive</value>
   </data>
-  <data name="Hotkey_touchscreenToggle" xml:space="preserve">
-    <value>Touchscreen</value>
-  </data>
-  <data name="Hotkey_touchscreenToggleDesc" xml:space="preserve">
-    <value>Toggle Touchscreen</value>
-  </data>
-  <data name="Off" xml:space="preserve">
-    <value>Off</value>
-  </data>
-  <data name="On" xml:space="preserve">
-    <value>On</value>
-  </data>
-  <data name="AboutPage_Bios" xml:space="preserve">
-    <value>Bios</value>
-  </data>
-  <data name="AboutPage_Memory" xml:space="preserve">
-    <value>Memory</value>
-  </data>
-  <data name="AboutPage_MemorySpecification" xml:space="preserve">
-    <value>Memory specification</value>
-  </data>
-  <data name="AboutPage_Model" xml:space="preserve">
-    <value>Model</value>
-  </data>
-  <data name="AboutPage_Processor" xml:space="preserve">
-    <value>Processor</value>
-  </data>
-  <data name="AboutPage_ProcessorSpecification" xml:space="preserve">
-    <value>Processor specification</value>
-  </data>
-  <data name="AboutPage_Graphic" xml:space="preserve">
-    <value>Graphic</value>
-  </data>
-  <data name="AboutPage_GraphicDriverVersion" xml:space="preserve">
-    <value>Graphic Driver</value>
-  </data>
-  <data name="BatteryHealth" xml:space="preserve">
-    <value>Battery Health</value>
-  </data>
-  <data name="BatteryCharge" xml:space="preserve">
-    <value>Charge</value>
-  </data>
-  <data name="Charging" xml:space="preserve">
-    <value>Charging</value>
-  </data>
-  <data name="Discharging" xml:space="preserve">
-    <value>Discharging</value>
-  </data>
-  <data name="Fan" xml:space="preserve">
-    <value>Fan</value>
-  </data>
-  <data name="Hotkey_touchpadToggle" xml:space="preserve">
-    <value>Touchpad</value>
-  </data>
-  <data name="Hotkey_touchpadToggleDesc" xml:space="preserve">
-    <value>Toggle Touchpad</value>
-  </data>
-  <data name="Muted" xml:space="preserve">
-    <value>Muted</value>
-  </data>
-  <data name="Unmuted" xml:space="preserve">
-    <value>Unmuted</value>
-  </data>
-  <data name="BatteryFullyCharged" xml:space="preserve">
-    <value>Battery fully charged</value>
-  </data>
   <data name="PowerProfileMinisforumV3BetterBattery" xml:space="preserve">
     <value>Power save</value>
   </data>
@@ -3414,17 +3138,14 @@ Thank you for using HC and helping us make it better.</value>
   <data name="PowerProfileMinisforumV3BetterPerformanceDesc" xml:space="preserve">
     <value>22W TDP</value>
   </data>
-  <data name="PowerProfileBatteryDefaultName" xml:space="preserve">
-    <value>Default (On battery)</value>
-  </data>
-  <data name="Hint_SteamInputAction" xml:space="preserve">
-    <value>Disable Steam Input</value>
-  </data>
   <data name="ProfilesPage_AFMF" xml:space="preserve">
     <value>AMD Fluid Motion Frames</value>
   </data>
   <data name="ProfilesPage_AFMFDesc" xml:space="preserve">
     <value>Enhance performance by utilizing frame generation technology to increase FPS beyond the in-game limit, resulting in a smoother experience</value>
+  </data>
+  <data name="ProfilesPage_PowerSettingsPlugged" xml:space="preserve">
+    <value>UNUSED</value>
   </data>
   <data name="Hotkey_muteVolume" xml:space="preserve">
     <value>Mute volume</value>
@@ -4229,5 +3950,38 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="PerformancePage_PL1PL2Warning" xml:space="preserve">
     <value>Setting PL1 equal to PL2 on Intel processors may reduce gaming performance.</value>
+  </data>
+  <data name="Hotkey_touchpadToggle" xml:space="preserve">
+    <value>Toggle touchpad</value>
+  </data>
+  <data name="Hotkey_touchscreenToggleDesc" xml:space="preserve">
+    <value>Toggle touchscreen on / off</value>
+  </data>
+  <data name="Hotkey_touchscreenToggle" xml:space="preserve">
+    <value>Toggle touchscreen</value>
+  </data>
+  <data name="On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Muted" xml:space="preserve">
+    <value>Muted</value>
+  </data>
+  <data name="BatteryFullyCharged" xml:space="preserve">
+    <value>Battery fully charged</value>
+  </data>
+  <data name="Unmuted" xml:space="preserve">
+    <value>Unmuted</value>
+  </data>
+  <data name="Discharging" xml:space="preserve">
+    <value>Discharging</value>
+  </data>
+  <data name="Charging" xml:space="preserve">
+    <value>Charging</value>
+  </data>
+  <data name="Hotkey_touchpadToggleDesc" xml:space="preserve">
+    <value>Toggle touchpad on / off</value>
   </data>
 </root>

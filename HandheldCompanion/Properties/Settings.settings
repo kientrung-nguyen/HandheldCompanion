@@ -146,7 +146,7 @@
     <Setting Name="MainWindowIsPaneOpen" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="DesktopProfileOnStart" Type="System.Boolean" Scope="User">
+    <Setting Name="DesktopLayoutOnStart" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="QuietModeDisclosure" Type="System.Boolean" Scope="User">
@@ -157,9 +157,6 @@
     </Setting>
     <Setting Name="OnScreenDisplayRefreshRate" Type="System.Double" Scope="User">
       <Value Profile="(Default)">1000</Value>
-    </Setting>
-    <Setting Name="NativeDisplayOrientation" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">-1</Value>
     </Setting>
     <Setting Name="PlatformRTSSEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>

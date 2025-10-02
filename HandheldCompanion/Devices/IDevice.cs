@@ -1,4 +1,4 @@
-using HandheldCompanion.Controls;
+using HandheldCompanion.Devices.Zotac;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
@@ -8,7 +8,6 @@ using HandheldCompanion.Sensors;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HidLibrary;
-using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using Sentry;
 using System;
@@ -16,6 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media;
 using Windows.Devices.Sensors;
 using WindowsInput.Events;
@@ -92,7 +92,6 @@ public abstract class IDevice
     public delegate void KeyReleasedEventHandler(ButtonFlags button);
     public event KeyReleasedEventHandler KeyReleased;
 
-    public delegate void PowerStatusChangedEventHandler(IDevice device);
     public static readonly Guid BetterBatteryGuid = new Guid("961cc777-2547-4f9d-8174-7d86181b8a7a");
     public static readonly Guid BetterPerformanceGuid = new Guid("3af9B8d9-7c97-431d-ad78-34a8bfea439f");
     public static readonly Guid BestPerformanceGuid = new Guid("ded574b5-45a0-4f42-8737-46345c09c238");
@@ -187,6 +186,11 @@ public abstract class IDevice
     // key press delay to use for certain scenarios
     public short KeyPressDelay = (short)(TimerManager.GetPeriod() * 2);
 
+    // LibreHardwareMonitor
+    public bool CpuMonitor = true;
+    public bool GpuMonitor = true;
+    public bool MemoryMonitor = true;
+    public bool BatteryMonitor = true;
 
     protected bool DeviceOpen = false;
     public virtual bool IsOpen => DeviceOpen;
@@ -195,21 +199,27 @@ public abstract class IDevice
         GamepadMotion = new(ProductIllustration, CalibrationMode.Manual  /*| CalibrationMode.SensorFusion */);
 
         // add default power profile
-        DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileDefaultName, Properties.Resources.PowerProfileDefaultDescription)
+        DevicePowerProfiles.Add(new(
+            Properties.Resources.PowerProfileDefaultName + " (On battery)",
+            Properties.Resources.PowerProfileDefaultDescription,
+            Properties.Resources.PowerProfileDefaultName + (int)PowerLineStatus.Offline)
         {
             Default = true,
-            Guid = new("00000000-0000-0000-0000-010000000000"),
-            OSPowerMode = OSPowerMode.BetterPerformance,
+            Guid = PowerProfile.DefaultDC,
+            OSPowerMode = OSPowerMode.BetterBattery,
             TDPOverrideValues = new double[] { this.nTDP[0], this.nTDP[1], this.nTDP[2] }
         });
 
         // add default power profile
-        DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileBatteryDefaultName, Properties.Resources.PowerProfileDefaultDescription)
+        DevicePowerProfiles.Add(new(
+            Properties.Resources.PowerProfileDefaultName + " (Plugged in)",
+            Properties.Resources.PowerProfileDefaultDescription,
+            Properties.Resources.PowerProfileDefaultName + (int)PowerLineStatus.Online)
         {
             Default = true,
-            Guid = Guid.Empty,
-            OSPowerMode = OSPowerMode.BetterBattery,
-            TDPOverrideValues = [nTDP[0], nTDP[0], nTDP[0]]
+            Guid = PowerProfile.DefaultAC,
+            OSPowerMode = OSPowerMode.BetterPerformance,
+            TDPOverrideValues = new double[] { this.nTDP[0], this.nTDP[1], this.nTDP[2] }
         });
     }
 
@@ -472,6 +482,9 @@ public abstract class IDevice
                         case "AOKZOE A1 Pro":
                             device = new AOKZOEA1Pro();
                             break;
+                        case "AOKZOE A1X":
+                            device = new AOKZOEA1X();
+                            break;
                         case "AOKZOE A2 Pro":
                             device = new AOKZOEA2();
                             break;
@@ -491,6 +504,7 @@ public abstract class IDevice
                             device = new AYANEOAIRPro();
                             break;
                         case "AIR 1S":
+                        case "AIR 1S Limited":
                             device = new AYANEOAIR1S();
                             break;
                         case "AIR Lite":
@@ -579,6 +593,9 @@ public abstract class IDevice
                                     break;
                             }
                             break;
+                        case "G1617-02":
+                            device = new GPDWinMini_HX370();
+                            break;
                         case "G1618-03":
                             device = new GPDWin3();
                             break;
@@ -600,7 +617,9 @@ public abstract class IDevice
                                 case "AMD Ryzen 7 8840U w/ Radeon 780M Graphics":
                                     device = new GPDWin4_2024_8840U();
                                     break;
-
+                                case "AMD Ryzen AI 9 HX 370 w/ Radeon 890M":
+                                    device = new GPDWin4_2024_HX370();
+                                    break;
                             }
                             break;
                         case "G1619-03":
@@ -649,6 +668,9 @@ public abstract class IDevice
                         case "ONEXPLAYER X1 mini":
                             device = new OneXPlayerX1Mini();
                             break;
+                        case "ONEXPLAYER X1Pro":
+                            device = new OneXPlayerX1Pro();
+                            break;
                         case "ONEXPLAYER F1":
                             {
                                 switch (Version)
@@ -656,6 +678,17 @@ public abstract class IDevice
                                     default:
                                     case "Default string":
                                         device = new OneXPlayerOneXFly();
+                                        break;
+                                }
+                                break;
+                            }
+                        case "ONEXPLAYER F1Pro":
+                            {
+                                switch (Version)
+                                {
+                                    default:
+                                    case "Default string":
+                                        device = new OneXPlayerOneXFlyF1Pro();
                                         break;
                                 }
                                 break;
@@ -948,7 +981,7 @@ public abstract class IDevice
     [Obsolete("ECRamReadByte is deprecated, please use ECRamReadByte with ECDetails instead.")]
     public virtual byte ECRamReadByte(ushort address)
     {
-        if (!IsOpen)
+        if (!IsOpen || openLibSys is null)
             return 0;
 
         try
@@ -965,7 +998,7 @@ public abstract class IDevice
     [Obsolete("ECRamWriteByte is deprecated, please use ECRamDirectWrite with ECDetails instead.")]
     public virtual bool ECRamWriteByte(ushort address, byte data)
     {
-        if (!IsOpen)
+        if (!IsOpen || openLibSys is null)
             return false;
 
         try
@@ -982,7 +1015,7 @@ public abstract class IDevice
 
     public virtual byte ECRamDirectReadByte(ushort address, ECDetails details)
     {
-        if (!IsOpen)
+        if (!IsOpen || openLibSys is null)
             return 0;
 
         var addr_upper = (byte)((address >> 8) & byte.MaxValue);
@@ -1008,7 +1041,7 @@ public abstract class IDevice
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Couldn't read to port using OpenLibSys. ErrorCode: {0}", ex.Message + ex.StackTrace);
+            LogManager.LogError("Couldn't read to port using OpenLibSys. ErrorCode: {0}", ex.Message);
             return 0;
         }
     }
@@ -1018,7 +1051,7 @@ public abstract class IDevice
         var sum = 0l;
         foreach (var len in Enumerable.Range(0, length))
         {
-            var value = ECRamReadByte((ushort)(address + len), details);
+            var value = ECRamDirectReadByte((ushort)(address + len), details);
             sum = (sum << 8) + value;
         }
         return sum;
@@ -1026,7 +1059,7 @@ public abstract class IDevice
 
     public virtual bool ECRamDirectWrite(ushort address, ECDetails details, byte data)
     {
-        if (!IsOpen)
+        if (!IsOpen || openLibSys is null)
             return false;
 
         byte addr_upper = (byte)((address >> 8) & byte.MaxValue);

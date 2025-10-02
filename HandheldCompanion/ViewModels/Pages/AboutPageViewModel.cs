@@ -32,7 +32,7 @@ namespace HandheldCompanion.ViewModels
             IDevice.GetCurrent().BiosManufacturer,
             IDevice.GetCurrent().BiosName,
             IDevice.GetCurrent().BiosReleaseDate]);
-        public string Version => MainWindow.fileVersionInfo.FileVersion!;
+        public string Version => MainWindow.CurrentVersion.ToString();
 
         public string InternalSensor => IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.InternalSensor)
                 ? IDevice.GetCurrent().InternalSensorName

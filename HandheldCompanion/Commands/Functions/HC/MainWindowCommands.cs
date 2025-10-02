@@ -25,7 +25,7 @@ namespace HandheldCompanion.Commands.Functions.HC
 
         public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
         {
-            MainWindow.GetCurrent().SwapWindowState();
+            MainWindow.GetCurrent().ToggleState();
 
             base.Execute(IsKeyDown, IsKeyUp, false);
         }

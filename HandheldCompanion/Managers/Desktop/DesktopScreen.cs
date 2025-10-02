@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HandheldCompanion.Misc;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
@@ -12,6 +13,8 @@ public class ScreenResolution : IComparable<ScreenResolution>
     public int Height;
     public int Width;
     public int BitsPerPel;
+
+    public ScreenOrientation Orientation => Width > Height ? ScreenOrientation.Landscape : ScreenOrientation.Portrait;
 
     public ScreenResolution(int dmPelsWidth, int dmPelsHeight, int bitsPerPel)
     {
@@ -95,90 +98,40 @@ public class ScreenDivider
     }
 }
 
-public struct ScreenRotation
+public enum ScreenOrientation
 {
-    public enum Rotations
-    {
-        UNSET = -1,
-        DEFAULT = 0,
-        D90 = 1,
-        D180 = 2,
-        D270 = 3
-    }
-
-    public Rotations rotation;
-    public Rotations rotationNativeBase;
-    public Rotations rotationUnnormalized;
-
-    public ScreenRotation()
-    {
-        rotationUnnormalized = Rotations.DEFAULT;
-        rotationNativeBase = Rotations.DEFAULT;
-        rotation = Rotations.DEFAULT;
-    }
-
-    public ScreenRotation(Rotations unnormalized, Rotations native)
-    {
-        rotationUnnormalized = unnormalized;
-
-        if (native == Rotations.UNSET)
-            rotationNativeBase = (Rotations)((4 - (int)unnormalized) % 4);
-        else
-            rotationNativeBase = native;
-
-        rotation = (Rotations)(((int)unnormalized + (int)rotationNativeBase) % 4);
-    }
-
-    public static implicit operator Rotations(ScreenRotation r)
-    {
-        return r.rotation;
-    }
-
-    public static implicit operator ScreenOrientation(ScreenRotation r)
-    {
-        return (ScreenOrientation)r.rotation;
-    }
-
-    public override string ToString()
-    {
-        switch (rotation)
-        {
-            case Rotations.DEFAULT:
-            case Rotations.D90:
-            case Rotations.D180:
-            case Rotations.D270:
-                return $"{((int)rotation * 90).ToString()}°";
-            default:
-                return "undefined";
-        }
-    }
+    Landscape = 0,
+    Portrait = 1
 }
 
-public class DesktopScreen
+public class DesktopScreen : IDisposable
 {
     public DisplayDevice devMode;
-    public Screen Screen;
+    public Screen screen;
     public string DevicePath;
     public string FriendlyName;
-    public bool IsPrimary => Screen.Primary;
+    public bool IsPrimary => screen.Primary;
 
-    public List<ScreenResolution> screenResolutions = [];
-    public List<ScreenDivider> screenDividers = [];
+    public List<ScreenResolution> screenResolutions = new List<ScreenResolution>();
+    public List<ScreenDivider> screenDividers = new List<ScreenDivider>();
+    public ScreenResolution nativeResolution;
 
-    private static Dictionary<int, List<ScreenFramelimit>> _cachedFrameLimits = new();
+    private static Dictionary<int, List<ScreenFramelimit>> _cachedFrameLimits = new Dictionary<int, List<ScreenFramelimit>>();
+
+    // Flag: Has Dispose already been called?
+    private bool disposed = false;
 
     public DesktopScreen(Screen screen)
     {
-        this.Screen = screen;
-
-        devMode = GetDisplay(screen.DeviceName);
-        FriendlyName = GetDisplayFriendlyName(screen.DeviceName);
-        DevicePath = GetDisplayPath(screen.DeviceName);
+        this.screen = screen;
+        devMode = MultimediaManager.GetDisplay(screen.DeviceName);
+        FriendlyName = MultimediaManager.GetDisplayFriendlyName(screen.DeviceName);
+        DevicePath = MultimediaManager.GetDisplayPath(screen.DeviceName);
     }
 
     public override string ToString()
     {
-        return FriendlyName;
+        return $"{FriendlyName} - {screen?.DeviceName}";
     }
 
     public bool HasResolution(ScreenResolution resolution)
@@ -206,17 +159,19 @@ public class DesktopScreen
     public List<ScreenFramelimit> GetFramelimits()
     {
         // A list to store the quotients
-        List<ScreenFramelimit> Limits = [new(0, 0)]; // (Comparer<int>.Create((x, y) => y.CompareTo(x)));
+        List<ScreenFramelimit> Limits = new List<ScreenFramelimit> { new ScreenFramelimit(0, 0) };
 
         // A variable to store the divider value, rounded to nearest even number
         int divider = 1;
         int dmDisplayFrequency = RoundToEven(devMode.dmDisplayFrequency);
 
-        if (_cachedFrameLimits.ContainsKey(dmDisplayFrequency)) { return _cachedFrameLimits[dmDisplayFrequency]; }
+        if (_cachedFrameLimits.ContainsKey(dmDisplayFrequency))
+        {
+            return _cachedFrameLimits[dmDisplayFrequency];
+        }
 
         int lowestFPS = dmDisplayFrequency;
-
-        HashSet<int> fpsLimits = [];
+        HashSet<int> fpsLimits = new HashSet<int>();
 
         // A loop to find the lowest possible fps limit option and limits from division
         do
@@ -237,7 +192,7 @@ public class DesktopScreen
             divider++;
         } while (true);
 
-        // loop to fill all possible fps limit options from lowest fps limit (e.g. getting 40FPS dor 60Hz)
+        // Loop to fill all possible fps limit options from lowest fps limit (e.g. getting 40FPS for 60Hz)
         int nrOptions = dmDisplayFrequency / lowestFPS;
         for (int i = 1; i < nrOptions; i++)
         {
@@ -245,15 +200,16 @@ public class DesktopScreen
         }
 
         // Fill limits
-
         var orderedFpsLimits = fpsLimits.OrderByDescending(f => f);
 
         for (int i = 0; i < orderedFpsLimits.Count(); i++)
         {
-            Limits.Add(new(i + 1, orderedFpsLimits.ElementAt(i)));
+            Limits.Add(new ScreenFramelimit(i + 1, orderedFpsLimits.ElementAt(i)));
         }
 
-        _cachedFrameLimits.Add(dmDisplayFrequency, Limits);
+        if (!_cachedFrameLimits.ContainsKey(dmDisplayFrequency))
+            _cachedFrameLimits.Add(dmDisplayFrequency, Limits);
+
         // Return the list of quotients
         return Limits;
     }
@@ -263,10 +219,16 @@ public class DesktopScreen
         List<ScreenFramelimit> limits = GetFramelimits();
 
         ScreenFramelimit? fpsInLimits = limits.FirstOrDefault(l => l.limit == fps);
-        if (fpsInLimits is not null) { return fpsInLimits; }
+        if (fpsInLimits is not null)
+        {
+            return fpsInLimits;
+        }
 
-        var diffs = GetFramelimits().Select(limit => (Math.Abs(fps - limit.limit), limit))
-                                    .OrderBy(g => g.Item1).ThenBy(g => g.limit.limit).ToList();
+        var diffs = GetFramelimits()
+            .Select(limit => (Math.Abs(fps - limit.limit), limit))
+            .OrderBy(g => g.Item1)
+            .ThenBy(g => g.limit.limit)
+            .ToList();
 
         var lowestDiff = diffs.First().Item1;
         var lowestDiffs = diffs.Where(d => d.Item1 == lowestDiff);
@@ -274,7 +236,7 @@ public class DesktopScreen
         return lowestDiffs.Last().limit;
     }
 
-    // A function that takes an int as a parameter and returns the closest multiple of 10
+    // A function that takes an int as a parameter and returns the closest even number
     private int RoundToEven(int num)
     {
         if (num % 2 == 0)
@@ -282,4 +244,39 @@ public class DesktopScreen
 
         return num + 1;
     }
+
+    #region IDisposable Support
+
+    // Public implementation of Dispose pattern callable by consumers.
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    // Protected implementation of Dispose pattern.
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposed)
+        {
+            if (disposing)
+            {
+                screenResolutions?.Clear();
+                screenDividers?.Clear();
+            }
+
+            // Free unmanaged resources (if any) here and set large fields to null.
+            screen = null;
+
+            disposed = true;
+        }
+    }
+
+    // Destructor (Finalizer)
+    ~DesktopScreen()
+    {
+        Dispose(false);
+    }
+
+    #endregion
 }

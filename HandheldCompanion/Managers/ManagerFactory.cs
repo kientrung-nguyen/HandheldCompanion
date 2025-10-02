@@ -32,7 +32,7 @@ namespace HandheldCompanion.Managers
             processManager,
             gpuManager,
             notificationManager,
-            //libraryManager,
+            libraryManager,
             platformManager
         };
 

@@ -83,18 +83,22 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs args)
     {
         // get current assembly
-        var CurrentAssembly = Assembly.GetExecutingAssembly();
-        var fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
+        var currentAssembly = Assembly.GetExecutingAssembly();
+        var assemblyPath = Path.Combine(AppContext.BaseDirectory, currentAssembly.GetName().Name + ".dll");
+        var fileVersionInfo = FileVersionInfo.GetVersionInfo(assemblyPath);
 
         // Get the MyDocuments folder path
-        // set environment variables
-        Environment.SetEnvironmentVariable("LOG_PATH", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HandheldCompanion", "logs"));
+        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string logDirectory = System.IO.Path.Combine(myDocumentsPath, "HandheldCompanion", "logs");
+
+        // Set environment variables
+        Environment.SetEnvironmentVariable("LOG_PATH", logDirectory);
         Environment.SetEnvironmentVariable("COMPlus_legacyCorruptedStateExceptionsPolicy", "1");
 
         // initialize log
         LogManager.Initialize("HandheldCompanion");
         LogManager.LogInformation("----------------");
-        LogManager.LogInformation("{0} ({1})", CurrentAssembly.GetName(), fileVersionInfo.FileVersion);
+        LogManager.LogInformation("{0} ({1})", currentAssembly.GetName(), fileVersionInfo.FileVersion);
 
         using (var process = Process.GetCurrentProcess())
         {
@@ -159,7 +163,7 @@ public partial class App : Application
         // Handler for exceptions in dispatcher.
         DispatcherUnhandledException += App_DispatcherUnhandledException;
 
-        MainWindow = new MainWindow(fileVersionInfo, CurrentAssembly);
+        MainWindow = new MainWindow(fileVersionInfo, currentAssembly);
         MainWindow.Show();
     }
 
@@ -218,7 +222,7 @@ public partial class App : Application
 
     private void InitializeSentry()
     {
-        string url = SentryConfig.DSN_URL;
+        string url = SecretKeys.DSN_URL;
 
         if (!string.IsNullOrEmpty(url))
         {

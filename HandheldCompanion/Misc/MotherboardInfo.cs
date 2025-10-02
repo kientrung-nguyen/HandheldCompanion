@@ -43,7 +43,7 @@ public static class MotherboardInfo
 
     static MotherboardInfo()
     {
-        cacheDirectory = Path.Combine(MainWindow.SettingsPath, "cache");
+        cacheDirectory = Path.Combine(App.SettingsPath, "cache");
         if (!Directory.Exists(cacheDirectory))
             Directory.CreateDirectory(cacheDirectory);
     }

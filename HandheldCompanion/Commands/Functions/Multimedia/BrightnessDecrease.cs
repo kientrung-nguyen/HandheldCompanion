@@ -18,6 +18,7 @@ namespace HandheldCompanion.Commands.Functions.Multimedia
         public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
         {
             ToastManager.RunToast($"{ManagerFactory.multimediaManager.AdjustBrightness(-2)}", ToastIcons.BrightnessDown);
+
             base.Execute(IsKeyDown, IsKeyUp, false);
         }
 

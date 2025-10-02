@@ -715,7 +715,7 @@ namespace HandheldCompanion.Devices.Zotac
             ECRamDirectWrite(ECDetails.AddressFanDuty, ECDetails, fanValue);
         }
 
-        public override float ReadFanDuty() => ECRamReadByte(ECDetails.AddressFanDuty, ECDetails);
+        public override float ReadFanDuty() => ECRamDirectReadByte(ECDetails.AddressFanDuty, ECDetails);
         #endregion
 
         #region WMI

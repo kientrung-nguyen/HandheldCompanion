@@ -29,25 +29,26 @@ public class ProfileManager : IManager
     public const string DefaultName = "Default";
 
     public ConcurrentDictionary<Guid, Profile> profiles = new();
-    public static List<Profile> subProfiles = [];
+    // public List<Profile> subProfiles = [];
 
     private object profileLock = new();
     private Profile currentProfile;
 
     public FileSystemWatcher profileWatcher { get; set; }
-    private static string profilesPath;
 
     public ProfileManager()
     {
-        // initialiaze path(s)
-        profilesPath = Path.Combine(MainWindow.SettingsPath, "profiles");
-        if (!Directory.Exists(profilesPath))
-            Directory.CreateDirectory(profilesPath);
+        // initialize path
+        ManagerPath = Path.Combine(App.SettingsPath, "profiles");
+
+        // create path
+        if (!Directory.Exists(ManagerPath))
+            Directory.CreateDirectory(ManagerPath);
 
         // monitor profile files
         profileWatcher = new FileSystemWatcher
         {
-            Path = profilesPath,
+            Path = ManagerPath,
             EnableRaisingEvents = true,
             IncludeSubdirectories = true,
             Filter = "*.json",
@@ -364,7 +365,6 @@ public class ProfileManager : IManager
 
         if (profileToApply != null)
             ApplyProfile(profileToApply);
-
     }
 
     private void ProcessManager_ProcessStopped(ProcessEx processEx)
@@ -484,8 +484,8 @@ public class ProfileManager : IManager
         }
 
         // not ideal
-        var ProfileName = e.Name.Replace(".json", "");
-        var profile = profiles.Values.FirstOrDefault(p => p.Name.Equals(ProfileName, StringComparison.InvariantCultureIgnoreCase));
+        var profileName = e.Name.Replace(".json", "");
+        var profile = profiles.Values.FirstOrDefault(p => p.Name.Equals(profileName, StringComparison.InvariantCultureIgnoreCase));
 
         // couldn't find a matching profile
         if (profile is null)
@@ -508,9 +508,9 @@ public class ProfileManager : IManager
 
     public Profile GetDefault()
     {
-        if (HasDefault())
-            return profiles.Values.First(a => a.Default);
-        return new Profile();
+        // Try to find the default profile; if none is found, fall back to a new Profile
+        Profile? defaultProfile = profiles.Values.Where(p => p.Default).FirstOrDefault();
+        return defaultProfile ?? new Profile();
     }
 
     public Profile GetCurrent()
@@ -573,37 +573,88 @@ public class ProfileManager : IManager
                 // too old
                 throw new Exception("Profile is outdated.");
             }
+            else if (version <= Version.Parse("0.22.1.5"))
+            {
+                // Navigate to the Layout object.
+                JObject layout = jObject["Layout"] as JObject;
+                if (layout != null)
+                {
+                    // Navigate to the AxisLayout section.
+                    JObject axisLayout = layout["AxisLayout"] as JObject;
+                    if (axisLayout != null)
+                    {
+                        // Replace the overall "$type" if it matches the old type.
+                        string oldAxisLayoutType = "System.Collections.Generic.SortedDictionary`2[[HandheldCompanion.Inputs.AxisLayoutFlags, HandheldCompanion],[HandheldCompanion.Actions.IActions, HandheldCompanion]], System.Collections";
+                        string newAxisLayoutType = "System.Collections.Generic.SortedDictionary`2[[HandheldCompanion.Inputs.AxisLayoutFlags, HandheldCompanion],[System.Collections.Generic.List`1[[HandheldCompanion.Actions.IActions, HandheldCompanion]], System.Private.CoreLib]], System.Collections";
+                        if (axisLayout["$type"] != null && axisLayout["$type"].Type == JTokenType.String)
+                        {
+                            string currentType = axisLayout["$type"].ToString();
+                            if (currentType == oldAxisLayoutType)
+                            {
+                                axisLayout["$type"] = newAxisLayoutType;
+                            }
+                        }
 
-            // we've been doing back and forth on ButtonState State type
-            // let's make sure we get a ConcurrentDictionary
-            outputraw = outputraw.Replace(
-                    "\"System.Collections.Generic.Dictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Private.CoreLib\"",
-                    "\"System.Collections.Concurrent.ConcurrentDictionary`2[[HandheldCompanion.Inputs.ButtonFlags, HandheldCompanion],[System.Boolean, System.Private.CoreLib]], System.Collections.Concurrent\"");
+                        // Process each property in AxisLayout (skip "$type").
+                        foreach (var property in axisLayout.Properties().Where(p => p.Name != "$type").ToList())
+                        {
+                            // If the value is a JObject, check if it already has a "$values" array.
+                            if (property.Value.Type == JTokenType.Object)
+                            {
+                                JObject valueObj = (JObject)property.Value;
+                                if (valueObj["$values"] == null)
+                                {
+                                    // It is a single IActions object, so wrap it.
+                                    JToken singleValue = valueObj.DeepClone();
+                                    JObject newArrayObj = new JObject();
+                                    newArrayObj["$type"] = "System.Collections.Generic.List`1[[HandheldCompanion.Actions.IActions, HandheldCompanion]], System.Private.CoreLib";
+                                    newArrayObj["$values"] = new JArray(singleValue);
+                                    property.Value = newArrayObj;
+                                }
+                                // If it already has "$values", assume it's in the new format.
+                            }
+                            else
+                            {
+                                // For any other token type, wrap it in the new array format.
+                                JToken singleValue = property.Value.DeepClone();
+                                JObject newArrayObj = new JObject();
+                                newArrayObj["$type"] = "System.Collections.Generic.List`1[[HandheldCompanion.Actions.IActions, HandheldCompanion]], System.Private.CoreLib";
+                                newArrayObj["$values"] = new JArray(singleValue);
+                                property.Value = newArrayObj;
+                            }
+                        }
+
+                        // Convert the modified JObject back to a JSON string.
+                        outputraw = jObject.ToString();
+                    }
+                }
+            }
+            else if (version <= Version.Parse("0.26.0.2"))
+            {
+                // get previous path, if any
+                string path = jObject.GetValue("Path")?.ToString() ?? string.Empty;
+            }
 
             // parse profile
             profile = JsonConvert.DeserializeObject<Profile>(outputraw, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
 
             // store fileName
             profile.FileName = Path.GetFileName(fileName);
+
             // post-parse manipulations
-            switch (version.ToString())
+            if (version <= Version.Parse("0.21.5.4"))
             {
-                default:
-                case "0.21.5.4":
+                // Access the PowerProfile value
+                string oldPowerProfile = jObject["PowerProfile"]?.ToString();
+                if (!string.IsNullOrEmpty(oldPowerProfile))
+                {
+                    for (int idx = 0; idx < 2; idx++)
                     {
-                        // Access the PowerProfile value
-                        string oldPowerProfile = jObject["PowerProfile"]?.ToString();
-                        if (!string.IsNullOrEmpty(oldPowerProfile))
-                        {
-                            for (int idx = 0; idx < 2; idx++)
-                            {
-                                Guid powerProfile = profile.PowerProfiles[idx];
-                                if (powerProfile == Guid.Empty)
-                                    profile.PowerProfiles[idx] = new Guid(oldPowerProfile);
-                            }
-                        }
+                        Guid powerProfile = profile.PowerProfiles[idx];
+                        if (powerProfile == Guid.Empty)
+                            profile.PowerProfiles[idx] = new Guid(oldPowerProfile);
                     }
-                    break;
+                }
             }
 
             // in case of updated profile naming convention
@@ -717,7 +768,7 @@ public class ProfileManager : IManager
 
     public void DeleteProfile(Profile profile)
     {
-        string profilePath = Path.Combine(profilesPath, profile.GetFileName());
+        string profilePath = Path.Combine(ManagerPath, profile.GetFileName());
         pendingDeletion.Add(profilePath);
 
         if (profiles.ContainsKey(profile.Guid))
@@ -767,11 +818,11 @@ public class ProfileManager : IManager
     public void SerializeProfile(Profile profile)
     {
         // prepare for writing
-        string profilePath = Path.Combine(profilesPath, profile.GetFileName());
+        string profilePath = Path.Combine(ManagerPath, profile.GetFileName());
         pendingCreation.Add(profilePath);
 
         // update profile version to current build
-        profile.Version = new Version(MainWindow.fileVersionInfo.FileVersion);
+        profile.Version = MainWindow.CurrentVersion;
 
         var jsonString = JsonConvert.SerializeObject(profile, Formatting.Indented, new JsonSerializerSettings
         {

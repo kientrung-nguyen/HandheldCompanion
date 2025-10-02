@@ -12,17 +12,18 @@ using static HandheldCompanion.Utils.DeviceUtils;
 namespace HandheldCompanion.Devices;
 public class OneXPlayerOneXFly : IDevice
 {
-    HidDevice hidDevice;
+    protected HidDevice hidDevice;
 
     public OneXPlayerOneXFly()
     {
         // device specific settings
         ProductIllustration = "device_onexplayer_onexfly";
         ProductModel = "ONEXPLAYEROneXFly";
+        UseOpenLib = true;
 
         // https://www.amd.com/en/products/apu/amd-ryzen-z1
         // https://www.amd.com/en/products/apu/amd-ryzen-z1-extreme
-        // https://www.amd.com/en/products/apu/amd-ryzen-7-7840u
+        // https://www.amd.com/fr/products/processors/laptop/ryzen/7000-series/amd-ryzen-7-7840u.html
         nTDP = new double[] { 15, 15, 20 };
         cTDP = new double[] { 5, 30 };
         GfxClock = new double[] { 100, 2700 };
@@ -48,6 +49,8 @@ public class OneXPlayerOneXFly : IDevice
         Capabilities = DeviceCapabilities.FanControl;
         Capabilities |= DeviceCapabilities.DynamicLighting;
         Capabilities |= DeviceCapabilities.DynamicLightingBrightness;
+
+        // dynamic lighting capacities
         DynamicLightingCapabilities |= LEDLevel.SolidColor;
         DynamicLightingCapabilities |= LEDLevel.Rainbow;
 
@@ -62,8 +65,8 @@ public class OneXPlayerOneXFly : IDevice
         };
 
         // LED HID Device
-        _vid = 0x1A2C;
-        _pid = 0xB001;
+        vendorId = 0x1A2C;
+        productIds = [0xB001];
 
         OEMChords.Add(new KeyboardChord("Turbo",
             [KeyCode.LControl, KeyCode.LWin, KeyCode.LMenu],
@@ -119,7 +122,7 @@ public class OneXPlayerOneXFly : IDevice
 
     public override bool Open()
     {
-        var success = base.Open();
+        bool success = base.Open();
         if (!success)
             return false;
 
@@ -128,7 +131,7 @@ public class OneXPlayerOneXFly : IDevice
 
         ECRamDirectWrite(0x4F1, ECDetails, 0x40);
 
-        return (ECRamReadByte(0x4F1, ECDetails) == 0x40);
+        return (ECRamDirectReadByte(0x4F1, ECDetails) == 0x40);
     }
 
     public override void Close()
@@ -141,7 +144,7 @@ public class OneXPlayerOneXFly : IDevice
     public override bool IsReady()
     {
         // Prepare list for all HID devices
-        HidDevice[] HidDeviceList = HidDevices.Enumerate(_vid, new int[] { _pid }).ToArray();
+        HidDevice[] HidDeviceList = HidDevices.Enumerate(vendorId, productIds).ToArray();
 
         // Check every HID device to find LED device
         foreach (HidDevice device in HidDeviceList)

@@ -45,7 +45,7 @@ public abstract class IPlatform : IDisposable
 {
     protected readonly object updateLock = new();
 
-    private Process _Process;
+    private Process _process;
 
     public virtual string Name { get; set; }
     public virtual string ExecutableName { get; set; }
@@ -79,21 +79,21 @@ public abstract class IPlatform : IDisposable
         {
             try
             {
-                if (_Process is not null)
-                    return _Process;
+                if (_process is not null)
+                    return _process;
 
                 var processes = ProcessUtils.GetProcessesByExecutable(ExecutableName);
                 if (processes.Length == 0)
                     return null;
 
-                _Process = processes.FirstOrDefault();
-                _Process.EnableRaisingEvents = true;
+                _process = processes.FirstOrDefault();
+                _process.EnableRaisingEvents = true;
 
                 SetStatus(PlatformStatus.Started);
 
-                _Process.Exited += _Process_Exited;
+                _process.Exited += _Process_Exited;
 
-                return _Process;
+                return _process;
             }
             catch
             {
@@ -157,12 +157,12 @@ public abstract class IPlatform : IDisposable
 
     private void _Process_Exited(object sender, EventArgs e)
     {
-        if (_Process is null)
+        if (_process is null)
             return;
 
         SetStatus(PlatformStatus.Stopped);
 
-        _Process = null;
+        _process = null;
     }
 
     protected void SetStatus(PlatformStatus status)

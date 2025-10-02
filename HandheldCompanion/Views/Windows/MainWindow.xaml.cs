@@ -3,12 +3,15 @@ using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Notifications;
 using HandheldCompanion.Shared;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
 using HandheldCompanion.Views.Windows;
+using iNKORE.UI.WPF.Modern;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
@@ -62,6 +65,7 @@ public partial class MainWindow : GamepadWindow
     public static HotkeysPage hotkeysPage;
     public static LayoutPage layoutPage;
     public static NotificationsPage notificationsPage;
+    public static LibraryPage libraryPage;
 
     // overlay(s) vars
     public static OverlayModel overlayModel;
@@ -72,25 +76,17 @@ public partial class MainWindow : GamepadWindow
     public static string CurrentExe, CurrentPath;
 
     private static MainWindow currentWindow;
-    public static FileVersionInfo fileVersionInfo;
+    private static FileVersionInfo fileVersionInfo;
 
-    public static string InstallPath = string.Empty;
-    public static string SettingsPath = string.Empty;
     public static string CurrentPageName = string.Empty;
 
     private bool appClosing;
     private static NotifyIcon notifyIcon;
     private static ContextMenu notifyContextMenu;
     private bool notifyInTaskbar;
-    private string preNavItemTag;
-    private static DispatcherTimer sensorTimer = new(
-        TimeSpan.FromMilliseconds(1000),
-        DispatcherPriority.Normal,
-        sensorTimer_Elapsed,
-        Dispatcher.CurrentDispatcher)
-    {
-        IsEnabled = false
-    };
+    private string prevNavItemTag;
+    private DispatcherTimer sensorTimer;
+    private DispatcherTimer notifyIconWaitTimer;
 
     private WindowState prevWindowState;
     public static SplashScreen SplashScreen;
@@ -101,17 +97,14 @@ public partial class MainWindow : GamepadWindow
     private const int WM_DISPLAYCHANGE = 0x007e;
     private const int WM_DEVICECHANGE = 0x0219;
 
-    //TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime)
-    private static readonly DispatcherTimer notifyIconWaitTimer = new(
-        TimeSpan.FromMilliseconds(200),
-        DispatcherPriority.Normal,
-        notifyIconWaitTimerTicked,
-        Dispatcher.CurrentDispatcher)
-    {
-        IsEnabled = false
-    };
+    public static Version LastVersion => Version.Parse(ManagerFactory.settingsManager.Get<string>("LastVersion"));
+    public static Version CurrentVersion => Version.Parse(fileVersionInfo.FileVersion);
+    private static bool StartMinimized => ManagerFactory.settingsManager.Get<bool>("StartMinimized");
 
-    private static void notifyIconWaitTimerTicked(object? sender, EventArgs e)
+    private static bool PreloadPages => ManagerFactory.settingsManager.Get<bool>("PreloadPages");
+
+
+    private void notifyIconWaitTimerTicked(object? sender, EventArgs e)
     {
         notifyIconWaitTimer.Stop();
         overlayquickTools.ToggleVisibility();
@@ -121,16 +114,15 @@ public partial class MainWindow : GamepadWindow
     {
         // initialize splash screen
         SplashScreen = new SplashScreen();
+        DataContext = new MainWindowViewModel();
 
-        // get last version
-        Version LastVersion = Version.Parse(ManagerFactory.settingsManager.Get<string>("LastVersion"));
-        bool FirstStart = LastVersion == Version.Parse("0.0.0.0");
-        if (FirstStart)
-        {
 #if !DEBUG
-            SplashScreen.Show();
+        SplashScreen.Show();
 #endif
-        }
+
+        // set theme
+        var currentTheme = (ElementTheme)ManagerFactory.settingsManager.Get<int>("MainWindowTheme");
+        ThemeManager.SetRequestedTheme(this, currentTheme);
 
         InitializeComponent();
         this.Tag = "MainWindow";
@@ -138,26 +130,36 @@ public partial class MainWindow : GamepadWindow
         fileVersionInfo = _fileVersionInfo;
         currentWindow = this;
 
+        // get last version
+        bool FirstStart = LastVersion == Version.Parse("0.0.0.0");
+        bool NewUpdate = LastVersion != CurrentVersion;
+
         // used by system manager, controller manager
         uiSettings = new UISettings();
 
-        // fix touch support
-        TabletDeviceCollection tabletDevices = Tablet.TabletDevices;
-
         // define current directory
-        InstallPath = AppDomain.CurrentDomain.BaseDirectory;
-        SettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "HandheldCompanion");
-
-        // initialize path
-        if (!Directory.Exists(SettingsPath))
-            Directory.CreateDirectory(SettingsPath);
-
         Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
 
         // initialize XInputWrapper
         XInputPlus.ExtractXInputPlusLibraries();
 
+        sensorTimer = new(
+            TimeSpan.FromMilliseconds(1000),
+            DispatcherPriority.Normal,
+            sensorTimer_Elapsed,
+            Dispatcher.CurrentDispatcher)
+        {
+            IsEnabled = false
+        };
+
+        notifyIconWaitTimer = new(
+            TimeSpan.FromMilliseconds(200),
+            DispatcherPriority.Normal,
+            notifyIconWaitTimerTicked,
+            Dispatcher.CurrentDispatcher)
+        {
+            IsEnabled = false
+        };
         // initialize notifyIcon
         notifyIcon = new NotifyIcon
         {
@@ -186,7 +188,7 @@ public partial class MainWindow : GamepadWindow
             notifyIconWaitTimer.Stop();
             if (overlayquickTools.Visibility == Visibility.Visible)
                 overlayquickTools.ToggleVisibility();
-            SwapWindowState();
+            ToggleState();
         };
 
         notifyIcon.Click += (sender, e) =>
@@ -246,24 +248,12 @@ public partial class MainWindow : GamepadWindow
         // initialize device
         currentDevice = IDevice.GetCurrent();
         currentDevice.PullSensors();
+        currentDevice.Initialize(FirstStart, NewUpdate);
 
         // initialize title
         Title += $" {currentDevice.ProductName}";
-        if (FirstStart)
-        {
-            if (currentDevice is SteamDeck steamDeck)
-            {
-                // do something
-            }
-            else if (currentDevice is AYANEOFlipDS flipDS)
-            {
-                // set Quicktools to Maximize on bottom screen
-                ManagerFactory.settingsManager.Set("QuickToolsLocation", 2);
-                ManagerFactory.settingsManager.Set("QuickToolsDeviceName", "AYANEOQHD");
-            }
 
-            ManagerFactory.settingsManager.Set("FirstStart", false);
-        }
+        ManagerFactory.settingsManager.Set("FirstStart", false);
 
         // initialize UI sounds board
         UISounds uiSounds = new UISounds();
@@ -279,40 +269,35 @@ public partial class MainWindow : GamepadWindow
         SystemManager.SystemStatusChanged += OnSystemStatusChanged;
         ManagerFactory.deviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         ManagerFactory.deviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
+        ManagerFactory.notificationManager.Added += NotificationManagerUpdated;
+        ManagerFactory.notificationManager.Discarded += NotificationManagerUpdated;
         ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
 
         // prepare toast manager
         ToastManager.Start();
-        ToastManager.IsEnabled = ManagerFactory.settingsManager.Get<bool>("ToastEnable");
+
+        // start non-static managers
+        foreach (IManager manager in ManagerFactory.Managers)
+            Task.Run(() => manager.Start());
 
         // start static managers
-        GPUManager.Start();
-        PowerProfileManager.Start();
-        ProfileManager.Start();
-        ControllerManager.Start();
-        HotkeysManager.Start();
-        DeviceManager.Start();
-        OSDManager.Start();
-        LayoutManager.Start();
-        SystemManager.Start();
-        DynamicLightingManager.Start();
-        MultimediaManager.Start();
-        VirtualManager.Start();
-        SensorsManager.Start();
-        TimerManager.Start();
-
-        // non-STA threads
+        // todo: make them non-static
         List<Task> tasks = new List<Task>
         {
-            Task.Run(() => PlatformManager.Start()),
-            Task.Run(() => ProcessManager.Start()),
+            Task.Run(() => OSDManager.Start()),
+            Task.Run(() => SystemManager.Start()),
+            Task.Run(() => DynamicLightingManager.Start()),
+            Task.Run(() => VirtualManager.Start()),
+            Task.Run(() => SensorsManager.Start()),
+            Task.Run(() => ControllerManager.Start()),
             Task.Run(() => TaskManager.Start(CurrentExe)),
             Task.Run(() => PerformanceManager.Start()),
             Task.Run(() => UpdateManager.Start())
         };
 
-        // those managers can't be threaded
+        // start non-threaded managers
         InputsManager.Start();
+        TimerManager.Start();
         ManagerFactory.settingsManager.Start();
 
         // Load MVVM pages after the Models / data have been created.
@@ -329,6 +314,8 @@ public partial class MainWindow : GamepadWindow
         // update LastVersion
         ManagerFactory.settingsManager.Set("LastVersion", fileVersionInfo.FileVersion);
 
+        // load gamepad navigation manager
+        gamepadFocusManager = new(this, ContentFrame);
     }
 
     private static void sensorTimer_Elapsed(object? sender, EventArgs e)
@@ -340,8 +327,11 @@ public partial class MainWindow : GamepadWindow
 
     private static void RefreshSensors(bool force = false)
     {
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
+            if (notifyIcon == null)
+                return;
+
             if (!force && Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRefresh) < 2000) return;
             lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
@@ -350,44 +340,44 @@ public partial class MainWindow : GamepadWindow
             string battery = "";
             string charge = "";
 
-            if (PlatformManager.LibreHardwareMonitor.CPUPower != null)
-                cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUPower.Value, 1):0.0}W";
+            if (PlatformManager.LibreHardware.GetCPUPower() != null)
+                cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardware.GetCPUPower(), 1):0.0}W";
 
-            if (PlatformManager.LibreHardwareMonitor.CPUTemp != null)
-                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPUTemp.Value)}°C";
+            if (PlatformManager.LibreHardware.GetCPUTemperature() != null)
+                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetCPUTemperature().Value)}°C";
 
-            if (PlatformManager.LibreHardwareMonitor.CPULoad != null)
-                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.CPULoad.Value)}%";
+            if (PlatformManager.LibreHardware.GetCPULoad() != null)
+                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetCPULoad().Value)}%";
 
-            if (PlatformManager.LibreHardwareMonitor.MemoryUsage != null)
-                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.MemoryUsage.Value / 1024, 1)}GB";
+            if (PlatformManager.LibreHardware.GetMemoryUsage() != null)
+                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetMemoryUsage().Value / 1024, 1)}GB";
 
-            if (PlatformManager.LibreHardwareMonitor.GPUPower != null)
-                gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUPower.Value, 1):0.0}W";
+            if (PlatformManager.LibreHardware.GetGPUPower() != null)
+                gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUPower().Value, 1):0.0}W";
 
-            if (PlatformManager.LibreHardwareMonitor.GPUTemp != null)
-                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUTemp.Value)}°C";
+            if (PlatformManager.LibreHardware.GetGPUTemperature() != null)
+                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUTemperature().Value)}°C";
 
-            if (PlatformManager.LibreHardwareMonitor.GPULoad != null)
-                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPULoad.Value)}%";
+            if (PlatformManager.LibreHardware.GetGPULoad() != null)
+                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetGPULoad().Value)}%";
 
-            if (PlatformManager.LibreHardwareMonitor.GPUMemoryUsage != null)
-                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.GPUMemoryUsage.Value / 1024, 1)}GB";
+            if (PlatformManager.LibreHardware.GetGPUMemoryDedicated() != null)
+                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUMemoryDedicated().Value / 1024, 1)}GB";
 
-            if (PlatformManager.LibreHardwareMonitor.BatteryCapacity > 0)
-                battery = $": {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryCapacity)}%";
+            if (PlatformManager.LibreHardware.GetBatteryLevel() != null)
+                battery = $": {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryLevel().Value)}%";
 
-            if (PlatformManager.LibreHardwareMonitor.BatteryPower < 0)
-                charge = $"{Properties.Resources.Discharging}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W";
-            else if (PlatformManager.LibreHardwareMonitor.BatteryPower > 0)
-                charge = $"{Properties.Resources.Charging}: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryPower, 1)}W";
+            if (PlatformManager.LibreHardware.GetBatteryPower() != null)
+                charge = $"{Properties.Resources.Discharging}: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryPower(), 1)}W";
+            else if (PlatformManager.LibreHardware.GetBatteryPower() > 0)
+                charge = $"{Properties.Resources.Charging}: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryPower(), 1)}W";
 
-            if (PlatformManager.LibreHardwareMonitor.BatteryHealth > 0)
-                battery += $"\nBattery Health: {Math.Round((decimal)PlatformManager.LibreHardwareMonitor.BatteryHealth, 1)}%";
+            if (PlatformManager.LibreHardware.GetBatteryHealth() != null)
+                battery += $"\nBattery Health: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryHealth(), 1)}%";
 
             string trayTip = $"CPU{cpuTemp}";
             if (gpuTemp.Length > 0) trayTip += "\nGPU" + gpuTemp;
-            //if (PlatformManager.LibreHardwareMonitor.CPUFanSpeed != null) trayTip += $"\nFan {PlatformManager.LibreHardwareMonitor.CPUFanSpeed}RPM";
+            //if (PlatformManager.LibreHardware.CPUFanSpeed != null) trayTip += $"\nFan {PlatformManager.LibreHardware.CPUFanSpeed}RPM";
             if (battery.Length > 0) trayTip += "\nBattery Remaining" + battery;
             if (charge.Length > 0) trayTip += "\n" + charge;
 
@@ -396,7 +386,7 @@ public partial class MainWindow : GamepadWindow
         });
     }
 
-    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         switch (msg)
         {
@@ -406,9 +396,11 @@ public partial class MainWindow : GamepadWindow
                 break;
             case WM_QUERYENDSESSION:
                 break;
+
+
         }
 
-        return IntPtr.Zero;
+        return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
     }
 
     private void ControllerManager_ControllerSelected(IController Controller)
@@ -536,13 +528,13 @@ public partial class MainWindow : GamepadWindow
         menuItemMainWindow.Click += (sender, e) =>
         {
 
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 if (sender is MenuItem menuItem)
                     switch (menuItem.Tag)
                     {
                         case "MainWindow":
-                            SwapWindowState();
+                            ToggleState();
                             break;
                         case "QuickTools":
                             overlayquickTools.ToggleVisibility();
@@ -574,31 +566,12 @@ public partial class MainWindow : GamepadWindow
 
         var separator = new Separator();
         notifyContextMenu.Items.Add(separator);
-        //notifyIcon.ContextMenuStrip.Items.Add("-");
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
-    {
-        switch (name)
-        {
-            case "ToastEnable":
-                ToastManager.IsEnabled = Convert.ToBoolean(value);
-                break;
-            case "TelemetryApproved":
-
-                // If the input is null or empty, return false or handle as needed
-                if (string.IsNullOrEmpty(Convert.ToString(value)))
-                    break;
-
-                bool test = Convert.ToBoolean(value);
-                break;
-        }
-    }
-
-    public void SwapWindowState()
+    public void ToggleState()
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (WindowState)
             {
@@ -656,18 +629,17 @@ public partial class MainWindow : GamepadWindow
         overlayPage = new OverlayPage("overlay");
         hotkeysPage = new HotkeysPage("hotkeys");
         notificationsPage = new NotificationsPage("notifications");
+        libraryPage = new LibraryPage("library");
 
         // store pages
         _pages.Add("ControllerPage", controllerPage);
         _pages.Add("DevicePage", devicePage);
-
         _pages.Add("ProfilesPage", profilesPage);
-
         _pages.Add("OverlayPage", overlayPage);
         _pages.Add("SettingsPage", settingsPage);
         _pages.Add("HotkeysPage", hotkeysPage);
-
         _pages.Add("NotificationsPage", notificationsPage);
+        _pages.Add("LibraryPage", libraryPage);
     }
 
     private void LoadPages_MVVM()
@@ -706,7 +678,7 @@ public partial class MainWindow : GamepadWindow
             switch (menuItem.Tag)
             {
                 case "MainWindow":
-                    SwapWindowState();
+                    ToggleState();
                     break;
                 case "QuickTools":
                     overlayquickTools.ToggleVisibility();
@@ -724,21 +696,26 @@ public partial class MainWindow : GamepadWindow
         // hide splashscreen
         SplashScreen?.Close();
 
-        // load gamepad navigation maanger
-        gamepadFocusManager = new(this, ContentFrame);
+        // load gamepad navigation manager
+        gamepadFocusManager.Loaded();
 
         HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
         source.AddHook(WndProc); // Hook into the window's message loop
 
         // restore window state
-        WindowState = ManagerFactory.settingsManager.Get<bool>("StartMinimized") ? WindowState.Minimized : (WindowState)ManagerFactory.settingsManager.Get<int>("MainWindowState");
+        WindowState = StartMinimized ? WindowState.Minimized : (WindowState)ManagerFactory.settingsManager.Get<int>("MainWindowState");
         prevWindowState = (WindowState)ManagerFactory.settingsManager.Get<int>("MainWindowPrevState");
     }
 
-    private void ControllerPage_Loaded(object sender, RoutedEventArgs e)
+    private bool Homepage_Loaded = false;
+    private void HomePage_Loaded()
     {
+        // set status
+        Homepage_Loaded = true;
+
         // home page is ready, display main window
         this.Visibility = Visibility.Visible;
+        notifyIcon.Visible = true;
 
         string TelemetryApproved = ManagerFactory.settingsManager.Get<string>("TelemetryApproved");
         if (string.IsNullOrEmpty(TelemetryApproved))
@@ -748,17 +725,17 @@ public partial class MainWindow : GamepadWindow
 
             MessageBoxResult result = MessageBox.Show(Content, Title, MessageBoxButton.YesNo);
             ManagerFactory.settingsManager.Set("TelemetryApproved", result == MessageBoxResult.Yes ? "True" : "False");
-            ManagerFactory.settingsManager.Set("TelemetryEnabled", result == MessageBoxResult.Yes ? true : false);
+            ManagerFactory.settingsManager.Set("TelemetryEnabled", result == MessageBoxResult.Yes);
         }
     }
 
-    private void NotificationsPage_LayoutUpdated(int notifications)
+    private void NotificationManagerUpdated(Notification notification)
     {
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            HasNotifications.Visibility = notifications != 0 ? Visibility.Visible : Visibility.Collapsed;
-            HasNotifications.Value = notifications;
+            HasNotifications.Visibility = ManagerFactory.notificationManager.Any ? Visibility.Visible : Visibility.Collapsed;
+            HasNotifications.Value = ManagerFactory.notificationManager.Count;
         });
     }
 
@@ -776,21 +753,29 @@ public partial class MainWindow : GamepadWindow
                     if (prevStatus == SystemManager.SystemStatus.SystemPending)
                     {
                         // when device resumes from sleep
+                        resumeTime = DateTime.Now;
+
                         // use device-specific delay
-                        await Task.Delay(currentDevice.ResumeDelay);
+                        await Task.Delay(currentDevice.ResumeDelay); // Captures synchronization context
 
                         // resume manager(s)
                         InputsManager.Start();
                         TimerManager.Start();
                         SensorsManager.Resume(true);
-                        GPUManager.Start();
-                        OSDManager.Start();
                         PerformanceManager.Resume(true);
 
                         ManagerFactory.Resume();
 
                         // resume platform(s)
-                        PlatformManager.LibreHardwareMonitor.Start();
+                        PlatformManager.LibreHardware.Start();
+
+                        // wait a bit more if device went to sleep for at least 30 minutes (arbitrary)
+                        TimeSpan sleepDuration = resumeTime - pendingTime;
+                        if (sleepDuration.TotalMinutes > 30)
+                            await Task.Delay(currentDevice.ResumeDelay); // Captures synchronization context
+
+                        VirtualManager.Resume(true);
+                        ControllerManager.Resume(true);
                     }
 
                     // open device, when ready
@@ -812,28 +797,38 @@ public partial class MainWindow : GamepadWindow
 
             case SystemManager.SystemStatus.SystemPending:
                 {
-                    // when device goes to sleep
-                    // suspend manager(s)
-                    VirtualManager.Suspend(true);
-                    await Task.Delay(currentDevice.ResumeDelay); // Captures synchronization context
+                    if (prevStatus == SystemManager.SystemStatus.SystemReady)
+                    {
+                        SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS | SystemManager.ES_SYSTEM_REQUIRED);
+                        LogManager.LogInformation("System is about to suspend. Performing tasks.");
 
-                    TimerManager.Stop();
-                    SensorsManager.Stop();
-                    InputsManager.Stop();
-                    GPUManager.Stop();
+                        // when device goes to sleep
+                        pendingTime = DateTime.Now;
 
-                    // suspend platform(s)
-                    PlatformManager.LibreHardwareMonitor.Stop();
+                        // hide subwindow(s)
+                        overlayModel.SetVisibility(Visibility.Collapsed);
+                        overlayTrackpad.SetVisibility(Visibility.Collapsed);
+                        overlayquickTools.SetVisibility(Visibility.Collapsed);
 
-                    // close current device
-                    currentDevice.Close();
+                        // suspend manager(s)
+                        ManagerFactory.Suspend();
 
-                    // free memory
-                    GC.Collect();
+                        VirtualManager.Suspend(true);
+                        ControllerManager.Suspend(true);
+                        TimerManager.Stop();
+                        SensorsManager.Stop();
+                        InputsManager.Stop(false);
 
-                    // Allow system to sleep
-                    SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
-                    LogManager.LogDebug("Tasks completed. System can now suspend if needed.");
+                        // suspend platform(s)
+                        PlatformManager.LibreHardware.Stop();
+
+                        // close current device
+                        currentDevice.Close();
+
+                        // Allow system to sleep
+                        SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
+                        LogManager.LogInformation("Tasks completed. System can now suspend.");
+                    }
                 }
                 break;
         }
@@ -852,7 +847,7 @@ public partial class MainWindow : GamepadWindow
         }
     }
 
-    public void NavView_Navigate(string navItemTag)
+    private void NavView_Navigate(string navItemTag)
     {
         if (navItemTag == "WindowsExit")
         {
@@ -860,6 +855,23 @@ public partial class MainWindow : GamepadWindow
             Close();
             return;
         }
+
+        NavigationViewItem? selectedItem = navView.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => item.Tag?.ToString() == navItemTag);
+
+        // is it a footer item ?
+        if (selectedItem is null)
+            selectedItem = navView.FooterMenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => item.Tag?.ToString() == navItemTag);
+
+        // Find and select the matching menu item
+        navView.SelectedItem = selectedItem;
+
+        // Give gamepad focus
+        gamepadFocusManager.Focus((NavigationViewItem)selectedItem);
+
         var item = _pages.FirstOrDefault(p => p.Key.Equals(navItemTag));
         var _page = item.Value;
 
@@ -868,7 +880,8 @@ public partial class MainWindow : GamepadWindow
         var preNavPageType = ContentFrame.CurrentSourcePageType;
 
         // Only navigate if the selected page isn't currently loaded.
-        if (_page is not null && !Equals(preNavPageType, _page)) NavView_Navigate(_page);
+        if (_page is not null && !Equals(preNavPageType, _page))
+            NavView_Navigate(_page);
     }
 
     public void NavigateToPage(string navItemTag)
@@ -891,50 +904,76 @@ public partial class MainWindow : GamepadWindow
         TryGoBack();
     }
 
-    private void Window_Closed(object sender, EventArgs e)
+    private async void Window_Closed(object sender, EventArgs e)
     {
+        // wait until all managers have initialized
+        if (ManagerFactory.Managers.Any(manager => manager.Status.HasFlag(ManagerStatus.Initializing)))
+        {
+            LogManager.LogWarning("Waiting for all managers to be fully initialized before halting them");
+
+            while (ManagerFactory.Managers.Any(manager => manager.Status.HasFlag(ManagerStatus.Initializing)))
+                await Task.Delay(250).ConfigureAwait(false);
+        }
+
         currentDevice.Close();
 
         UnloadNotifyIcon();
 
-        // stop windows
-        overlayModel.Close();
-        overlayTrackpad.Close();
-        overlayquickTools.Close(true);
+        sensorTimer?.Stop();
+        sensorTimer = null;
 
-        // stop pages
-        controllerPage.Page_Closed();
-        profilesPage.Page_Closed();
-        settingsPage.Page_Closed();
-        overlayPage.Page_Closed();
-        hotkeysPage.Page_Closed();
-        layoutPage.Page_Closed();
-        notificationsPage.Page_Closed();
+        notifyIconWaitTimer?.Stop();
+        notifyIconWaitTimer = null;
+
+        // manage events
+        SystemManager.SystemStatusChanged -= OnSystemStatusChanged;
+        ManagerFactory.deviceManager.UsbDeviceArrived -= GenericDeviceUpdated;
+        ManagerFactory.deviceManager.UsbDeviceRemoved -= GenericDeviceUpdated;
+        ManagerFactory.notificationManager.Added -= NotificationManagerUpdated;
+        ManagerFactory.notificationManager.Discarded -= NotificationManagerUpdated;
+        ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+
+        // UI thread
+        UIHelper.TryInvoke(() =>
+        {
+            // stop windows
+            overlayModel.Close(true);
+            overlayTrackpad.Close();
+            overlayquickTools.Close(true);
+
+            // stop pages
+            controllerPage.Page_Closed();
+            profilesPage.Page_Closed();
+            settingsPage.Page_Closed();
+            overlayPage.Page_Closed();
+            hotkeysPage.Page_Closed();
+            layoutPage.Page_Closed();
+            notificationsPage.Page_Closed();
+        });
 
         // remove all automation event handlers
-        Automation.RemoveAllEventHandlers();
+        ProcessUtils.TaskWithTimeout(() => Automation.RemoveAllEventHandlers(), TimeSpan.FromSeconds(3));
+
+        foreach (IManager manager in ManagerFactory.Managers)
+            manager.Stop();
 
         // stop managers
         VirtualManager.Stop();
-        MultimediaManager.Stop();
-        GPUManager.Stop();
         MotionManager.Stop();
         SensorsManager.Stop();
         ControllerManager.Stop();
-        InputsManager.Stop();
-        DeviceManager.Stop();
-        PlatformManager.Stop();
+        InputsManager.Stop(true);
         OSDManager.Stop();
-        PowerProfileManager.Stop();
-        ProfileManager.Stop();
-        LayoutManager.Stop();
         SystemManager.Stop();
         DynamicLightingManager.Stop();
-        ProcessManager.Stop();
         ToastManager.Stop();
         TaskManager.Stop();
         PerformanceManager.Stop();
         UpdateManager.Stop();
+
+        Application.Current.Shutdown();
+        await Task.Delay(250).ConfigureAwait(false);
+        Environment.Exit(0);
     }
 
     private async void Window_Closing(object sender, CancelEventArgs e)
@@ -951,8 +990,8 @@ public partial class MainWindow : GamepadWindow
             case WindowState.Maximized:
                 ManagerFactory.settingsManager.Set("MainWindowLeft", 0);
                 ManagerFactory.settingsManager.Set("MainWindowTop", 0);
-                ManagerFactory.settingsManager.Set("MainWindowWidth", SystemParameters.MaximizedPrimaryScreenWidth);
-                ManagerFactory.settingsManager.Set("MainWindowHeight", SystemParameters.MaximizedPrimaryScreenHeight);
+                //ManagerFactory.settingsManager.Set("MainWindowWidth", SystemParameters.MaximizedPrimaryScreenWidth);
+                //ManagerFactory.settingsManager.Set("MainWindowHeight", SystemParameters.MaximizedPrimaryScreenHeight);
 
                 break;
         }
@@ -975,7 +1014,7 @@ public partial class MainWindow : GamepadWindow
         switch (WindowState)
         {
             case WindowState.Minimized:
-                notifyIcon.Visible = true;
+                notifyIcon.Visible = Homepage_Loaded;
                 ShowInTaskbar = false;
 
                 if (!notifyInTaskbar)
@@ -1000,20 +1039,87 @@ public partial class MainWindow : GamepadWindow
         }
     }
 
-    private void navView_Loaded(object sender, RoutedEventArgs e)
+    private const string HomeKey = "ControllerPage";
+    private readonly CancellationTokenSource _preloadCts = new();
+
+    private async void navView_Loaded(object sender, RoutedEventArgs e)
     {
-        // Add handler for ContentFrame navigation.
         ContentFrame.Navigated += On_Navigated;
 
-        // NavView doesn't load any page by default, so load home page.
-        navView.SelectedItem = navView.MenuItems[0];
+        // Preload HOME first (invisible, in PreloadFrame)
+        if (_pages.TryGetValue(HomeKey, out var homePage))
+        {
+            await PreloadInHiddenFrameAsync(PreloadFrame, homePage);
 
-        // If navigation occurs on SelectionChanged, this isn't needed.
-        // Because we use ItemInvoked to navigate, we need to call Navigate
-        // here to load the home page.
-        preNavItemTag = "ControllerPage";
-        NavView_Navigate(preNavItemTag);
+            // IMPORTANT: detach from hidden frame before showing it in the visible one
+            if (ReferenceEquals(PreloadFrame.Content, homePage))
+                PreloadFrame.Content = null;
+
+            // Show Home in the visible frame
+            NavigateToPage(HomeKey);
+
+            // Now that Home is really ready, reveal window & run your callback
+            HomePage_Loaded();
+        }
+
+        // Warm the rest in the background (non-blocking)
+        if (PreloadPages)
+            _ = PreloadRemainingAsync(_preloadCts.Token);
     }
+
+    private async Task PreloadRemainingAsync(CancellationToken ct)
+    {
+        foreach (var kvp in _pages)
+        {
+            if (ct.IsCancellationRequested) break;
+            if (kvp.Key == HomeKey) continue;
+
+            var page = kvp.Value;
+
+            // Already warmed once? skip.
+            if (page.IsLoaded && !ReferenceEquals(PreloadFrame.Content, page))
+                continue;
+
+            try
+            {
+                await PreloadInHiddenFrameAsync(PreloadFrame, page);
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError("Background preload failed for {0}", page.GetType().Name);
+            }
+        }
+
+        // Optional: release the last preloaded page
+        PreloadFrame.Content = null;
+    }
+
+    private static Task PreloadInHiddenFrameAsync(Frame hiddenFrame, Page page)
+    {
+        // If this page has already been loaded once in the app lifetime,
+        // we're warmed; no need to wait again.
+        if (page.IsLoaded && !ReferenceEquals(hiddenFrame.Content, page))
+            return Task.CompletedTask;
+
+        var tcs = new TaskCompletionSource<object?>();
+
+        RoutedEventHandler? onLoaded = null;
+        onLoaded = (s, e) =>
+        {
+            page.Loaded -= onLoaded;
+            LogManager.LogInformation("Preloaded: {0}", page.GetType().Name);
+            tcs.TrySetResult(null);
+        };
+
+        // Subscribe before navigating
+        page.Loaded += onLoaded;
+
+        // Navigate the hidden frame to the *existing* instance
+        hiddenFrame.Navigate(page);
+
+        return tcs.Task;
+    }
+
 
     private void GamepadWindow_PreviewGotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
@@ -1046,22 +1152,23 @@ public partial class MainWindow : GamepadWindow
     private void navView_PaneOpened(NavigationView sender, object args)
     {
         // todo: localize me
-        PaneText.Text = "Close navigation";
+        PaneText.Text = Properties.Resources.MainWindow_CloseNavigation;
     }
 
     private void navView_PaneClosed(NavigationView sender, object args)
     {
         // todo: localize me
-        PaneText.Text = "Open navigation";
+        PaneText.Text = Properties.Resources.MainWindow_OpenNavigation;
     }
 
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
-        navView.IsBackEnabled = ContentFrame.CanGoBack;
-
         if (ContentFrame.SourcePageType is not null)
         {
             CurrentPageName = ContentFrame.CurrentSourcePageType.Name;
+
+            // Update previous navigation item
+            prevNavItemTag = CurrentPageName;
 
             var NavViewItem = navView.MenuItems
                 .OfType<NavigationViewItem>()

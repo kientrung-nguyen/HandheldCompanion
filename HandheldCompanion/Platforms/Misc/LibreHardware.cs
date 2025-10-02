@@ -17,35 +17,43 @@ public class LibreHardware : IPlatform
     private Computer computer;
 
     private Timer sensorTimer;
-    private int updateInterval = 500;
-    private object updateLock = new();
+    private int updateInterval = 1000;
 
-    public float? CPULoad;
-    public float? CPUClock;
-    public float? CPUPower;
-    public float? CPUTemp;
+    private float? CPULoad;
+    private float? CPUClock;
+    private float? CPUPower;
+    private float? CPUTemp;
 
 
     public float? CPUFanSpeed;
     public float? CPUFanDuty;
 
-    public float? GPULoad;
-    public float? GPUClock;
-    public float? GPUPower;
-    public float? GPUTemp;
+    private float? GPULoad;
+    private float? GPUClock;
+    private float? GPUPower;
+    private float? GPUTemp;
 
-    public float? MemoryUsage;
-    public float? GPUMemoryUsage;
+    private float? GPUMemory;
+    private float? GPUMemoryTotal;
 
-    public float? BatteryChargeLevel;
+    private float? GPUMemoryShared;
+    private float? GPUMemorySharedTotal;
 
-    public float? BatteryDesignCapacity;
-    public float? BatteryFullCapacity;
-    public float? BatteryRemainingCapacity;
-    public float? BatteryPower = 0f;
-    public float? BatteryCapacity = -1f;
-    public float? BatteryHealth = -1f;
-    public TimeSpan BatteryTimeSpan = TimeSpan.Zero;
+    private float? GPUMemoryDedicated;
+    private float? GPUMemoryDedicatedTotal;
+
+    private float? MemoryUsage;
+    private float? MemoryAvailable;
+
+    private float? BatteryChargeLevel;
+
+    private float? BatteryDesignCapacity;
+    private float? BatteryFullCapacity;
+    private float? BatteryRemainingCapacity;
+    private float? BatteryPower;
+    private float? BatteryCapacity;
+    private float? BatteryHealth;
+    private TimeSpan BatteryTimeSpan = TimeSpan.Zero;
 
     long lastCPURefresh;
     long lastGPURefresh;
@@ -68,12 +76,11 @@ public class LibreHardware : IPlatform
         // prepare for sensors reading
         computer = new Computer
         {
-            IsCpuEnabled = true,
-            //IsGpuEnabled = true,
-            IsMemoryEnabled = true
+            IsCpuEnabled = IDevice.GetCurrent().CpuMonitor,
+            IsGpuEnabled = IDevice.GetCurrent().GpuMonitor,
+            IsMemoryEnabled = IDevice.GetCurrent().MemoryMonitor,
+            IsBatteryEnabled = IDevice.GetCurrent().BatteryMonitor,
         };
-
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
@@ -89,14 +96,53 @@ public class LibreHardware : IPlatform
 
     public override bool Start()
     {
-        // open computer, slow
-        computer?.Open();
+        // raise events
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
+        }
+
+        if (computer is not null)
+        {
+            // open computer, slow
+            computer.Open();
+            // prevent sensor from being stored to memory for too long
+            foreach (var hardware in computer.Hardware)
+                foreach (var sensor in hardware.Sensors)
+                    sensor.ValuesTimeWindow = new(0, 0, 10);
+        }
+
         sensorTimer?.Start();
         return base.Start();
     }
 
+
+    private void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+
+    private void QuerySettings()
+    {
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", ManagerFactory.settingsManager.Get<double>("OnScreenDisplayRefreshRate"), false);
+    }
+
     public override bool Stop(bool kill = false)
     {
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+
         sensorTimer?.Stop();
 
         // wait until all tasks are complete
@@ -107,6 +153,7 @@ public class LibreHardware : IPlatform
 
         return base.Stop(kill);
     }
+
     private void sensorTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
         lock (updateLock)
@@ -132,54 +179,43 @@ public class LibreHardware : IPlatform
             }
 
 
-            if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) > 500)
-            {
-                lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                HandleGPU();
-            }
+            //if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) > 500)
+            //{
+            //    lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            //    HandleGPU(GPUManager.GetCurrent());
+            //}
 
 
             // pull temperature sensor
             foreach (var hardware in computer.Hardware)
             {
-                try
+                try { hardware.Update(); } catch { }
+                switch (hardware.HardwareType)
                 {
-                    switch (hardware.HardwareType)
-                    {
-                        case HardwareType.Cpu:
-                            if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastCPURefresh) < 500) continue;
-                            lastCPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                            hardware.Update();
-                            HandleCPU(hardware);
-                            break;
-                        /*            
-                        case HardwareType.GpuAmd:
-                            if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) < 500) continue;
-                            lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                            hardware.Update();
-                            HandleGPU(hardware);
-                            //LogManager.LogDebug($"{GPUTemp}°C {GPUClock}mHz {GPULoad}% {GPUPower}W");
-                            //LogManager.LogDebug($"{amdControl.GetGpuTemperature()}°C {amdControl.GetGpuClock()}mHz {amdControl.GetGpuUse()}% {amdControl.GetGpuPower()}W {amdControl.GetFPS()}FPS");
-                            //LogManager.LogDebug($"{GPUManager.GetCurrent().GetTemperature()}°C {GPUManager.GetCurrent().GetClock()}mHz {GPUManager.GetCurrent().GetLoad()}% {GPUManager.GetCurrent().GetPower()}W {GPUManager.GetCurrent().GetVRAMUsage()}");
-                            break;
-                         */
-                        case HardwareType.Memory:
-                            if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastMemoryRefresh) < 3000) continue;
-                            lastMemoryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                            hardware.Update();
-                            HandleMemory(hardware);
-                            break;
-                        default: continue;
-                            /*
-                        case HardwareType.Battery:
-                            HandleBattery(hardware);
-                            break;
-                            */
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogManager.LogError($"{nameof(LibreHardware)} Update: {ex.Message}");
+                    case HardwareType.Cpu:
+                        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastCPURefresh) < 1000) continue;
+                        lastCPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        HandleCPU(hardware);
+                        break;
+                    case HardwareType.GpuNvidia:
+                    case HardwareType.GpuAmd:
+                    case HardwareType.GpuIntel:
+                        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastGPURefresh) < 1000) continue;
+                        lastGPURefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        HandleGPU(hardware);
+                        break;
+
+                    case HardwareType.Memory:
+                        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastMemoryRefresh) < 3000) continue;
+                        lastMemoryRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        HandleMemory(hardware);
+                        break;
+                    default: continue;
+                        /*
+                    case HardwareType.Battery:
+                        HandleBattery(hardware);
+                        break;
+                        */
                 }
             }
         }
@@ -191,7 +227,152 @@ public class LibreHardware : IPlatform
         CPUFanDuty = IDevice.GetCurrent().ReadFanDuty();
     }
 
+    #region GPU updates
+    public float? GetGPULoad() => computer?.IsGpuEnabled ?? false ? GPULoad : null;
+    public float? GetGPUPower() => computer?.IsGpuEnabled ?? false ? GPUPower : null;
+    public float? GetGPUTemperature() => computer?.IsGpuEnabled ?? false ? GPUTemp : null;
+    public float? GetGPUClock() => computer?.IsGpuEnabled ?? false ? GPUClock : null;
+
+    public float? GetGPUMemory() => computer?.IsGpuEnabled ?? false ? GPUMemory : null;
+    public float? GetGPUMemoryDedicated() => computer?.IsGpuEnabled ?? false ? GPUMemoryDedicated : null;
+    public float? GetGPUMemoryShared() => computer?.IsGpuEnabled ?? false ? GPUMemoryShared : null;
+
+    public float? GetGPUMemoryTotal() => computer?.IsGpuEnabled ?? false ? GPUMemoryTotal : null;
+    public float? GetGPUMemoryDedicatedTotal() => computer?.IsGpuEnabled ?? false ? GPUMemoryDedicatedTotal : null;
+    public float? GetGPUMemorySharedTotal() => computer?.IsGpuEnabled ?? false ? GPUMemorySharedTotal : null;
+
+    private void HandleGPU(GPU? gpu)
+    {
+        if (gpu is null || !gpu.IsInitialized)
+            return;
+
+        if (gpu.HasLoad())
+            GPULoad = gpu.GetLoad();
+        if (gpu.HasClock())
+            GPUClock = gpu.GetClock();
+        if (gpu.HasPower())
+            GPUPower = gpu.GetPower();
+        if (gpu.HasTemperature())
+            GPUTemp = gpu.GetTemperature();
+        if (gpu.HasVRAMUsage())
+            GPUMemory = gpu.GetVRAMUsage();
+    }
+
+    private void HandleGPU(IHardware gpu)
+    {
+        foreach (var sensor in gpu.Sensors)
+        {
+            // May crash the app when Value is null, better to check first
+            if (sensor.Value is null)
+                continue;
+
+            switch (sensor.SensorType)
+            {
+                case SensorType.Load:
+                    HandleGPU_Load(sensor);
+                    break;
+                case SensorType.Clock:
+                    HandleGPU_Clock(sensor);
+                    break;
+                case SensorType.Power:
+                    HandleGPU_Power(sensor);
+                    break;
+                case SensorType.Temperature:
+                    HandleGPU_Temp(sensor);
+                    break;
+                case SensorType.Data:
+                case SensorType.SmallData:
+                    HandleGPU_Data(sensor);
+                    break;
+            }
+        }
+    }
+
+    private void HandleGPU_Temp(ISensor sensor)
+    {
+        switch (sensor.Name)
+        {
+            case "GPU VR SoC":
+                GPUTemp = sensor.Value;
+                GPUTemperatureChanged?.Invoke(GPUTemp);
+                break;
+        }
+    }
+
+    private void HandleGPU_Load(ISensor sensor)
+    {
+        switch (sensor.Name)
+        {
+            case "D3D 3D":
+                GPULoad = sensor.Value;
+                GPULoadChanged?.Invoke(GPULoad);
+                break;
+        }
+    }
+
+    private void HandleGPU_Clock(ISensor sensor)
+    {
+        switch (sensor.Name)
+        {
+            case "GPU Core":
+                if (sensor.Value != GPUClock)
+                {
+                    GPUClock = sensor.Value;
+                    GPUClockChanged?.Invoke(GPUClock);
+                }
+                break;
+        }
+    }
+
+    private void HandleGPU_Power(ISensor sensor)
+    {
+        switch (sensor.Name)
+        {
+            case "GPU Core":
+                GPUPower = sensor.Value;
+                GPUPowerChanged?.Invoke(GPUPower);
+                break;
+        }
+    }
+
+
+    private void HandleGPU_Data(ISensor sensor)
+    {
+        switch (sensor.Name)
+        {
+            case "GPU Memory Used":
+                GPUMemory = sensor.Value;
+                GPUMemoryChanged?.Invoke(GPUMemory);
+                break;
+            case "GPU Memory Total":
+                GPUMemoryTotal = sensor.Value;
+                break;
+            case "D3D Dedicated Memory Used":
+                GPUMemoryDedicated = sensor.Value;
+                GPUMemoryDedicatedChanged?.Invoke(GPUMemoryDedicated);
+                break;
+            case "D3D Dedicated Memory Total":
+                GPUMemoryDedicatedTotal = sensor.Value;
+                break;
+            case "D3D Shared Memory Used":
+                GPUMemoryShared = sensor.Value;
+                GPUMemorySharedChanged?.Invoke(GPUMemoryShared);
+                break;
+            case "D3D Shared Memory Total":
+                GPUMemorySharedTotal = sensor.Value;
+                break;
+
+        }
+    }
+
+    #endregion
+
     #region CPU updates
+
+    public float? GetCPULoad() => computer?.IsCpuEnabled ?? false ? CPULoad : null;
+    public float? GetCPUPower() => computer?.IsCpuEnabled ?? false ? CPUPower : null;
+    public float? GetCPUTemperature() => computer?.IsCpuEnabled ?? false ? CPUTemp : null;
+    public float? GetCPUClock() => computer?.IsCpuEnabled ?? false ? CPUClock : null;
 
     private void HandleCPU(IHardware cpu)
     {
@@ -268,9 +449,8 @@ public class LibreHardware : IPlatform
         }
     }
 
-    private float HandleCPU_Temp(ISensor sensor)
+    private void HandleCPU_Temp(ISensor sensor)
     {
-        var prevTemp = CPUTemp ?? 0;
         switch (sensor.Name)
         {
             case "CPU Package":
@@ -280,110 +460,14 @@ public class LibreHardware : IPlatform
                 break;
         }
 
-        return (CPUTemp ?? 0f) - prevTemp;
-    }
-
-    #endregion
-
-    #region GPU updates
-
-    private void HandleGPU()
-    {
-        var gpu = GPUManager.GetCurrent();
-        if (gpu is null || !gpu.IsInitialized)
-            return;
-
-        if (gpu.HasLoad())
-            GPULoad = gpu.GetLoad();
-        if (gpu.HasClock())
-            GPUClock = gpu.GetClock();
-        if (gpu.HasPower())
-            GPUPower = gpu.GetPower();
-        if (gpu.HasTemperature())
-            GPUTemp = gpu.GetTemperature();
-        if (gpu.HasVRAMUsage())
-            GPUMemoryUsage = gpu.GetVRAMUsage();
-    }
-
-    private void HandleGPU(IHardware gpu)
-    {
-        foreach (var sensor in gpu.Sensors)
-        {
-            switch (sensor.SensorType)
-            {
-                case SensorType.Load:
-                    HandleGPU_Load(sensor);
-                    break;
-                case SensorType.Clock:
-                    HandleGPU_Clock(sensor);
-                    break;
-                case SensorType.Power:
-                    HandleGPU_Power(sensor);
-                    break;
-                case SensorType.Temperature:
-                    HandleGPU_Temp(sensor);
-                    break;
-                case SensorType.SmallData:
-                    HandleGPU_Data(sensor);
-                    break;
-            }
-        }
-    }
-
-    private void HandleGPU_Clock(ISensor sensor)
-    {
-        switch (sensor.Name)
-        {
-            case "GPU Core":
-                GPUClock = sensor.Value;
-                break;
-        }
-    }
-
-    private void HandleGPU_Temp(ISensor sensor)
-    {
-        switch (sensor.Name)
-        {
-            case "GPU VR SoC":
-                GPUTemp = sensor.Value;
-                break;
-        }
-    }
-
-    private void HandleGPU_Load(ISensor sensor)
-    {
-        switch (sensor.Name)
-        {
-            case "D3D 3D":
-                GPULoad = sensor.Value;
-                break;
-        }
-    }
-
-    private void HandleGPU_Power(ISensor sensor)
-    {
-        switch (sensor.Name)
-        {
-            case "GPU Core":
-                GPUPower = sensor.Value;
-                break;
-        }
-    }
-
-
-    private void HandleGPU_Data(ISensor sensor)
-    {
-        switch (sensor.Name)
-        {
-            case "D3D Dedicated Memory Used":
-                GPUMemoryUsage = sensor.Value;
-                break;
-        }
     }
 
     #endregion
 
     #region Memory updates
+    public float? GetMemoryUsage() => computer?.IsMemoryEnabled ?? false ? MemoryUsage : null;
+    public float? GetMemoryAvailable() => computer?.IsMemoryEnabled ?? false ? MemoryAvailable : null;
+    public float? GetMemoryTotal() => GetMemoryUsage() + GetMemoryAvailable();
 
     private void HandleMemory(IHardware cpu)
     {
@@ -407,13 +491,21 @@ public class LibreHardware : IPlatform
                 MemoryUsage = sensor.Value * 1024;
                 MemoryUsageChanged?.Invoke(MemoryUsage);
                 break;
+            case "Memory Available":
+                MemoryAvailable = sensor.Value;
+                MemoryAvailableChanged?.Invoke(MemoryAvailable);
+                break;
         }
     }
 
     #endregion
 
     #region Battery updates
-
+    public float? GetBatteryLevel() => computer?.IsBatteryEnabled ?? false ? BatteryCapacity : null;
+    public float? GetBatteryPower() => computer?.IsBatteryEnabled ?? false ? BatteryPower : null;
+    public TimeSpan? GetBatteryTimeSpan() => computer?.IsBatteryEnabled ?? false ? BatteryTimeSpan : null;
+    public float? GetBatteryHealth() => computer?.IsBatteryEnabled ?? false ? BatteryHealth : null;
+    public float? GetBatteryRemainingCapacity() => computer?.IsBatteryEnabled ?? false ? BatteryRemainingCapacity : null;
 
     private void GetBatteryStatus()
     {
@@ -496,10 +588,10 @@ public class LibreHardware : IPlatform
     private void RefreshBatteryHealth()
     {
         BatteryFullCapacity = null;
-        BatteryHealth = GetBatteryHealth() * 100f;
+        BatteryHealth = GetBatteryHealthInternal() * 100f;
     }
 
-    private float GetBatteryHealth()
+    private float GetBatteryHealthInternal()
     {
         if (BatteryDesignCapacity is null)
         {
@@ -518,8 +610,6 @@ public class LibreHardware : IPlatform
         return health;
     }
 
-
-
     private void ReadBatterySensors()
     {
         BatteryPower = 0f;
@@ -533,7 +623,7 @@ public class LibreHardware : IPlatform
         {
             var currentBatteryCapacity = (float)Math.Min(100, (decimal)BatteryRemainingCapacity / (decimal)BatteryFullCapacity * 100);
 
-            if (BatteryCapacity != -1f && BatteryCapacity != 100f && currentBatteryCapacity == 100f)
+            if (BatteryCapacity != null && BatteryCapacity != 100f && currentBatteryCapacity == 100f)
                 ToastManager.RunToast(
                     Properties.Resources.BatteryFullyCharged, ToastIcons.BatteryFull
                     );
@@ -547,7 +637,7 @@ public class LibreHardware : IPlatform
                     BatteryTimeSpan = TimeSpan.FromMinutes(((BatteryFullCapacity / 1000 - BatteryRemainingCapacity / 1000) / BatteryPower).Value * 60d);
                 else
                     BatteryTimeSpan = TimeSpan.FromMinutes((BatteryRemainingCapacity / 1000 / BatteryPower).Value * 60d * -1);
-                BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
+                BatteryTimeSpanChanged?.Invoke((float)BatteryTimeSpan.TotalMinutes);
             }
         }
     }
@@ -592,7 +682,7 @@ public class LibreHardware : IPlatform
                     BatteryTimeSpan = TimeSpan.FromMinutes(((BatteryFullCapacity / 1000 - BatteryRemainingCapacity / 1000) / BatteryPower).Value * 60d);
                 else
                     BatteryTimeSpan = TimeSpan.FromMinutes((BatteryRemainingCapacity / 1000 / BatteryPower).Value * 60d * -1);
-                BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
+                BatteryTimeSpanChanged?.Invoke((float)BatteryTimeSpan.TotalMinutes);
             }
         }
 
@@ -631,7 +721,7 @@ public class LibreHardware : IPlatform
         {
             case "Remaining Time (Estimated)":
                 BatteryTimeSpan = TimeSpan.FromMinutes(sensor.Value ?? 0d / 60d);
-                BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
+                BatteryTimeSpanChanged?.Invoke((float)BatteryTimeSpan.TotalMinutes);
                 break;
         }
     }
@@ -656,14 +746,23 @@ public class LibreHardware : IPlatform
 
     #region Events
 
-    public delegate void ChangedHandler(object? value);
+    public delegate void ChangedHandler(float? value);
 
     public event ChangedHandler CPULoadChanged;
     public event ChangedHandler CPUPowerChanged;
     public event ChangedHandler CPUClockChanged;
     public event ChangedHandler CPUTemperatureChanged;
 
+    public event ChangedHandler GPULoadChanged;
+    public event ChangedHandler GPUPowerChanged;
+    public event ChangedHandler GPUClockChanged;
+    public event ChangedHandler GPUTemperatureChanged;
+    public event ChangedHandler GPUMemoryChanged;
+    public event ChangedHandler GPUMemoryDedicatedChanged;
+    public event ChangedHandler GPUMemorySharedChanged;
+
     public event ChangedHandler MemoryUsageChanged;
+    public event ChangedHandler MemoryAvailableChanged;
 
     public event ChangedHandler BatteryLevelChanged;
     public event ChangedHandler BatteryPowerChanged;

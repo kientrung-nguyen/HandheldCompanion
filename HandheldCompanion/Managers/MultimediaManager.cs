@@ -17,18 +17,12 @@ namespace HandheldCompanion.Managers;
 
 public class MultimediaManager : IManager
 {
+    private readonly bool VolumeSupport;
+    private readonly bool MicrophoneSupport;
+    private readonly bool BrightnessSupport;
+    private readonly bool NightLightSupport;
 
-    private static ScreenRotation screenOrientation;
-
-    private static readonly bool VolumeSupport;
-    private static readonly bool MicrophoneSupport;
-    private static readonly bool BrightnessSupport;
-
-    private static readonly bool NightLightSupport;
-
-    public static bool IsInitialized;
-
-    static MultimediaManager()
+    public MultimediaManager()
     {
         VolumeSupport = SoundControl.AudioGet() != -1;
         MicrophoneSupport = SoundControl.MicrophoneGet() != -1;
@@ -68,7 +62,8 @@ public class MultimediaManager : IManager
         }
 
         LogManager.LogInformation("{0} has started", nameof(MultimediaManager));
-        return;
+        
+        base.Start();
     }
 
 
@@ -88,19 +83,22 @@ public class MultimediaManager : IManager
 
     public override void Stop()
     {
-        if (!IsInitialized)
+        if (Status.HasFlag(ManagerStatus.Halting) || Status.HasFlag(ManagerStatus.Halted))
             return;
 
+        base.PrepareStop();
+		
         ScreenBrightness.Unsubscribe();
         SoundControl.Unsubscribe();
         NightLight.Unsubscribe();
         ScreenControl.Unsubscribe();
+		
+        // manage events
+        SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
         ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
         ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
-        SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
 
-        IsInitialized = false;
-
+        base.Stop();
         LogManager.LogInformation("{0} has stopped", "SystemManager");
     }
 
@@ -114,7 +112,7 @@ public class MultimediaManager : IManager
 
 
         LogManager.LogError($"Detect primary display {_primaryDisplay.ToPathDisplayTarget().FriendlyName}");
-        if (ScreenControl.PrimaryDisplay is null || !ScreenControl.PrimaryDisplay.ToPathDisplayTarget().FriendlyName.Equals(_primaryDisplay.ToPathDisplayTarget().FriendlyName))
+        if (ScreenControl.PrimaryDisplay is null || !ScreenControl.PrimaryDisplay.ToPathDisplayTarget().FriendlyName.Equals(_primaryDisplay.ToPathDisplayTarget().FriendlyName, StringComparison.OrdinalIgnoreCase))
             PrimaryScreenChanged?.Invoke(_primaryDisplay);
 
         ScreenControl.PrimaryDisplay = _primaryDisplay;
@@ -135,24 +133,7 @@ public class MultimediaManager : IManager
 
     private void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
     {
-        switch (name)
-        {
-            case "NativeDisplayOrientation":
-                {
-                    ScreenRotation.Rotations nativeOrientation = (ScreenRotation.Rotations)Convert.ToInt32(value);
-
-                    if (!IsInitialized)
-                        return;
-
-                    ScreenRotation.Rotations oldOrientation = screenOrientation.rotation;
-                    screenOrientation = new ScreenRotation(screenOrientation.rotationUnnormalized, nativeOrientation);
-
-                    // Though the real orientation didn't change, raise event because the interpretation of it changed
-                    if (oldOrientation != screenOrientation.rotation)
-                        DisplayOrientationChanged?.Invoke(screenOrientation);
-                }
-                break;
-        }
+        
     }
 
     private void NightLightNotificationEventArrived(object? sender, RegistryChangedEventArgs e)
@@ -171,7 +152,7 @@ public class MultimediaManager : IManager
         BrightnessNotification?.Invoke(brightness);
     }
 
-    public string GetDisplayFriendlyName(string DeviceName)
+    public static string GetDisplayFriendlyName(string DeviceName)
     {
         string friendlyName = string.Empty;
 
@@ -191,9 +172,13 @@ public class MultimediaManager : IManager
     {
         string DevicePath = string.Empty;
 
+        try
+        {
         Display? PrimaryDisplay = Display.GetDisplays().Where(display => display.DisplayName.Equals(DeviceName)).FirstOrDefault();
         if (PrimaryDisplay is not null)
             DevicePath = PrimaryDisplay.DevicePath;
+        }
+        catch { }
 
         return DevicePath;
     }
@@ -205,11 +190,6 @@ public class MultimediaManager : IManager
         return PrimaryTarget;
     }
 
-    public static ScreenRotation GetScreenOrientation()
-    {
-        return screenOrientation;
-    }
-
     public static DisplayDevice GetDisplay(string DeviceName)
     {
         DisplayDevice dm = new DisplayDevice();
@@ -218,7 +198,7 @@ public class MultimediaManager : IManager
         return dm;
     }
 
-    public static void PlayWindowsMedia(string file)
+    public void PlayWindowsMedia(string file)
     {
         bool Enabled = ManagerFactory.settingsManager.Get<bool>("UISounds");
         if (!Enabled)
@@ -231,7 +211,7 @@ public class MultimediaManager : IManager
 
     public bool HasVolumeSupport()
     {
-        return VolumeSupport && MicrophoneSupport;
+        return VolumeSupport;
     }
 
     public float AdjustVolume(int delta)
@@ -274,7 +254,7 @@ public class MultimediaManager : IManager
         return brightness;
     }
 
-    public static void SetBrightness(double brightness)
+    public void SetBrightness(double brightness)
     {
         if (!BrightnessSupport)
             return;
@@ -371,9 +351,6 @@ public class MultimediaManager : IManager
 
     public event ScreenDisconnectedEventHandler ScreenDisconnected;
     public delegate void ScreenDisconnectedEventHandler(Display screen);
-
-    public event DisplayOrientationChangedEventHandler DisplayOrientationChanged;
-    public delegate void DisplayOrientationChangedEventHandler(ScreenRotation rotation);
 
     public event VolumeNotificationEventHandler VolumeNotification;
     public delegate void VolumeNotificationEventHandler(SoundDirections flow, float volume, bool isMute);

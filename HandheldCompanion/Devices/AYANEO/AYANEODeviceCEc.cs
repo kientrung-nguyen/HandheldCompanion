@@ -1,8 +1,11 @@
 ﻿using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
 using System.Windows.Media;
+using Windows.System.Power;
 using WindowsInput.Events;
 using static HandheldCompanion.Utils.DeviceUtils;
 
@@ -23,9 +26,14 @@ namespace HandheldCompanion.Devices.AYANEO
 
         public AYANEODeviceCEc()
         {
+            // device specific capacities
             this.Capabilities |= DeviceCapabilities.FanControl;
             this.Capabilities |= DeviceCapabilities.DynamicLighting;
             this.Capabilities |= DeviceCapabilities.DynamicLightingBrightness;
+            this.Capabilities |= DeviceCapabilities.BatteryChargeLimit;
+            this.Capabilities |= DeviceCapabilities.BatteryChargeLimitPercent;
+
+            // dynamic lighting capacities
             this.DynamicLightingCapabilities = LEDLevel.SolidColor;
 
             this.ECDetails = new ECDetails
@@ -78,12 +86,32 @@ namespace HandheldCompanion.Devices.AYANEO
 
         public override bool Open()
         {
-            if (!base.Open()) return false;
+            bool success = base.Open();
+            if (!success)
+                return false;
+
             lock (this.updateLock)
             {
                 this.CEcControl_RgbHoldControl();
             }
+
             return true;
+        }
+
+        public override void OpenEvents()
+        {
+            base.OpenEvents();
+
+            // manage events
+            PowerManager.RemainingChargePercentChanged += PowerManager_RemainingChargePercentChanged;
+        }
+
+        protected override void QuerySettings()
+        {
+            // raise events
+            SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.Get<string>("BatteryChargeLimit"), false);
+
+            base.QuerySettings();
         }
 
         public override void Close()
@@ -92,7 +120,56 @@ namespace HandheldCompanion.Devices.AYANEO
             {
                 this.CEcControl_RgbReleaseControl();
             }
+
+            PowerManager.RemainingChargePercentChanged -= PowerManager_RemainingChargePercentChanged;
+
             base.Close();
+        }
+
+        protected override void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
+        {
+            switch (name)
+            {
+                case "BatteryChargeLimit":
+                    {
+                        bool enabled = Convert.ToBoolean(value);
+                        switch (enabled)
+                        {
+                            case true:
+                                CEcControl_BypassChargeOpen();
+                                break;
+                            case false:
+                                CEcControl_BypassChargeClose();
+                                break;
+                        }
+                    }
+                    break;
+            }
+
+            base.SettingsManager_SettingValueChanged(name, value, temporary);
+        }
+
+        private void PowerManager_RemainingChargePercentChanged(object? sender, object e)
+        {
+            // Check if BatteryChargeLimit is enabled in SettingsManager
+            bool isBatteryChargeLimitEnabled = ManagerFactory.settingsManager.Get<bool>("BatteryChargeLimit");
+            if (!isBatteryChargeLimitEnabled)
+                return;
+
+            int BatteryChargeLimit = ManagerFactory.settingsManager.Get<int>("BatteryChargeLimitPercent");
+
+            // Get the current battery percentage
+            int batteryPercentage = PowerManager.RemainingChargePercent;
+            if (batteryPercentage >= BatteryChargeLimit)
+            {
+                // Call the function to open the charge bypass
+                CEcControl_BypassChargeOpen();
+            }
+            else if (batteryPercentage < BatteryChargeLimit)
+            {
+                // Call the function to close the charge bypass
+                CEcControl_BypassChargeClose();
+            }
         }
 
         public override bool SetLedStatus(bool status)
@@ -238,6 +315,18 @@ namespace HandheldCompanion.Devices.AYANEO
         protected virtual void CEcControl_RgbReleaseControl()
         {
             this.ECRAMWrite(0xbf, 0x00);
+        }
+
+        protected virtual void CEcControl_BypassChargeOpen()
+        {
+            if (this.ECRamReadByte(0x1e) != 0x55)
+                this.ECRAMWrite(0x1e, 0x55);
+        }
+
+        protected virtual void CEcControl_BypassChargeClose()
+        {
+            if (this.ECRamReadByte(0x1e) != 0xaa)
+                this.ECRAMWrite(0x1e, 0xaa);
         }
     }
 }

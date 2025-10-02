@@ -8,6 +8,9 @@ namespace HandheldCompanion.Misc
     [Serializable]
     public class PowerProfile
     {
+        public static Guid DefaultAC = new("00000000-0000-0000-0000-010000000000");
+        public static Guid DefaultDC = new("00000000-0000-0000-0000-000000000000");
+
         public string Name;
         public string Description;
 
@@ -51,17 +54,19 @@ namespace HandheldCompanion.Misc
         public int OEMPowerMode { get; set; } = 0xFF;
         public Guid OSPowerMode { get; set; } = Managers.OSPowerMode.BetterPerformance;
 
-        public PowerProfile()
-        { }
+        public PowerProfile() { }
 
-        public PowerProfile(string name, string description)
+        public PowerProfile(string name, string description, string fileName = "")
         {
             Name = name;
             Description = description;
 
+            if (fileName.Length == 0)
+                fileName = name;
+
             // Remove any invalid characters from the input
             string invalidChars = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
-            string output = Regex.Replace(name, "[" + invalidChars + "]", string.Empty);
+            string output = Regex.Replace(fileName, "[" + invalidChars + "]", string.Empty);
             output = output.Trim();
 
             FileName = output;
@@ -74,7 +79,7 @@ namespace HandheldCompanion.Misc
 
         public bool IsDefault()
         {
-            return Default;
+            return Default/* && Guid == Guid.Empty*/;
         }
 
         public bool IsDeviceDefault()

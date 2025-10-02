@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Helpers;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
@@ -24,20 +25,23 @@ public partial class QuickHomePage : Page
     {
         this.Tag = Tag;
 
-        MultimediaManager.VolumeNotification += MultimediaManager_VolumeNotification;
-        MultimediaManager.BrightnessNotification += MultimediaManager_BrightnessNotification;
-        MultimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
-        MultimediaManager.Initialized += MultimediaManager_Initialized;
+        ManagerFactory.multimediaManager.VolumeNotification += MultimediaManager_VolumeNotification;
+        ManagerFactory.multimediaManager.BrightnessNotification += MultimediaManager_BrightnessNotification;
+        ManagerFactory.multimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
+        ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
 
-        VolumeSupport.IsEnabled = MultimediaManager.HasVolumeSupport();
-        BrightnessSupport.IsEnabled = MultimediaManager.HasBrightnessSupport();
-        NightLightSupport.IsEnabled = MultimediaManager.HasNightLightSupport();
-        GPUManager.Hooked += GPUManager_Hooked;
+        VolumeSupport.IsEnabled = ManagerFactory.multimediaManager.HasVolumeSupport();
+        SliderBrightness.IsEnabled = ManagerFactory.multimediaManager.HasBrightnessSupport();
+        BrightnessButton.IsEnabled = ManagerFactory.multimediaManager.HasNightLightSupport();
     }
-
-    private void GPUManager_Hooked(GraphicsProcessingUnit.GPU GPU)
+	
+	public void Close()
     {
-        // do something
+        // manage events
+        ManagerFactory.multimediaManager.VolumeNotification -= MultimediaManager_VolumeNotification;
+        ManagerFactory.multimediaManager.BrightnessNotification -= MultimediaManager_BrightnessNotification;
+        ManagerFactory.multimediaManager.NightLightNotification -= MultimediaManager_NightLightNotification;
+        ManagerFactory.multimediaManager.Initialized -= MultimediaManager_Initialized;
     }
 
     public QuickHomePage()
@@ -49,17 +53,17 @@ public partial class QuickHomePage : Page
     private void QuickButton_Click(object sender, RoutedEventArgs e)
     {
         Button button = (Button)sender;
-        MainWindow.overlayquickTools.NavView_Navigate(button.Name);
+        OverlayQuickTools.GetCurrent().NavigateToPage(button.Name);
     }
 
     private void MultimediaManager_Initialized()
     {
-        if (MultimediaManager.HasBrightnessSupport())
+        if (ManagerFactory.multimediaManager.HasBrightnessSupport())
         {
             lock (brightnessLock)
             {
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     SliderBrightness.IsEnabled = true;
                     SliderBrightness.Value = ScreenBrightness.Get();
@@ -67,7 +71,7 @@ public partial class QuickHomePage : Page
             }
         }
 
-        if (MultimediaManager.HasNightLightSupport())
+        if (ManagerFactory.multimediaManager.HasNightLightSupport())
         {
             lock (brightnessLock)
             {
@@ -79,12 +83,12 @@ public partial class QuickHomePage : Page
             }
         }
 
-        if (MultimediaManager.HasVolumeSupport())
+        if (ManagerFactory.multimediaManager.HasVolumeSupport())
         {
             lock (volumeLock)
             {
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     SliderVolume.IsEnabled = true;
                     SliderVolume.Value = SoundControl.AudioGet();
@@ -129,12 +133,13 @@ public partial class QuickHomePage : Page
             try
             {
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     if (SliderBrightness.Value != brightness)
                         SliderBrightness.Value = brightness;
                 });
             }
+            catch { }
             finally
             {
                 brightnessLock.Exit();
@@ -152,7 +157,7 @@ public partial class QuickHomePage : Page
                     try
                     {
                         // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                         {
                             UpdateVolumeIcon(volume, isMute);
                             SliderVolume.Value = Math.Round(volume);
@@ -175,6 +180,7 @@ public partial class QuickHomePage : Page
                             MicIcon.Glyph = isMute ? "\uf781" : "\ue720";
                         });
                     }
+            catch { }
                     finally
                     {
                         microphoneLock.Exit();
@@ -195,7 +201,7 @@ public partial class QuickHomePage : Page
             return;
 
         lock (brightnessLock)
-            MultimediaManager.SetBrightness(SliderBrightness.Value);
+            ManagerFactory.multimediaManager.SetBrightness(SliderBrightness.Value);
     }
 
     private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -208,7 +214,7 @@ public partial class QuickHomePage : Page
             return;
 
         lock (volumeLock)
-            MultimediaManager.SetVolume(SliderVolume.Value);
+            ManagerFactory.multimediaManager.SetVolume(SliderVolume.Value);
     }
 
     private void UpdateVolumeIcon(float volume, bool mute = false)
@@ -230,7 +236,7 @@ public partial class QuickHomePage : Page
             try
             {
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     var isMute = SoundControl.ToggleAudio();
                     UpdateVolumeIcon(SoundControl.AudioGet(), isMute ?? true);
@@ -240,23 +246,27 @@ public partial class QuickHomePage : Page
                             isMute.Value ? ToastIcons.VolumeMute : ToastIcons.Volume);
                 });
             }
+            catch { }
             finally
             {
                 volumeLock.Exit();
             }
         }
-
     }
 
 
     private void MicButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!IsLoaded)
+            return;
+
+        // prevent update loop
         if (microphoneLock.TryEnter())
         {
             try
             {
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     var isMute = SoundControl.ToggleMicrophone();
                     MicIcon.Glyph = (isMute ?? true) ? "\uf781" : "\ue720";
@@ -275,12 +285,16 @@ public partial class QuickHomePage : Page
 
     private void BrightnessButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!IsLoaded)
+            return;
+
+        // prevent update loop
         if (nightlightLock.TryEnter())
         {
             try
             {
                 // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     var isEnabled = NightLight.Toggle();
                     if (isEnabled is not null)

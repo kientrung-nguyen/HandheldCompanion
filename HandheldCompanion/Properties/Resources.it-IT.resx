@@ -223,109 +223,109 @@
   <data name="ControllerPage_VibrationStrength" xml:space="preserve">
     <value>Intensità vibrazione</value>
   </data>
-  <data name="ControllerPage_VibrationStrengthExpl" xml:space="preserve">
+  <data name="ControllerPage_VibrationStrengthDesc" xml:space="preserve">
     <value>Cambia l'intensità della vibrazione del controller</value>
   </data>
-  <data name="InputsHotkey_decreaseTDP" xml:space="preserve">
+  <data name="Hotkey_decreaseTDP" xml:space="preserve">
     <value>Riduci limite di potenza termica (TDP)</value>
   </data>
-  <data name="InputsHotkey_decreaseTDPDesc" xml:space="preserve">
+  <data name="Hotkey_decreaseTDPDesc" xml:space="preserve">
     <value>Riduci il TDP del sistema o del profilo correntemente applicato di un watt</value>
   </data>
-  <data name="InputsHotkey_fallbackInput" xml:space="preserve">
+  <data name="Hotkey_fallbackInput" xml:space="preserve">
     <value>Premi per definire il trigger</value>
   </data>
-  <data name="InputsHotkey_fallbackOutput" xml:space="preserve">
+  <data name="Hotkey_fallbackOutput" xml:space="preserve">
     <value>Premi per definire l'output della tastiera</value>
   </data>
-  <data name="InputsHotkey_increaseTDP" xml:space="preserve">
+  <data name="Hotkey_increaseTDP" xml:space="preserve">
     <value>Aumenta limite di potenza termica (TDP)</value>
   </data>
-  <data name="InputsHotkey_increaseTDPDesc" xml:space="preserve">
+  <data name="Hotkey_increaseTDPDesc" xml:space="preserve">
     <value>Aumenta il TDP del sistema o del profilo correntemente applicato di un watt</value>
   </data>
-  <data name="InputsHotkey_overlayGamepad" xml:space="preserve">
+  <data name="Hotkey_overlayGamepad" xml:space="preserve">
     <value>Mostra controller 3D</value>
   </data>
-  <data name="InputsHotkey_overlayGamepadDesc" xml:space="preserve">
+  <data name="Hotkey_overlayGamepadDesc" xml:space="preserve">
     <value>Cambia l'hotkey del controller 3D premendo un pulsante o un tasto speciale</value>
   </data>
-  <data name="InputsHotkey_overlayTrackpads" xml:space="preserve">
+  <data name="Hotkey_overlayTrackpads" xml:space="preserve">
     <value>Mostra trackpad virtuali</value>
   </data>
-  <data name="InputsHotkey_overlayTrackpadsDesc" xml:space="preserve">
+  <data name="Hotkey_overlayTrackpadsDesc" xml:space="preserve">
     <value>Cambia l'hotkey premendo un pulsante o un tasto speciale</value>
   </data>
-  <data name="InputsHotkey_quickTools" xml:space="preserve">
+  <data name="Hotkey_quickTools" xml:space="preserve">
     <value>Richiama finestra strumenti rapidi</value>
   </data>
-  <data name="InputsHotkey_quickToolsDesc" xml:space="preserve">
+  <data name="Hotkey_quickToolsDesc" xml:space="preserve">
     <value>Cambia l'hotkey premendo un pulsante o un tasto speciale</value>
   </data>
-  <data name="InputsHotkey_shortcutCustom" xml:space="preserve">
+  <data name="Hotkey_Custom" xml:space="preserve">
     <value>Scorciatoia personalizzata</value>
   </data>
-  <data name="InputsHotkey_shortcutCustomDesc" xml:space="preserve">
+  <data name="Hotkey_CustomDesc" xml:space="preserve">
     <value>Cambia l'hotkey premendo un pulsante o un tasto speciale</value>
   </data>
-  <data name="InputsHotkey_shortcutDesktop" xml:space="preserve">
+  <data name="Hotkey_Desktop" xml:space="preserve">
     <value>Mostra e nascondi il desktop</value>
   </data>
-  <data name="InputsHotkey_shortcutDesktopDesc" xml:space="preserve">
+  <data name="Hotkey_DesktopDesc" xml:space="preserve">
     <value>Premi questa combinazione di tasti: Windows + D</value>
   </data>
-  <data name="InputsHotkey_shortcutESC" xml:space="preserve">
+  <data name="Hotkey_ESC" xml:space="preserve">
     <value>Tasto Escape</value>
   </data>
-  <data name="InputsHotkey_shortcutESCDesc" xml:space="preserve">
+  <data name="Hotkey_ESCDesc" xml:space="preserve">
     <value>Premi questo tasto: Escape</value>
   </data>
-  <data name="InputsHotkey_shortcutExpand" xml:space="preserve">
+  <data name="Hotkey_Expand" xml:space="preserve">
     <value>Passa da finestra a schermo intero</value>
   </data>
-  <data name="InputsHotkey_shortcutExpandDesc" xml:space="preserve">
+  <data name="Hotkey_ExpandDesc" xml:space="preserve">
     <value>Premi questa combinazione di tasti: Alt + Enter</value>
   </data>
-  <data name="InputsHotkey_shortcutGuide" xml:space="preserve">
+  <data name="Hotkey_Guide" xml:space="preserve">
     <value>Pulsante Guide o PS</value>
   </data>
-  <data name="InputsHotkey_shortcutGuideDesc" xml:space="preserve">
+  <data name="Hotkey_GuideDesc" xml:space="preserve">
     <value>Simula l'input di un pulsante Guide di Xbox o PS di Sony</value>
   </data>
-  <data name="InputsHotkey_shortcutKeyboard" xml:space="preserve">
+  <data name="Hotkey_Keyboard" xml:space="preserve">
     <value>Mostra tastiera touch</value>
   </data>
-  <data name="InputsHotkey_shortcutKeyboardDesc" xml:space="preserve">
+  <data name="Hotkey_KeyboardDesc" xml:space="preserve">
     <value>Cambia l'hotkey premendo un pulsante o un tasto speciale</value>
   </data>
-  <data name="InputsHotkey_shortcutKillApp" xml:space="preserve">
+  <data name="Hotkey_KillApp" xml:space="preserve">
     <value>Forza la chiusura dell'applicazione</value>
   </data>
-  <data name="InputsHotkey_shortcutKillAppDesc" xml:space="preserve">
+  <data name="Hotkey_KillAppDesc" xml:space="preserve">
     <value>Cambia l'hotkey premendo un pulsante o un tasto speciale</value>
   </data>
-  <data name="InputsHotkey_shortcutMainwindow" xml:space="preserve">
+  <data name="Hotkey_Mainwindow" xml:space="preserve">
     <value>Mostra e nascondi finestra principale</value>
   </data>
-  <data name="InputsHotkey_shortcutMainwindowDesc" xml:space="preserve">
+  <data name="Hotkey_MainwindowDesc" xml:space="preserve">
     <value>Cambia l'hotkey premendo un pulsante o un tasto speciale</value>
   </data>
-  <data name="InputsHotkey_shortcutTaskManager" xml:space="preserve">
+  <data name="Hotkey_TaskManager" xml:space="preserve">
     <value>Apri Task Manager</value>
   </data>
-  <data name="InputsHotkey_shortcutTaskManagerDesc" xml:space="preserve">
+  <data name="Hotkey_TaskManagerDesc" xml:space="preserve">
     <value>Premi questa combinazione di tasti: Ctrl + Shift + Esc</value>
   </data>
-  <data name="InputsHotkey_shortcutTaskview" xml:space="preserve">
+  <data name="Hotkey_Taskview" xml:space="preserve">
     <value>Apri visualizzazione attività</value>
   </data>
-  <data name="InputsHotkey_shortcutTaskviewDesc" xml:space="preserve">
+  <data name="Hotkey_TaskviewDesc" xml:space="preserve">
     <value>Premi questa combinazione di tasti: Windows + Tab</value>
   </data>
-  <data name="InputsHotkey_suspendResumeTask" xml:space="preserve">
+  <data name="Hotkey_suspendResumeTask" xml:space="preserve">
     <value>Attiva/disattiva sospensione</value>
   </data>
-  <data name="InputsHotkey_suspendResumeTaskDesc" xml:space="preserve">
+  <data name="Hotkey_suspendResumeTaskDesc" xml:space="preserve">
     <value>Sospendi o riprendi l'applicazione in primo piano</value>
   </data>
   <data name="MainWindow_HandheldCompanion" xml:space="preserve">
@@ -538,21 +538,6 @@
   <data name="SettingsMode0_CustomResponsePresetPrecise" xml:space="preserve">
     <value>Preciso</value>
   </data>
-  <data name="SettingsMode0_FlickDuration" xml:space="preserve">
-    <value>Durata flick</value>
-  </data>
-  <data name="SettingsMode0_FlickDurationDesc" xml:space="preserve">
-    <value>Cambia la durata del flick, calibra per una rotazione di 180 gradi, in millisecondi</value>
-  </data>
-  <data name="SettingsMode0_FlickStick" xml:space="preserve">
-    <value>Flick stick (sperimentale)</value>
-  </data>
-  <data name="SettingsMode0_FlickStickDesc" xml:space="preserve">
-    <value>Punta la fotocamera nella direzione del flick del joystick (destro), ruota la fotocamera esclusivamente nel piano orizzontale ruotando</value>
-  </data>
-  <data name="SettingsMode0_FlickStickEnable" xml:space="preserve">
-    <value>Abilita flick stick</value>
-  </data>
   <data name="SettingsMode0_Sensitivity" xml:space="preserve">
     <value>Sensibilità</value>
   </data>
@@ -701,7 +686,7 @@
     <value>Power preset</value>
   </data>
   <data name="ProfilesPage_PowerPresetDesc" xml:space="preserve">
-    <value>Change the selected power preset</value>
+    <value>Optimize your device based on power use and performance</value>
   </data>
   <data name="ProfilesPage_ProfileDetails" xml:space="preserve">
     <value>Dettagli profilo</value>
@@ -913,10 +898,10 @@
   <data name="SettingsPage_CloseMinimizesDesc" xml:space="preserve">
     <value>L'applicazione verrà ridotta a icona invece di essere chiusa</value>
   </data>
-  <data name="SettingsPage_EnableDesktopProfileOnStart" xml:space="preserve">
+  <data name="SettingsPage_EnableDesktopLayoutOnStart" xml:space="preserve">
     <value>Abilita il profilo desktop all'avvio</value>
   </data>
-  <data name="SettingsPage_EnableDesktopProfileOnStartDesc" xml:space="preserve">
+  <data name="SettingsPage_EnableDesktopLayoutOnStartDesc" xml:space="preserve">
     <value>Il profilo desktop verrà abilitato automaticamente all'avvio dell'applicazione</value>
   </data>
   <data name="SettingsPage_Download" xml:space="preserve">
@@ -1001,7 +986,7 @@
     <value>Sovrascrittura dell'intervallo di potenza configurabile (cTDP)</value>
   </data>
   <data name="SettingsPage_TDPRangeOverrideDesc" xml:space="preserve">
-    <value>Consente di modificare i valori di potenza minima e massima (TDP) al di là delle specifiche della CPU</value>
+    <value>Consente di modificare i valori TDP minimo e massimo oltre le raccomandazioni del produttore originale</value>
   </data>
   <data name="SettingsPage_ThemeDark" xml:space="preserve">
     <value>Scuro</value>
@@ -1044,12 +1029,6 @@
   </data>
   <data name="WarningElevated" xml:space="preserve">
     <value>Esegui questo strumento come amministratore per sbloccare queste impostazioni</value>
-  </data>
-  <data name="ControllerPage_SteamControllerMute" xml:space="preserve">
-    <value>Silenzia il controller virtuale</value>
-  </data>
-  <data name="ControllerPage_SteamControllerMuteDesc" xml:space="preserve">
-    <value>Silenzia il controller virtuale nelle applicazioni correlate a Steam</value>
   </data>
   <data name="ProfilesPage_ControllerSettings" xml:space="preserve">
     <value>Impostazioni del controller</value>
@@ -1102,56 +1081,53 @@
   <data name="ControllerPage_VibrateDeviceDesc" xml:space="preserve">
     <value>Fai vibrare il controller fisico quando è collegato</value>
   </data>
-  <data name="InputsHotkey_DesktopLayoutEnabled" xml:space="preserve">
-    <value>Layout desktop</value>
+  <data name="Hotkey_LayoutMode" xml:space="preserve">
+    <value>Controller mode</value>
   </data>
-  <data name="InputsHotkey_DesktopLayoutEnabledDesc" xml:space="preserve">
-    <value>Passa al layout del controller desktop</value>
+  <data name="Hotkey_LayoutModeDesc" xml:space="preserve">
+    <value>Change controller mode: Auto, Gamepad or Desktop</value>
   </data>
-  <data name="InputsHotkey_shortcutControlCenter" xml:space="preserve">
+  <data name="Hotkey_ControlCenter" xml:space="preserve">
     <value>Mostra Centro notifiche</value>
   </data>
-  <data name="InputsHotkey_shortcutControlCenterDesc" xml:space="preserve">
+  <data name="Hotkey_ControlCenterDesc" xml:space="preserve">
     <value>Mostra e nasconde il Centro notifiche di Windows</value>
   </data>
   <data name="ProfilesPage_ControllerLayout" xml:space="preserve">
     <value>Layout del controller</value>
   </data>
-  <data name="InputsHotkey_QuietModeToggled" xml:space="preserve">
+  <data name="Hotkey_QuietModeToggled" xml:space="preserve">
     <value>Sovrascrittura ventola</value>
   </data>
-  <data name="InputsHotkey_QuietModeToggledDesc" xml:space="preserve">
+  <data name="Hotkey_QuietModeToggledDesc" xml:space="preserve">
     <value>Imposta il ciclo di dovere della ventola su un valore definito dall'utente</value>
   </data>
-  <data name="InputsHotkey_OnScreenDisplay" xml:space="preserve">
-    <value>Visualizzazione a schermo</value>
-  </data>
-  <data name="InputsHotkey_OnScreenDisplayDesc" xml:space="preserve">
+  <data name="Hotkey_OnScreenDisplayDesc" xml:space="preserve">
     <value>Abilita il supporto per la visualizzazione a schermo</value>
   </data>
-  <data name="InputsHotkey_decreaseBrightness" xml:space="preserve">
+  <data name="Hotkey_decreaseBrightness" xml:space="preserve">
     <value>Riduci luminosità</value>
   </data>
-  <data name="InputsHotkey_decreaseBrightnessDesc" xml:space="preserve">
-    <value>Riduci la luminosità corrente del display del 5%</value>
+  <data name="Hotkey_decreaseBrightnessDesc" xml:space="preserve">
+    <value>Riduci la luminosità corrente del display del 2%</value>
   </data>
-  <data name="InputsHotkey_decreaseVolume" xml:space="preserve">
+  <data name="Hotkey_decreaseVolume" xml:space="preserve">
     <value>Riduci volume</value>
   </data>
-  <data name="InputsHotkey_decreaseVolumeDesc" xml:space="preserve">
-    <value>Riduci il volume del sistema del 5%</value>
+  <data name="Hotkey_decreaseVolumeDesc" xml:space="preserve">
+    <value>Riduci il volume del sistema del 2%</value>
   </data>
-  <data name="InputsHotkey_increaseBrightness" xml:space="preserve">
+  <data name="Hotkey_increaseBrightness" xml:space="preserve">
     <value>Aumenta luminosità</value>
   </data>
-  <data name="InputsHotkey_increaseBrightnessDesc" xml:space="preserve">
-    <value>Increase the current display brightness by 5%</value>
+  <data name="Hotkey_increaseBrightnessDesc" xml:space="preserve">
+    <value>Increase the current display brightness by 2%</value>
   </data>
-  <data name="InputsHotkey_increaseVolume" xml:space="preserve">
+  <data name="Hotkey_increaseVolume" xml:space="preserve">
     <value>Aumenta volume</value>
   </data>
-  <data name="InputsHotkey_increaseVolumeDesc" xml:space="preserve">
-    <value>Aumenta il volume del sistema del 5%</value>
+  <data name="Hotkey_increaseVolumeDesc" xml:space="preserve">
+    <value>Aumenta il volume del sistema del 2%</value>
   </data>
   <data name="ProfilesPage_AutoTDP" xml:space="preserve">
     <value>TDP automatico</value>
@@ -1192,10 +1168,10 @@
   <data name="ProfilesPage_FramerateLimitDesc" xml:space="preserve">
     <value>Limita il framerate per le applicazioni 3D</value>
   </data>
-  <data name="InputsHotkey_shortcutPrintScreen" xml:space="preserve">
+  <data name="Hotkey_PrintScreen" xml:space="preserve">
     <value>Apri strumento di cattura</value>
   </data>
-  <data name="InputsHotkey_shortcutPrintScreenDesc" xml:space="preserve">
+  <data name="Hotkey_PrintScreenDesc" xml:space="preserve">
     <value>Premi questi tasti: Windows + Shift + S</value>
   </data>
   <data name="MainWindow_navHotkeys" xml:space="preserve">
@@ -1273,30 +1249,6 @@
   <data name="Dialog_ForceRestartTitle" xml:space="preserve">
     <value>Restart required</value>
   </data>
-  <data name="SettingsPage_ControllerManagementDependencyPrimary" xml:space="preserve">
-    <value>Yes</value>
-  </data>
-  <data name="SettingsPage_ControllerManagementDependencySecondary" xml:space="preserve">
-    <value>No</value>
-  </data>
-  <data name="SettingsPage_ControllerManagementDependencyText" xml:space="preserve">
-    <value>Disabling this setting will also disable "Improve virtual controller detection". Do you want to continue?</value>
-  </data>
-  <data name="SettingsPage_ControllerManagementDependencyTitle" xml:space="preserve">
-    <value>Warning</value>
-  </data>
-  <data name="MainWindow_ControllerManagementClosePrimary" xml:space="preserve">
-    <value>Yes</value>
-  </data>
-  <data name="MainWindow_ControllerManagementCloseSecondary" xml:space="preserve">
-    <value>No</value>
-  </data>
-  <data name="MainWindow_ControllerManagementCloseText" xml:space="preserve">
-    <value>Improve virtual controller detection might not work if you close Handheld Companion. Are you sure ?</value>
-  </data>
-  <data name="MainWindow_ControllerManagementCloseTitle" xml:space="preserve">
-    <value>Warning</value>
-  </data>
   <data name="AboutPage_Manufacturer" xml:space="preserve">
     <value>Produttore</value>
   </data>
@@ -1331,7 +1283,7 @@
     <value>Non hai nessun controller fisico collegato. Nessun input verrà inviato a HC o al suo servizio.</value>
   </data>
   <data name="ControllerPage_NoPhysicalControllerDetectedAction" xml:space="preserve">
-    <value>Assicurati di aver collegato un dispositivo XInput o DInput compatibile.</value>
+    <value>Assicurati di aver collegato un dispositivo XInput o DirectInput compatibile.</value>
   </data>
   <data name="ControllerPage_NoPhysicalControllerDetectedWarning" xml:space="preserve">
     <value>Nessun controller fisico rilevato</value>
@@ -1525,28 +1477,13 @@
   <data name="ProfilesPage_PowerLimitTarget" xml:space="preserve">
     <value>Target del limite di potenza</value>
   </data>
-  <data name="SettingsPage_NativeDisplayOrientation" xml:space="preserve">
-    <value>Orientamento display nativo</value>
-  </data>
-  <data name="SettingsPage_NativeDisplayOrientationDesc" xml:space="preserve">
-    <value>Alcune funzionalità dipendono dalla corretta rilevazione dell'orientamento del display per funzionare correttamente. Se ciò non è stato rilevato correttamente, impostare l'orientamento del display sulla stessa orientamento del tuo controller, quindi fare clic su Rileva</value>
-  </data>
-  <data name="SettingsPage_NativeDisplayOrientationDetect" xml:space="preserve">
-    <value>Rileva</value>
-  </data>
-  <data name="SettingsPage_NativeDisplayOrientationNotSet" xml:space="preserve">
-    <value>Non impostato</value>
-  </data>
   <data name="QuickPerformancePage_CPUBoostMode" xml:space="preserve">
     <value>CPU boost mode</value>
   </data>
   <data name="QuickPerformancePage_CPUBoostModeDesc" xml:space="preserve">
     <value>Set current CPU boost mode</value>
   </data>
-  <data name="QuickSettingsPage_DisplayResolution" xml:space="preserve">
-    <value>Display resolution and refresh rate</value>
-  </data>
-  <data name="QuickSettingsPage_DisplayResolutionDesc" xml:space="preserve">
+  <data name="QuickDevicePage_DisplayResolutionDesc" xml:space="preserve">
     <value>Adjust main display resolution and refresh rate</value>
   </data>
   <data name="QuickPerformancePage_FanOverride" xml:space="preserve">
@@ -1595,10 +1532,10 @@
     <value>Define quicktools window location</value>
   </data>
   <data name="SettingsPage_QuickToolsWindowLocationTopLeft" xml:space="preserve">
-    <value>Top left</value>
+    <value />
   </data>
   <data name="SettingsPage_QuickToolsWindowLocationTopRight" xml:space="preserve">
-    <value>Top right</value>
+    <value />
   </data>
   <data name="SettingsPage_RivaTunerStatisticsServer" xml:space="preserve">
     <value>RivaTuner Statistics Server</value>
@@ -1671,27 +1608,6 @@
   </data>
   <data name="Enum_AYANEOAIRPro_ButtonFlags_OEM4" xml:space="preserve">
     <value>LC</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_B1" xml:space="preserve">
-    <value>Croce</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_B2" xml:space="preserve">
-    <value>Cerchio</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_B3" xml:space="preserve">
-    <value>Quadrato</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_B4" xml:space="preserve">
-    <value>Triangolo</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_Back" xml:space="preserve">
-    <value>Condividi</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_Special" xml:space="preserve">
-    <value>Sony</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_Start" xml:space="preserve">
-    <value>Opzioni</value>
   </data>
   <data name="Enum_HIDmode_DualShock4Controller" xml:space="preserve">
     <value>Controller DualShock 4 emulato</value>
@@ -2032,99 +1948,6 @@
   <data name="Enum_ProfileErrorCode_IsRunning" xml:space="preserve">
     <value>Oops. Sembra che questo profilo sia già in esecuzione. Alcune opzioni che richiedono un'eseguibile potrebbero essere disabilitate.</value>
   </data>
-  <data name="Enum_ProController_AxisLayoutFlags_L2" xml:space="preserve">
-    <value>ZL</value>
-  </data>
-  <data name="Enum_ProController_AxisLayoutFlags_R2" xml:space="preserve">
-    <value>ZR</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_B1" xml:space="preserve">
-    <value>B</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_B2" xml:space="preserve">
-    <value>A</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_B3" xml:space="preserve">
-    <value>Y</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_B4" xml:space="preserve">
-    <value>X</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_Back" xml:space="preserve">
-    <value>Minus</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_L1" xml:space="preserve">
-    <value>L</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_R1" xml:space="preserve">
-    <value>R</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_Special" xml:space="preserve">
-    <value>Home</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_Special2" xml:space="preserve">
-    <value>Capture</value>
-  </data>
-  <data name="Enum_ProController_ButtonFlags_Start" xml:space="preserve">
-    <value>Plus</value>
-  </data>
-  <data name="Enum_DS4Controller_AxisLayoutFlags_LeftPad" xml:space="preserve">
-    <value>Single-touch swipe</value>
-  </data>
-  <data name="Enum_DS4Controller_AxisLayoutFlags_RightPad" xml:space="preserve">
-    <value>Multi-touch swipe</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_LeftPadClick" xml:space="preserve">
-    <value>Single-touch click</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_LeftPadTouch" xml:space="preserve">
-    <value>Single-touch tap</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_RightPadClick" xml:space="preserve">
-    <value>Multi-touch click</value>
-  </data>
-  <data name="Enum_DS4Controller_ButtonFlags_RightPadTouch" xml:space="preserve">
-    <value>Multi-touch tap</value>
-  </data>
-  <data name="Enum_DualSenseController_AxisLayoutFlags_LeftPad" xml:space="preserve">
-    <value>Single-touch swipe</value>
-  </data>
-  <data name="Enum_DualSenseController_AxisLayoutFlags_RightPad" xml:space="preserve">
-    <value>Multi-touch swipe</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_B1" xml:space="preserve">
-    <value>Cross</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_B2" xml:space="preserve">
-    <value>Circle</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_B3" xml:space="preserve">
-    <value>Square</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_B4" xml:space="preserve">
-    <value>Triangle</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_Back" xml:space="preserve">
-    <value>Share</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_LeftPadClick" xml:space="preserve">
-    <value>Single-touch click</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_LeftPadTouch" xml:space="preserve">
-    <value>Single-touch tap</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_RightPadClick" xml:space="preserve">
-    <value>Multi-touch click</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_RightPadTouch" xml:space="preserve">
-    <value>Multi-touch tap</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_Special" xml:space="preserve">
-    <value>Sony</value>
-  </data>
-  <data name="Enum_DualSenseController_ButtonFlags_Start" xml:space="preserve">
-    <value>Options</value>
-  </data>
   <data name="ProfilesPage_AreYouSureApplyTemplate1" xml:space="preserve">
     <value>Are you sure you want to apply this template? All layout settings will be overridden.</value>
   </data>
@@ -2318,10 +2141,10 @@
     <value>ScrollWheel</value>
   </data>
   <data name="Enum_XInputController_AxisLayoutFlags_LeftStick" xml:space="preserve">
-    <value>LeftStick</value>
+    <value>Left Stick</value>
   </data>
   <data name="Enum_XInputController_AxisLayoutFlags_RightStick" xml:space="preserve">
-    <value>RightStick</value>
+    <value>Right Stick</value>
   </data>
   <data name="Controller_Connect" xml:space="preserve">
     <value>Connect</value>
@@ -2356,15 +2179,6 @@
   <data name="MainWindow_Select" xml:space="preserve">
     <value>Select</value>
   </data>
-  <data name="Hint_SteamNeptuneReadme" xml:space="preserve">
-    <value>You should restart Steam, so that Handheld Companion can automatically adjust Steam Desktop Layout and prevent double input</value>
-  </data>
-  <data name="Hint_SteamNeptuneDesktopDesc" xml:space="preserve">
-    <value>Steam is already running and Steam Desktop Layout is applied. This may result in double input</value>
-  </data>
-  <data name="Hint_SteamNeptuneDesktop" xml:space="preserve">
-    <value>Steam Desktop Layout is applied</value>
-  </data>
   <data name="Hint_SteamXboxDriversReadme" xml:space="preserve">
     <value>You might want to uninstall Steam Xbox Controller Enhanced Features Driver</value>
   </data>
@@ -2381,7 +2195,7 @@
     <value>Device</value>
   </data>
   <data name="XInputController_Warning_BTH" xml:space="preserve">
-    <value>Please switch your controller off and then on again by pressing and holding the Guide button to finalize pairing.</value>
+    <value>Please switch your controller off and on by pressing and holding the power button to finalize pairing.</value>
   </data>
   <data name="DevicePage_DynamicLighting" xml:space="preserve">
     <value>Effects</value>
@@ -2518,10 +2332,10 @@
   <data name="QuickApplicationsPage_Title" xml:space="preserve">
     <value>Applications</value>
   </data>
-  <data name="QuickSettingsPage_DisplayFrequency" xml:space="preserve">
+  <data name="QuickDevicePage_DisplayFrequency" xml:space="preserve">
     <value>Refresh rate</value>
   </data>
-  <data name="QuickSettingsPage_DisplayFrequencyDesc" xml:space="preserve">
+  <data name="QuickDevicePage_DisplayFrequencyDesc" xml:space="preserve">
     <value>Adjust main refresh rate</value>
   </data>
   <data name="ProfilesPage_FanSettings" xml:space="preserve">
@@ -2581,13 +2395,10 @@
   <data name="Enum_ROGAlly_ButtonFlags_OEM4" xml:space="preserve">
     <value>M2</value>
   </data>
-  <data name="LayoutPage_SetAsDefault" xml:space="preserve">
-    <value>Make this the default layout</value>
-  </data>
-  <data name="InputsHotkey_shortcutChangeHIDMode" xml:space="preserve">
+  <data name="Hotkey_ChangeHIDMode" xml:space="preserve">
     <value>Toggle emulated controller type</value>
   </data>
-  <data name="InputsHotkey_shortcutChangeHIDModeDesc" xml:space="preserve">
+  <data name="Hotkey_ChangeHIDModeDesc" xml:space="preserve">
     <value>Toggle between Xbox 360 and Dualshock 4 emulated controllers</value>
   </data>
   <data name="ProfilesPage_EmulatedController" xml:space="preserve">
@@ -2605,9 +2416,6 @@
   <data name="ProfilesPage_EmulatedControllerDesc" xml:space="preserve">
     <value>The emulated controller to be used when this profile is active</value>
   </data>
-  <data name="ControllerPage_ControllerManagement" xml:space="preserve">
-    <value>Controller management</value>
-  </data>
   <data name="ControllerPage_ControllerManagementDesc" xml:space="preserve">
     <value>Automatically manage your controllers for greater compatibility</value>
   </data>
@@ -2615,7 +2423,7 @@
     <value>Touchpad passthrough</value>
   </data>
   <data name="ControllerPage_LegionGoPassthroughDesc" xml:space="preserve">
-    <value>Allows you to use your device’s touchpad as a regular mouse, without any software processing or mapping</value>
+    <value>Allows you to use your device's touchpad as a regular mouse, without any software processing or mapping</value>
   </data>
   <data name="ControllerPage_Close" xml:space="preserve">
     <value>Close</value>
@@ -2634,9 +2442,6 @@
   </data>
   <data name="Hint_RogAllyServiceCheckAction" xml:space="preserve">
     <value>Disable ASUS services</value>
-  </data>
-  <data name="Hint_SteamNeptuneAction" xml:space="preserve">
-    <value>Restart Steam</value>
   </data>
   <data name="MainWindow_navNotifications" xml:space="preserve">
     <value>Notifications</value>
@@ -2676,18 +2481,6 @@
   </data>
   <data name="QuickProfilesPage_SubProfilesDesc" xml:space="preserve">
     <value>Select a sub profile to apply</value>
-  </data>
-  <data name="InputsHotkey_nextSubProfile" xml:space="preserve">
-    <value>Select next sub profile</value>
-  </data>
-  <data name="InputsHotkey_nextSubProfileDesc" xml:space="preserve">
-    <value>Apply next sub profile for the current game</value>
-  </data>
-  <data name="InputsHotkey_previousSubProfile" xml:space="preserve">
-    <value>Select previous sub profile</value>
-  </data>
-  <data name="InputsHotkey_previousSubProfileDesc" xml:space="preserve">
-    <value>Apply previous sub profile for the current game</value>
   </data>
   <data name="DevicePage_FullFanSpeedDesc" xml:space="preserve">
     <value>Sets the fan to max speed</value>
@@ -2773,19 +2566,13 @@
   <data name="ProfilesPage_PowerSettings" xml:space="preserve">
     <value>Impostazioni alimentazione</value>
   </data>
-  <data name="QuickSettingsPage_ResolutionOverrideWarning" xml:space="preserve">
+  <data name="QuickDevicePage_ResolutionOverrideWarning" xml:space="preserve">
     <value>Resolution is currently overridden by profile</value>
   </data>
-  <data name="SettingsPage_QuickToolsWindowLocationLeft" xml:space="preserve">
-    <value>Left</value>
-  </data>
-  <data name="SettingsPage_QuickToolsWindowLocationRight" xml:space="preserve">
-    <value>Right</value>
-  </data>
-  <data name="InputsHotkey_OnScreenDisplayToggle" xml:space="preserve">
+  <data name="Hotkey_OnScreenDisplayToggle" xml:space="preserve">
     <value>On Screen Overlay</value>
   </data>
-  <data name="InputsHotkey_OnScreenDisplayToggleDesc" xml:space="preserve">
+  <data name="Hotkey_OnScreenDisplayToggleDesc" xml:space="preserve">
     <value>Toggle on screen overlay</value>
   </data>
   <data name="ProfilesPage_GPUScaling" xml:space="preserve">
@@ -2902,10 +2689,724 @@
   <data name="DevicePage_Lenovo_ControllerTriggerMargin" xml:space="preserve">
     <value>Trigger Margin</value>
   </data>
-  <data name="DevicePage_Lenovo_Settings" xml:space="preserve">
-    <value>Lenovo Legion Go settings</value>
-  </data>
   <data name="AboutPage_UnsupportedDevice" xml:space="preserve">
-    <value>Oups, it appears your device is not supported yet. The software might not run as expected.</value>
+    <value />
+  </data>
+  <data name="ControllerPage_ControllerManagement_Attempt" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_BatteryOptions" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_BatteryChargeLimitPercent" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="PerformancePage_ParkingModeAllCoresAuto" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PerformancePage_ParkingModeAllCoresPrefPCore" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PerformancePage_ParkingModeAllCoresPrefECore" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PerformancePage_ParkingModeOnlyPCore" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PerformancePage_ParkingModeOnlyECore" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_XGMobile" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_XGMobileDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_Experimental" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_SuspendOnSleep" xml:space="preserve">
+    <value />
+  </data>
+  <data name="OverlayPage_OnScreenDisplayOptions" xml:space="preserve">
+    <value />
+  </data>
+  <data name="HotkeysPage_Hotkeys" xml:space="preserve">
+    <value />
+  </data>
+  <data name="HotkeysPage_RumbleOnExecution" xml:space="preserve">
+    <value />
+  </data>
+  <data name="HotkeysPage_RumbleOnExecutionDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="HotkeysPage_HotkeysSettings" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PerformancePage_CPUParkingMode" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PerformancePage_EnduranceGaming_Desc" xml:space="preserve">
+    <value>GPU Auto TDP based on desired FPS target</value>
+  </data>
+  <data name="SettingsPage_Priority" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_PriorityDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_Priority_Normal" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_Priority_AboveNormal" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_Priority_High" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_QuickToolsBackdropHeader" xml:space="preserve">
+    <value />
+  </data>
+  <data name="MainWindow_navLibrary" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_Library_Desc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_ShowInLibrary" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_ShowInLibraryDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_Library_Title" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_LibraryRefreshImage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_LibraryRefreshImageButton" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_LibraryRefreshImageDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LibraryDiscoverTitle" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LibraryDiscoverContent" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_WindowStyle" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_WindowStyleDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_WindowStyle_Normal" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_WindowStyle_Hidden" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_WindowStyle_Minimized" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_WindowStyle_Maximized" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_RunAsAdministrator" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_RunAsAdministratorDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_ExecutableTargetPlaceholder" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_MainWindowPageDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_MainWindowPage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_CycleSubProfileDirection" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_CycleSubProfileDirectionDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_CycleSubProfilePrev" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_CycleSubProfileNext" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_KeyboardLegacyPosition" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_KeyboardLegacyPositionDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_KeyboardLegacyPositionBottom" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_KeyboardLegacyPositionMaximize" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_FunctionCategory_HandheldCompanion" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_FunctionCategory_PowerAndBattery" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_FunctionCategory_Windows" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_FunctionCategory_Multitasking" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_FunctionCategory_Display" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_FunctionCategory_Sound" xml:space="preserve">
+    <value />
+  </data>
+  <data name="MainWindow_OpenNavigation" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_Play" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_TDPControlMethod" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_TDPControlMethodDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_SecurityOptions" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_CoreIsolation" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_CoreIsolationDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_PlatformOptions" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_ManufacturerApplication" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_ManufacturerApplicationDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="MainWindow_CloseNavigation" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_Lenovo_LeftController" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_Lenovo_RightController" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickDevicePage_DeviceSettings" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickDevicePage_Bluetooth" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickDevicePage_NightLight" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickDevicePage_DisplayResolution" xml:space="preserve">
+    <value>Display resolution and refresh rate</value>
+  </data>
+  <data name="QuickDevicePage_DynamicLighting" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickDevicePage_DynamicLightingToggle" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickDevicePage_NightLightDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_VirtualTrackpad" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_VirtualTrackpadDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_VirtualKeyboard" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_VirtualKeyboardDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_Profile" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_LaytouDesktop" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_Desktop" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_DesktopDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_Default" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_DefaultDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_Nintendo" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_NintendoDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_Keyboard" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_KeyboardDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_GamepadMouse" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_GamepadMouseDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_GamepadJoystick" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutTemplate_GamepadJoystickDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_WindowsSettings" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_SuspendOnOverlay" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_SuspendOnOverlayDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_WindowsSettingsDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_ActionType_Disabled" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_ActionType_Button" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_ActionType_Joystick" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_ActionType_Keyboard" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_ActionType_Mouse" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_ActionType_Trigger" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_ActionType_Shift" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_ActionType_Inherit" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_HoldToRepeat" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_Interruptable" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_PressToToggle" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_HapticFeedback" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_InputShift" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LayoutPage_InputType" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickApplicationsPage_QuickStart" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickApplicationsPage_Processes" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickApplicationsPage_SuspendApplication" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickApplicationsPage_ResumeApplication" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PerformancePage_EnduranceGaming_Title" xml:space="preserve">
+    <value>Intel Endurance Gaming</value>
+  </data>
+  <data name="PerformancePage_CPUParkingModeDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="QuickPerformancePage_EnduranceGamingPresetDesc" xml:space="preserve">
+    <value>Preset</value>
+  </data>
+  <data name="QuickPerformancePage_EnduranceGamingPerformancePreset" xml:space="preserve">
+    <value>Performance - 60 FPS</value>
+  </data>
+  <data name="QuickPerformancePage_EnduranceGamingBalancedPreset" xml:space="preserve">
+    <value>Balanced - 40 FPS</value>
+  </data>
+  <data name="QuickPerformancePage_EnduranceGamingEfficiencyPreset" xml:space="preserve">
+    <value>Efficiency - 30 FPS</value>
+  </data>
+  <data name="QuickPerformancePage_EnduranceGamingPreset" xml:space="preserve">
+    <value>Endurance Gaming presets</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_B1" xml:space="preserve">
+    <value>Croce</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_B2" xml:space="preserve">
+    <value>Cerchio</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_B3" xml:space="preserve">
+    <value>Quadrato</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_B4" xml:space="preserve">
+    <value>Triangolo</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_Back" xml:space="preserve">
+    <value>Condividi</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_Special" xml:space="preserve">
+    <value>Sony</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_Start" xml:space="preserve">
+    <value>Opzioni</value>
+  </data>
+  <data name="Enum_DualShock4Controller_AxisLayoutFlags_LeftPad" xml:space="preserve">
+    <value>Left-finger swipe</value>
+  </data>
+  <data name="Enum_DualShock4Controller_AxisLayoutFlags_RightPad" xml:space="preserve">
+    <value>Right-finger swipe</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_LeftPadClick" xml:space="preserve">
+    <value>Left-finger click</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_LeftPadTouch" xml:space="preserve">
+    <value>Left-finger touch</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_RightPadClick" xml:space="preserve">
+    <value>Right-finger click</value>
+  </data>
+  <data name="Enum_DualShock4Controller_ButtonFlags_RightPadTouch" xml:space="preserve">
+    <value>Right-finger touch</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_AxisLayoutFlags_L2" xml:space="preserve">
+    <value>ZL</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_AxisLayoutFlags_R2" xml:space="preserve">
+    <value>ZR</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_B1" xml:space="preserve">
+    <value>B</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_B2" xml:space="preserve">
+    <value>A</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_B3" xml:space="preserve">
+    <value>Y</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_B4" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_Back" xml:space="preserve">
+    <value>Minus</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_L1" xml:space="preserve">
+    <value>L</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_R1" xml:space="preserve">
+    <value>R</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_Special" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_Special2" xml:space="preserve">
+    <value>Capture</value>
+  </data>
+  <data name="Enum_NintendoSwitchProController_ButtonFlags_Start" xml:space="preserve">
+    <value>Plus</value>
+  </data>
+  <data name="Enum_DClawController_OEM3" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Enum_DClawController_OEM4" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Enum_Xbox360Controller_AxisLayoutFlags_L2" xml:space="preserve">
+    <value>L2</value>
+  </data>
+  <data name="Enum_Xbox360Controller_AxisLayoutFlags_LeftStick" xml:space="preserve">
+    <value>Left Stick</value>
+  </data>
+  <data name="Enum_Xbox360Controller_AxisLayoutFlags_LeftThumb" xml:space="preserve">
+    <value>Levetta sinistra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_AxisLayoutFlags_R2" xml:space="preserve">
+    <value>R2</value>
+  </data>
+  <data name="Enum_Xbox360Controller_AxisLayoutFlags_RightStick" xml:space="preserve">
+    <value>Right Stick</value>
+  </data>
+  <data name="Enum_Xbox360Controller_AxisLayoutFlags_RightThumb" xml:space="preserve">
+    <value>Levetta destra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_B1" xml:space="preserve">
+    <value>A</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_B2" xml:space="preserve">
+    <value>B</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_B3" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_B4" xml:space="preserve">
+    <value>Y</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_B5" xml:space="preserve">
+    <value>B5</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_B6" xml:space="preserve">
+    <value>B6</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_B7" xml:space="preserve">
+    <value>B7</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_B8" xml:space="preserve">
+    <value>B8</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_Back" xml:space="preserve">
+    <value>Vista</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_DPadDown" xml:space="preserve">
+    <value>Pulsante D-Pad giù</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_DPadLeft" xml:space="preserve">
+    <value>Pulsante D-Pad sinistra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_DPadRight" xml:space="preserve">
+    <value>Pulsante D-Pad destra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_DPadUp" xml:space="preserve">
+    <value>Pulsante D-Pad su</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_L1" xml:space="preserve">
+    <value>LB</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_L2" xml:space="preserve">
+    <value>L2</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_L3" xml:space="preserve">
+    <value>L3</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_L4" xml:space="preserve">
+    <value>L4</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_L5" xml:space="preserve">
+    <value>L5</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_LeftThumb" xml:space="preserve">
+    <value>Levetta sinistra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_LeftThumbDown" xml:space="preserve">
+    <value>Levetta sinistra giù</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_LeftThumbLeft" xml:space="preserve">
+    <value>Levetta sinistra sinistra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_LeftThumbRight" xml:space="preserve">
+    <value>Levetta sinistra destra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_LeftThumbUp" xml:space="preserve">
+    <value>Levetta sinistra su</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_OEM1" xml:space="preserve">
+    <value>OEM1</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_OEM2" xml:space="preserve">
+    <value>OEM2</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_OEM3" xml:space="preserve">
+    <value>OEM3</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_R1" xml:space="preserve">
+    <value>RB</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_R2" xml:space="preserve">
+    <value>R2</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_R3" xml:space="preserve">
+    <value>R3</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_R4" xml:space="preserve">
+    <value>R4</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_R5" xml:space="preserve">
+    <value>R5</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_RightThumb" xml:space="preserve">
+    <value>Levetta destra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_RightThumbDown" xml:space="preserve">
+    <value>Levetta destra giù</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_RightThumbLeft" xml:space="preserve">
+    <value>Levetta destra sinistra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_RightThumbRight" xml:space="preserve">
+    <value>Levetta destra destra</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_RightThumbUp" xml:space="preserve">
+    <value>Levetta destra su</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_Special" xml:space="preserve">
+    <value>Guida</value>
+  </data>
+  <data name="Enum_Xbox360Controller_ButtonFlags_Start" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="Enum_GamingZone_ButtonFlags_OEM1" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Enum_GamingZone_ButtonFlags_OEM2" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Enum_GamingZone_ButtonFlags_OEM3" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Enum_GamingZone_ButtonFlags_OEM4" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Enum_GamingZone_ButtonFlags_OEM5" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hint_GamingZoneServices" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hint_GamingZoneServicesDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PowerProfileGamingZoneBestPerformance" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PowerProfileGamingZoneBetterBattery" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PowerProfileGamingZoneBetterPerformance" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PowerProfileGamingZoneBestPerformanceDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PowerProfileGamingZoneBetterBatteryDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PowerProfileGamingZoneBetterPerformanceDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ControllerPage_LegionGoControllerSwap" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ControllerPage_LegionGoControllerSwapDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_GamingZone_VRAM" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DevicePage_GamingZone_VRAMDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_Run" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_RunAs" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_ProfileLaunchString" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_ProfileExecutables" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_InputsSettings" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_QuickToolsWindowLocationBottomCenter" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LibraryScanTitle" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LibraryScanContent" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_OpenProfilePage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfilesPage_OpenLayoutPage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_QuicktoolsSlideAnimation" xml:space="preserve">
+    <value />
+  </data>
+  <data name="SettingsPage_QuicktoolsSlideAnimationDesc" xml:space="preserve">
+    <value />
+  </data>
+  <data name="PerformancePage_PL1PL2Warning" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Hotkey_touchpadToggle" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Hotkey_touchscreenToggleDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Hotkey_touchscreenToggle" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="On" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Off" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Muted" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="BatteryFullyCharged" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Unmuted" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Discharging" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Charging" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Hotkey_touchpadToggleDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
   </data>
 </root>

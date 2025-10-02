@@ -16,6 +16,9 @@ A touch optimized GUI to increase your handheld gaming computer experience. Feat
 - 3D Controller overlay for stream recordings.
 - Hotkeys for various conveniences. 
 
+## Support & Early Access
+Handheld Companion is funded entirely by community support. [Through our Patreon](https://www.patreon.com/c/handheldcompanion), contributors in the Early Access tier receive exclusive builds at least two weeks before they are released publicly. This helps supporters enjoy the latest features sooner while directly contributing to the ongoing development of the project and the acquisition of new devices.
+
 ## Use cases
 A few examples of the most common use cases are:
 - You want to add universal motion controls (UMC) to any game.

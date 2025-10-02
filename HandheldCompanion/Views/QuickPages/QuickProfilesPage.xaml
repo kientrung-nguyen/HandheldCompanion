@@ -7,468 +7,212 @@
     xmlns:l="clr-namespace:HandheldCompanion.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:HandheldCompanion.Properties"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="QuickProfiles"
     Title="{l:Static resx:Resources.QuickProfilesPage_Title}"
-    Margin="15,0,0,6"
-    d:Background="Black"
+    Margin="12,0,12,0"
+    d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:QuickProfilesPageViewModel}"
     d:DesignHeight="2000"
     d:DesignWidth="640"
     KeepAlive="True"
     mc:Ignorable="d">
 
-    <ikw:SimpleStackPanel Margin="0,6,0,6" Spacing="24">
+    <ikw:SimpleStackPanel Spacing="8">
 
         <!--  Header  -->
-        <Grid Name="StackProfileToggle">
-            <!--  Header  -->
-            <Expander HorizontalAlignment="Stretch" d:IsExpanded="true" IsExpanded="True">
-                <Expander.Header>
-                    <Border Padding="0,0,12,0" CornerRadius="{DynamicResource ControlCornerRadius}">
+        <ui:SettingsExpander Name="ProcessCard" IsEnabled="False">
+            <ui:SettingsExpander.HeaderIcon>
+                <Image
+                    Name="ProfileIcon"
+                    Grid.Column="0"
+                    Width="24"
+                    Height="24"
+                    CacheMode="BitmapCache" />
+            </ui:SettingsExpander.HeaderIcon>
+
+            <ui:SettingsExpander.Header>
+                <TextBlock
+                    Name="ProcessName"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    Style="{StaticResource BodyTextBlockStyle}"
+                    Text="{l:Static resx:Resources.QuickProfilesPage_Waiting}" />
+            </ui:SettingsExpander.Header>
+
+            <ui:SettingsExpander.Description>
+                <TextBlock
+                    Name="ProcessPath"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    TextWrapping="NoWrap"
+                    Visibility="Collapsed" />
+            </ui:SettingsExpander.Description>
+
+            <ui:SettingsExpander.Items>
+                <ui:SettingsCard Header="{l:Static resx:Resources.ProfilesPage_EnableProfile}">
+                    <ui:SettingsCard.Description>
+                        <TextBlock
+                            Name="CurrentProfileName"
+                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="{l:Static resx:Resources.QuickProfilesPage_CurrentProfileDefault}"
+                            TextWrapping="NoWrap" />
+                    </ui:SettingsCard.Description>
+
+                    <ui:ToggleSwitch Name="ProfileToggle" Toggled="ProfileToggle_Toggled" />
+                </ui:SettingsCard>
+
+                <!--  Sub Profiles  -->
+                <ui:SettingsCard
+                    Name="SubProfilesBorder"
+                    d:Visibility="Visible"
+                    Description="{l:Static resx:Resources.QuickProfilesPage_SubProfilesDesc}"
+                    Header="{l:Static resx:Resources.ProfilesPage_SubProfiles}"
+                    Visibility="Collapsed">
+
+                    <ui:SettingsCard.Resources>
+                        <sys:Double x:Key="SettingsCardWrapThreshold">476</sys:Double>
+                        <sys:Double x:Key="SettingsCardWrapNoIconThreshold">286</sys:Double>
+                    </ui:SettingsCard.Resources>
+
+                    <ComboBox
+                        Name="cb_SubProfiles"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center"
+                        SelectionChanged="cb_SubProfiles_SelectionChanged" />
+                </ui:SettingsCard>
+
+                <ui:SettingsCard
+                    Click="Button_OpenProfilePage_Click"
+                    Header="{l:Static resx:Resources.ProfilesPage_OpenProfilePage}"
+                    IsClickEnabled="True"
+                    Tag="Navigation" />
+
+                <ui:SettingsCard
+                    Click="Button_OpenProfileLayout_Click"
+                    Header="{l:Static resx:Resources.ProfilesPage_OpenLayoutPage}"
+                    IsClickEnabled="True"
+                    Tag="Navigation" />
+            </ui:SettingsExpander.Items>
+        </ui:SettingsExpander>
+
+        <ikw:SimpleStackPanel Name="GridProfile" Spacing="8">
+
+            <!--  Battery Power Settings  -->
+            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_PowerSettings}" />
+            <ikw:SimpleStackPanel Spacing="3">
+
+                <ui:SettingsExpander
+                    d:IsExpanded="True"
+                    Description="{l:Static resx:Resources.ProfilesPage_PowerPresetDesc}"
+                    Header="{l:Static resx:Resources.ProfilesPage_PowerPreset}">
+                    <ui:SettingsExpander.HeaderIcon>
+                        <ui:FontIcon Glyph="&#xec4a;" />
+                    </ui:SettingsExpander.HeaderIcon>
+
+                    <TextBlock
+                        Name="SelectedPowerProfileName"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Text="{l:Static resx:Resources.PowerProfileDefaultName}" />
+
+                    <ui:SettingsExpander.Items>
+                        <ui:SettingsCard
+                            Click="PowerProfileOnBatteryMore_Click"
+                            Header="On battery"
+                            IsClickEnabled="True"
+                            Tag="Navigation">
+                            <ComboBox
+                                Name="PowerProfileOnBattery"
+                                DisplayMemberPath="Text"
+                                ItemContainerStyle="{StaticResource {x:Type ComboBoxItem}}"
+                                ItemsSource="{Binding ProfilePickerCollectionViewDC, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                SelectedIndex="{Binding SelectedPresetIndexDC, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                SelectedValuePath="Text">
+                                <ComboBox.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <TextBlock
+                                                    Margin="4,0,0,0"
+                                                    Style="{StaticResource BaseTextBlockStyle}"
+                                                    Text="{Binding Name, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ComboBox.GroupStyle>
+                            </ComboBox>
+                        </ui:SettingsCard>
+
+                        <ui:SettingsCard
+                            Click="PowerProfilePluggedMore_Click"
+                            Header="Plugged in"
+                            IsClickEnabled="True"
+                            Tag="Navigation">
+                            <ComboBox
+                                Name="PowerProfilePlugged"
+                                DisplayMemberPath="Text"
+                                ItemContainerStyle="{StaticResource {x:Type ComboBoxItem}}"
+                                ItemsSource="{Binding ProfilePickerCollectionViewAC, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                SelectedIndex="{Binding SelectedPresetIndexAC, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                SelectedValuePath="Text">
+                                <ComboBox.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <TextBlock
+                                                    Margin="4,0,0,0"
+                                                    Style="{StaticResource BaseTextBlockStyle}"
+                                                    Text="{Binding Name, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ComboBox.GroupStyle>
+                            </ComboBox>
+                        </ui:SettingsCard>
+
+                        <ui:SettingsCard
+                            Click="Button_PowerSettings_Create_Click"
+                            Header="{l:Static resx:Resources.ProfilesPage_CreatePowerProfile}"
+                            IsClickEnabled="True" />
+                    </ui:SettingsExpander.Items>
+                </ui:SettingsExpander>
+            </ikw:SimpleStackPanel>
+
+            <!--  Motion control settings  -->
+            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_InputsSettings}" />
+            <ikw:SimpleStackPanel Spacing="3">
+
+                <Expander
+                    HorizontalAlignment="Stretch"
+                    d:IsExpanded="true"
+                    IsExpanded="False">
+                    <Expander.Header>
                         <DockPanel Margin="0,12,12,12">
-                            <Image
-                                Name="ProfileIcon"
-                                Width="16"
-                                Height="16"
-                                HorizontalAlignment="Left" />
-
-                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock
-                                    Name="ProcessName"
-                                    Style="{StaticResource BodyTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.QuickProfilesPage_Waiting}" />
-                                <TextBlock
-                                    Name="ProcessPath"
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    TextWrapping="NoWrap" />
-                            </ikw:SimpleStackPanel>
-                        </DockPanel>
-                    </Border>
-
-                </Expander.Header>
-
-                <ikw:SimpleStackPanel Spacing="6">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                            <ColumnDefinition Width="0.2*" MinWidth="80" />
-                        </Grid.ColumnDefinitions>
-
-                        <DockPanel>
                             <ui:FontIcon
                                 Height="40"
                                 HorizontalAlignment="Center"
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xE7EE;" />
+                                Glyph="&#xE8B4;" />
 
                             <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource BodyTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_EnableProfile}" />
-                                <DockPanel>
-                                    <TextBlock
-                                        Name="CurrentProfile"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.QuickProfilesPage_CurrentProfile}"
-                                        TextWrapping="Wrap" />
-                                    <TextBlock
-                                        Name="CurrentProfileName"
-                                        Margin="2,0,0,0"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.QuickProfilesPage_CurrentProfileDefault}"
-                                        TextWrapping="Wrap" />
-                                </DockPanel>
-                            </ikw:SimpleStackPanel>
-                        </DockPanel>
-
-                        <ui:ToggleSwitch
-                            Name="ProfileToggle"
-                            Grid.Column="1"
-                            HorizontalAlignment="Right"
-                            IsEnabled="False"
-                            Style="{DynamicResource InvertedToggleSwitchStyle}"
-                            Toggled="ProfileToggle_Toggled" />
-                    </Grid>
-
-                    <!--  Separator  -->
-                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                    <!--  Sub Profiles  -->
-                    <Grid
-                        Name="SubProfilesBorder"
-                        d:Visibility="Visible">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="6*" />
-                            <ColumnDefinition Width="4*" />
-                        </Grid.ColumnDefinitions>
-                        <DockPanel>
-                            <ui:FontIcon
-                                Height="40"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                Glyph="&#xE81E;" />
-                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_SubProfiles}" />
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_MotionControlSettings}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.QuickProfilesPage_SubProfilesDesc}"
+                                    Text="{l:Static resx:Resources.ProfilesPage_MotionControlSettingsDesc}"
                                     TextWrapping="Wrap" />
                             </ikw:SimpleStackPanel>
                         </DockPanel>
-                        <DockPanel Grid.Column="1" Margin="12,0,0,0">
-                            <ComboBox
-                                Name="cb_SubProfiles"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Center"
-                                SelectionChanged="cb_SubProfiles_SelectionChanged" />
-                        </DockPanel>
-                    </Grid>
+                    </Expander.Header>
 
-                </ikw:SimpleStackPanel>
-            </Expander>
-        </Grid>
+                    <Expander.Content>
+                        <ikw:SimpleStackPanel Margin="0,-10,0,-4" Spacing="3">
 
-        <ikw:SimpleStackPanel Spacing="24">
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_PowerSettings}" Visibility="Collapsed" />
-
-            <!--  Separator  -->
-            <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" Visibility="Collapsed" />
-
-            <Expander HorizontalAlignment="Stretch" IsExpanded="True">
-                <Expander.Header>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-
-                        <DockPanel Margin="0,12,0,12">
-                            <ui:FontIcon
-                                Height="40"
-                                HorizontalAlignment="Center"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xe945;" />
-                            <ikw:SimpleStackPanel
-                                Margin="12,0,0,0"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_PowerPreset}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_PowerPresetDesc}"
-                                    TextWrapping="Wrap" />
-                                <DockPanel>
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.QuickProfilesPage_CurrentProfile}"
-                                        TextWrapping="Wrap" />
-                                    <TextBlock
-                                        Margin="2,0,0,0"
-                                        Name="SelectedPowerProfileName"
-                                        TextWrapping="Wrap"
-		                                HorizontalAlignment="Right"
-		                                VerticalAlignment="Center"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                	    Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.PowerProfileDefaultName}" />
-                                </DockPanel>
-                            </ikw:SimpleStackPanel>
-                            <DockPanel Width="30" HorizontalAlignment="Right">
-                                <ui:FontIcon
-                                    Name="PowerPresetIcon"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    FontSize="20"
-                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                    Glyph="&#xe95f;" RenderTransformOrigin="0.5,0.5">
-                                    <ui:FontIcon.RenderTransform>
-                                        <TransformGroup>
-                                            <ScaleTransform/>
-                                            <SkewTransform/>
-                                            <RotateTransform Angle="-135"/>
-                                            <TranslateTransform/>
-                                        </TransformGroup>
-                                    </ui:FontIcon.RenderTransform>
-                                </ui:FontIcon>
-                            </DockPanel>
-                        </DockPanel>
-                    </Grid>
-
-                </Expander.Header>
-
-                <ikw:SimpleStackPanel Spacing="12">
-                    <Grid Margin="0,0,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-                        <DockPanel>
-                            <ikw:SimpleStackPanel Margin="0,0,0,0" Spacing="6">
-                                <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="12">
-                                    <ui:FontIcon
-                                        FontSize="20"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                        Glyph="&#xe95f;" RenderTransformOrigin="0.5,0.5">
-                                        <ui:FontIcon.RenderTransform>
-                                            <TransformGroup>
-                                                <ScaleTransform/>
-                                                <SkewTransform/>
-                                                <RotateTransform Angle="-135"/>
-                                                <TranslateTransform/>
-                                            </TransformGroup>
-                                        </ui:FontIcon.RenderTransform>
-                                    </ui:FontIcon>
-                                    <DockPanel>
-                                        <TextBlock
-                                            Style="{StaticResource BodyTextBlockStyle}"
-                                            VerticalAlignment="Center"
-                                            Text="Power preset (Plugged in)" />
-                                    </DockPanel>
-                                </ikw:SimpleStackPanel>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="46" />
-                                    </Grid.ColumnDefinitions>
-                                    <ComboBox
-                                        Name="PowerProfilePlugged"
-                                        Grid.Column="0"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Center"
-                                        DisplayMemberPath="Text"
-                                        ItemsSource="{Binding ProfilePickerItems, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                        SelectedIndex="{Binding SelectedPresetIndexAC, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        SelectedValuePath="Text">
-                                        <ComboBox.ItemContainerStyle>
-                                            <Style BasedOn="{StaticResource {x:Type ComboBoxItem}}" TargetType="ComboBoxItem">
-                                                <Setter Property="IsEnabled" Value="True" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsHeader}" Value="True">
-                                                        <Setter Property="IsEnabled" Value="False" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ComboBox.ItemContainerStyle>
-                                    </ComboBox>
-
-                                    <Button
-                                        Name="PowerProfilePluggedMore"
-                                        Grid.Column="1"
-                                        Width="40"
-                                        Height="32"
-                                        HorizontalAlignment="Right"
-                                        Click="PowerProfilePluggedMore_Click"
-                                        Style="{DynamicResource AccentButtonStyle}">
-                                        <ui:FontIcon
-                                            HorizontalAlignment="Center"
-                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                            Glyph="&#xE712;" />
-                                    </Button>
-                                </Grid>
-                            </ikw:SimpleStackPanel>
-                        </DockPanel>
-                    </Grid>
-
-                    <!--  Separator  -->
-                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                    <Grid Margin="0,0,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition  />
-                        </Grid.ColumnDefinitions>
-                        <DockPanel>
-                            <ikw:SimpleStackPanel Margin="0,0,0,0" Spacing="6">
-                                <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="12">
-                                    <ui:FontIcon
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                        Glyph="&#xf5f7;" />
-                                    <DockPanel>
-                                        <TextBlock
-                                            Style="{StaticResource BodyTextBlockStyle}"
-                                            VerticalAlignment="Center"
-                                            Text="Power preset (On battery)" />
-                                    </DockPanel>
-                                </ikw:SimpleStackPanel>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition />
-                                        <ColumnDefinition Width="46" />
-                                    </Grid.ColumnDefinitions>
-                                    <ComboBox
-                                        Name="PowerProfileOnBattery"
-                                        Grid.Column="0"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Center"
-                                        DisplayMemberPath="Text"
-                                        ItemsSource="{Binding ProfilePickerItems, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                        SelectedIndex="{Binding SelectedPresetIndexDC, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        SelectedValuePath="Text">
-                                        <ComboBox.ItemContainerStyle>
-                                            <Style BasedOn="{StaticResource {x:Type ComboBoxItem}}" TargetType="ComboBoxItem">
-                                                <Setter Property="IsEnabled" Value="True" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsHeader}" Value="True">
-                                                        <Setter Property="IsEnabled" Value="False" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ComboBox.ItemContainerStyle>
-                                    </ComboBox>
-
-                                    <Button
-                                        Name="PowerProfileOnBatteryMore"
-                                        Grid.Column="1"
-                                        Width="40"
-                                        Height="32"
-                                        HorizontalAlignment="Right"
-                                        Click="PowerProfileOnBatteryMore_Click"
-                                        Style="{DynamicResource AccentButtonStyle}">
-                                        <ui:FontIcon
-                                            HorizontalAlignment="Center"
-                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                            Glyph="&#xE712;" />
-                                    </Button>
-                                </Grid>
-                            </ikw:SimpleStackPanel>
-                        </DockPanel>
-                    </Grid>
-
-                    <!--  Separator  -->
-                    <Separator Visibility="Collapsed" Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-                    <ikw:SimpleStackPanel Spacing="6">
-
-                        <ikw:SimpleStackPanel Name="ProfileStack" Spacing="16" Visibility="Collapsed" />
-                        <!--  Separator  -->
-                        <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="6*" />
-                                <ColumnDefinition Width="4*" />
-                            </Grid.ColumnDefinitions>
-                            <DockPanel Grid.Column="0" Margin="0,0,0,0" VerticalAlignment="Center">
-                                <ikw:SimpleStackPanel Margin="0,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_CreatePowerProfile}" />
-                                </ikw:SimpleStackPanel>
-                            </DockPanel>
-                            <Button
-                                Name="Button_PowerSettings_Create"
-                                Grid.Column="1"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Center"
-                                Click="Button_PowerSettings_Create_Click"
-                                Style="{DynamicResource AccentButtonStyle}">
-                                <!--<TextBlock Text="{l:Static resx:Resources.ProfilesPage_CreatePowerProfile}" />-->
-                                <TextBlock Text="{l:Static resx:Resources.ProfilesPage_CreatePowerProfileButton}" />
-                            </Button>
-
-                        </Grid>
-                    </ikw:SimpleStackPanel>
-                </ikw:SimpleStackPanel>
-            </Expander>
-
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_MotionControlSettings}" Visibility="Collapsed" />
-            <Expander
-                HorizontalAlignment="Stretch"
-                d:IsExpanded="true"
-                IsExpanded="False">
-                <Expander.Header>
-                    <DockPanel Margin="0,12,12,12">
-                        <ui:FontIcon
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xE8B4;" />
-
-                        <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_MotionControlSettings}" />
-                            <TextBlock
-                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{l:Static resx:Resources.ProfilesPage_MotionControlSettingsDesc}"
-                                TextWrapping="Wrap" />
-                        </ikw:SimpleStackPanel>
-                    </DockPanel>
-                </Expander.Header>
-
-                <Expander.Content>
-                    <ikw:SimpleStackPanel Margin="0,-10,0,-4" Spacing="6">
-
-                        <!--  Controller layout  -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1*" />
-                                <ColumnDefinition Width="1*" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ControllerLayout}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="Enable controller layout"
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-
-                            <ui:ToggleSwitch
-                                Name="Toggle_ControllerLayout"
-                                Grid.Column="1"
-                                Margin="12,0,0,0"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                Style="{DynamicResource InvertedToggleSwitchStyle}"
-                                Toggled="Toggle_ControllerLayout_Toggled" />
-                        </Grid>
-
-                        <!--  Separator  -->
-                        <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                        <!--  Output device  -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="6*" />
-                                <ColumnDefinition Width="4*" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock
-                                    Style="{StaticResource BodyTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_StyleofOutput}"
-                                    ToolTip="{l:Static resx:Resources.ProfilesPage_StyleofOutputTooltip}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_UMCSelectionRightLeftDesc}"
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-
-                            <ComboBox
-                                Name="cB_Output"
-                                Grid.Column="1"
-                                Margin="12,0,0,0"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Center"
-                                SelectionChanged="cB_Output_SelectionChanged" />
-                        </Grid>
-
-                        <ikw:SimpleStackPanel Spacing="6" Visibility="{Binding ElementName=cB_Output, Path=SelectedIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|2|3|4|5}">
-
-                            <!--  Separator  -->
-                            <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                            <!--  Style of input  -->
+                            <!--  Output device  -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="6*" />
@@ -478,793 +222,851 @@
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock
                                         Style="{StaticResource BodyTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_StyleofInput}"
-                                        ToolTip="{l:Static resx:Resources.ProfilesPage_StyleofInputTooltip}" />
-                                    <TextBlock
-                                        Name="Text_InputHint"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_StyleofInputTooltip}"
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-
-                                <ComboBox
-                                    Name="cB_Input"
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Center"
-                                    SelectionChanged="cB_Input_SelectionChanged" />
-                            </Grid>
-
-                            <!--  Separator  -->
-                            <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                            <!--  Motion activator  -->
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="6*" />
-                                    <ColumnDefinition Width="4*" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Orientation="Vertical">
-                                    <TextBlock
-                                        Style="{StaticResource BodyTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_UMCMotionOnOff}"
+                                        Text="{l:Static resx:Resources.ProfilesPage_StyleofOutput}"
                                         ToolTip="{l:Static resx:Resources.ProfilesPage_StyleofOutputTooltip}" />
                                     <TextBlock
                                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                         Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_UMCMotionOnOffDesc}"
+                                        Text="{l:Static resx:Resources.ProfilesPage_UMCSelectionRightLeftDesc}"
                                         TextWrapping="Wrap" />
                                 </StackPanel>
 
                                 <ComboBox
-                                    Name="cB_UMC_MotionDefaultOffOn"
+                                    Name="cB_Output"
                                     Grid.Column="1"
                                     Margin="12,0,0,0"
                                     HorizontalAlignment="Stretch"
                                     VerticalAlignment="Center"
-                                    SelectionChanged="cB_UMC_MotionDefaultOffOn_SelectionChanged">
-                                    <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionOff}" />
-                                    <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionOn}" />
-                                    <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionToggle}" />
-                                </ComboBox>
+                                    SelectionChanged="cB_Output_SelectionChanged" />
                             </Grid>
 
-                            <Separator Background="{DynamicResource ExpanderHeaderBackground}" />
+                            <ikw:SimpleStackPanel Spacing="3" Visibility="{Binding ElementName=cB_Output, Path=SelectedIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|2|3|4|5}">
 
-                            <!--  Motion activator  -->
-                            <ui:ItemsRepeater
-                                Grid.Column="1"
-                                Margin="12,0,0,0"
-                                ItemsSource="{Binding HotkeysList}">
-                                <ui:ItemsRepeater.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="10*" />
-                                                <ColumnDefinition Width="45" />
-                                            </Grid.ColumnDefinitions>
+                                <!--  Separator  -->
+                                <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
 
-                                            <ToggleButton
-                                                Height="41"
-                                                HorizontalAlignment="Stretch"
-                                                VerticalAlignment="Stretch"
-                                                Command="{Binding DefineButtonCommand}"
-                                                IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                <!--  Style of input  -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6*" />
+                                        <ColumnDefinition Width="4*" />
+                                    </Grid.ColumnDefinitions>
 
-                                                <ToggleButton.Resources>
-                                                    <Style BasedOn="{StaticResource {x:Type ToggleButton}}" TargetType="ToggleButton">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsExecuted}" Value="True">
-                                                                <DataTrigger.EnterActions>
-                                                                    <BeginStoryboard>
-                                                                        <Storyboard>
-                                                                            <DoubleAnimation
-                                                                                AutoReverse="True"
-                                                                                RepeatBehavior="1x"
-                                                                                Storyboard.TargetProperty="Opacity"
-                                                                                From="1.0"
-                                                                                To="0.0"
-                                                                                Duration="0:0:0.125" />
-                                                                        </Storyboard>
-                                                                    </BeginStoryboard>
-                                                                </DataTrigger.EnterActions>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </ToggleButton.Resources>
-
-                                                <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="6">
-                                                    <ui:ItemsRepeater ItemsSource="{Binding ButtonGlyphs}">
-                                                        <ui:ItemsRepeater.Style>
-                                                            <Style TargetType="ui:ItemsRepeater">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding ButtonGlyphs.Count}" Value="0">
-                                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding ButtonGlyphs.Count}">
-                                                                        <Setter Property="Visibility" Value="Visible" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </ui:ItemsRepeater.Style>
-
-                                                        <ui:ItemsRepeater.Layout>
-                                                            <ui:UniformGridLayout
-                                                                ItemsJustification="Center"
-                                                                ItemsStretch="Uniform"
-                                                                MaximumRowsOrColumns="10"
-                                                                MinColumnSpacing="3"
-                                                                Orientation="Horizontal" />
-                                                        </ui:ItemsRepeater.Layout>
-
-                                                        <ui:ItemsRepeater.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <ui:FontIcon
-                                                                    FontFamily="PromptFont"
-                                                                    FontSize="24"
-                                                                    Glyph="{Binding Glyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                                                                    <ui:FontIcon.Style>
-                                                                        <Style TargetType="ui:FontIcon">
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Value="{x:Null}">
-                                                                                    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                            <Setter Property="Foreground" Value="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                                        </Style>
-                                                                    </ui:FontIcon.Style>
-                                                                </ui:FontIcon>
-                                                            </DataTemplate>
-                                                        </ui:ItemsRepeater.ItemTemplate>
-                                                    </ui:ItemsRepeater>
-
-                                                    <TextBlock VerticalAlignment="Center" Text="{Binding KeyboardChord, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding KeyboardChord}" Value="">
-                                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding KeyboardChord}">
-                                                                        <Setter Property="Visibility" Value="Visible" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-
-                                                    <TextBlock
-                                                        VerticalAlignment="Center"
-                                                        Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
-                                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                                        Text="{Binding InputsChordType, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                </ikw:SimpleStackPanel>
-                                            </ToggleButton>
-
-                                            <Button
-                                                Grid.Column="1"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Stretch"
-                                                Command="{Binding EraseButtonCommand}">
-                                                <ui:FontIcon
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                                    Glyph="&#xe75c;" />
-                                            </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ui:ItemsRepeater.ItemTemplate>
-                            </ui:ItemsRepeater>
-
-                            <!--  Separator  -->
-                            <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                            <!--  Motion antideadzone  -->
-                            <Grid Name="GridAntiDeadzone">
-                                <ikw:SimpleStackPanel Spacing="6">
-                                    <StackPanel Orientation="Vertical">
-                                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_UMCAntiDeadzone}" />
+                                    <StackPanel VerticalAlignment="Center">
                                         <TextBlock
+                                            Style="{StaticResource BodyTextBlockStyle}"
+                                            Text="{l:Static resx:Resources.ProfilesPage_StyleofInput}"
+                                            ToolTip="{l:Static resx:Resources.ProfilesPage_StyleofInputTooltip}" />
+                                        <TextBlock
+                                            Name="Text_InputHint"
                                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                             Style="{StaticResource CaptionTextBlockStyle}"
-                                            Text="{l:Static resx:Resources.ProfilesPage_UMCAntiDeadzoneDesc}"
+                                            Text="{l:Static resx:Resources.ProfilesPage_StyleofInputTooltip}"
                                             TextWrapping="Wrap" />
                                     </StackPanel>
 
-                                    <DockPanel ScrollViewer.PanningMode="HorizontalOnly">
-                                        <TextBox
-                                            Height="32"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center"
-                                            HorizontalContentAlignment="Center"
-                                            IsReadOnly="True"
-                                            Text="{Binding Value, StringFormat={}{0:N0}, ElementName=SliderUMCAntiDeadzone, Mode=OneWay}" />
-                                        <Slider
-                                            x:Name="SliderUMCAntiDeadzone"
-                                            Margin="8,0,0,0"
-                                            HorizontalAlignment="Stretch"
-                                            VerticalAlignment="Center"
-                                            AutoToolTipPrecision="0"
-                                            IsMoveToPointEnabled="True"
-                                            IsSnapToTickEnabled="True"
-                                            LargeChange="10"
-                                            Maximum="40"
-                                            SmallChange="1"
-                                            Style="{DynamicResource SliderStyle1}"
-                                            TickPlacement="BottomRight"
-                                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                            ValueChanged="SliderUMCAntiDeadzone_ValueChanged" />
-                                    </DockPanel>
-                                </ikw:SimpleStackPanel>
-                            </Grid>
+                                    <ComboBox
+                                        Name="cB_Input"
+                                        Grid.Column="1"
+                                        Margin="12,0,0,0"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Center"
+                                        SelectionChanged="cB_Input_SelectionChanged" />
+                                </Grid>
 
-                            <!--  Separator  -->
-                            <Separator
-                                Margin="-16,0,-16,0"
-                                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                Visibility="{Binding ElementName=GridAntiDeadzone, Path=Visibility}" />
+                                <!--  Separator  -->
+                                <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
 
-                            <!--  Gyro Weight  -->
-                            <Grid Name="GridGyroWeight">
-                                <ikw:SimpleStackPanel Spacing="6">
+                                <!--  Motion activator  -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6*" />
+                                        <ColumnDefinition Width="4*" />
+                                    </Grid.ColumnDefinitions>
 
-                                    <StackPanel Orientation="Vertical">
-                                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Gyrometer weight" />
-                                        <TextBlock
-                                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                            Text="Modify the gyrometer weight when applied against joystick movements"
-                                            TextWrapping="Wrap" />
-                                    </StackPanel>
-
-                                    <DockPanel ScrollViewer.PanningMode="HorizontalOnly">
-                                        <TextBox
-                                            Height="32"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center"
-                                            HorizontalContentAlignment="Center"
-                                            IsReadOnly="True"
-                                            Text="{Binding Value, StringFormat={}{0:N1}, ElementName=Slider_GyroWeight, Mode=OneWay}" />
-                                        <Slider
-                                            x:Name="Slider_GyroWeight"
-                                            Margin="8,0,0,0"
-                                            HorizontalAlignment="Stretch"
-                                            VerticalAlignment="Center"
-                                            AutoToolTipPrecision="1"
-                                            IsMoveToPointEnabled="True"
-                                            IsSnapToTickEnabled="True"
-                                            Maximum="2.0"
-                                            Minimum="1.0"
-                                            Style="{DynamicResource SliderStyle1}"
-                                            TickFrequency="0.1"
-                                            TickPlacement="BottomRight"
-                                            ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                            ValueChanged="Slider_GyroWeight_ValueChanged" />
-                                    </DockPanel>
-                                </ikw:SimpleStackPanel>
-                            </Grid>
-
-                            <!--  Separator  -->
-                            <Separator
-                                Margin="-16,0,-16,0"
-                                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                Visibility="{Binding ElementName=GridGyroWeight, Path=Visibility}" />
-
-                            <!--  Sensivity  -->
-                            <Grid>
-                                <ikw:SimpleStackPanel Spacing="6">
                                     <StackPanel Orientation="Vertical">
                                         <TextBlock
                                             Style="{StaticResource BodyTextBlockStyle}"
-                                            Text="{l:Static resx:Resources.SettingsMode0_Sensitivity}"
+                                            Text="{l:Static resx:Resources.ProfilesPage_UMCMotionOnOff}"
                                             ToolTip="{l:Static resx:Resources.ProfilesPage_StyleofOutputTooltip}" />
                                         <TextBlock
                                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                             Style="{StaticResource CaptionTextBlockStyle}"
-                                            Text="{l:Static resx:Resources.SettingsMode0_SensitivityDesc}"
+                                            Text="{l:Static resx:Resources.ProfilesPage_UMCMotionOnOffDesc}"
                                             TextWrapping="Wrap" />
                                     </StackPanel>
 
-                                    <ikw:SimpleStackPanel Spacing="6">
-                                        <StackPanel>
-                                            <TextBlock Text="Horizontal sensitivity" />
-                                            <DockPanel ScrollViewer.PanningMode="HorizontalOnly">
-                                                <TextBox
-                                                    Height="32"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Center"
-                                                    HorizontalContentAlignment="Center"
-                                                    IsReadOnly="True"
-                                                    Text="{Binding Value, StringFormat={}{0:N1}, ElementName=SliderSensitivityX, Mode=OneWay}" />
-                                                <Slider
-                                                    x:Name="SliderSensitivityX"
-                                                    Margin="8,0,0,0"
+                                    <ComboBox
+                                        Name="cB_UMC_MotionDefaultOffOn"
+                                        Grid.Column="1"
+                                        Margin="12,0,0,0"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Center"
+                                        SelectionChanged="cB_UMC_MotionDefaultOffOn_SelectionChanged">
+                                        <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionOff}" />
+                                        <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionOn}" />
+                                        <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionToggle}" />
+                                    </ComboBox>
+                                </Grid>
+
+                                <Separator Background="{DynamicResource ExpanderHeaderBackground}" />
+
+                                <!--  Motion activator  -->
+                                <ItemsControl
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    ItemsSource="{Binding HotkeysList}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="10*" />
+                                                    <ColumnDefinition Width="45" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <ToggleButton
+                                                    Height="41"
                                                     HorizontalAlignment="Stretch"
-                                                    VerticalAlignment="Center"
-                                                    AutoToolTipPrecision="1"
-                                                    IsMoveToPointEnabled="True"
-                                                    IsSnapToTickEnabled="True"
-                                                    LargeChange="0.1"
-                                                    Maximum="3.0"
-                                                    Minimum="0.1"
-                                                    SmallChange="0.1"
-                                                    Style="{DynamicResource SliderStyle1}"
-                                                    TickFrequency="0.1"
-                                                    TickPlacement="BottomRight"
-                                                    ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                                    ValueChanged="SliderSensitivityX_ValueChanged"
-                                                    Value="1" />
-                                            </DockPanel>
+                                                    VerticalAlignment="Stretch"
+                                                    Command="{Binding DefineButtonCommand}"
+                                                    IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+
+                                                    <ToggleButton.Resources>
+                                                        <Style BasedOn="{StaticResource {x:Type ToggleButton}}" TargetType="ToggleButton">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsExecuted}" Value="True">
+                                                                    <DataTrigger.EnterActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation
+                                                                                    AutoReverse="True"
+                                                                                    RepeatBehavior="1x"
+                                                                                    Storyboard.TargetProperty="Opacity"
+                                                                                    From="1.0"
+                                                                                    To="0.0"
+                                                                                    Duration="0:0:0.125" />
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </DataTrigger.EnterActions>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ToggleButton.Resources>
+
+                                                    <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3">
+                                                        <ItemsControl ItemsSource="{Binding ButtonGlyphs}">
+                                                            <ItemsControl.Style>
+                                                                <Style TargetType="ItemsControl">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding ButtonGlyphs.Count}" Value="0">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding ButtonGlyphs.Count}">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </ItemsControl.Style>
+
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3" />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <ui:FontIcon
+                                                                        FontFamily="PromptFont"
+                                                                        FontSize="24"
+                                                                        Glyph="{Binding Glyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                                        <ui:FontIcon.Style>
+                                                                            <Style TargetType="ui:FontIcon">
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Value="{x:Null}">
+                                                                                        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                                <Setter Property="Foreground" Value="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                            </Style>
+                                                                        </ui:FontIcon.Style>
+                                                                    </ui:FontIcon>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+
+                                                        <TextBlock VerticalAlignment="Center" Text="{Binding KeyboardChord, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding KeyboardChord}" Value="">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding KeyboardChord}">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                                            Text="{Binding InputsChordType, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    </ikw:SimpleStackPanel>
+                                                </ToggleButton>
+
+                                                <Button
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Stretch"
+                                                    Command="{Binding EraseButtonCommand}">
+                                                    <ui:FontIcon
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                                        Glyph="&#xe75c;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!--  Separator  -->
+                                <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+
+                                <!--  Motion antideadzone  -->
+                                <Grid Name="GridAntiDeadzone">
+                                    <ikw:SimpleStackPanel Spacing="3">
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_UMCAntiDeadzone}" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.ProfilesPage_UMCAntiDeadzoneDesc}"
+                                                TextWrapping="Wrap" />
                                         </StackPanel>
 
-                                        <StackPanel>
-                                            <TextBlock Text="Vertical sensitivity" />
-                                            <DockPanel ScrollViewer.PanningMode="HorizontalOnly">
-                                                <TextBox
-                                                    Height="32"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Center"
-                                                    HorizontalContentAlignment="Center"
-                                                    IsReadOnly="True"
-                                                    Text="{Binding Value, StringFormat={}{0:N1}, ElementName=SliderSensitivityY, Mode=OneWay}" />
-                                                <Slider
-                                                    x:Name="SliderSensitivityY"
-                                                    Margin="8,0,0,0"
-                                                    HorizontalAlignment="Stretch"
-                                                    VerticalAlignment="Center"
-                                                    AutoToolTipPrecision="1"
-                                                    IsMoveToPointEnabled="True"
-                                                    IsSnapToTickEnabled="True"
-                                                    LargeChange="0.1"
-                                                    Maximum="3.0"
-                                                    Minimum="0.1"
-                                                    SmallChange="0.1"
-                                                    Style="{DynamicResource SliderStyle1}"
-                                                    TickFrequency="0.1"
-                                                    TickPlacement="BottomRight"
-                                                    ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                                    ValueChanged="SliderSensitivityY_ValueChanged"
-                                                    Value="1" />
-                                            </DockPanel>
+                                        <DockPanel>
+                                            <TextBox
+                                                Height="31"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                HorizontalContentAlignment="Center"
+                                                IsReadOnly="True"
+                                                Text="{Binding Value, StringFormat={}{0:N0}, ElementName=SliderUMCAntiDeadzone, Mode=OneWay}" />
+                                            <Slider
+                                                x:Name="SliderUMCAntiDeadzone"
+                                                Margin="8,0,0,0"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                AutoToolTipPrecision="0"
+                                                IsMoveToPointEnabled="True"
+                                                IsSnapToTickEnabled="True"
+                                                LargeChange="10"
+                                                Maximum="40"
+                                                SmallChange="1"
+                                                TickPlacement="BottomRight"
+                                                ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                                ValueChanged="SliderUMCAntiDeadzone_ValueChanged" />
+                                        </DockPanel>
+                                    </ikw:SimpleStackPanel>
+                                </Grid>
+
+                                <!--  Separator  -->
+                                <Separator
+                                    Margin="-16,0,-16,0"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                    Visibility="{Binding ElementName=GridAntiDeadzone, Path=Visibility}" />
+
+                                <!--  Gyro Weight  -->
+                                <Grid Name="GridGyroWeight">
+                                    <ikw:SimpleStackPanel Spacing="3">
+
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Gyrometer weight" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="Modify the gyrometer weight when applied against joystick movements"
+                                                TextWrapping="Wrap" />
                                         </StackPanel>
+
+                                        <DockPanel>
+                                            <TextBox
+                                                Height="31"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                HorizontalContentAlignment="Center"
+                                                IsReadOnly="True"
+                                                Text="{Binding Value, StringFormat={}{0:N1}, ElementName=Slider_GyroWeight, Mode=OneWay}" />
+                                            <Slider
+                                                x:Name="Slider_GyroWeight"
+                                                Margin="8,0,0,0"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                AutoToolTipPrecision="1"
+                                                IsMoveToPointEnabled="True"
+                                                IsSnapToTickEnabled="True"
+                                                Maximum="2.0"
+                                                Minimum="1.0"
+                                                TickFrequency="0.1"
+                                                TickPlacement="BottomRight"
+                                                ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                                ValueChanged="Slider_GyroWeight_ValueChanged" />
+                                        </DockPanel>
+                                    </ikw:SimpleStackPanel>
+                                </Grid>
+
+                                <!--  Separator  -->
+                                <Separator
+                                    Margin="-16,0,-16,0"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                    Visibility="{Binding ElementName=GridGyroWeight, Path=Visibility}" />
+
+                                <!--  Sensivity  -->
+                                <Grid>
+                                    <ikw:SimpleStackPanel Spacing="3">
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock
+                                                Style="{StaticResource BodyTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.SettingsMode0_Sensitivity}"
+                                                ToolTip="{l:Static resx:Resources.ProfilesPage_StyleofOutputTooltip}" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.SettingsMode0_SensitivityDesc}"
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
+
+                                        <ikw:SimpleStackPanel Spacing="3">
+                                            <StackPanel>
+                                                <TextBlock Text="Horizontal sensitivity" />
+                                                <DockPanel>
+                                                    <TextBox
+                                                        Height="31"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center"
+                                                        HorizontalContentAlignment="Center"
+                                                        IsReadOnly="True"
+                                                        Text="{Binding Value, StringFormat={}{0:N1}, ElementName=SliderSensitivityX, Mode=OneWay}" />
+                                                    <Slider
+                                                        x:Name="SliderSensitivityX"
+                                                        Margin="8,0,0,0"
+                                                        HorizontalAlignment="Stretch"
+                                                        VerticalAlignment="Center"
+                                                        AutoToolTipPrecision="1"
+                                                        IsMoveToPointEnabled="True"
+                                                        IsSnapToTickEnabled="True"
+                                                        LargeChange="0.1"
+                                                        Maximum="3.0"
+                                                        Minimum="0.1"
+                                                        SmallChange="0.1"
+                                                        TickFrequency="0.1"
+                                                        TickPlacement="BottomRight"
+                                                        ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                                        ValueChanged="SliderSensitivityX_ValueChanged"
+                                                        Value="1" />
+                                                </DockPanel>
+                                            </StackPanel>
+
+                                            <StackPanel>
+                                                <TextBlock Text="Vertical sensitivity" />
+                                                <DockPanel>
+                                                    <TextBox
+                                                        Height="31"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center"
+                                                        HorizontalContentAlignment="Center"
+                                                        IsReadOnly="True"
+                                                        Text="{Binding Value, StringFormat={}{0:N1}, ElementName=SliderSensitivityY, Mode=OneWay}" />
+                                                    <Slider
+                                                        x:Name="SliderSensitivityY"
+                                                        Margin="8,0,0,0"
+                                                        HorizontalAlignment="Stretch"
+                                                        VerticalAlignment="Center"
+                                                        AutoToolTipPrecision="1"
+                                                        IsMoveToPointEnabled="True"
+                                                        IsSnapToTickEnabled="True"
+                                                        LargeChange="0.1"
+                                                        Maximum="3.0"
+                                                        Minimum="0.1"
+                                                        SmallChange="0.1"
+                                                        TickFrequency="0.1"
+                                                        TickPlacement="BottomRight"
+                                                        ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                                        ValueChanged="SliderSensitivityY_ValueChanged"
+                                                        Value="1" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </ikw:SimpleStackPanel>
+                                    </ikw:SimpleStackPanel>
+                                </Grid>
+                            </ikw:SimpleStackPanel>
+                        </ikw:SimpleStackPanel>
+                    </Expander.Content>
+                </Expander>
+            </ikw:SimpleStackPanel>
+
+            <!--  Graphics settings  -->
+            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_GraphicsSettings}" />
+            <ikw:SimpleStackPanel Spacing="3">
+
+                <Expander
+                    Name="GraphicsSettingsExpander"
+                    HorizontalAlignment="Stretch"
+                    d:IsExpanded="true"
+                    IsExpanded="False">
+                    <Expander.Header>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="7*" />
+                                <ColumnDefinition Width="3*" MinWidth="120" />
+                            </Grid.ColumnDefinitions>
+
+                            <DockPanel Margin="0,12,12,12">
+                                <ui:FontIcon
+                                    Height="40"
+                                    HorizontalAlignment="Center"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xE790;" />
+
+                                <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_GraphicsSettings}" />
+                                    <TextBlock
+                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{l:Static resx:Resources.ProfilesPage_GraphicsSettingsDesc}"
+                                        TextWrapping="Wrap" />
+                                </ikw:SimpleStackPanel>
+                            </DockPanel>
+
+                            <TextBlock
+                                Name="CurrentDeviceName"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                d:Visibility="Visible"
+                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                Style="{StaticResource BodyTextBlockStyle}"
+                                Text="{l:Static resx:Resources.PowerProfileDefaultName}"
+                                Visibility="Collapsed" />
+                        </Grid>
+                    </Expander.Header>
+
+                    <Expander.Content>
+                        <Grid>
+                            <ikw:SimpleStackPanel Margin="0,-10,0,-4" Spacing="3">
+                                <!--  GPU Scaling  -->
+                                <ikw:SimpleStackPanel
+                                    Name="StackProfileGPUScaling"
+                                    IsEnabled="False"
+                                    Spacing="3">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="5*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_GPUScaling}" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.ProfilesPage_GPUScalingDesc}"
+                                                TextWrapping="Wrap" />
+                                        </ikw:SimpleStackPanel>
+
+                                        <ui:ToggleSwitch
+                                            Name="GPUScalingToggle"
+                                            Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Style="{DynamicResource InvertedToggleSwitchStyle}"
+                                            Toggled="GPUScaling_Toggled" />
+                                    </Grid>
+
+                                    <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=GPUScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                    <StackPanel d:Visibility="Visible" Visibility="{Binding ElementName=GPUScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ScalingMode}" />
+                                                <TextBlock
+                                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Text="{l:Static resx:Resources.ProfilesPage_GPUScalingDesc}"
+                                                    TextWrapping="Wrap" />
+                                            </ikw:SimpleStackPanel>
+
+                                            <ComboBox
+                                                Name="GPUScalingComboBox"
+                                                Grid.Column="1"
+                                                Margin="12,0,0,0"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                SelectionChanged="GPUScalingComboBox_SelectionChanged">
+                                                <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_ScalingMode_PreserveAspectRatio}" />
+                                                <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_ScalingMode_FullPanel}" />
+                                                <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_ScalingMode_Center}" IsEnabled="{Binding ElementName=RSRToggle, Path=IsOn, Converter={StaticResource InvertBooleanConverter}}" />
+                                            </ComboBox>
+                                        </Grid>
+                                    </StackPanel>
+                                </ikw:SimpleStackPanel>
+
+                                <!--  Separator  -->
+                                <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+
+                                <!--  RSR (AMD)  -->
+                                <ikw:SimpleStackPanel
+                                    Name="StackProfileRSR"
+                                    d:Background="Red"
+                                    d:Visibility="Visible"
+                                    IsEnabled="False"
+                                    Spacing="3"
+                                    Visibility="Collapsed">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="5*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_RSR}" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.ProfilesPage_RSRDesc}"
+                                                TextWrapping="Wrap" />
+                                        </ikw:SimpleStackPanel>
+
+                                        <ui:ToggleSwitch
+                                            Name="RSRToggle"
+                                            Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            IsEnabled="{Binding ElementName=GPUScalingToggle, Path=IsOn}"
+                                            Style="{DynamicResource InvertedToggleSwitchStyle}"
+                                            Toggled="RSRToggle_Toggled" />
+                                    </Grid>
+
+                                    <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=RSRToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                    <DockPanel
+                                        Grid.Column="1"
+                                        Margin="12,0,0,0"
+                                        d:Visibility="Visible"
+                                        Visibility="{Binding ElementName=RSRToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+                                        <TextBox
+                                            Height="31"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            HorizontalContentAlignment="Center"
+                                            IsReadOnly="True"
+                                            Text="{Binding Value, StringFormat={}{0:N0} %, ElementName=RSRSlider, Mode=OneWay}" />
+                                        <Slider
+                                            x:Name="RSRSlider"
+                                            VerticalAlignment="Center"
+                                            AutoToolTipPrecision="0"
+                                            IsMoveToPointEnabled="True"
+                                            IsSnapToTickEnabled="True"
+                                            LargeChange="5"
+                                            Maximum="100"
+                                            Minimum="0"
+                                            SmallChange="1"
+                                            TickFrequency="5"
+                                            TickPlacement="BottomRight"
+                                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                            ValueChanged="RSRSlider_ValueChanged" />
+                                    </DockPanel>
+                                </ikw:SimpleStackPanel>
+
+                                <!--  Separator  -->
+                                <Separator
+                                    Margin="-16,0,-16,0"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                    Visibility="{Binding ElementName=StackProfileRSR, Path=Visibility}" />
+
+                                <!--  AFMF (AMD)  -->
+                                <ikw:SimpleStackPanel
+                                    Name="StackProfileAFMF"
+                                    d:Background="Red"
+                                    d:Visibility="Visible"
+                                    IsEnabled="False"
+                                    Spacing="3"
+                                    Visibility="Collapsed">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="5*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_AFMF}" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.ProfilesPage_AFMFDesc}"
+                                                TextWrapping="Wrap" />
+                                        </ikw:SimpleStackPanel>
+
+                                        <ui:ToggleSwitch
+                                            Name="AFMFToggle"
+                                            Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Style="{DynamicResource InvertedToggleSwitchStyle}"
+                                            Toggled="AFMFToggle_Toggled" />
+                                    </Grid>
+                                </ikw:SimpleStackPanel>
+
+                                <!--  Separator  -->
+                                <Separator
+                                    Margin="-16,0,-16,0"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                    Visibility="{Binding ElementName=StackProfileAFMF, Path=Visibility}" />
+
+                                <!--  Integer Scaling  -->
+                                <ikw:SimpleStackPanel
+                                    Name="StackProfileIS"
+                                    IsEnabled="False"
+                                    Spacing="3">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="7*" />
+                                            <ColumnDefinition Width="3*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_IS}" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.ProfilesPage_ISDesc}"
+                                                TextWrapping="Wrap" />
+                                        </ikw:SimpleStackPanel>
+
+                                        <ui:ToggleSwitch
+                                            Name="IntegerScalingToggle"
+                                            Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            IsEnabled="{Binding ElementName=GPUScalingToggle, Path=IsOn}"
+                                            Style="{DynamicResource InvertedToggleSwitchStyle}"
+                                            Toggled="IntegerScalingToggle_Toggled" />
+                                    </Grid>
+
+                                    <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=IntegerScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                    <ikw:SimpleStackPanel
+                                        d:Visibility="Visible"
+                                        Spacing="3"
+                                        Visibility="{Binding ElementName=IntegerScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ResolutionScale}" />
+                                                <TextBlock
+                                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Text="{l:Static resx:Resources.ProfilesPage_ResolutionScaleDesc}"
+                                                    TextWrapping="Wrap" />
+                                            </ikw:SimpleStackPanel>
+
+                                            <ComboBox
+                                                Name="IntegerScalingComboBox"
+                                                Grid.Column="1"
+                                                Margin="12,0,0,0"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                SelectionChanged="IntegerScalingComboBox_SelectionChanged" />
+                                        </Grid>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel
+                                                Grid.Column="1"
+                                                Margin="12,0,0,0"
+                                                d:Visibility="Visible"
+                                                Orientation="Horizontal"
+                                                Visibility="{Binding ElementName=IntegerScalingComboBox, Path=SelectedIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=0}">
+                                                <ui:FontIcon
+                                                    Height="20"
+                                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                                    Glyph="&#xe7ba;" />
+                                                <TextBlock
+                                                    Margin="6,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Text="{l:Static resx:Resources.QuickSettingsPage_ResScaleExclusiveFullscreen}"
+                                                    TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=IntegerScalingTypeGrid, Path=Visibility}" />
+
+                                        <Grid
+                                            Name="IntegerScalingTypeGrid"
+                                            MinHeight="40"
+                                            d:Background="Blue">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ResolutionScaleType}" />
+                                                <TextBlock
+                                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Text="{l:Static resx:Resources.ProfilesPage_ResolutionScaleTypeDesc}"
+                                                    TextWrapping="Wrap" />
+                                            </ikw:SimpleStackPanel>
+
+                                            <ComboBox
+                                                Name="IntegerScalingTypeComboBox"
+                                                Grid.Column="1"
+                                                Margin="12,0,0,0"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                SelectionChanged="IntegerScalingTypeComboBox_SelectionChanged">
+                                                <ComboBoxItem Name="IntegerScalingTypeInteger" Content="{l:Static resx:Resources.ProfilesPage_ResolutionScaleTypeInteger}" />
+                                                <ComboBoxItem Name="IntegerScalingTypeNearest" Content="{l:Static resx:Resources.ProfilesPage_ResolutionScaleTypeNearest}" />
+                                            </ComboBox>
+                                        </Grid>
                                     </ikw:SimpleStackPanel>
                                 </ikw:SimpleStackPanel>
-                            </Grid>
-                        </ikw:SimpleStackPanel>
-                    </ikw:SimpleStackPanel>
-                </Expander.Content>
-            </Expander>
-            <Expander
-                HorizontalAlignment="Stretch"
-                d:IsExpanded="true"
-                IsExpanded="False">
-                <Expander.Header>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="7*" />
-                            <ColumnDefinition Width="3*" MinWidth="120" />
-                        </Grid.ColumnDefinitions>
 
-                        <DockPanel Margin="0,12,12,12">
-                            <ui:FontIcon
-                                Height="40"
-                                HorizontalAlignment="Center"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xf211;" />
+                                <!--  Separator  -->
+                                <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
 
-                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_GraphicsSettings}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_GraphicsSettingsDesc}"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
-                        </DockPanel>
-                    </Grid>
-                </Expander.Header>
+                                <!--  RIS (AMD)  -->
+                                <ikw:SimpleStackPanel
+                                    Name="StackProfileRIS"
+                                    IsEnabled="False"
+                                    Spacing="3">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="5*" />
+                                        </Grid.ColumnDefinitions>
 
-                <ikw:SimpleStackPanel Margin="0,-10,0,-4" Spacing="6">
-                    <!--  GPU Scaling  -->
-                    <ikw:SimpleStackPanel Name="StackProfileGPUScaling" Spacing="6">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="7*" />
-                                <ColumnDefinition Width="3*" />
-                            </Grid.ColumnDefinitions>
+                                        <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ImageSharpening}" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.ProfilesPage_ImageSharpeningDesc}"
+                                                TextWrapping="Wrap" />
+                                        </ikw:SimpleStackPanel>
 
-                            <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_GPUScaling}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_GPUScalingDesc}"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
+                                        <ui:ToggleSwitch
+                                            Name="RISToggle"
+                                            Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Style="{DynamicResource InvertedToggleSwitchStyle}"
+                                            Toggled="RISToggle_Toggled" />
+                                    </Grid>
 
-                            <ui:ToggleSwitch
-                                Name="GPUScalingToggle"
-                                Grid.Column="1"
-                                Margin="12,0,0,0"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                Style="{DynamicResource InvertedToggleSwitchStyle}"
-                                Toggled="GPUScaling_Toggled" />
-                        </Grid>
+                                    <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=RISToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                        <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=GPUScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <DockPanel
+                                        Grid.Column="1"
+                                        Margin="12,0,0,0"
+                                        d:Visibility="Visible"
+                                        Visibility="{Binding ElementName=RISToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
 
-                        <StackPanel d:Visibility="Visible" Visibility="{Binding ElementName=GPUScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="6*" />
-                                    <ColumnDefinition Width="4*" />
-                                </Grid.ColumnDefinitions>
-
-                                <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ScalingMode}" />
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_GPUScalingDesc}"
-                                        TextWrapping="Wrap" />
+                                        <TextBox
+                                            Height="31"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            HorizontalContentAlignment="Center"
+                                            IsReadOnly="True"
+                                            Text="{Binding Value, StringFormat={}{0:N0} %, ElementName=RISSlider, Mode=OneWay}" />
+                                        <Slider
+                                            x:Name="RISSlider"
+                                            VerticalAlignment="Center"
+                                            AutoToolTipPrecision="0"
+                                            IsMoveToPointEnabled="True"
+                                            IsSnapToTickEnabled="True"
+                                            LargeChange="5"
+                                            Maximum="100"
+                                            Minimum="0"
+                                            SmallChange="1"
+                                            TickFrequency="5"
+                                            TickPlacement="BottomRight"
+                                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                            ValueChanged="RISSlider_ValueChanged" />
+                                    </DockPanel>
                                 </ikw:SimpleStackPanel>
 
-                                <ComboBox
-                                    Name="GPUScalingComboBox"
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Center"
-                                    SelectionChanged="GPUScalingComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_ScalingMode_PreserveAspectRatio}" />
-                                    <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_ScalingMode_FullPanel}" />
-                                    <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_ScalingMode_Center}" IsEnabled="{Binding ElementName=RSRToggle, Path=IsOn, Converter={StaticResource InvertBooleanConverter}}" />
-                                </ComboBox>
-                            </Grid>
-                        </StackPanel>
-                    </ikw:SimpleStackPanel>
+                                <!--  Separator  -->
+                                <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
 
-                    <!--  Separator  -->
-                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                                <!--  Framerate Limit  -->
+                                <ikw:SimpleStackPanel
+                                    Name="StackProfileFramerate"
+                                    IsEnabled="False"
+                                    Spacing="3">
 
-                    <!--  RSR (AMD)  -->
-                    <ikw:SimpleStackPanel
-                        Name="StackProfileRSR"
-                        d:Background="Red"
-                        d:Visibility="Visible"
-                        Spacing="6"
-                        Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="5*" />
-                                <ColumnDefinition Width="5*" />
-                            </Grid.ColumnDefinitions>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="5*" />
+                                        </Grid.ColumnDefinitions>
 
-                            <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_RSR}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_RSRDesc}"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
+                                        <ikw:SimpleStackPanel VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_FramerateLimit}" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{l:Static resx:Resources.ProfilesPage_FramerateLimitDesc}"
+                                                TextWrapping="Wrap" />
+                                        </ikw:SimpleStackPanel>
 
-                            <ui:ToggleSwitch
-                                Name="RSRToggle"
-                                Grid.Column="1"
-                                Margin="12,0,0,0"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                IsEnabled="{Binding ElementName=GPUScalingToggle, Path=IsOn}"
-                                Style="{DynamicResource InvertedToggleSwitchStyle}"
-                                Toggled="RSRToggle_Toggled" />
-                        </Grid>
-
-                        <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=RSRToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-
-                        <DockPanel
-                            Grid.Column="1"
-                            Margin="0,0,0,0"
-                            d:Visibility="Visible"
-                            ScrollViewer.PanningMode="HorizontalOnly"
-                            Visibility="{Binding ElementName=RSRToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
-
-                            <TextBox
-                                Height="32"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                HorizontalContentAlignment="Center"
-                                IsReadOnly="True"
-                                Text="{Binding Value, StringFormat={}{0:N0} %, ElementName=RSRSlider, Mode=OneWay}" />
-                            <Slider
-                                x:Name="RSRSlider"
-                                VerticalAlignment="Center"
-                                AutoToolTipPrecision="0"
-                                IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
-                                LargeChange="5"
-                                Maximum="100"
-                                Minimum="0"
-                                SmallChange="1"
-                                Style="{DynamicResource SliderStyle1}"
-                                TickFrequency="5"
-                                TickPlacement="BottomRight"
-                                ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                ValueChanged="RSRSlider_ValueChanged" />
-                        </DockPanel>
-                    </ikw:SimpleStackPanel>
-
-                    <!--  Separator  -->
-                    <Separator
-                        Margin="-16,0,-16,0"
-                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                        Visibility="{Binding ElementName=StackProfileRSR, Path=Visibility}" />
-
-
-                    <!--  AFMF (AMD)  -->
-                    <ikw:SimpleStackPanel
-                        Name="StackProfileAFMF"
-                        d:Background="Red"
-                        d:Visibility="Visible"
-                        Spacing="6"
-                        Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="5*" />
-                                <ColumnDefinition Width="5*" />
-                            </Grid.ColumnDefinitions>
-
-                            <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_AFMF}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_AFMFDesc}"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
-
-                            <ui:ToggleSwitch
-                                Name="AFMFToggle"
-                                Grid.Column="1"
-                                Margin="12,0,0,0"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                Style="{DynamicResource InvertedToggleSwitchStyle}"
-                                Toggled="AFMFToggle_Toggled" />
-                        </Grid>
-                    </ikw:SimpleStackPanel>
-
-                    <!--  Separator  -->
-                    <Separator
-                        Margin="-16,0,-16,0"
-                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                        Visibility="{Binding ElementName=StackProfileAFMF, Path=Visibility}" />
-
-
-                    <!--  Integer Scaling  -->
-                    <ikw:SimpleStackPanel Name="StackProfileIS" Spacing="6">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="7*" />
-                                <ColumnDefinition Width="3*" />
-                            </Grid.ColumnDefinitions>
-
-                            <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_IS}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_ISDesc}"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
-
-                            <ui:ToggleSwitch
-                                Name="IntegerScalingToggle"
-                                Grid.Column="1"
-                                Margin="12,0,0,0"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                IsEnabled="{Binding ElementName=GPUScalingToggle, Path=IsOn}"
-                                Style="{DynamicResource InvertedToggleSwitchStyle}"
-                                Toggled="IntegerScalingToggle_Toggled" />
-                        </Grid>
-
-                        <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=IntegerScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-
-                        <ikw:SimpleStackPanel
-                            d:Visibility="Visible"
-                            Spacing="6"
-                            Visibility="{Binding ElementName=IntegerScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="5*" />
-                                    <ColumnDefinition Width="5*" />
-                                </Grid.ColumnDefinitions>
-
-                                <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ResolutionScale}" />
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_ResolutionScaleDesc}"
-                                        TextWrapping="Wrap" />
+                                        <ComboBox
+                                            Name="cB_Framerate"
+                                            Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
+                                            SelectionChanged="cB_Framerate_SelectionChanged" />
+                                    </Grid>
                                 </ikw:SimpleStackPanel>
-
-                                <ComboBox
-                                    Name="IntegerScalingComboBox"
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Center"
-                                    SelectionChanged="IntegerScalingComboBox_SelectionChanged" />
-                            </Grid>
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="5*" />
-                                    <ColumnDefinition Width="5*" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    d:Visibility="Visible"
-                                    Orientation="Horizontal"
-                                    Visibility="{Binding ElementName=IntegerScalingComboBox, Path=SelectedIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=0}">
-                                    <ui:FontIcon
-                                        Height="20"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        Glyph="&#xe7ba;" />
-                                    <TextBlock
-                                        Margin="6,0,0,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.QuickSettingsPage_ResScaleExclusiveFullscreen}"
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Grid>
-
-                            <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=IntegerScalingTypeGrid, Path=Visibility}" />
-
-                            <Grid
-                                Name="IntegerScalingTypeGrid"
-                                MinHeight="40"
-                                d:Background="Blue">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="5*" />
-                                    <ColumnDefinition Width="5*" />
-                                </Grid.ColumnDefinitions>
-
-                                <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ResolutionScaleType}" />
-                                    <TextBlock
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{l:Static resx:Resources.ProfilesPage_ResolutionScaleTypeDesc}"
-                                        TextWrapping="Wrap" />
-                                </ikw:SimpleStackPanel>
-
-                                <ComboBox
-                                    Name="IntegerScalingTypeComboBox"
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Center"
-                                    SelectionChanged="IntegerScalingTypeComboBox_SelectionChanged">
-                                    <ComboBoxItem Name="IntegerScalingTypeInteger" Content="{l:Static resx:Resources.ProfilesPage_ResolutionScaleTypeInteger}" />
-                                    <ComboBoxItem Name="IntegerScalingTypeNearest" Content="{l:Static resx:Resources.ProfilesPage_ResolutionScaleTypeNearest}" />
-                                </ComboBox>
-                            </Grid>
-                        </ikw:SimpleStackPanel>
-                    </ikw:SimpleStackPanel>
-
-                    <!--  Separator  -->
-                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                    <!--  RIS (AMD)  -->
-                    <ikw:SimpleStackPanel Name="StackProfileRIS" Spacing="6">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="5*" />
-                                <ColumnDefinition Width="5*" />
-                            </Grid.ColumnDefinitions>
-
-                            <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ImageSharpening}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.ProfilesPage_ImageSharpeningDesc}"
-                                    TextWrapping="Wrap" />
                             </ikw:SimpleStackPanel>
-
-                            <ui:ToggleSwitch
-                                Name="RISToggle"
-                                Grid.Column="1"
-                                Margin="12,0,0,0"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                Style="{DynamicResource InvertedToggleSwitchStyle}"
-                                Toggled="RISToggle_Toggled" />
+                            <ui:ProgressRing
+                                Name="GraphicsSettingsRing"
+                                Width="100"
+                                Height="100"
+                                Visibility="Collapsed" />
                         </Grid>
-
-                        <Separator Background="{DynamicResource ExpanderHeaderBackground}" Visibility="{Binding ElementName=RISToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-
-                        <DockPanel
-                            Grid.Column="1"
-                            Margin="12,0,0,0"
-                            d:Visibility="Visible"
-                            ScrollViewer.PanningMode="HorizontalOnly"
-                            Visibility="{Binding ElementName=RISToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
-
-                            <TextBox
-                                Height="32"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                HorizontalContentAlignment="Center"
-                                IsReadOnly="True"
-                                Text="{Binding Value, StringFormat={}{0:N0} %, ElementName=RISSlider, Mode=OneWay}" />
-                            <Slider
-                                x:Name="RISSlider"
-                                VerticalAlignment="Center"
-                                AutoToolTipPrecision="0"
-                                IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
-                                LargeChange="5"
-                                Maximum="100"
-                                Minimum="0"
-                                SmallChange="1"
-                                Style="{DynamicResource SliderStyle1}"
-                                TickFrequency="5"
-                                TickPlacement="BottomRight"
-                                ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                ValueChanged="RISSlider_ValueChanged" />
-                        </DockPanel>
-                    </ikw:SimpleStackPanel>
-
-
-                    <!--  Separator  -->
-                    <Separator Margin="-16,0,-16,0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-
-                    <!--  Framerate Limit  -->
-                    <ikw:SimpleStackPanel
-                         Name="StackProfileFramerate"
-                         IsEnabled="False"
-                         Spacing="6">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="7*" />
-                                <ColumnDefinition Width="3*" />
-                            </Grid.ColumnDefinitions>
-
-                                <ikw:SimpleStackPanel VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_FramerateLimit}" />
-                                    <TextBlock
-                                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                         Style="{StaticResource CaptionTextBlockStyle}"
-                                         Text="{l:Static resx:Resources.ProfilesPage_FramerateLimitDesc}"
-                                         TextWrapping="Wrap" />
-                                </ikw:SimpleStackPanel>
-
-                            <ComboBox
-                                 Name="cB_Framerate"
-                                 Grid.Column="1"
-                                 Margin="12,0,0,0"
-                                 HorizontalAlignment="Stretch"
-                                 VerticalAlignment="Center"
-                                 SelectionChanged="cB_Framerate_SelectionChanged" />
-                        </Grid>
-
-                    </ikw:SimpleStackPanel>
-                </ikw:SimpleStackPanel>
-            </Expander>
+                    </Expander.Content>
+                </Expander>
+            </ikw:SimpleStackPanel>
         </ikw:SimpleStackPanel>
-        
     </ikw:SimpleStackPanel>
 </Page>

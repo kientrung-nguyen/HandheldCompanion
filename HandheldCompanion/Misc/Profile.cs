@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Windows;
 using WpfScreenHelper.Enum;
 using static HandheldCompanion.Utils.XInputPlusUtils;
 
@@ -165,11 +166,11 @@ public partial class Profile : ICloneable, IComparable
     public ButtonState AimingSightsTrigger { get; set; } = new();
 
     // power & graphics
-    public Guid[] PowerProfiles { get; set; } = 
-    [
-        new("00000000-0000-0000-0000-010000000000"), // PowerLineStatus.Offline
-        new("00000000-0000-0000-0000-000000000000"), // PowerLineStatus.Online
-    ];
+    public Dictionary<int, Guid> PowerProfiles { get; set; } = new()
+    {
+        { (int)PowerLineStatus.Offline, PowerProfile.DefaultDC },
+        { (int)PowerLineStatus.Online, PowerProfile.DefaultAC }
+    };
 
     public int FramerateValue { get; set; } = 0; // default RTSS value
     public bool GPUScaling { get; set; }
@@ -297,7 +298,7 @@ public partial class Profile : ICloneable, IComparable
 
     public List<string> GetExecutables(bool addMain)
     {
-        List<string> execs = new(Executables);
+        List<string> execs = [.. Executables];
 
         if (addMain)
             execs.Add(Path);

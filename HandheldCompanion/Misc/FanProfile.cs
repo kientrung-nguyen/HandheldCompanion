@@ -105,19 +105,19 @@ namespace HandheldCompanion.Misc
 
             // --- Correct interpolation on 0..100°C grid in 10°C steps ---
             // X-axis (temperatures): 0,10,20,...,100  => indices 0..10
-            int lastIdx = fanSpeeds.Length - 1;
+            int lastIdx = FanSpeeds.Length - 1;
 
             // Bracket indices
             int i0 = Math.Min((int)Math.Floor(temp / 10.0), lastIdx);
             int i1 = Math.Min(i0 + 1, lastIdx);
 
             // Degenerate case (at 100°C or array of length 1)
-            if (i0 == i1) return fanSpeeds[i0];
+            if (i0 == i1) return FanSpeeds[i0];
 
             double t0 = i0 * 10.0;
             double t1 = i1 * 10.0;
-            double y0 = fanSpeeds[i0];
-            double y1 = fanSpeeds[i1];
+            double y0 = FanSpeeds[i0];
+            double y1 = FanSpeeds[i1];
 
             double y = y0 + (temp - t0) * (y1 - y0) / (t1 - t0);
             return Math.Clamp(y, 0.0, 100.0);
@@ -125,7 +125,7 @@ namespace HandheldCompanion.Misc
 
         public void SetFanSpeed(double[] fanSpeeds)
         {
-            if (fanSpeeds.Length != this.fanSpeeds.Length || fanSpeeds.Length == 0)
+            if (fanSpeeds.Length != this.FanSpeeds.Length || fanSpeeds.Length == 0)
                 throw new ArgumentException("Invalid input array");
 
             for (int i = 0; i < fanSpeeds.Length - 1; i++)

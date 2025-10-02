@@ -602,12 +602,12 @@ namespace HandheldCompanion.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool DesktopProfileOnStart {
+        public bool DesktopLayoutOnStart {
             get {
-                return ((bool)(this["DesktopProfileOnStart"]));
+                return ((bool)(this["DesktopLayoutOnStart"]));
             }
             set {
-                this["DesktopProfileOnStart"] = value;
+                this["DesktopLayoutOnStart"] = value;
             }
         }
         
@@ -644,18 +644,6 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["OnScreenDisplayRefreshRate"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("-1")]
-        public int NativeDisplayOrientation {
-            get {
-                return ((int)(this["NativeDisplayOrientation"]));
-            }
-            set {
-                this["NativeDisplayOrientation"] = value;
             }
         }
         

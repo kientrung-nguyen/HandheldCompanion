@@ -17,9 +17,11 @@
     MaxWidth="960"
     MaxHeight="960"
     Margin="12,12,12,59"
+    d:DataContext="{d:DesignInstance Type=viewmodels:OverlayQuickToolsViewModel}"
     d:Height="450"
     ui:ThemeManager.IsThemeAware="True"
     ui:TitleBar.ExtendViewIntoTitleBar="True"
+    ui:WindowHelper.ApplyNoise="{Binding QuickToolsApplyNoise, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
     ui:WindowHelper.SystemBackdropType="Mica"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
@@ -33,6 +35,11 @@
     UseLayoutRounding="True"
     WindowStyle="ToolWindow"
     mc:Ignorable="d">
+
+    <Window.Resources>
+        <sys:Double x:Key="SettingsCardWrapThreshold">286</sys:Double>
+        <sys:Double x:Key="SettingsCardWrapNoIconThreshold">286</sys:Double>
+    </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -55,7 +62,7 @@
                         Margin="14,0,0,0"
                         VerticalAlignment="Center"
                         Orientation="Horizontal">
-                        <Grid>
+                        <!--<Grid>
                             <ui:FontIcon
                                 Name="WifiIcon"
                                 Width="24"
@@ -70,7 +77,7 @@
                                 FontSize="15"
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xe702;" />
-                        </Grid>
+                        </Grid>-->
                         <TextBlock
                             Name="Time"
                             Margin="0,0,0,0"
@@ -475,127 +482,195 @@
         <DockPanel
             Grid.Row="2"
             VerticalAlignment="Stretch">
-            <ui:NavigationView
-                Name="navView"
-                Margin="0,0,0,0"
-                BackRequested="navView_BackRequested"
-                IsBackButtonVisible="Collapsed"
-                IsBackEnabled="False"
-                IsSettingsVisible="False"
-                IsPaneToggleButtonVisible="False"
-                ItemInvoked="navView_ItemInvoked"
-                Loaded="navView_Loaded"
-                PaneDisplayMode="Top"
-                Style="{StaticResource NavigationViewStyle1}"
-                SelectionFollowsFocus="Enabled"
-                Grid.Row="0"
-                Grid.Column="0">
-                <ui:NavigationView.MenuItems>
-                    <ui:NavigationViewItem IsEnabled="False">
-                        <ui:NavigationViewItem.Icon>
-                            <ui:FontIcon
-                                Name="QTLB"
-                                Margin="-6,0,0,0"
-                                FontFamily="PromptFont"
-                                FontSize="22"
-                                Glyph="&#x2198;" />
-                        </ui:NavigationViewItem.Icon>
-                    </ui:NavigationViewItem>
-                    <ui:NavigationViewItem 
-                        Name="navSettingsPage" 
-                        Tag="QuickHomePage"
-		                FontSize="12"
-                        Style="{StaticResource NavigationViewItemStyle1}"
-                        Content="{l:Static resx:Resources.QuickHomePage_Title}">
-                        <ui:NavigationViewItem.Icon>
+        <ui:NavigationView
+            Name="navView"
+            Margin="0,0,0,0"
+            BackRequested="navView_BackRequested"
+            IsBackButtonVisible="Collapsed"
+            IsBackEnabled="{Binding ElementName=ContentFrame, Path=CanGoBack, Mode=OneWay}"
+            IsPaneToggleButtonVisible="False"
+            IsSettingsVisible="False"
+            ItemInvoked="navView_ItemInvoked"
+            Loaded="navView_Loaded"
+            PaneDisplayMode="Top"
+            SelectionFollowsFocus="Enabled"
+            Style="{StaticResource NavigationViewStyle1}">
+
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem IsEnabled="False">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:FontIcon
+                            Name="QTLB"
+                            Margin="-6,0,0,0"
+                            FontFamily="PromptFont"
+                            FontSize="22"
+                            Glyph="&#x2198;" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem
+                    Name="navHome"
+                    Content="{l:Static resx:Resources.QuickHomePage_Title}"
+                    FontSize="12"
+                    Style="{StaticResource NavigationViewItemStyle1}"
+                    Tag="QuickHomePage">
+                    <ui:NavigationViewItem.Icon>
                             <ui:FontIcon 
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
                                 FontFamily="{StaticResource SymbolThemeFontFamily}"
                                 Glyph="&#xE80F;" />
-                        </ui:NavigationViewItem.Icon>
-                    </ui:NavigationViewItem>
-                    <ui:NavigationViewItem 
-                        Name="navDevicePage" 
-                        Tag="QuickDevicePage"
-		                FontSize="12"
-                        Style="{StaticResource NavigationViewItemStyle1}"
-                        Content="{l:Static resx:Resources.QuickDevicePage_Title}">
-                        <ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem
+                    Name="navDevice"
+                    Content="{l:Static resx:Resources.QuickDevicePage_Title}"
+                    FontSize="12"
+                    Style="{StaticResource NavigationViewItemStyle1}"
+                    Tag="QuickDevicePage">
+                    <ui:NavigationViewItem.Icon>
                             <ui:FontIcon 
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
                                 FontFamily="{StaticResource SymbolThemeFontFamily}"
                                 Glyph="&#xE70A;" />
-                        </ui:NavigationViewItem.Icon>
-                    </ui:NavigationViewItem>
-                    <ui:NavigationViewItem 
-                        Name="navProfilesPage" 
-                        Tag="QuickProfilesPage"
-		                FontSize="12"
-                        Style="{StaticResource NavigationViewItemStyle1}"
-                        Content="{l:Static resx:Resources.QuickProfilesPage_Title}">
-                        <ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem
+                    Name="navProfiles"
+                    Content="{l:Static resx:Resources.QuickProfilesPage_Title}"
+                    FontSize="12"
+                    Style="{StaticResource NavigationViewItemStyle1}"
+                    Tag="QuickProfilesPage">
+                    <ui:NavigationViewItem.Icon>
                             <ui:FontIcon 
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
                                 FontFamily="{StaticResource SymbolThemeFontFamily}"
                                 Glyph="&#xE77B;" />
-                        </ui:NavigationViewItem.Icon>
-                    </ui:NavigationViewItem>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
 
-                    <ui:NavigationViewItem 
-                        Name="navOverlayPage" 
-                        Tag="QuickOverlayPage"
-                        FontSize="12"
-                        Style="{StaticResource NavigationViewItemStyle1}"
-                        Visibility="Collapsed"
-                        Content="{l:Static resx:Resources.QuickOverlayPage_Title}">
-                        <ui:NavigationViewItem.Icon>
+                <ui:NavigationViewItem
+                    Name="navOverlay"
+                    Content="{l:Static resx:Resources.QuickOverlayPage_Title}"
+                    FontSize="12"
+                    Style="{StaticResource NavigationViewItemStyle1}"
+                    Visibility="Collapsed">
+                    <ui:NavigationViewItem.Icon>
                             <ui:FontIcon 
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"
                             FontFamily="{StaticResource SymbolThemeFontFamily}"
                             Glyph="&#xE78B;" />
-                        </ui:NavigationViewItem.Icon>
-                    </ui:NavigationViewItem>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
 
-                    <ui:NavigationViewItem 
-                        Name="navApplicationsPage" 
-                        Tag="QuickApplicationsPage"
-		                FontSize="12"
-                        Style="{StaticResource NavigationViewItemStyle1}"
-                        Content="{l:Static resx:Resources.QuickApplicationsPage_Title}">
-                        <ui:NavigationViewItem.Icon>
+                <ui:NavigationViewItem
+                    Name="navApplications"
+                    Content="{l:Static resx:Resources.QuickApplicationsPage_Title}"
+                    FontSize="12"
+                    Style="{StaticResource NavigationViewItemStyle1}"
+                    Tag="QuickApplicationsPage">
+                    <ui:NavigationViewItem.Icon>
                             <ui:FontIcon 
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
                                 FontFamily="{StaticResource SymbolThemeFontFamily}"
                                 Glyph="&#xE71D;" />
-                        </ui:NavigationViewItem.Icon>
-                    </ui:NavigationViewItem>
-                    <ui:NavigationViewItem IsEnabled="False">
-                        <ui:NavigationViewItem.Icon>
-                            <ui:FontIcon
-                                Name="QTRB"
-                                Margin="-6,0,0,0"
-                                FontFamily="PromptFont"
-                                FontSize="22"
-                                Glyph="&#x2199;" />
-                        </ui:NavigationViewItem.Icon>
-                    </ui:NavigationViewItem>
-                </ui:NavigationView.MenuItems>
-                <Grid>
-                    <ui:ContentDialog Name="ContentDialog" />
-                    <common:TouchScrollViewer
-                        x:Name="scrollViewer"
-                        Margin="0,12,0,12"
-                        PanningMode="VerticalOnly">
-                        <ui:Frame Name="ContentFrame" />
-                    </common:TouchScrollViewer>
-                </Grid>
-            </ui:NavigationView>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
 
+                <ui:NavigationViewItem IsEnabled="False">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:FontIcon
+                            Name="QTRB"
+                            Margin="-6,0,0,0"
+                            FontFamily="PromptFont"
+                            FontSize="22"
+                            Glyph="&#x2199;" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
+                <!--
+                <ui:NavigationViewItem
+                    Name="navKeyboard"
+                    Tag="QuickKeyboardPage"
+                    Visibility="{Binding QuickKeyboardVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ui:NavigationViewItem.Content>
+                        <ui:FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE765;" />
+                    </ui:NavigationViewItem.Content>
+                </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem
+                    Name="navTrackpad"
+                    IsEnabled="False"
+                    Tag="QuickTrackpadPage"
+                    Visibility="{Binding QuickTrackpadVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ui:NavigationViewItem.Content>
+                        <ui:FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEFA5;" />
+                    </ui:NavigationViewItem.Content>
+                </ui:NavigationViewItem>
+                -->
+            </ui:NavigationView.MenuItems>
+
+            <Grid>
+                <ui:CommandBar x:Name="Control1" DefaultLabelPosition="Collapsed">
+                    <ui:CommandBar.PrimaryCommands>
+                        <ui:AppBarButton Click="QuicKeyboard_Click">
+                            <ui:AppBarButton.Icon>
+                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.KeyboardClassic}" />
+                            </ui:AppBarButton.Icon>
+                        </ui:AppBarButton>
+
+                        <ui:AppBarSeparator />
+
+                        <!--
+                        <ui:AppBarElementContainer VerticalContentAlignment="Stretch">
+                            <ui:DropDownButton
+                                Margin="0,6,0,6"
+                                VerticalAlignment="Stretch"
+                                Background="Transparent"
+                                BorderBrush="Transparent">
+                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.PowerButton}" />
+                            </ui:DropDownButton>
+                        </ui:AppBarElementContainer>
+                        -->
+
+                        <!--
+                        <ui:AppBarButton Click="QuickTrackpad_Click">
+                            <ui:AppBarButton.Icon>
+                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.Touchpad}" />
+                            </ui:AppBarButton.Icon>
+                        </ui:AppBarButton>
+
+                        <ui:AppBarSeparator />
+                        -->
+
+                        <ui:AppBarButton Click="QuickGoBack_Click">
+                            <ui:AppBarButton.Icon>
+                                <ui:FontIcon FontSize="10" Icon="{x:Static ui:SegoeFluentIcons.Back}" />
+                            </ui:AppBarButton.Icon>
+                        </ui:AppBarButton>
+                    </ui:CommandBar.PrimaryCommands>
+                </ui:CommandBar>
+
+                <ui:ContentDialog Name="ContentDialog" d:Visibility="Collapsed" />
+                <ui:ScrollViewerEx
+                    x:Name="scrollViewer"
+                    Margin="0,48,0,4"
+                    PanningMode="VerticalFirst">
+                        <ui:Frame Name="ContentFrame" />
+                </ui:ScrollViewerEx>
+                <Separator
+                    Margin="0,0,0,0"
+                    VerticalAlignment="Bottom"
+                    Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
+                    Opacity="0.2" />
+            </Grid>
+        </ui:NavigationView>
         </DockPanel>
     </Grid>
 </common:GamepadWindow>

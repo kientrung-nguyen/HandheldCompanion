@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.ViewModels;
 using System;
+using System.Windows.Forms;
 using Page = System.Windows.Controls.Page;
 
 namespace HandheldCompanion.Views.QuickPages;
@@ -14,8 +15,8 @@ public partial class QuickPerformancePage : Page
         InitializeComponent();
     }
 
-    public void SelectionChanged(Guid guid)
+    public void SelectionChanged(Guid guid, PowerLineStatus powerLineStatus = PowerLineStatus.Offline)
     {
-        ((PerformancePageViewModel)DataContext).SelectedPreset = PowerProfileManager.GetProfile(guid);
+        ((PerformancePageViewModel)DataContext).SelectedPreset = ManagerFactory.powerProfileManager.GetProfile(guid, powerLineStatus);
     }
 }

@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Managers;
+﻿using Gma.System.MouseKeyHook;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
@@ -9,7 +10,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
+using static HandheldCompanion.Misc.ProcessEx;
 using Path = System.IO.Path;
 using Timer = System.Timers.Timer;
 
@@ -26,7 +29,9 @@ public class RTSS : IPlatform
     private const string GLOBAL_PROFILE = "";
 
     private int hookedProcessId = 0;
+    private int targetProcessId = 0;
     private uint lastOsdFrameId = 0;
+
     private bool profileLoaded;
     private AppEntry? appEntry;
 
@@ -36,11 +41,10 @@ public class RTSS : IPlatform
     {
         Name = "RTSS";
         PlatformType = PlatformType.RTSS;
+        ExecutableName = "RTSS.exe";
+
         ExpectedVersion = new Version(7, 3, 4);
         Url = "https://www.guru3d.com/files-details/rtss-rivatuner-statistics-server-download.html";
-
-        Name = "RTSS";
-        ExecutableName = RunningName = "RTSS.exe";
 
         // store specific modules
         Modules =
@@ -89,7 +93,7 @@ public class RTSS : IPlatform
         }
 
         // our main watchdog to (re)apply requested settings
-        PlatformWatchdog = new Timer(2000) { Enabled = false };
+        PlatformWatchdog = new Timer(2000) { Enabled = false, AutoReset = false };
         PlatformWatchdog.Elapsed += (sender, e) => PlatformWatchdogElapsed();
     }
 
@@ -211,64 +215,65 @@ public class RTSS : IPlatform
         }
     }
 
-    private async void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx)
+    private void ProcessManager_ForegroundChanged(ProcessEx? processEx, ProcessEx? backgroundEx, ProcessFilter filter)
     {
         if (processEx is null || processEx.ProcessId == 0)
             return;
 
-        // hook new process
+        // clear RTSS target app
         appEntry = null;
 
-        var processId = processEx.ProcessId;
-        var foregroundId = processId;
-        if (processId == 0) return;
+        switch (filter)
+        {
+            case ProcessFilter.Allowed:
+                break;
+            default:
+                return;
+        }
+        // unhook previous process
+        UnhookProcess(targetProcessId);
 
+        // update foreground process id
+        targetProcessId = processEx.ProcessId;
 
-        if (processEx.Filter != ProcessEx.ProcessFilter.Allowed) return;
+        // try to hook new process
+        new Thread(() => TryHookProcess(targetProcessId)).Start();
+    }
+
+    private void TryHookProcess(int processId)
+    {
+        if (!IsRunning)
+            return;
+
         do
         {
-            /*
-             * loop until we either:
-             * - got an RTSS entry
-             * - process no longer exists
-             * - RTSS was closed
-             */
-
-            var foreground = ProcessManager.GetForegroundProcess();
-            foregroundId = foreground is not null ? foreground.ProcessId : 0;
-
             try
             {
                 appEntry = OSD.GetAppEntries().FirstOrDefault(entry =>
                         (entry.Flags & AppFlags.MASK) != AppFlags.None &&
-                        entry.ProcessId == processId
-                    );
+                         entry.ProcessId == processId);
             }
             catch (FileNotFoundException) { return; }
             catch { }
 
-            await Task.Delay(1000).ConfigureAwait(false); // Avoid blocking the synchronization context
-        } while (appEntry is null && foregroundId == processId && KeepAlive);
+            // wait a bit
+            Thread.Sleep(1000);
+        } while (appEntry is null && targetProcessId == processId && KeepAlive);
 
-        OnHook();
-    }
-
-    private void OnHook()
-    {
         if (appEntry is null)
             return;
 
         // set HookedProcessId
         hookedProcessId = appEntry.ProcessId;
+
         lastOsdFrameId = appEntry.OSDFrameId;
 
         // raise event
         Hooked?.Invoke(appEntry);
     }
 
-    private void OnUnhook(ProcessEx processEx)
+    private void UnhookProcess(int processId)
     {
-        var processId = processEx.ProcessId;
         if (processId != hookedProcessId)
             return;
 
@@ -286,16 +291,14 @@ public class RTSS : IPlatform
     {
         if (processEx is null || processEx.ProcessId == 0)
             return;
-        OnUnhook(processEx);
+        UnhookProcess(processEx.ProcessId);
     }
 
     private void PlatformWatchdogElapsed()
     {
         lock (updateLock)
         {
-            // reset tentative counter
-            Tentative = 0;
-
+            int RequestedFramerate = ManagerFactory.profileManager.GetCurrent().FramerateValue;
             if (GetTargetFPS() != RequestedFramerate)
                 SetTargetFPS(RequestedFramerate);
 
@@ -327,12 +330,12 @@ public class RTSS : IPlatform
     public void RefreshAppEntry()
     {
         // refresh appEntry
-		try
-		{
-        	appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == (appEntry is not null ? appEntry.ProcessId : 0));
-        	lastOsdFrameId = appEntry is null || appEntry.OSDFrameId == lastOsdFrameId ? 0 : appEntry.OSDFrameId;
-		}
-		catch (FileNotFoundException) {}
+        try
+        {
+            appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == (appEntry is not null ? appEntry.ProcessId : 0));
+            lastOsdFrameId = appEntry is null || appEntry.OSDFrameId == lastOsdFrameId ? 0 : appEntry.OSDFrameId;
+        }
+        catch (FileNotFoundException) { }
     }
 
     public double GetFramerate(bool refresh = false)

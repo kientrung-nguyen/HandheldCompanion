@@ -5,7 +5,6 @@ using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
-using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Globalization;
 using System.Windows;

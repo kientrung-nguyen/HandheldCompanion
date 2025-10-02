@@ -1,3 +1,5 @@
+using HandheldCompanion.Helpers;
+using HandheldCompanion.Localization;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
@@ -9,6 +11,7 @@ using iNKORE.UI.WPF.Modern.Helpers.Styles;
 using Sentry;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -16,8 +19,10 @@ using System.Windows;
 using System.Windows.Controls;
 using WindowsDisplayAPI;
 using static HandheldCompanion.Managers.UpdateManager;
+using static HandheldCompanion.WinAPI;
 using Application = System.Windows.Application;
 using Page = System.Windows.Controls.Page;
+using WindowHelper = iNKORE.UI.WPF.Modern.Controls.Helpers.WindowHelper;
 
 namespace HandheldCompanion.Views.Pages;
 
@@ -31,35 +36,45 @@ public partial class SettingsPage : Page
         InitializeComponent();
 
         // initialize components
-        cB_Language.Items.Add(new CultureInfo("en-US"));
-        cB_Language.Items.Add(new CultureInfo("fr-FR"));
-        cB_Language.Items.Add(new CultureInfo("de-DE"));
-        cB_Language.Items.Add(new CultureInfo("it-IT"));
-        cB_Language.Items.Add(new CultureInfo("ja-JP"));
-        cB_Language.Items.Add(new CultureInfo("pt-BR"));
-        cB_Language.Items.Add(new CultureInfo("es-ES"));
-        cB_Language.Items.Add(new CultureInfo("zh-Hans"));
-        cB_Language.Items.Add(new CultureInfo("zh-Hant"));
-        cB_Language.Items.Add(new CultureInfo("ru-RU"));
+        cB_Language.ItemsSource = TranslationSource.ValidCultures;
 
-        // initialize manager(s)
+        // manage events
         UpdateManager.Updated += UpdateManager_Updated;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        MultimediaManager.ScreenConnected += MultimediaManager_ScreenConnected;
-        MultimediaManager.ScreenDisconnected += MultimediaManager_ScreenDisconnected;
-        MultimediaManager.Initialized += MultimediaManager_Initialized;
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        ManagerFactory.multimediaManager.ScreenConnected += MultimediaManager_ScreenConnected;
+        ManagerFactory.multimediaManager.ScreenDisconnected += MultimediaManager_ScreenDisconnected;
+        ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
 
+        // raise events
+        switch (ManagerFactory.platformManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.platformManager.Initialized += PlatformManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryPlatforms();
+                break;
+        }
+    }
+
+    private void QueryPlatforms()
+    {
+        // manage events
         PlatformManager.RTSS.Updated += RTSS_Updated;
 
-        // force call
-        // todo: make PlatformManager static
         RTSS_Updated(PlatformManager.RTSS.Status);
+    }
+
+    private void PlatformManager_Initialized()
+    {
+        QueryPlatforms();
     }
 
     private void MultimediaManager_ScreenConnected(Display screen)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             cB_QuickToolsDevicePath.Items.Clear();
             foreach (var display in Display.GetDisplays())
@@ -76,7 +91,7 @@ public partial class SettingsPage : Page
     private void MultimediaManager_ScreenDisconnected(Display screen)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             cB_QuickToolsDevicePath.Items.Clear();
             foreach (var display in Display.GetDisplays())
@@ -92,10 +107,10 @@ public partial class SettingsPage : Page
 
     private void MultimediaManager_Initialized()
     {
-        string QuickToolsDevicePath = SettingsManager.Get<string>("QuickToolsDevicePath");
+        string QuickToolsDevicePath = ManagerFactory.settingsManager.Get<string>("QuickToolsDevicePath");
 
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             if (string.IsNullOrEmpty(QuickToolsDevicePath))
                 cB_QuickToolsDevicePath.SelectedIndex = 0;
@@ -109,8 +124,8 @@ public partial class SettingsPage : Page
 
     private void RTSS_Updated(PlatformStatus status)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             switch (status)
             {
@@ -127,36 +142,18 @@ public partial class SettingsPage : Page
     private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (name)
             {
                 case "MainWindowTheme":
-                    {
-                        cB_Theme.SelectedIndex = Convert.ToInt32(value);
-
-                        // bug: SelectionChanged not triggered when control isn't loaded
-                        if (!IsLoaded)
-                            cB_Theme_SelectionChanged(this, null);
-                    }
+                    cB_Theme.SelectedIndex = Convert.ToInt32(value);
                     break;
                 case "MainWindowBackdrop":
-                    {
-                        cB_Backdrop.SelectedIndex = Convert.ToInt32(value);
-
-                        // bug: SelectionChanged not triggered when control isn't loaded
-                        if (!IsLoaded)
-                            cB_Backdrop_SelectionChanged(this, null);
-                    }
+                    cB_Backdrop.SelectedIndex = Convert.ToInt32(value);
                     break;
                 case "QuicktoolsBackdrop":
-                    {
-                        cB_QuickToolsBackdrop.SelectedIndex = Convert.ToInt32(value);
-
-                        // bug: SelectionChanged not triggered when control isn't loaded
-                        if (!IsLoaded)
-                            cB_QuickToolsBackdrop_SelectionChanged(this, null);
-                    }
+                    cB_QuickToolsBackdrop.SelectedIndex = Convert.ToInt32(value);
                     break;
                 case "RunAtStartup":
                     Toggle_AutoStart.IsOn = Convert.ToBoolean(value);
@@ -167,41 +164,18 @@ public partial class SettingsPage : Page
                 case "CloseMinimises":
                     Toggle_CloseMinimizes.IsOn = Convert.ToBoolean(value);
                     break;
-                case "DesktopProfileOnStart":
-                    Toggle_DesktopProfileOnStart.IsOn = Convert.ToBoolean(value);
-                    break;
-                case "NativeDisplayOrientation":
-                    var nativeOrientation = (ScreenRotation.Rotations)Convert.ToInt32(value);
-
-                    switch (nativeOrientation)
-                    {
-                        case ScreenRotation.Rotations.DEFAULT:
-                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_Landscape;
-                            break;
-                        case ScreenRotation.Rotations.D90:
-                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_Portrait;
-                            break;
-                        case ScreenRotation.Rotations.D180:
-                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_FlippedLandscape;
-                            break;
-                        case ScreenRotation.Rotations.D270:
-                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_FlippedPortrait;
-                            break;
-                        default:
-                            Text_NativeDisplayOrientation.Text = Properties.Resources.SettingsPage_ScreenRotation_NotSet;
-                            break;
-                    }
-
+                case "DesktopLayoutOnStart":
+                    Toggle_DesktopLayoutOnStart.IsOn = Convert.ToBoolean(value);
                     break;
                 case "ToastEnable":
                     Toggle_Notification.IsOn = Convert.ToBoolean(value);
                     break;
                 case "CurrentCulture":
-                    cB_Language.SelectedItem = new CultureInfo((string)value);
-
-                    // bug: SelectionChanged not triggered when control isn't loaded
-                    if (!IsLoaded)
-                        cB_Language_SelectionChanged(this, null);
+                    cB_Language.SelectedItem = (string)value switch
+                    {
+                        "" => TranslationSource.Instance.CurrentCulture,
+                        _ => new CultureInfo((string)value)
+                    };
                     break;
                 case "PlatformRTSSEnabled":
                     Toggle_RTSS.IsOn = Convert.ToBoolean(value);
@@ -213,7 +187,7 @@ public partial class SettingsPage : Page
                     Toggle_QuicktoolsAutoHide.IsOn = Convert.ToBoolean(value);
                     break;
                 case "UISounds":
-                    Toggle_UISounds.IsEnabled = MultimediaManager.HasVolumeSupport();
+                    Toggle_UISounds.IsEnabled = ManagerFactory.multimediaManager.HasVolumeSupport();
                     Toggle_UISounds.IsOn = Convert.ToBoolean(value);
                     break;
                 case "TelemetryEnabled":
@@ -222,8 +196,8 @@ public partial class SettingsPage : Page
                         bool IsSentryEnabled = Convert.ToBoolean(value);
                         Toggle_Telemetry.IsOn = IsSentryEnabled;
 
-                        // ignore if loading
-                        if (!SettingsManager.IsInitialized)
+                        // ignore if initializing
+                        if (ManagerFactory.settingsManager.Status.HasFlag(ManagerStatus.Initializing))
                             return;
 
                         if (SentrySdk.IsEnabled && IsSentryEnabled)
@@ -236,7 +210,7 @@ public partial class SettingsPage : Page
                             .OfType<ComboBoxItem>()
                             .FirstOrDefault(item =>
                                 ((Display)item.Tag).DevicePath.Equals(value) ||
-                                ((Display)item.Tag).ToPathDisplayTarget().FriendlyName.Equals(SettingsManager.Get<string>("QuickToolsDeviceName")));
+                                ((Display)item.Tag).ToPathDisplayTarget().FriendlyName.Equals(ManagerFactory.settingsManager.Get<string>("QuickToolsDeviceName")));
 
                         if (selectedItem != null)
                             cB_QuickToolsDevicePath.SelectedItem = selectedItem;
@@ -244,17 +218,40 @@ public partial class SettingsPage : Page
                             cB_QuickToolsDevicePath.SelectedIndex = 0;
                     }
                     break;
+				case "ProcessPriority":
+                    cB_Priority.SelectedIndex = Convert.ToInt32(value);
+                    break;
+                case "QuickKeyboardVisibility":
+                    VirtualKeyboardToggle.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "QuickTrackpadVisibility":
+                    VirtualTrackpadToggle.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "QuickToolsSlideAnimation":
+                    QuicktoolsSlideAnimationToggle.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "GPUManagerMonitor":
+                    Toggle_GPUMonitor.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "QuickToolsApplyNoise":
+                    QuickToolsNoiseToggle.IsOn = Convert.ToBoolean(value);
+                    break;
             }
         });
     }
 
     private void Page_Loaded(object? sender, RoutedEventArgs? e)
     {
-        UpdateManager.Start();
     }
 
     public void Page_Closed()
     {
+        // manage events
+        UpdateManager.Updated -= UpdateManager_Updated;
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.multimediaManager.ScreenConnected -= MultimediaManager_ScreenConnected;
+        ManagerFactory.multimediaManager.ScreenDisconnected -= MultimediaManager_ScreenDisconnected;
+        ManagerFactory.multimediaManager.Initialized -= MultimediaManager_Initialized;
     }
 
     private async void Toggle_AutoStart_Toggled(object? sender, RoutedEventArgs? e)
@@ -262,7 +259,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("RunAtStartup", Toggle_AutoStart.IsOn);
+        ManagerFactory.settingsManager.Set("RunAtStartup", Toggle_AutoStart.IsOn);
     }
 
     private void Toggle_Background_Toggled(object? sender, RoutedEventArgs? e)
@@ -270,7 +267,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("StartMinimized", Toggle_Background.IsOn);
+        ManagerFactory.settingsManager.Set("StartMinimized", Toggle_Background.IsOn);
     }
 
     private void Toggle_CloseMinimizes_Toggled(object? sender, RoutedEventArgs? e)
@@ -278,31 +275,21 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("CloseMinimises", Toggle_CloseMinimizes.IsOn);
+        ManagerFactory.settingsManager.Set("CloseMinimises", Toggle_CloseMinimizes.IsOn);
     }
 
-    private void Toggle_DesktopProfileOnStart_Toggled(object? sender, RoutedEventArgs? e)
+    private void Toggle_DesktopLayoutOnStart_Toggled(object? sender, RoutedEventArgs? e)
     {
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("DesktopProfileOnStart", Toggle_DesktopProfileOnStart.IsOn);
+        ManagerFactory.settingsManager.Set("DesktopProfileOnStart", Toggle_DesktopLayoutOnStart.IsOn);
     }
 
-    private void Button_DetectNativeDisplayOrientation_Click(object sender, RoutedEventArgs? e)
+    private void UpdateManager_Updated(UpdateStatus status, UpdateFile updateFile, object value)
     {
-        if (!IsLoaded)
-            return;
-
-        var rotation = MultimediaManager.GetScreenOrientation();
-        rotation = new ScreenRotation(rotation.rotationUnnormalized, ScreenRotation.Rotations.UNSET);
-        SettingsManager.Set("NativeDisplayOrientation", (int)rotation.rotationNativeBase);
-    }
-
-    private void UpdateManager_Updated(UpdateStatus status, UpdateFile? updateFile, object? value)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             switch (status)
             {
@@ -333,8 +320,11 @@ public partial class SettingsPage : Page
 
                 case UpdateStatus.Checking:
                     {
+                        CurrentUpdates.Children.Clear();
+
                         LabelUpdate.Text = Properties.Resources.SettingsPage_UpdateCheck;
 
+                        CurrentChangelog.Visibility = Visibility.Collapsed;
                         GridUpdateSymbol.Visibility = Visibility.Collapsed;
                         LabelUpdateDate.Visibility = Visibility.Collapsed;
                         ProgressBarUpdate.Visibility = Visibility.Visible;
@@ -373,7 +363,9 @@ public partial class SettingsPage : Page
                 case UpdateStatus.Changelog:
                     {
                         CurrentChangelog.Visibility = Visibility.Visible;
+                        LabelUpdateDate.Visibility = Visibility.Visible;
                         CurrentChangelog.AppendText((string)value);
+                        B_CheckUpdate.IsEnabled = true;
                     }
                     break;
 
@@ -395,9 +387,9 @@ public partial class SettingsPage : Page
                 case UpdateStatus.Downloaded:
                     {
                         updateFile.updateInstall.Visibility = Visibility.Visible;
-
                         updateFile.updateDownload.Visibility = Visibility.Collapsed;
                         updateFile.updatePercentage.Visibility = Visibility.Collapsed;
+                        B_CheckUpdate.IsEnabled = true;
                     }
                     break;
             }
@@ -406,7 +398,10 @@ public partial class SettingsPage : Page
 
     private void B_CheckUpdate_Click(object? sender, RoutedEventArgs? e)
     {
-        new Thread(() => { UpdateManager.StartProcess(); }).Start();
+        new Thread(() =>
+        {
+            UpdateManager.StartProcess(false);
+        }).Start();
     }
 
     private void cB_Language_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -419,7 +414,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("CurrentCulture", culture.Name);
+        ManagerFactory.settingsManager.Set("CurrentCulture", culture.Name);
 
         Localization.TranslationSource.Instance.CurrentCulture = CultureInfo.GetCultureInfo(culture.Name);
 
@@ -431,7 +426,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("ToastEnable", Toggle_Notification.IsOn);
+        ManagerFactory.settingsManager.Set("ToastEnable", Toggle_Notification.IsOn);
     }
 
     private void cB_Theme_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -461,7 +456,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("MainWindowTheme", cB_Theme.SelectedIndex);
+        ManagerFactory.settingsManager.Set("MainWindowTheme", cB_Theme.SelectedIndex);
     }
 
     private void cB_QuickToolsBackdrop_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -469,13 +464,13 @@ public partial class SettingsPage : Page
         if (cB_QuickToolsBackdrop.SelectedIndex == -1)
             return;
 
-        var targetWindow = MainWindow.overlayquickTools;
+        var targetWindow = OverlayQuickTools.GetCurrent();
         SwitchBackdrop(targetWindow, cB_QuickToolsBackdrop.SelectedIndex);
 
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("QuicktoolsBackdrop", cB_QuickToolsBackdrop.SelectedIndex);
+        ManagerFactory.settingsManager.Set("QuicktoolsBackdrop", cB_QuickToolsBackdrop.SelectedIndex);
     }
 
     private void cB_Backdrop_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -489,7 +484,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("MainWindowBackdrop", cB_Backdrop.SelectedIndex);
+        ManagerFactory.settingsManager.Set("MainWindowBackdrop", cB_Backdrop.SelectedIndex);
     }
 
     private void SwitchBackdrop(Window targetWindow, int idx)
@@ -503,23 +498,15 @@ public partial class SettingsPage : Page
             {
                 case 0: // "None":
                     WindowHelper.SetSystemBackdropType(targetWindow, BackdropType.None);
-                    //WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
-                    //WindowHelper.SetUseAeroBackdrop(targetWindow, false);
                     break;
                 case 1: // "Mica":
                     WindowHelper.SetSystemBackdropType(targetWindow, BackdropType.Mica);
-                    //WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
-                    //WindowHelper.SetUseAeroBackdrop(targetWindow, false);
                     break;
                 case 2: // "Tabbed":
                     WindowHelper.SetSystemBackdropType(targetWindow, BackdropType.Tabbed);
-                    //WindowHelper.SetUseAcrylicBackdrop(targetWindow, false);
-                    //WindowHelper.SetUseAeroBackdrop(targetWindow, false);
                     break;
                 case 3: // "Acrylic":
                     WindowHelper.SetSystemBackdropType(targetWindow, BackdropType.Acrylic);
-                    //WindowHelper.SetUseAcrylicBackdrop(targetWindow, true);
-                    //WindowHelper.SetUseAeroBackdrop(MainWindow.GetCurrent(), true);
                     break;
             }
         }
@@ -533,7 +520,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("PlatformRTSSEnabled", Toggle_RTSS.IsOn);
+        ManagerFactory.settingsManager.Set("PlatformRTSSEnabled", Toggle_RTSS.IsOn);
     }
 
     private void cB_QuicktoolsPosition_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -541,7 +528,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("QuickToolsLocation", cB_QuicktoolsPosition.SelectedIndex);
+        ManagerFactory.settingsManager.Set("QuickToolsLocation", cB_QuicktoolsPosition.SelectedIndex);
     }
 
     private void Toggle_QuicktoolsAutoHide_Toggled(object sender, RoutedEventArgs e)
@@ -549,7 +536,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("QuickToolsAutoHide", Toggle_QuicktoolsAutoHide.IsOn);
+        ManagerFactory.settingsManager.Set("QuickToolsAutoHide", Toggle_QuicktoolsAutoHide.IsOn);
     }
 
     private void Toggle_UISounds_Toggled(object sender, RoutedEventArgs e)
@@ -557,7 +544,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("UISounds", Toggle_UISounds.IsOn);
+        ManagerFactory.settingsManager.Set("UISounds", Toggle_UISounds.IsOn);
     }
 
     private void Toggle_Telemetry_Toggled(object sender, RoutedEventArgs e)
@@ -565,7 +552,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("TelemetryEnabled", Toggle_Telemetry.IsOn);
+        ManagerFactory.settingsManager.Set("TelemetryEnabled", Toggle_Telemetry.IsOn);
     }
 
     private void cB_QuickToolsDevicePath_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -575,8 +562,72 @@ public partial class SettingsPage : Page
 
         if (cB_QuickToolsDevicePath.SelectedItem is Display desktopScreen)
         {
-            SettingsManager.Set("QuickToolsDeviceName", desktopScreen.ToPathDisplayTarget().FriendlyName);
-            SettingsManager.Set("QuickToolsDevicePath", desktopScreen.DevicePath);
+            ManagerFactory.settingsManager.Set("QuickToolsDeviceName", desktopScreen.ToPathDisplayTarget().FriendlyName);
+            ManagerFactory.settingsManager.Set("QuickToolsDevicePath", desktopScreen.DevicePath);
         }
+    }
+
+    private void cB_Priority_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        using (Process process = Process.GetCurrentProcess())
+        {
+            switch (cB_Priority.SelectedIndex)
+            {
+                case 0: // Normal
+                    SetPriorityClass(process.Handle, (int)PriorityClass.NORMAL_PRIORITY_CLASS);
+                    break;
+                case 1: // Above normal
+                    SetPriorityClass(process.Handle, (int)PriorityClass.ABOVE_NORMAL_PRIORITY_CLASS);
+                    break;
+                case 2: // High
+                    SetPriorityClass(process.Handle, (int)PriorityClass.HIGH_PRIORITY_CLASS);
+                    break;
+            }
+        }
+
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("ProcessPriority", cB_Priority.SelectedIndex);
+    }
+
+    private void VirtualKeyboardToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("QuickKeyboardVisibility", VirtualKeyboardToggle.IsOn);
+    }
+
+    private void VirtualTrackpadToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("QuickTrackpadVisibility", VirtualTrackpadToggle.IsOn);
+    }
+
+    private void QuicktoolsSlideAnimationToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("QuickToolsSlideAnimation", QuicktoolsSlideAnimationToggle.IsOn);
+    }
+
+    private void Toggle_GPUMonitor_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("GPUManagerMonitor", Toggle_GPUMonitor.IsOn);
+    }
+
+    private void QuickToolsNoiseToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("QuickToolsApplyNoise", QuickToolsNoiseToggle.IsOn);
     }
 }

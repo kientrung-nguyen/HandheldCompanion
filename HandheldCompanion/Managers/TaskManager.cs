@@ -89,7 +89,7 @@ public static class TaskManager
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // raise events
-        SettingsManager_SettingValueChanged("RunAtStartup", ManagerFactory.settingsManager.GetString("RunAtStartup"), false);
+        SettingsManager_SettingValueChanged("RunAtStartup", ManagerFactory.settingsManager.Get<string>("RunAtStartup"), false);
     }
 
     public static void Stop()

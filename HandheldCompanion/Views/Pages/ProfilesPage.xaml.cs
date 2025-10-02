@@ -1,5 +1,6 @@
 using HandheldCompanion.Actions;
 using HandheldCompanion.GraphicsProcessingUnit;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
@@ -58,27 +59,54 @@ public partial class ProfilesPage : Page
         InitializeComponent();
 
         // manage events
-        ProfileManager.Deleted += ProfileDeleted;
-        ProfileManager.Updated += ProfileUpdated;
-        ProfileManager.Applied += ProfileApplied;
-        ProfileManager.Initialized += ProfileManagerLoaded;
-        MultimediaManager.Initialized += MultimediaManager_Initialized;
-        MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
-        PlatformManager.RTSS.Updated += RTSS_Updated;
-        GPUManager.Hooked += GPUManager_Hooked;
-        GPUManager.Unhooked += GPUManager_Unhooked;
+        ManagerFactory.profileManager.Deleted += ProfileDeleted;
+        ManagerFactory.profileManager.Updated += ProfileUpdated;
+        ManagerFactory.profileManager.Applied += ProfileApplied;
+        ManagerFactory.profileManager.Initialized += ProfileManagerLoaded;
+        ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
+        ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+        ManagerFactory.gpuManager.Hooked += GPUManager_Hooked;
+        ManagerFactory.gpuManager.Unhooked += GPUManager_Unhooked;
+        ManagerFactory.powerProfileManager.Applied += PowerProfileManager_Applied;
 
-        UpdateTimer = new Timer(UpdateInterval)
+        // raise events
+        switch (ManagerFactory.platformManager.Status)
         {
-            AutoReset = false
-        };
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.platformManager.Initialized += PlatformManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryPlatforms();
+                break;
+        }
+
+        UpdateTimer = new Timer(UpdateInterval) { AutoReset = false };
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         // auto-sort
         cB_Profiles.Items.SortDescriptions.Add(new SortDescription(string.Empty, ListSortDirection.Descending));
+    }
 
-        // force call
+    private void QueryPlatforms()
+    {
+        // manage events
+        PlatformManager.RTSS.Updated += RTSS_Updated;
+
         RTSS_Updated(PlatformManager.RTSS.Status);
+    }
+
+    private void PlatformManager_Initialized()
+    {
+        QueryPlatforms();
+    }
+
+    private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+    {
+        UIHelper.TryInvoke(() =>
+        {
+            SelectedPowerProfileName.Text = profile.Name;
+        });
     }
 
     private void MultimediaManager_Initialized()
@@ -91,10 +119,17 @@ public partial class ProfilesPage : Page
         });
     }
 
+    private bool HasRSRSupport = false;
+    private bool HasAFMFSupport = false;
+    private bool HasScalingModeSupport = false;
+    private bool HasIntegerScalingSupport = false;
+    private bool HasGPUScalingSupport = false;
+    private bool IsGPUScalingEnabled = false;
+
     private void GPUManager_Hooked(GPU GPU)
     {
-        bool HasRSRSupport = false;
-        bool HasAFMFSupport = false;
+        HasRSRSupport = false;
+        HasAFMFSupport = false;
 
         if (GPU is AmdGpu amdGPU)
         {
@@ -108,25 +143,20 @@ public partial class ProfilesPage : Page
         GPU.IntegerScalingChanged += OnIntegerScalingChanged;
         GPU.GPUScalingChanged += OnGPUScalingChanged;
 
-        bool HasScalingModeSupport = GPU.HasScalingModeSupport();
-        bool HasIntegerScalingSupport = GPU.HasIntegerScalingSupport();
-        bool HasGPUScalingSupport = GPU.HasGPUScalingSupport();
-        bool IsGPUScalingEnabled = GPU.GetGPUScaling();
+        HasScalingModeSupport = GPU.HasScalingModeSupport();
+        HasIntegerScalingSupport = GPU.HasIntegerScalingSupport();
+        HasGPUScalingSupport = GPU.HasGPUScalingSupport();
+        IsGPUScalingEnabled = GPU.GetGPUScaling();
 
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             // GPU-specific settings
-            StackProfileRSR.Visibility = GPU is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
-            StackProfileAFMF.Visibility = GPU is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
-
-            StackProfileRSR.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasRSRSupport;
-            StackProfileAFMF.IsEnabled = HasAFMFSupport;
-
-            StackProfileIS.IsEnabled = HasGPUScalingSupport && IsGPUScalingEnabled && HasIntegerScalingSupport;
-            GPUScalingToggle.IsEnabled = HasGPUScalingSupport;
-            GPUScalingComboBox.IsEnabled = HasGPUScalingSupport && HasScalingModeSupport;
+            StackProfileRSR.Visibility = GPUManager.GetCurrent() is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
+            StackProfileAFMF.Visibility = GPUManager.GetCurrent() is AmdGpu ? Visibility.Visible : Visibility.Collapsed;
         });
+
+        UpdateGraphicsSettingsUI();
     }
 
     private void GPUManager_Unhooked(GPU GPU)
@@ -140,70 +170,85 @@ public partial class ProfilesPage : Page
         GPU.IntegerScalingChanged -= OnIntegerScalingChanged;
         GPU.GPUScalingChanged -= OnGPUScalingChanged;
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
+            // GPU-specific settings
+            StackProfileRSR.Visibility = Visibility.Collapsed;
+            StackProfileAFMF.Visibility = Visibility.Collapsed;
+
             StackProfileRSR.IsEnabled = false;
             StackProfileAFMF.IsEnabled = false;
+            StackProfileGPUScaling.IsEnabled = false;
             StackProfileIS.IsEnabled = false;
-            GPUScalingToggle.IsEnabled = false;
+            StackProfileRIS.IsEnabled = false;
             GPUScalingComboBox.IsEnabled = false;
+        });
+    }
+
+    private void UpdateGraphicsSettingsUI()
+    {
+        // UI thread (async)
+        UIHelper.TryInvoke(() =>
+        {
+            StackProfileRSR.IsEnabled = HasRSRSupport;
+            StackProfileAFMF.IsEnabled = HasAFMFSupport;
+            StackProfileGPUScaling.IsEnabled = HasGPUScalingSupport;
+            StackProfileIS.IsEnabled = HasIntegerScalingSupport;
+            StackProfileRIS.IsEnabled = HasGPUScalingSupport; // check if processor is AMD should be enough
+            GPUScalingComboBox.IsEnabled = HasScalingModeSupport;
         });
     }
 
     private void OnRSRStateChanged(bool Supported, bool Enabled, int Sharpness)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        if (Supported != HasRSRSupport)
         {
-            StackProfileRSR.IsEnabled = Supported;
-        });
+            HasRSRSupport = Supported;
+            UpdateGraphicsSettingsUI();
+        }
     }
 
     private void OnAFMFStateChanged(bool Supported, bool Enabled)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        if (Supported != HasAFMFSupport)
         {
-            StackProfileAFMF.IsEnabled = Supported;
-        });
+            HasAFMFSupport = Supported;
+            UpdateGraphicsSettingsUI();
+        }
     }
 
     private void OnGPUScalingChanged(bool Supported, bool Enabled, int Mode)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        if (Supported != HasGPUScalingSupport)
         {
-            GPUScalingToggle.IsEnabled = Supported;
-            StackProfileRIS.IsEnabled = Supported; // check if processor is AMD should be enough
-            StackProfileRSR.IsEnabled = Supported;
-            StackProfileIS.IsEnabled = Supported;
-        });
+            HasGPUScalingSupport = Supported;
+            UpdateGraphicsSettingsUI();
+        }
     }
 
     private void OnIntegerScalingChanged(bool Supported, bool Enabled)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        if (Supported != HasIntegerScalingSupport)
         {
-            StackProfileIS.IsEnabled = Supported;
-        });
+            HasIntegerScalingSupport = Supported;
+            UpdateGraphicsSettingsUI();
+        }
     }
 
     private void RTSS_Updated(PlatformStatus status)
     {
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             switch (status)
             {
                 case PlatformStatus.Ready:
-                    var Processor = PerformanceManager.GetProcessor();
+                case PlatformStatus.Started:
                     StackProfileFramerate.IsEnabled = true;
                     break;
-                case PlatformStatus.Stalled:
-                    // StackProfileFramerate.IsEnabled = false;
-                    // StackProfileAutoTDP.IsEnabled = false;
+                default:
+                    StackProfileFramerate.IsEnabled = false;
                     break;
             }
         });
@@ -213,8 +258,8 @@ public partial class ProfilesPage : Page
     {
         var frameLimits = ScreenControl.GetFramelimits(display);
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             cB_Framerate.Items.Clear();
 
@@ -267,6 +312,21 @@ public partial class ProfilesPage : Page
 
     public void Page_Closed()
     {
+        // manage events
+        ManagerFactory.profileManager.Deleted -= ProfileDeleted;
+        ManagerFactory.profileManager.Updated -= ProfileUpdated;
+        ManagerFactory.profileManager.Applied -= ProfileApplied;
+        ManagerFactory.profileManager.Initialized -= ProfileManagerLoaded;
+        ManagerFactory.multimediaManager.Initialized -= MultimediaManager_Initialized;
+        ManagerFactory.multimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
+        ManagerFactory.gpuManager.Hooked -= GPUManager_Hooked;
+        ManagerFactory.gpuManager.Unhooked -= GPUManager_Unhooked;
+        PlatformManager.RTSS.Updated -= RTSS_Updated;
+        ManagerFactory.powerProfileManager.Applied -= PowerProfileManager_Applied;
+
+        UpdateTimer.Elapsed -= (sender, e) => SubmitProfile();
+
+        ((ProfilesPageViewModel)DataContext).Dispose();
     }
 
     private async void b_CreateProfile_Click(object sender, RoutedEventArgs e)
@@ -275,126 +335,62 @@ public partial class ProfilesPage : Page
         if (UpdateTimer.Enabled)
             UpdateTimer.Stop();
 
-        var openFileDialog = new OpenFileDialog()
+        try
         {
-            Filter = "Executable|*.exe|UWP manifest|AppxManifest.xml",
-        };
+            string path = string.Empty;
+            string arguments = string.Empty;
+            string name = string.Empty;
 
-        if (openFileDialog.ShowDialog() == true)
-            try
+            FileUtils.CommonFileDialog(out path, out arguments, out name);
+
+            // create profile
+            Profile profile = new Profile(path);
+            profile.Arguments = arguments;
+            if (!string.IsNullOrEmpty(arguments))
+                profile.Name = name;
+
+            // check on path rather than profile
+            bool exists = false;
+            if (ManagerFactory.profileManager.Contains(path))
             {
-                string path = openFileDialog.FileName;
-                string folder = Path.GetDirectoryName(path);
-
-                string file = openFileDialog.SafeFileName;
-                string ext = Path.GetExtension(file);
-
-                switch (ext)
+                Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
                 {
-                    default:
-                    case ".exe":
-                        break;
-                    case ".xml":
-                        try
-                        {
-                            XmlDocument doc = new XmlDocument();
-                            string UWPpath = string.Empty;
-                            string UWPfile = string.Empty;
+                    Title = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite1, profile.Name),
+                    Content = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite2, profile.Name),
+                    CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
+                    PrimaryButtonText = Properties.Resources.ProfilesPage_Yes,
+                    SecondaryButtonText = Properties.Resources.ProfilesPage_AreYouSureOverwriteSecondary,
+                }.ShowAsync();
 
-                            // check if MicrosoftGame.config exists
-                            string configPath = Path.Combine(folder, "MicrosoftGame.config");
-                            if (File.Exists(configPath))
-                            {
-                                doc.Load(configPath);
+                await dialogTask; // sync call
 
-                                XmlNodeList ExecutableList = doc.GetElementsByTagName("ExecutableList");
-                                foreach (XmlNode node in ExecutableList)
-                                    foreach (XmlNode child in node.ChildNodes)
-                                        if (child.Name.Equals("Executable"))
-                                            if (child.Attributes is not null)
-                                                foreach (XmlAttribute attribute in child.Attributes)
-                                                    switch (attribute.Name)
-                                                    {
-                                                        case "Name":
-                                                            UWPpath = Path.Combine(folder, attribute.InnerText);
-                                                            UWPfile = Path.GetFileName(path);
-                                                            break;
-                                                    }
-                            }
-
-                            // either there was no config file, either we couldn't find an executable within it
-                            if (!File.Exists(UWPpath))
-                            {
-                                doc.Load(path);
-
-                                XmlNodeList Applications = doc.GetElementsByTagName("Applications");
-                                foreach (XmlNode node in Applications)
-                                    foreach (XmlNode child in node.ChildNodes)
-                                        if (child.Name.Equals("Application"))
-                                            if (child.Attributes is not null)
-                                                foreach (XmlAttribute attribute in child.Attributes)
-                                                    switch (attribute.Name)
-                                                    {
-                                                        case "Executable":
-                                                            UWPpath = Path.Combine(folder, attribute.InnerText);
-                                                            UWPfile = Path.GetFileName(path);
-                                                            break;
-                                                    }
-                            }
-
-                            // we're good to go
-                            if (File.Exists(UWPpath))
-                            {
-                                path = UWPpath;
-                                file = UWPfile;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            LogManager.LogError(ex.Message, true);
-                        }
-
-                        break;
-                }
-
-                Profile profile = new Profile(path);
-                Layout toCloneLayout = ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout;
-                profile.Layout = toCloneLayout.Clone() as Layout;
-                profile.LayoutTitle = LayoutTemplate.DefaultLayout.Name;
-
-                var exists = false;
-
-                // check on path rather than profile
-                if (ProfileManager.Contains(path))
+                switch (dialogTask.Result)
                 {
-                    Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
-                    {
-                        Title = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite1, profile.Name),
-                        Content = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite2, profile.Name),
-                        CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
-                        PrimaryButtonText = Properties.Resources.ProfilesPage_Yes
-                    }.ShowAsync();
+                    case ContentDialogResult.Primary:
+                        exists = false;
+                        break;
+                    case ContentDialogResult.Secondary:
+                        {
+                            Profile mainProfile = ManagerFactory.profileManager.GetProfileFromPath(path, true, true);
+                            profile.IsSubProfile = true;
+                            profile.ParentGuid = mainProfile.Guid;
 
-                    await dialogTask; // sync call
-
-                    switch (dialogTask.Result)
-                    {
-                        case ContentDialogResult.Primary:
                             exists = false;
-                            break;
-                        default:
-                            exists = true;
-                            break;
-                    }
+                        }
+                        break;
+                    default:
+                        exists = true;
+                        break;
                 }
+            }
 
-                if (!exists)
-                    ProfileManager.UpdateOrCreateProfile(profile, UpdateSource.Creation);
-            }
-            catch (Exception ex)
-            {
-                LogManager.LogError(ex.Message);
-            }
+            if (!exists)
+                ManagerFactory.profileManager.UpdateOrCreateProfile(profile, UpdateSource.Creation);
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError(ex.Message);
+        }
     }
 
     private void b_AdditionalSettings_Click(object sender, RoutedEventArgs e)
@@ -421,22 +417,32 @@ public partial class ProfilesPage : Page
 
     private void PowerProfileOnBatteryMore_Click(object sender, RoutedEventArgs e)
     {
-        PowerProfile powerProfile = PowerProfileManager.GetProfile(selectedProfile.PowerProfiles[(int)PowerLineStatus.Offline]);
+        // If the click originated in the ComboBox (or any ComboBoxItem), ignore it
+        DependencyObject? src = e.Source as DependencyObject;
+        if (src is not SettingsCard)
+            return;
+
+        PowerProfile powerProfile = ManagerFactory.powerProfileManager.GetProfile(selectedProfile.PowerProfiles[(int)PowerLineStatus.Offline]);
         if (powerProfile is null)
             return;
 
         MainWindow.performancePage.SelectionChanged(powerProfile);
-        MainWindow.GetCurrent().NavView_Navigate("PerformancePage");
+        MainWindow.GetCurrent().NavigateToPage("PerformancePage");
     }
 
     private void PowerProfilePluggedMore_Click(object sender, RoutedEventArgs e)
     {
-        PowerProfile powerProfile = PowerProfileManager.GetProfile(selectedProfile.PowerProfiles[(int)PowerLineStatus.Online]);
+        // If the click originated in the ComboBox (or any ComboBoxItem), ignore it
+        DependencyObject? src = e.Source as DependencyObject;
+        if (src is not SettingsCard)
+            return;
+
+        PowerProfile powerProfile = ManagerFactory.powerProfileManager.GetProfile(selectedProfile.PowerProfiles[(int)PowerLineStatus.Online]);
         if (powerProfile is null)
             return;
 
         MainWindow.performancePage.SelectionChanged(powerProfile);
-        MainWindow.GetCurrent().NavView_Navigate("PerformancePage");
+        MainWindow.GetCurrent().NavigateToPage("PerformancePage");
     }
 
     public void PowerProfile_Selected(PowerProfile powerProfile, bool AC)
@@ -448,8 +454,8 @@ public partial class ProfilesPage : Page
         if (profileLock.IsEntered())
             return;
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             switch (AC)
             {
@@ -472,6 +478,7 @@ public partial class ProfilesPage : Page
             return;
 
         selectedMainProfile = (Profile)cB_Profiles.SelectedItem;
+
         UpdateSubProfiles();
     }
 
@@ -482,10 +489,10 @@ public partial class ProfilesPage : Page
             if (action is not null && action.actionType != ActionType.Disabled)
                 MotionMapped = true;
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
-            MotionControlAdditional.IsEnabled = MotionMapped ? true : false;
+            MotionControlAdditional.IsEnabled = MotionMapped;
         });
     }
 
@@ -496,9 +503,11 @@ public partial class ProfilesPage : Page
 
         if (profileLock.TryEnter())
         {
+            ((ProfilesPageViewModel)DataContext).ProfileChanged(selectedProfile);
+
             try
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                UIHelper.TryInvoke(() =>
                 {
                     // disable delete button if is default profile or any sub profile is running
                     //TODO consider sub profiles pertaining to this main profile is running
@@ -507,38 +516,38 @@ public partial class ProfilesPage : Page
                     b_ProfileRename.IsEnabled = !selectedMainProfile.Default;
                     // prevent user from disabling default profile
                     Toggle_EnableProfile.IsEnabled = !selectedProfile.Default;
-                    // prevent user from disabling default profile layout
-                    Toggle_ControllerLayout.IsEnabled = !selectedProfile.Default;
                     // prevent user from using Wrapper on default profile
                     cB_Wrapper.IsEnabled = !selectedProfile.Default;
                     UseFullscreenOptimizations.IsEnabled = !selectedProfile.Default;
                     UseHighDPIAwareness.IsEnabled = !selectedProfile.Default;
+                    LibrarySettings.IsEnabled = !selectedProfile.Default;
+                    Toggle_SuspendOnQuicktools.IsEnabled = !selectedProfile.Default;
 
                     // sub profiles
                     b_SubProfileCreate.IsEnabled = !selectedMainProfile.Default;
 
                     // enable delete and rename if not default sub profile
-                    if (cb_SubProfilePicker.SelectedIndex == 0) // main profile
-                    {
-                        b_SubProfileDelete.IsEnabled = false;
-                        b_SubProfileRename.IsEnabled = false;
-                    }
-                    else // actual sub profile
-                    {
-                        b_SubProfileDelete.IsEnabled = true;
-                        b_SubProfileRename.IsEnabled = true;
-                    }
+                    b_SubProfileDelete.IsEnabled = selectedProfile.IsSubProfile ? true : false;
+                    b_SubProfileRename.IsEnabled = selectedProfile.IsSubProfile ? true : false;
 
                     // Profile info
                     tB_ProfileName.Text = selectedMainProfile.Name;
                     tB_ProfilePath.Text = selectedProfile.Path;
                     tB_ProfileArguments.Text = selectedProfile.Arguments;
+                    tB_ProfileLaunchString.Text = selectedProfile.LaunchString;
                     Toggle_EnableProfile.IsOn = selectedProfile.Enabled;
 
                     // Global settings
                     cB_Whitelist.IsChecked = selectedProfile.Whitelisted;
                     cB_Pinned.IsChecked = selectedProfile.IsPinned;
+                    cB_Suspend.IsChecked = selectedProfile.SuspendOnSleep;
                     cB_Wrapper.SelectedIndex = (int)selectedProfile.XInputPlus;
+
+                    // Library
+                    Toggle_ShowInLibrary.IsOn = selectedProfile.ShowInLibrary;
+
+                    // Window(s)
+                    Toggle_SuspendOnQuicktools.IsOn = selectedProfile.SuspendOnQT;
 
                     // Emulated controller assigned to the profile
                     cB_EmulatedController.IsEnabled = !selectedProfile.Default; // if default profile, disable combobox
@@ -616,65 +625,48 @@ public partial class ProfilesPage : Page
                     UseFullscreenOptimizations.IsOn = selectedProfile.FullScreenOptimization;
                     UseHighDPIAwareness.IsOn = selectedProfile.HighDPIAware;
 
-                    // Layout settings
-                    Toggle_ControllerLayout.IsOn = selectedProfile.LayoutEnabled;
-
                     // power profile
-                    PowerProfile powerProfileDC = PowerProfileManager.GetProfile(selectedProfile.PowerProfiles[(int)PowerLineStatus.Offline]);
-                    PowerProfile powerProfileAC = PowerProfileManager.GetProfile(selectedProfile.PowerProfiles[(int)PowerLineStatus.Online]);
+                    PowerProfile powerProfileDC = ManagerFactory.powerProfileManager.GetProfile(selectedProfile.PowerProfiles[(int)PowerLineStatus.Offline]);
+                    PowerProfile powerProfileAC = ManagerFactory.powerProfileManager.GetProfile(selectedProfile.PowerProfiles[(int)PowerLineStatus.Online]);
 
-                    SelectedPowerProfileName.Text = System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Offline ? powerProfileDC?.Name : powerProfileAC?.Name;
-                    
+                    switch (System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus)
+                    {
+                        case System.Windows.Forms.PowerLineStatus.Unknown:
+                        case System.Windows.Forms.PowerLineStatus.Offline:
+                            SelectedPowerProfileName.Text = powerProfileDC?.Name;
+                            break;
+                        case System.Windows.Forms.PowerLineStatus.Online:
+                            SelectedPowerProfileName.Text = powerProfileAC?.Name;
+                            break;
+                    }
+
                     ((ProfilesPageViewModel)DataContext).PowerProfileChanged(powerProfileAC, powerProfileDC);
 
                     // display warnings
-                    WarningContent.Text = EnumUtils.GetDescriptionFromEnumValue(selectedProfile.ErrorCode);
+                    WarningInfoBar.Message = EnumUtils.GetDescriptionFromEnumValue(selectedProfile.ErrorCode);
 
-                    switch (selectedProfile.ErrorCode)
+                    (Visibility warningVisibility, bool controlsEnabled, bool redirectionEnabled) = selectedProfile.ErrorCode switch
                     {
-                        default:
-                        case ProfileErrorCode.None:
-                            WarningBorder.Visibility = Visibility.Collapsed;
-                            cB_Whitelist.IsEnabled = true;
-                            cB_Pinned.IsEnabled = true;
-                            cB_Wrapper.IsEnabled = true;
+                        ProfileErrorCode.MissingPermission => (Visibility.Visible, true, false),
+                        ProfileErrorCode.Running or
+                        ProfileErrorCode.MissingExecutable or
+                        ProfileErrorCode.MissingPath or
+                        ProfileErrorCode.Default => (Visibility.Visible, false, false),
+                        _ => (Visibility.Collapsed, true, true)
+                    };
 
-                            // wrapper
-                            cB_Wrapper_Injection.IsEnabled = true;
-                            cB_Wrapper_Redirection.IsEnabled = true;
-                            break;
-
-                        case ProfileErrorCode.Running:              // application is running
-                        case ProfileErrorCode.MissingExecutable:    // profile has no executable
-                        case ProfileErrorCode.MissingPath:          // profile has no path
-                        case ProfileErrorCode.Default:              // profile is default
-                            WarningBorder.Visibility = Visibility.Visible;
-                            cB_Whitelist.IsEnabled = false;
-                            cB_Pinned.IsEnabled = false;
-                            cB_Wrapper.IsEnabled = false;
-
-                            // wrapper
-                            cB_Wrapper_Injection.IsEnabled = false;
-                            cB_Wrapper_Redirection.IsEnabled = false;
-                            break;
-
-                        case ProfileErrorCode.MissingPermission:
-                            WarningBorder.Visibility = Visibility.Visible;
-                            cB_Whitelist.IsEnabled = true;
-                            cB_Pinned.IsEnabled = true;
-                            cB_Wrapper.IsEnabled = true;
-
-                            // wrapper
-                            cB_Wrapper_Injection.IsEnabled = true;
-                            cB_Wrapper_Redirection.IsEnabled = false;
-                            break;
-                    }
+                    WarningInfoBar.Visibility = warningVisibility;
+                    GlobalSettings.IsEnabled = controlsEnabled;
+                    cB_Wrapper_Injection.IsEnabled = controlsEnabled;
+                    b_Play.IsEnabled = controlsEnabled;
+                    cB_Wrapper_Redirection.IsEnabled = redirectionEnabled;
 
                     // update dropdown lists
                     cB_Profiles.Items.Refresh();
                     cb_SubProfilePicker.Items.Refresh();
                 });
             }
+            catch { }
             finally
             {
                 profileLock.Exit();
@@ -682,7 +674,7 @@ public partial class ProfilesPage : Page
         }
     }
 
-    private void UpdateSubProfiles()
+    private void UpdateSubProfiles(Profile updatedProfile = null)
     {
         if (selectedMainProfile is null)
             return;
@@ -691,31 +683,26 @@ public partial class ProfilesPage : Page
         {
             try
             {
-                int idx = 0; // default or main profile itself
-
-                // add main profile as first subprofile
                 cb_SubProfilePicker.Items.Clear();
-                cb_SubProfilePicker.Items.Add(selectedMainProfile);
 
-                // if main profile is not default, occupy sub profiles dropdown list
+                IEnumerable<Profile> profiles = ManagerFactory.profileManager.GetSubProfilesFromProfile(selectedMainProfile, true);
+                foreach (Profile profile in profiles)
+                    cb_SubProfilePicker.Items.Add(profile);
+
+                // Only need to refresh if we loaded real sub-profiles
                 if (!selectedMainProfile.Default)
-                {
-                    foreach (Profile subprofile in ProfileManager.GetSubProfilesFromPath(selectedMainProfile.Path, false))
-                    {
-                        cb_SubProfilePicker.Items.Add(subprofile);
+                    cb_SubProfilePicker.Items.Refresh();
 
-                        // select sub profile if it's favorite for main profile
-                        if (subprofile.IsFavoriteSubProfile)
-                            idx = cb_SubProfilePicker.Items.IndexOf(subprofile);
-                    }
-                }
+                // Decide which index to select
+                int selectedIndex;
+                if (updatedProfile != null && cb_SubProfilePicker.Items.Contains(updatedProfile))
+                    selectedIndex = cb_SubProfilePicker.Items.IndexOf(updatedProfile);
+                else
+                    selectedIndex = profiles.Select((p, i) => new { p, i }).FirstOrDefault(x => x.p.IsFavoriteSubProfile)?.i ?? 0;
 
-                // refresh sub profiles dropdown
-                cb_SubProfilePicker.Items.Refresh();
-
-                // set subprofile to be applied
-                cb_SubProfilePicker.SelectedIndex = idx;
+                cb_SubProfilePicker.SelectedIndex = selectedIndex;
             }
+            catch { }
             finally
             {
                 profileLock.Exit();
@@ -744,7 +731,7 @@ public partial class ProfilesPage : Page
         switch (dialogTask.Result)
         {
             case ContentDialogResult.Primary:
-                ProfileManager.DeleteProfile(selectedMainProfile);
+                ManagerFactory.profileManager.DeleteProfile(selectedMainProfile);
                 cB_Profiles.SelectedIndex = 0;
                 break;
         }
@@ -767,6 +754,16 @@ public partial class ProfilesPage : Page
             return;
 
         selectedProfile.IsPinned = (bool)cB_Pinned.IsChecked;
+        UpdateProfile();
+    }
+
+    private void cB_Suspend_Checked(object sender, RoutedEventArgs e)
+    {
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
+        selectedProfile.SuspendOnSleep = (bool)cB_Suspend.IsChecked;
         UpdateProfile();
     }
 
@@ -812,10 +809,17 @@ public partial class ProfilesPage : Page
         UpdateProfile();
     }
 
-    private void ControllerSettingsButton_Click(object sender, RoutedEventArgs e)
+    private LayoutTemplate selectedTemplate;
+    public void ControllerSettingsButton_Click(object sender, RoutedEventArgs e)
     {
+        if (selectedTemplate is not null)
+        {
+            selectedTemplate.Updated -= Template_Updated;
+            selectedTemplate = null;
+        }
+
         // prepare layout editor
-        LayoutTemplate layoutTemplate = new(selectedProfile.Layout)
+        selectedTemplate = new(selectedProfile.Layout)
         {
             Name = selectedProfile.LayoutTitle,
             Description = Properties.Resources.ProfilesPage_Layout_Desc,
@@ -823,21 +827,23 @@ public partial class ProfilesPage : Page
             Executable = selectedProfile.Executable,
             Product = selectedProfile.Name,
         };
-        layoutTemplate.Updated += Template_Updated;
+        selectedTemplate.Updated += Template_Updated;
 
-        MainWindow.layoutPage.UpdateLayoutTemplate(layoutTemplate);
+        MainWindow.layoutPage.UpdateLayoutTemplate(selectedTemplate);
         MainWindow.NavView_Navigate(MainWindow.layoutPage);
     }
 
     private void Template_Updated(LayoutTemplate layoutTemplate)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             selectedProfile.LayoutTitle = layoutTemplate.Name;
         });
 
-        selectedProfile.Layout = layoutTemplate.Layout;
+        selectedProfile.Layout.ButtonLayout = layoutTemplate.Layout.ButtonLayout;
+        selectedProfile.Layout.AxisLayout = layoutTemplate.Layout.AxisLayout;
+        selectedProfile.Layout.GyroLayout = layoutTemplate.Layout.GyroLayout;
         UpdateMotionControlsVisibility();
 
         UpdateProfile();
@@ -855,34 +861,25 @@ public partial class ProfilesPage : Page
 
     public void ProfileUpdated(Profile profile, UpdateSource source, bool isCurrent)
     {
-        // self call - update ui and return
+        isCurrent = selectedProfile?.Guid == profile?.Guid;
+        isCurrent |= source.HasFlag(UpdateSource.Creation);
+
         switch (source)
         {
-            case UpdateSource.ProfilesPage:
-            case UpdateSource.ProfilesPageUpdateOnly:
-                // UI thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    cB_Profiles.SelectedItem = profile;
-                });
-                return;
             case UpdateSource.QuickProfilesPage:
-                {
-                    isCurrent = selectedProfile.Path.Equals(profile.Path, StringComparison.InvariantCultureIgnoreCase);
-                    if (!isCurrent) return;
-                }
+                if (!isCurrent) return;
                 break;
         }
 
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             var idx = -1;
-            if (!profile.IsSubProfile && cb_SubProfilePicker.Items.IndexOf(profile) != 0)
+            if (!profile.IsSubProfile)
             {
                 foreach (Profile pr in cB_Profiles.Items)
                 {
-                    bool isCurrent = pr.Path.Equals(profile.Path, StringComparison.InvariantCultureIgnoreCase);
+                    bool isCurrent = pr.Guid == profile.Guid;
                     if (isCurrent)
                     {
                         idx = cB_Profiles.Items.IndexOf(pr);
@@ -897,26 +894,22 @@ public partial class ProfilesPage : Page
 
                 cB_Profiles.Items.Refresh();
 
-                cB_Profiles.SelectedItem = profile;
+                if (isCurrent)
+                    cB_Profiles.SelectedItem = profile;
             }
-
-            else if (!profile.IsFavoriteSubProfile)
-                cB_Profiles.SelectedItem = profile;
-
-            else // TODO updateUI to show main & sub profile selected
+            else if (isCurrent)
             {
-                Profile mainProfile = ProfileManager.GetProfileForSubProfile(profile);
-                cB_Profiles.SelectedItem = mainProfile;
+                cB_Profiles.SelectedItem = selectedMainProfile;
             }
 
-            UpdateSubProfiles(); // TODO check
+            UpdateSubProfiles(profile);
         });
     }
 
     public void ProfileDeleted(Profile profile)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             int prevIdx = cB_Profiles.SelectedIndex;
 
@@ -968,7 +961,7 @@ public partial class ProfilesPage : Page
     private void ProfileManagerLoaded()
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() => { cB_Profiles.SelectedItem = ProfileManager.GetDefault(); });
+        UIHelper.TryInvoke(() => { cB_Profiles.SelectedItem = ManagerFactory.profileManager.GetDefault(); });
     }
 
     #endregion
@@ -1032,25 +1025,6 @@ public partial class ProfilesPage : Page
         UpdateProfile();
     }
 
-    private void Toggle_ControllerLayout_Toggled(object sender, RoutedEventArgs e)
-    {
-        // prevent update loop
-        if (profileLock.IsEntered())
-            return;
-
-        // Layout settings
-        switch (selectedProfile.Default)
-        {
-            case true:
-                selectedProfile.LayoutEnabled = true;
-                break;
-            case false:
-                selectedProfile.LayoutEnabled = Toggle_ControllerLayout.IsOn;
-                break;
-        }
-        UpdateProfile();
-    }
-
     public static void UpdateProfile()
     {
         if (UpdateTimer is not null)
@@ -1068,10 +1042,10 @@ public partial class ProfilesPage : Page
         switch (source)
         {
             case UpdateSource.ProfilesPageUpdateOnly: // when renaming main profile, update main profile only but don't apply it
-                ProfileManager.UpdateOrCreateProfile(selectedMainProfile, source);
+                ManagerFactory.profileManager.UpdateOrCreateProfile(selectedMainProfile, source);
                 break;
             default:
-                ProfileManager.UpdateOrCreateProfile(selectedProfile, source);
+                ManagerFactory.profileManager.UpdateOrCreateProfile(selectedProfile, source);
                 break;
         }
     }
@@ -1171,9 +1145,7 @@ public partial class ProfilesPage : Page
 
         var divider = 1;
         if (IntegerScalingComboBox.SelectedItem is ScreenDivider screenDivider)
-        {
             divider = screenDivider.divider;
-        }
 
         selectedProfile.IntegerScalingDivider = divider;
         UpdateProfile();
@@ -1257,13 +1229,14 @@ public partial class ProfilesPage : Page
     private void b_SubProfileCreate_Click(object sender, RoutedEventArgs e)
     {
         // create a new sub profile matching the original profile's settings
-        Profile newSubProfile = (Profile)selectedProfile.Clone();
+        Profile newSubProfile = (Profile)selectedMainProfile.Clone();
+
         newSubProfile.Name = Properties.Resources.ProfilesPage_NewSubProfile;
-        newSubProfile.Guid = Guid.NewGuid(); // must be unique
+        newSubProfile.Guid = Guid.NewGuid();
         newSubProfile.IsSubProfile = true;
-        newSubProfile.IsFavoriteSubProfile = true;
-        ProfileManager.UpdateOrCreateProfile(newSubProfile);
-        UpdateSubProfiles();
+        newSubProfile.ParentGuid = selectedMainProfile.Guid;
+
+        ManagerFactory.profileManager.UpdateOrCreateProfile(newSubProfile);
     }
 
     private async void b_SubProfileDelete_Click(object sender, RoutedEventArgs e)
@@ -1289,7 +1262,7 @@ public partial class ProfilesPage : Page
         switch (dialogTask.Result)
         {
             case ContentDialogResult.Primary:
-                ProfileManager.DeleteSubProfile(subProfile);
+                ManagerFactory.profileManager.DeleteProfile(subProfile);
                 break;
         }
     }
@@ -1310,8 +1283,6 @@ public partial class ProfilesPage : Page
 
         // serialize subprofile
         SubmitProfile();
-
-        UpdateSubProfiles();
     }
 
     private void SubProfileRenameDialog_CloseButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
@@ -1330,11 +1301,6 @@ public partial class ProfilesPage : Page
     {
         // change main profile name
         selectedMainProfile.Name = tB_ProfileName.Text;
-
-        // change it in 
-        int ind = cB_Profiles.Items.IndexOf(selectedMainProfile);
-        cB_Profiles.Items[ind] = selectedMainProfile;
-
         SubmitProfile(UpdateSource.ProfilesPageUpdateOnly);
     }
 
@@ -1388,9 +1354,11 @@ public partial class ProfilesPage : Page
                             selectedProfile.RSREnabled = isEnabled;
                             if (isEnabled)
                             {
+                                selectedProfile.GPUScaling = true;
                                 selectedProfile.RISEnabled = false;
                                 selectedProfile.IntegerScalingEnabled = false;
 
+                                GPUScalingToggle.IsOn = true;
                                 RISToggle.IsOn = false;
                                 IntegerScalingToggle.IsOn = false;
 
@@ -1438,6 +1406,7 @@ public partial class ProfilesPage : Page
                         break;
                 }
             }
+            catch { }
             finally
             {
                 graphicLock.Exit();
@@ -1481,6 +1450,46 @@ public partial class ProfilesPage : Page
             return;
 
         selectedProfile.Arguments = tB_ProfileArguments.Text;
+        UpdateProfile();
+    }
+
+    // Toggle to show or hide profile in library or quick start
+    private void ShowInLibrary_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (selectedProfile is null)
+            return;
+
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
+        selectedProfile.ShowInLibrary = Toggle_ShowInLibrary.IsOn;
+        UpdateProfile();
+    }
+
+    private void Toggle_SuspendOnQuicktools_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (selectedProfile is null)
+            return;
+
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
+        selectedProfile.SuspendOnQT = Toggle_SuspendOnQuicktools.IsOn;
+        UpdateProfile();
+    }
+
+    private void tB_ProfileLaunchString_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (selectedProfile is null)
+            return;
+
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
+        selectedProfile.LaunchString = tB_ProfileLaunchString.Text;
         UpdateProfile();
     }
 }

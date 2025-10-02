@@ -44,13 +44,13 @@ namespace HandheldCompanion.ViewModels
         {
             get
             {
-                return ManagerFactory.settingsManager.GetInt("ConfigurableTDPMethod");
+                return ManagerFactory.settingsManager.Get<int>("ConfigurableTDPMethod");
             }
             set
             {
                 if (value != ConfigurableTDPMethod)
                 {
-                    ManagerFactory.settingsManager.SetProperty("ConfigurableTDPMethod", value);
+                    ManagerFactory.settingsManager.Set("ConfigurableTDPMethod", value);
                     OnPropertyChanged(nameof(ConfigurableTDPMethod));
                 }
             }
@@ -61,13 +61,13 @@ namespace HandheldCompanion.ViewModels
         {
             get
             {
-                return ManagerFactory.settingsManager.GetInt("MSIClawControllerIndex");
+                return ManagerFactory.settingsManager.Get<int>("MSIClawControllerIndex");
             }
             set
             {
                 if (value != ClawControllerIndex)
                 {
-                    ManagerFactory.settingsManager.SetProperty("MSIClawControllerIndex", value);
+                    ManagerFactory.settingsManager.Set("MSIClawControllerIndex", value);
                     OnPropertyChanged(nameof(ClawControllerIndex));
                 }
             }

@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Input;
+using WindowsDisplayAPI;
 using WpfScreenHelper.Enum;
 
 namespace HandheldCompanion.ViewModels
@@ -149,7 +150,7 @@ namespace HandheldCompanion.ViewModels
             Dispose();
         }
 
-        private void MultimediaManager_DisplaySettingsChanged(Managers.Desktop.DesktopScreen screen, Managers.Desktop.ScreenResolution resolution)
+        private void MultimediaManager_DisplaySettingsChanged(Display? screen)
         {
             if (ProcessWindow is null)
                 return;

@@ -5,9 +5,9 @@ namespace HandheldCompanion.ViewModels
 {
     public class OverlayQuickToolsViewModel : BaseViewModel
     {
-        public Visibility QuickKeyboardVisibility => ManagerFactory.settingsManager.GetBoolean("QuickKeyboardVisibility") ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility QuickTrackpadVisibility => ManagerFactory.settingsManager.GetBoolean("QuickTrackpadVisibility") ? Visibility.Visible : Visibility.Collapsed;
-        public bool QuickToolsApplyNoise => ManagerFactory.settingsManager.GetBoolean("QuickToolsApplyNoise");
+        public Visibility QuickKeyboardVisibility => ManagerFactory.settingsManager.Get<bool>("QuickKeyboardVisibility") ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility QuickTrackpadVisibility => ManagerFactory.settingsManager.Get<bool>("QuickTrackpadVisibility") ? Visibility.Visible : Visibility.Collapsed;
+        public bool QuickToolsApplyNoise => ManagerFactory.settingsManager.Get<bool>("QuickToolsApplyNoise");
 
         public OverlayQuickToolsViewModel()
         {

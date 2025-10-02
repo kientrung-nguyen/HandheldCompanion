@@ -15,7 +15,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace HandheldCompanion.Managers;
 
@@ -23,13 +22,14 @@ public class HotkeysManager : IManager
 {
     public ConcurrentDictionary<ButtonFlags, Hotkey> hotkeys = new();
 
-    private static readonly string HotkeysPath;
-    static HotkeysManager()
+    public HotkeysManager()
     {
         // initialize path
-        HotkeysPath = Path.Combine(MainWindow.SettingsPath, "hotkeys");
-        if (!Directory.Exists(HotkeysPath))
-            Directory.CreateDirectory(HotkeysPath);
+        ManagerPath = Path.Combine(App.SettingsPath, "hotkeys");
+
+        // create path
+        if (!Directory.Exists(ManagerPath))
+            Directory.CreateDirectory(ManagerPath);
     }
 
     public override void Start()
@@ -346,10 +346,10 @@ public class HotkeysManager : IManager
 
     public void SerializeHotkey(Hotkey hotkey)
     {
-        string hotkeyPath = Path.Combine(HotkeysPath, $"{hotkey.ButtonFlags}.json");
+        string hotkeyPath = Path.Combine(ManagerPath, $"{hotkey.ButtonFlags}.json");
 
         // update profile version to current build
-        hotkey.Version = new Version(MainWindow.fileVersionInfo.FileVersion);
+        hotkey.Version = MainWindow.CurrentVersion;
 
         string jsonString = JsonConvert.SerializeObject(hotkey, Formatting.Indented, new JsonSerializerSettings
         {
@@ -361,7 +361,7 @@ public class HotkeysManager : IManager
 
     public void DeleteHotkey(Hotkey hotkey)
     {
-        var hotkeyPath = Path.Combine(HotkeysPath, $"{hotkey.ButtonFlags}.json");
+        var hotkeyPath = Path.Combine(ManagerPath, $"{hotkey.ButtonFlags}.json");
 
         if (hotkeys.ContainsKey(hotkey.ButtonFlags))
         {

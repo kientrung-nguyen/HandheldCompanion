@@ -28,7 +28,7 @@ namespace HandheldCompanion.Watchers
 
         private void GpuManager_Hooked(GPU GPU)
         {
-            if (GPU is AMDGPU aMDGPU)
+            if (GPU is AmdGpu aMDGPU)
             {
                 // read OS specific values
                 int EmbeddedIntegerScalingSupport = RegistryUtils.GetInt(@"SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000", "DalEmbeddedIntegerScalingSupport");

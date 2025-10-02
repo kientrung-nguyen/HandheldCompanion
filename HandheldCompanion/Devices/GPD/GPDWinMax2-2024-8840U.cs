@@ -36,7 +36,7 @@ public class GPDWinMax2_2024_8840U : GPDWinMax2
         if (!IsOpen)
             return 0f;
 
-        var value = ECRamReadByte(ECDetails.AddressFanDuty, ECDetails);
+        var value = ECRamDirectReadByte(ECDetails.AddressFanDuty, ECDetails);
         return (float)(100f * (Convert.ToDouble(value) / ECDetails.FanValueMax));
     }
 

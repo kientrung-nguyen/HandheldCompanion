@@ -16,6 +16,7 @@
     Height="720"
     MinWidth="960"
     MinHeight="640"
+    d:DataContext="{d:DesignInstance Type=viewmodels:MainWindowViewModel}"
     d:Visibility="Visible"
     ui:ThemeManager.IsThemeAware="True"
     ui:WindowHelper.SystemBackdropType="Mica"
@@ -40,7 +41,7 @@
     <ui:NavigationView
         Name="navView"
         BackRequested="navView_BackRequested"
-        IsBackEnabled="True"
+        IsBackEnabled="{Binding ElementName=ContentFrame, Path=CanGoBack, Mode=OneWay}"
         IsSettingsVisible="False"
         ItemInvoked="navView_ItemInvoked"
         Loaded="navView_Loaded"
@@ -71,6 +72,16 @@
                 Tag="ControllerPage">
                 <ui:NavigationViewItem.Icon>
                     <ui:FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE7FC;" />
+                </ui:NavigationViewItem.Icon>
+            </ui:NavigationViewItem>
+
+            <!--  Game icon  -->
+            <ui:NavigationViewItem
+                Name="navLibrary"
+                Content="{l:Static resx:Resources.MainWindow_navLibrary}"
+                Tag="LibraryPage">
+                <ui:NavigationViewItem.Icon>
+                    <ui:FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8F1;" />
                 </ui:NavigationViewItem.Icon>
             </ui:NavigationViewItem>
 
@@ -184,18 +195,95 @@
                 </Grid.RowDefinitions>
 
                 <Grid>
+                    <ui:InfoBar
+                        Title="{Binding InfoBarTitle}"
+                        Margin="0,0,24,12"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Panel.ZIndex="999"
+                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                        CloseButtonCommand="{Binding DismissInfoBarCommand}"
+                        IsClosable="True"
+                        IsOpen="{Binding IsInfoBarOpen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Message="{Binding InfoBarMessage}"
+                        Severity="{Binding InfoBarSeverity}">
+
+                        <ui:InfoBar.Effect>
+                            <DropShadowEffect
+                                BlurRadius="16"
+                                Direction="270"
+                                Opacity="0.5"
+                                ShadowDepth="2" />
+                        </ui:InfoBar.Effect>
+
+                        <ui:InfoBar.RenderTransform>
+                            <TranslateTransform Y="60" />
+                        </ui:InfoBar.RenderTransform>
+
+                        <ui:InfoBar.Style>
+                            <Style TargetType="ui:InfoBar">
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="60" />
+                                    </Setter.Value>
+                                </Setter>
+
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsInfoBarOpen}" Value="True">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard Name="ShowStoryboard">
+                                                <Storyboard>
+                                                    <DoubleAnimation
+                                                        Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                        To="0"
+                                                        Duration="0:0:0.2">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <QuadraticEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                        <DataTrigger.ExitActions>
+                                            <BeginStoryboard Name="HideStoryboard">
+                                                <Storyboard>
+                                                    <DoubleAnimation
+                                                        Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                        To="60"
+                                                        Duration="0:0:0.2">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <QuadraticEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.ExitActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:InfoBar.Style>
+                    </ui:InfoBar>
+
                     <ui:ContentDialog Name="ContentDialog" />
-                    <common:TouchScrollViewer
+                    <ui:ScrollViewerEx
                         x:Name="scrollViewer"
-                        Grid.Row="0"
                         VerticalAlignment="Stretch"
-                        PanningMode="VerticalOnly">
-                        <ui:Frame
-                            Name="ContentFrame"
-                            Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type FrameworkElement}}}"
-                            MaxWidth="1100"
-                            HorizontalAlignment="Left" />
-                    </common:TouchScrollViewer>
+                        PanningMode="VerticalFirst">
+                        <Grid>
+                            <ui:Frame
+                                Name="ContentFrame"
+                                Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type FrameworkElement}}}"
+                                MaxWidth="2000"
+                                HorizontalAlignment="Left" />
+                            <Frame
+                                Name="PreloadFrame"
+                                Width="1"
+                                Height="1"
+                                IsHitTestVisible="False"
+                                NavigationUIVisibility="Hidden"
+                                Visibility="Hidden" />
+                        </Grid>
+                    </ui:ScrollViewerEx>
                 </Grid>
 
                 <!--  GAMEPAD AREA  -->
@@ -210,7 +298,7 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
-                        Spacing="6">
+                        Spacing="3">
 
                         <!--  More options  -->
                         <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="2">
@@ -232,7 +320,7 @@
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                 Style="{StaticResource BaseTextBlockStyle}"
-                                Text="Open navigation" />
+                                Text="{l:Static resx:Resources.MainWindow_OpenNavigation}" />
                         </ikw:SimpleStackPanel>
 
                         <!--  Select  -->

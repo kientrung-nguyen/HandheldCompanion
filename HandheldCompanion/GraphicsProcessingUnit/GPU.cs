@@ -1,5 +1,4 @@
-﻿using HandheldCompanion.Managers;
-using HandheldCompanion.Shared;
+﻿using HandheldCompanion.Shared;
 using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
@@ -7,9 +6,7 @@ using System.Diagnostics;
 using System.Management;
 using System.ServiceProcess;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Timers;
-using Task = System.Threading.Tasks.Task;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.GraphicsProcessingUnit

@@ -30,7 +30,7 @@ public static class Settings
     public static readonly string OnScreenDisplayBATTLevel = "OnScreenDisplayBATTLevel";
 
     /// <summary>
-    /// First version that implemented the new hotkey manager
+    /// First version that implemented the new Hotkey manager
     /// </summary>
     public static readonly string VersionHotkeyManager = "0.21.5.0";
 
@@ -185,10 +185,7 @@ public class SettingsManager : IManager
                 SettingValueChanged?.Invoke(name, value, !save);
             }
         }
-        catch (Exception ex)
-        {
-            LogManager.LogError($"Error setting config value {name}: {value} {ex.Message} {ex.StackTrace}");
-        }
+        catch (Exception) { }
     }
 
 
@@ -259,11 +256,20 @@ public class SettingsManager : IManager
                             : IDevice.GetCurrent().nTDP[(int)PowerType.Slow]
                         : IDevice.GetCurrent().nTDP[(int)PowerType.Fast];
                 }
+
+            case "QuickToolsPerformanceGPUValue":
+                {
+                    var GPUoverride = Get<bool>("QuickToolsPerformanceGPUEnabled");
+
+                    var GPUvalue = Convert.ToDouble(Properties.Settings.Default["QuickToolsPerformanceGPUValue"]);
+                    return GPUvalue;
+                }
+
             case "HasBrightnessSupport":
-                return MultimediaManager.HasBrightnessSupport();
+                return ManagerFactory.multimediaManager.HasBrightnessSupport();
 
             case "HasVolumeSupport":
-                return MultimediaManager.HasVolumeSupport();
+                return ManagerFactory.multimediaManager.HasVolumeSupport();
             default:
                 {
                     if (current.TryGetValue(name, out var returnValue))

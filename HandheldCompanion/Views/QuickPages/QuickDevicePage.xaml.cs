@@ -1,7 +1,9 @@
 ﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
+using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
@@ -30,20 +32,24 @@ public partial class QuickDevicePage : Page
     {
         InitializeComponent();
 
-        MultimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
-        MultimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
-        MultimediaManager.Initialized += MultimediaManager_Initialized;
-        MultimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ProfileManager.Applied += ProfileManager_Applied;
-        ProfileManager.Discarded += ProfileManager_Discarded;
+        // manage events
+        ManagerFactory.multimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
+        ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+        ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
+        ManagerFactory.multimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        ManagerFactory.profileManager.Applied += ProfileManager_Applied;
+        ManagerFactory.profileManager.Discarded += ProfileManager_Discarded;
 
         // Device specific
-        LegionGoPanel.Visibility = IDevice.GetCurrent() is LegionGo ? Visibility.Visible : Visibility.Collapsed;
         AYANEOFlipDSPanel.Visibility = IDevice.GetCurrent() is AYANEOFlipDS ? Visibility.Visible : Visibility.Collapsed;
-        DynamicLightingPanel.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting) ? Visibility.Visible : Visibility.Collapsed;
-        panelNightlight.Visibility = MultimediaManager.HasNightLightSupport() ? Visibility.Visible : Visibility.Collapsed;
-        NightLightSchedule.IsEnabled = NightLightToggle.IsEnabled = MultimediaManager.HasNightLightSupport();
+
+        // Capabilities specific
+        DynamicLightingPanel.IsEnabled = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.DynamicLighting);
+        FanOverridePanel.Visibility = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.FanOverride) ? Visibility.Visible : Visibility.Collapsed;
+
+        NightLightToggle.Visibility = ManagerFactory.multimediaManager.HasNightLightSupport() ? Visibility.Visible : Visibility.Collapsed;
+        NightLightSchedule.IsEnabled = NightLightToggle.IsEnabled = ManagerFactory.multimediaManager.HasNightLightSupport();
 
         // why is that part of a timer ?
         radioTimer = new(1000);
@@ -51,9 +57,22 @@ public partial class QuickDevicePage : Page
         radioTimer.Start();
     }
 
+    public void Close()
+    {
+        // manage events
+        ManagerFactory.multimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
+        ManagerFactory.multimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
+        ManagerFactory.multimediaManager.NightLightNotification -= MultimediaManager_NightLightNotification;
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ManagerFactory.profileManager.Applied -= ProfileManager_Applied;
+        ManagerFactory.profileManager.Discarded -= ProfileManager_Discarded;
+
+        radioTimer.Stop();
+    }
+
     private void MultimediaManager_NightLightNotification(bool enabled)
     {
-        if (MultimediaManager.HasNightLightSupport())
+        if (ManagerFactory.multimediaManager.HasNightLightSupport())
         {
             // UI thread
             Application.Current.Dispatcher.Invoke(() =>
@@ -65,7 +84,7 @@ public partial class QuickDevicePage : Page
 
     private void MultimediaManager_Initialized()
     {
-        if (MultimediaManager.HasNightLightSupport())
+        if (ManagerFactory.multimediaManager.HasNightLightSupport())
         {
             // UI thread
             Application.Current.Dispatcher.Invoke(() =>
@@ -119,8 +138,8 @@ public partial class QuickDevicePage : Page
             }
         }
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        // UI thread
+        UIHelper.TryInvoke(() =>
         {
             var canChangeDisplay = !profile.IntegerScalingEnabled;
             DisplayStack.IsEnabled = canChangeDisplay;
@@ -128,16 +147,16 @@ public partial class QuickDevicePage : Page
         });
     }
 
-    private void ProfileManager_Discarded(Profile profile, bool swapped)
+    private void ProfileManager_Discarded(Profile profile, bool swapped, Profile nextProfile)
     {
         // don't bother discarding settings, new one will be enforce shortly
-        if (swapped)
+        if (swapped && nextProfile.IntegerScalingEnabled)
             return;
 
-        // UI thread (async)
-        Application.Current.Dispatcher.Invoke(() =>
+        if (profile.IntegerScalingEnabled)
         {
-            if (profile.IntegerScalingEnabled)
+            // UI thread
+            UIHelper.TryInvoke(() =>
             {
                 DisplayStack.IsEnabled = true;
                 ResolutionOverrideStack.Visibility = Visibility.Collapsed;
@@ -145,28 +164,29 @@ public partial class QuickDevicePage : Page
                 // restore default resolution
                 if (profile.IntegerScalingDivider != 1)
                     SetResolution();
-            }
-        });
+
+            });
+        }
     }
 
     private void SettingsManager_SettingValueChanged(string? name, object value, bool temporary)
     {
         // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             switch (name)
             {
                 case "ScreenFrequencyAuto":
-                    AutoScreenToggle.IsOn = SettingsManager.Get<bool>(name);
+                    AutoScreenToggle.IsOn = ManagerFactory.settingsManager.Get<bool>(name);
                     break;
                 case "NightLightSchedule":
-                    NightLightSchedule.IsOn = SettingsManager.Get<bool>(name);
+                    NightLightSchedule.IsOn = ManagerFactory.settingsManager.Get<bool>(name);
                     break;
                 case "NightLightTurnOn":
-                    NightlightTurnOn.SelectedDateTime = SettingsManager.Get<DateTime?>(name);
+                    NightlightTurnOn.SelectedDateTime = ManagerFactory.settingsManager.Get<DateTime?>(name);
                     break;
                 case "NightLightTurnOff":
-                    NightlightTurnOff.SelectedDateTime = SettingsManager.Get<DateTime?>(name);
+                    NightlightTurnOff.SelectedDateTime = ManagerFactory.settingsManager.Get<DateTime?>(name);
                     break;
                 case "LEDSettingsEnabled":
                     UseDynamicLightingToggle.IsOn = Convert.ToBoolean(value);
@@ -192,7 +212,7 @@ public partial class QuickDevicePage : Page
             radios = await Radio.GetRadiosAsync();
 
             // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 if (radios is null)
                 {
@@ -215,69 +235,108 @@ public partial class QuickDevicePage : Page
         }).Start();
     }
 
+    private CrossThreadLock multimediaLock = new();
     private void MultimediaManager_PrimaryScreenChanged(Display screen)
     {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
+        if (multimediaLock.TryEnter())
         {
-            ComboBoxResolution.Items.Clear();
-            if (screen is not null)
+            try
             {
-                foreach (var setting in screen.DisplayScreen.GetPossibleSettings()
-                    .DistinctBy(setting => new
-                    {
-                        setting.Resolution.Width,
-                        setting.Resolution.Height
-                    })
-                    .OrderByDescending(setting => (ulong)setting.Resolution.Height * (ulong)setting.Resolution.Width))
+                // UI thread
+                UIHelper.TryInvoke(() =>
                 {
-                    ComboBoxResolution.Items.Add(new ComboBoxItem
+                    ComboBoxResolution.Items.Clear();
+                    if (screen is not null)
                     {
-                        Tag = setting,
-                        Content = $"{setting.Resolution.Width} x {setting.Resolution.Height}"
-                    });
-                }
+                        foreach (var setting in screen.DisplayScreen.GetPossibleSettings()
+                            .DistinctBy(setting => new
+                            {
+                                setting.Resolution.Width,
+                                setting.Resolution.Height
+                            })
+                            .OrderByDescending(setting => (ulong)setting.Resolution.Height * (ulong)setting.Resolution.Width))
+                        {
+                            ComboBoxResolution.Items.Add(new ComboBoxItem
+                            {
+                                Tag = setting,
+                                Content = $"{setting.Resolution.Width} x {setting.Resolution.Height}"
+                            });
+                        }
+                    }
+                });
             }
-        });
+            catch { }
+            finally
+            {
+                multimediaLock.Exit();
+            }
+        }
     }
 
     private void MultimediaManager_DisplaySettingsChanged(Display desktopScreen)
     {
-        // We don't want to change the combobox when it's changed from profile integer scaling
-        var currentProfile = ProfileManager.GetCurrent();
-        if (currentProfile is not null && currentProfile.IntegerScalingEnabled)
+        if (multimediaLock.TryEnter())
         {
-            ProfileManager_Applied(currentProfile, UpdateSource.Background);
-            return;
+            try
+            {
+                // We don't want to change the combobox when it's changed from profile integer scaling
+                var currentProfile = ManagerFactory.profileManager.GetCurrent();
+                if (currentProfile is not null && currentProfile.IntegerScalingEnabled)
+                {
+                    ProfileManager_Applied(currentProfile, UpdateSource.Background);
+                    return;
+                }
+
+                // UI thread
+                UIHelper.TryInvoke(() =>
+                {
+                    foreach (ComboBoxItem item in ComboBoxResolution.Items)
+                    {
+                        if (item.Tag is DisplayPossibleSetting resolution 
+                            && resolution.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width
+                            && resolution.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height
+                            && (ComboBoxResolution.SelectedItem is null
+                                || (ComboBoxResolution.SelectedItem is ComboBoxItem selectedItem
+                                    && selectedItem.Tag is DisplayPossibleSetting selectedResolution
+                                    && (selectedResolution.Resolution.Width != desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width
+                                        || selectedResolution.Resolution.Height != desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height))))
+                        {
+                            ComboBoxResolution.SelectedItem = item;
+
+                            var frequencies = desktopScreen.DisplayScreen.GetPossibleSettings()
+                                .Where(setting =>
+                                    setting.Resolution.Width == resolution.Resolution.Width &&
+                                    setting.Resolution.Height == resolution.Resolution.Height)
+                                .DistinctBy(setting => setting.Frequency)
+                                .OrderByDescending(setting => setting.Frequency);
+
+                            var currFrequency = desktopScreen.DisplayScreen.CurrentSetting;
+
+                            ComboBoxFrequency.Items.Clear();
+                            foreach (var frequency in frequencies)
+                            {
+                                var frequencyItem = new ComboBoxItem
+                                {
+                                    Content = $"{frequency.Frequency} Hz",
+                                    Tag = frequency
+                                };
+
+                                ComboBoxFrequency.Items.Add(frequencyItem);
+
+                                if (frequency.Frequency == currFrequency.Frequency)
+                                    ComboBoxFrequency.SelectedItem = frequencyItem;
+                            }
+                            break;
+                        }
+                    }
+                });
+            }
+            catch { }
+            finally
+            {
+                multimediaLock.Exit();
+            }
         }
-
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            foreach (ComboBoxItem item in ComboBoxResolution.Items)
-            {
-                if (item.Tag is DisplayPossibleSetting resolution &&
-                    resolution.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width &&
-                    resolution.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height)
-                {
-                    ComboBoxResolution.SelectedItem = item;
-                    break;
-                }
-            }
-
-            foreach (ComboBoxItem item in ComboBoxFrequency.Items)
-            {
-                if (item.Tag is DisplayPossibleSetting frequency &&
-                    frequency.Resolution.Width == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Width &&
-                    frequency.Resolution.Height == desktopScreen.DisplayScreen.CurrentSetting.Resolution.Height &&
-                    frequency.Frequency == desktopScreen.DisplayScreen.CurrentSetting.Frequency
-                    )
-                {
-                    ComboBoxFrequency.SelectedItem = item;
-                    break;
-                }
-            }
-        });
     }
 
     private void ComboBoxResolution_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -285,6 +344,10 @@ public partial class QuickDevicePage : Page
         if (ComboBoxResolution.SelectedItem is null)
             return;
 
+        // prevent update loop
+        if (multimediaLock.IsEntered())
+            return;
+			
         if (ScreenControl.PrimaryDisplay is null)
             return;
 
@@ -322,6 +385,10 @@ public partial class QuickDevicePage : Page
         if (ComboBoxFrequency.SelectedItem is null)
             return;
 
+        // prevent update loop
+        if (multimediaLock.IsEntered())
+            return;
+
         SetResolution();
     }
 
@@ -353,12 +420,6 @@ public partial class QuickDevicePage : Page
 
     }
 
-    //public void SetResolution(ScreenResolution resolution)
-    //{
-    //    // update current screen resolution
-    //    MultimediaManager.SetResolution(resolution.Width, resolution.Height, MultimediaManager.PrimaryDesktop.GetCurrentFrequency(), resolution.BitsPerPel);
-    //}
-
     private void WIFIToggle_Toggled(object sender, RoutedEventArgs e)
     {
         foreach (Radio radio in radios.Where(r => r.Kind == RadioKind.WiFi))
@@ -376,25 +437,23 @@ public partial class QuickDevicePage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("LEDSettingsEnabled", UseDynamicLightingToggle.IsOn);
+        ManagerFactory.settingsManager.Set("LEDSettingsEnabled", UseDynamicLightingToggle.IsOn);
     }
 
-    internal void Close()
-    {
-        radioTimer.Stop();
-    }
-
-    private void Toggle_LegionGoFanOverride_Toggled(object sender, RoutedEventArgs e)
+    private void Toggle_FanOverride_Toggled(object sender, RoutedEventArgs e)
     {
         ToggleSwitch toggleSwitch = (ToggleSwitch)sender;
         if (IDevice.GetCurrent() is LegionGo device)
             device.SetFanFullSpeed(toggleSwitch.IsOn);
-        //else if (IDevice.GetCurrent() is ClawA2VM claw8)
-        //    claw8.SetFanFullSpeed(toggleSwitch.IsOn);
+        else if (IDevice.GetCurrent() is ClawA2VM claw8)
+            claw8.SetFanFullSpeed(toggleSwitch.IsOn);
     }
 
     private void NightLightToggle_Toggled(object sender, RoutedEventArgs e)
     {
+        if (!IsLoaded)
+            return;
+
         var isEnabled = NightLight.Set(NightLightToggle.IsOn);
         if (isEnabled is not null)
             ToastManager.RunToast(
@@ -404,15 +463,17 @@ public partial class QuickDevicePage : Page
 
     private void NightLightSchedule_Toggled(object sender, RoutedEventArgs e)
     {
-        SettingsManager.Set("NightLightSchedule", NightLightSchedule.IsOn);
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("NightLightSchedule", NightLightSchedule.IsOn);
     }
 
     private void NightlightTurnOn_SelectedDateTimeChanged(object sender, RoutedPropertyChangedEventArgs<DateTime?> e)
     {
-
         if (NightlightTurnOn.SelectedDateTime != null)
         {
-            SettingsManager.Set("NightLightTurnOn", NightlightTurnOn.SelectedDateTime);
+            ManagerFactory.settingsManager.Set("NightLightTurnOn", NightlightTurnOn.SelectedDateTime);
             NightLight.Auto();
         }
     }
@@ -421,14 +482,18 @@ public partial class QuickDevicePage : Page
     {
         if (NightlightTurnOff.SelectedDateTime != null)
         {
-            SettingsManager.Set("NightLightTurnOff", NightlightTurnOff.SelectedDateTime);
+            ManagerFactory.settingsManager.Set("NightLightTurnOff", NightlightTurnOff.SelectedDateTime);
             NightLight.Auto();
         }
     }
 
     private void AutoScreenToggle_Toggled(object sender, RoutedEventArgs e)
     {
-        SettingsManager.Set("ScreenFrequencyAuto", AutoScreenToggle.IsOn);
+
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("ScreenFrequencyAuto", AutoScreenToggle.IsOn);
 
     }
 
@@ -463,7 +528,7 @@ public partial class QuickDevicePage : Page
                     return;
             }
 
-            SettingsManager.Set("AYANEOFlipScreenEnabled", enabled);
+            ManagerFactory.settingsManager.Set("AYANEOFlipScreenEnabled", enabled);
         }
     }
 
@@ -476,6 +541,6 @@ public partial class QuickDevicePage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.Set("AYANEOFlipScreenBrightness", value);
+        ManagerFactory.settingsManager.Set("AYANEOFlipScreenBrightness", value);
     }
 }

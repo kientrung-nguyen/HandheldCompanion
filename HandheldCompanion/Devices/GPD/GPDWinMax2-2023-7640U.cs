@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace HandheldCompanion.Devices;
 
-public class GPDWinMax2_2023_7640U : GPDWinMax2_2023_7840U
+public class GPDWinMax2_2023_7640U : GPDWinMax2
 {
     public GPDWinMax2_2023_7640U()
     {
