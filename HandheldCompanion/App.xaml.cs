@@ -169,7 +169,7 @@ public partial class App : Application
 
     private void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
     {
-        Exception ex = e.Exception;
+        var ex = e.Exception;
 
         // send to sentry
         bool IsSentryEnabled = ManagerFactory.settingsManager.Get<bool>("TelemetryEnabled");
@@ -199,7 +199,7 @@ public partial class App : Application
 
     private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        Exception ex = e.Exception;
+        var ex = e.Exception;
 
         // dirty: filter ItemsRepeater DesiredSize is NaN
         if (ex.Message.Contains("ItemsRepeater"))

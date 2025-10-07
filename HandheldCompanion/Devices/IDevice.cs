@@ -85,6 +85,7 @@ public struct HidFilter
         Usage = usage;
     }
 }
+
 public abstract class IDevice
 {
     public delegate void KeyPressedEventHandler(ButtonFlags button);
@@ -191,9 +192,11 @@ public abstract class IDevice
     public bool GpuMonitor = true;
     public bool MemoryMonitor = true;
     public bool BatteryMonitor = true;
+    public bool NetworkMonitor = true;
 
     protected bool DeviceOpen = false;
     public virtual bool IsOpen => DeviceOpen;
+
     public IDevice()
     {
         GamepadMotion = new(ProductIllustration, CalibrationMode.Manual  /*| CalibrationMode.SensorFusion */);
@@ -768,32 +771,48 @@ public abstract class IDevice
 
             case "LENOVO":
                 {
-                    switch (ProductName)
+                    switch (SystemModel)
                     {
-                        case "LNVNB161216":
-                            device = new LegionGo();
+                        case "83E1":
+                            device = new LegionGoTablet();
                             break;
-
-                        // Weird...
-                        case "INVALID":
-                            {
-                                switch (SystemModel)
-                                {
-                                    case "83E1":
-                                        device = new LegionGo();
-                                        break;
-                                }
-                            }
+                        case "83L3": // Legion Go S Z2 Go
+                            device = new LegionGoSZ2();
+                            break;
+                        case "83N6": // Legion Go S Z1E
+                        case "83Q2":
+                        case "83Q3":
+                            device = new LegionGoSZ1();
                             break;
                     }
                 }
                 break;
+
             case "MICRO-STAR INTERNATIONAL CO., LTD.":
                 {
                     switch (ProductName)
                     {
                         case "MS-1T41":
                             device = new ClawA1M();
+                            break;
+                        case "MS-1T42": // Claw 7 AI+ A2VM
+                        case "MS-1T52": // Claw 8 AI+ A2VM
+                            device = new ClawA2VM();
+                            break;
+                        case "MS-1T8K": // Claw A8
+                            device = new ClawBZ2EM();
+                            break;
+                    }
+                }
+                break;
+
+            case "PC PARTNER LIMITED":
+            case "ZOTAC":
+                {
+                    switch (ProductName)
+                    {
+                        case "G0A1W":
+                            device = new GamingZone();
                             break;
                     }
                 }
@@ -981,7 +1000,7 @@ public abstract class IDevice
     [Obsolete("ECRamReadByte is deprecated, please use ECRamReadByte with ECDetails instead.")]
     public virtual byte ECRamReadByte(ushort address)
     {
-        if (!IsOpen || openLibSys is null)
+        if (!IsOpen)
             return 0;
 
         try
@@ -998,7 +1017,7 @@ public abstract class IDevice
     [Obsolete("ECRamWriteByte is deprecated, please use ECRamDirectWrite with ECDetails instead.")]
     public virtual bool ECRamWriteByte(ushort address, byte data)
     {
-        if (!IsOpen || openLibSys is null)
+        if (!IsOpen)
             return false;
 
         try
@@ -1015,7 +1034,7 @@ public abstract class IDevice
 
     public virtual byte ECRamDirectReadByte(ushort address, ECDetails details)
     {
-        if (!IsOpen || openLibSys is null)
+        if (!IsOpen)
             return 0;
 
         var addr_upper = (byte)((address >> 8) & byte.MaxValue);
@@ -1059,7 +1078,7 @@ public abstract class IDevice
 
     public virtual bool ECRamDirectWrite(ushort address, ECDetails details, byte data)
     {
-        if (!IsOpen || openLibSys is null)
+        if (!IsOpen)
             return false;
 
         byte addr_upper = (byte)((address >> 8) & byte.MaxValue);

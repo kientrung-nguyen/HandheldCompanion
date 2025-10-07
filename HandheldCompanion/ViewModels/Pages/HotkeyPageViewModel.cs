@@ -37,7 +37,7 @@ namespace HandheldCompanion.ViewModels
 
             // raise event
             if (ControllerManager.HasTargetController)
-                ControllerManager_ControllerSelected(ControllerManager.GetTarget());
+                ControllerManager_ControllerSelected(ControllerManager.GetTargetOrDefault());
 
             // raise events
             switch (ManagerFactory.hotkeysManager.Status)
@@ -60,7 +60,7 @@ namespace HandheldCompanion.ViewModels
         private void ControllerManager_ControllerSelected(Controllers.IController Controller)
         {
             // (re)draw chords on controller update
-            foreach (HotkeyViewModel hotkeyViewModel in HotkeysList)
+            foreach (HotkeyViewModel hotkeyViewModel in HotkeysList.ToList())
                 hotkeyViewModel.DrawChords();
         }
 
@@ -80,7 +80,7 @@ namespace HandheldCompanion.ViewModels
             if (hotkey.IsInternal)
                 return;
 
-            HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+            var foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
             if (foundHotkey is null)
             {
                 HotkeysList.SafeAdd(new HotkeyViewModel(hotkey));
@@ -94,7 +94,7 @@ namespace HandheldCompanion.ViewModels
 
         private void HotkeysManager_Deleted(Hotkey hotkey)
         {
-            HotkeyViewModel? foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
+            var foundHotkey = HotkeysList.FirstOrDefault(p => p.Hotkey.ButtonFlags == hotkey.ButtonFlags);
             if (foundHotkey is not null)
             {
                 HotkeysList.SafeRemove(foundHotkey);
@@ -105,13 +105,13 @@ namespace HandheldCompanion.ViewModels
 
         private void InputsManager_StartedListening(ButtonFlags buttonFlags, InputsChordTarget chordTarget)
         {
-            HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
+            var hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
             hotkeyViewModel?.SetListening(true, chordTarget);
         }
 
         private void InputsManager_StoppedListening(ButtonFlags buttonFlags, InputsChord storedChord)
         {
-            HotkeyViewModel hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
+            var hotkeyViewModel = HotkeysList.Where(h => h.Hotkey.ButtonFlags == buttonFlags).FirstOrDefault();
             hotkeyViewModel?.SetListening(false, storedChord.chordTarget);
         }
 

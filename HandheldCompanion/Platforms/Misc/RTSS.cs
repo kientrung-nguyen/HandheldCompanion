@@ -1,6 +1,4 @@
-﻿using Gma.System.MouseKeyHook;
-using HandheldCompanion.Managers;
-using HandheldCompanion.Managers.Desktop;
+﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
@@ -28,14 +26,22 @@ public class RTSS : IPlatform
     private const uint RTSSHOOKSFLAG_LIMITER_DISABLED = 4;
     private const string GLOBAL_PROFILE = "";
 
-    private int hookedProcessId = 0;
-    private int targetProcessId = 0;
+    private const int HOOK_RETRY_COUNT = 60;
+    private const int HOOK_RETRY_DELAY_MS = 1000;
+    private const int HOOK_TASK_TIMEOUT_MS = 1000;
+
+    private readonly object updateLock = new object();
+
+    private volatile int hookedProcessId = 0;
+    private volatile int targetProcessId = 0;
     private uint lastOsdFrameId = 0;
 
     private bool profileLoaded;
     private AppEntry? appEntry;
 
-    private int RequestedFramerate;
+    private volatile int RequestedFramerate;
+    private Task? hookTask;
+    private CancellationTokenSource? hookCts;
 
     public RTSS()
     {
@@ -164,6 +170,11 @@ public class RTSS : IPlatform
 
     public override bool Stop(bool kill = false)
     {
+        // Cancel any pending hook operations
+        hookCts?.Cancel();
+        hookCts?.Dispose();
+        hookCts = null;
+
         // manage events
         ManagerFactory.processManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
         ManagerFactory.processManager.ProcessStopped -= ProcessManager_ProcessStopped;
@@ -174,9 +185,12 @@ public class RTSS : IPlatform
         return base.Stop(kill);
     }
 
-    public AppEntry GetAppEntry()
+    public AppEntry? GetAppEntry()
     {
-        return appEntry;
+        lock (updateLock)
+        {
+            return appEntry;
+        }
     }
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
@@ -198,7 +212,7 @@ public class RTSS : IPlatform
 
                 fpsInLimits = lowestDiffs.Last().limit;
             }
-            // Determine most approriate frame rate limit based on screen frequency
+            // Determine most appropriate frame rate limit based on screen frequency
             frameLimit = fpsInLimits ?? 0;
         }
 
@@ -220,9 +234,6 @@ public class RTSS : IPlatform
         if (processEx is null || processEx.ProcessId == 0)
             return;
 
-        // clear RTSS target app
-        appEntry = null;
-
         switch (filter)
         {
             case ProcessFilter.Allowed:
@@ -230,43 +241,89 @@ public class RTSS : IPlatform
             default:
                 return;
         }
+
         // unhook previous process
         UnhookProcess(targetProcessId);
 
         // update foreground process id
         targetProcessId = processEx.ProcessId;
 
+        // Cancel any previous hook attempt
+        hookCts?.Cancel();
+        hookCts?.Dispose();
+
+        // Wait for previous task to complete (with timeout)
+        try
+        {
+            hookTask?.Wait(HOOK_TASK_TIMEOUT_MS);
+        }
+        catch (AggregateException)
+        {
+            // Task was cancelled or faulted, which is expected
+        }
+
+        // Create new cancellation token for this hook attempt
+        hookCts = new CancellationTokenSource();
+
         // try to hook new process
-        new Thread(() => TryHookProcess(targetProcessId)).Start();
+        hookTask = Task.Run(() => TryHookProcess(targetProcessId, hookCts.Token));
     }
 
-    private void TryHookProcess(int processId)
+    private void TryHookProcess(int processId, CancellationToken cancellationToken)
     {
         if (!IsRunning)
             return;
 
+        var count = HOOK_RETRY_COUNT;
         do
         {
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
             try
             {
-                appEntry = OSD.GetAppEntries().FirstOrDefault(entry =>
-                        (entry.Flags & AppFlags.MASK) != AppFlags.None &&
-                         entry.ProcessId == processId);
+                var entries = OSD.GetAppEntries()
+                    .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None && x.ProcessId == processId)
+                    .ToList();
+
+                lock (updateLock)
+                {
+                    appEntry = entries.FirstOrDefault();
+                }
             }
-            catch (FileNotFoundException) { return; }
-            catch { }
+            catch (FileNotFoundException ex)
+            {
+                LogManager.LogDebug("RTSS shared memory file not found: {0}", ex.Message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError("Error accessing RTSS app entries: {0}", ex.Message);
+            }
 
             // wait a bit
-            Thread.Sleep(1000);
-        } while (appEntry is null && targetProcessId == processId && KeepAlive);
+            try
+            {
+                Task.Delay(HOOK_RETRY_DELAY_MS, cancellationToken).Wait();
+            }
+            catch (AggregateException)
+            {
+                // Cancelled
+                return;
+            }
 
-        if (appEntry is null)
+            count--;
+        } while (appEntry is null && targetProcessId == processId && KeepAlive && count > 0 && !cancellationToken.IsCancellationRequested);
+
+        if (appEntry is null || cancellationToken.IsCancellationRequested)
             return;
 
-        // set HookedProcessId
-        hookedProcessId = appEntry.ProcessId;
-
-        lastOsdFrameId = appEntry.OSDFrameId;
+        lock (updateLock)
+        {
+            // set HookedProcessId
+            hookedProcessId = appEntry.ProcessId;
+            lastOsdFrameId = appEntry.OSDFrameId;
+        }
 
         // raise event
         Hooked?.Invoke(appEntry);
@@ -277,11 +334,14 @@ public class RTSS : IPlatform
         if (processId != hookedProcessId)
             return;
 
-        // clear RTSS target app
-        appEntry = null;
+        lock (updateLock)
+        {
+            // clear RTSS target app
+            appEntry = null;
 
-        // clear HookedProcessId
-        hookedProcessId = 0;
+            // clear HookedProcessId
+            hookedProcessId = 0;
+        }
 
         // raise event
         Unhooked?.Invoke(processId);
@@ -298,17 +358,23 @@ public class RTSS : IPlatform
     {
         lock (updateLock)
         {
-            int RequestedFramerate = ManagerFactory.profileManager.GetCurrent().FramerateValue;
-            if (GetTargetFPS() != RequestedFramerate)
-                SetTargetFPS(RequestedFramerate);
+            int requestedFramerate = RequestedFramerate;
+            if (GetTargetFPS() != requestedFramerate)
+                SetTargetFPS(requestedFramerate);
 
             try
             {
                 // force "Show On-Screen Display" to On
                 _ = SetFlags(~RTSSHOOKSFLAG_OSD_VISIBLE, RTSSHOOKSFLAG_OSD_VISIBLE);
             }
-            catch (DllNotFoundException)
-            { }
+            catch (DllNotFoundException ex)
+            {
+                LogManager.LogError("RTSSHooks64.dll not found: {0}", ex.Message);
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError("Error setting RTSS flags: {0}", ex.Message);
+            }
 
             // force "On-Screen Display Support" to On
             if (GetEnableOSD() != true)
@@ -329,13 +395,36 @@ public class RTSS : IPlatform
 
     public void RefreshAppEntry()
     {
-        // refresh appEntry
-        try
+        lock (updateLock)
         {
-            appEntry = OSD.GetAppEntries().Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None).FirstOrDefault(a => a.ProcessId == (appEntry is not null ? appEntry.ProcessId : 0));
-            lastOsdFrameId = appEntry is null || appEntry.OSDFrameId == lastOsdFrameId ? 0 : appEntry.OSDFrameId;
+            try
+            {
+                var entries = OSD.GetAppEntries()
+                    .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None)
+                    .ToList();
+
+                var entry = entries.FirstOrDefault(a => a.ProcessId == (appEntry?.ProcessId ?? 0));
+
+                if (entry != null)
+                {
+                    var newFrameId = entry.OSDFrameId;
+                    lastOsdFrameId = newFrameId != lastOsdFrameId ? newFrameId : 0;
+                    appEntry = entry;
+                }
+                else
+                {
+                    lastOsdFrameId = 0;
+                }
+            }
+            catch (FileNotFoundException ex)
+            {
+                LogManager.LogDebug("RTSS shared memory not available: {0}", ex.Message);
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError("Error refreshing RTSS app entry: {0}", ex.Message);
+            }
         }
-        catch (FileNotFoundException) { }
     }
 
     public double GetFramerate(bool refresh = false)
@@ -344,11 +433,28 @@ public class RTSS : IPlatform
         {
             if (refresh)
                 RefreshAppEntry();
-            if (appEntry is null || lastOsdFrameId == 0) return 0.0d;
-            return appEntry.StatFrameTimeBufFramerate / 10.0d;
+
+            lock (updateLock)
+            {
+                if (appEntry is null || lastOsdFrameId == 0)
+                    return 0.0d;
+
+                return appEntry.StatFrameTimeBufFramerate / 10.0d;
+            }
         }
-        catch (InvalidDataException) { }
-        catch (FileNotFoundException) { }
+        catch (InvalidDataException ex)
+        {
+            LogManager.LogDebug("Invalid RTSS framerate data: {0}", ex.Message);
+        }
+        catch (FileNotFoundException ex)
+        {
+            LogManager.LogDebug("RTSS shared memory not available: {0}", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Error reading RTSS framerate: {0}", ex.Message);
+        }
+
         return 0.0d;
     }
 
@@ -359,13 +465,27 @@ public class RTSS : IPlatform
             if (refresh)
                 RefreshAppEntry();
 
-            if (appEntry is null)
-                return 0.0d;
+            lock (updateLock)
+            {
+                if (appEntry is null)
+                    return 0.0d;
 
-            return (double)appEntry.InstantaneousFrameTime / 1000;
+                return (double)appEntry.InstantaneousFrameTime / 1000;
+            }
         }
-        catch (InvalidDataException) { }
-        catch (FileNotFoundException) { }
+        catch (InvalidDataException ex)
+        {
+            LogManager.LogDebug("Invalid RTSS frametime data: {0}", ex.Message);
+        }
+        catch (FileNotFoundException ex)
+        {
+            LogManager.LogDebug("RTSS shared memory not available: {0}", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Error reading RTSS frametime: {0}", ex.Message);
+        }
+
         return 0.0d;
     }
 
@@ -377,13 +497,17 @@ public class RTSS : IPlatform
         try
         {
             if (!GetProfileProperty(propertyName, handle.AddrOfPinnedObject(), (uint)bytes.Length))
+            {
+                LogManager.LogDebug("Failed to get RTSS property: {0}", propertyName);
                 return false;
+            }
 
             value = Marshal.PtrToStructure<T>(handle.AddrOfPinnedObject());
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            LogManager.LogError("Error reading RTSS property {0}: {1}", propertyName, ex.Message);
             return false;
         }
         finally
@@ -401,8 +525,9 @@ public class RTSS : IPlatform
             Marshal.StructureToPtr(value, handle.AddrOfPinnedObject(), false);
             return SetProfileProperty(propertyName, handle.AddrOfPinnedObject(), (uint)bytes.Length);
         }
-        catch
+        catch (Exception ex)
         {
+            LogManager.LogError("Error setting RTSS property {0}: {1}", propertyName, ex.Message);
             return false;
         }
         finally
@@ -450,8 +575,33 @@ public class RTSS : IPlatform
             if (GetProfileProperty("EnableOSD", out int enabled))
                 return Convert.ToBoolean(enabled);
         }
-        catch
+        catch (Exception ex)
         {
+            LogManager.LogError("Error getting RTSS OSD state: {0}", ex.Message);
+        }
+
+        return false;
+    }
+
+    private bool SetProfilePropertyAndUpdate<T>(string propertyName, T value, string errorMessage)
+    {
+        if (!IsRunning)
+            return false;
+
+        try
+        {
+            LoadProfile();
+
+            if (SetProfileProperty(propertyName, value))
+            {
+                SaveProfile();
+                UpdateProfiles();
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogWarning("{0}: {1}", errorMessage, ex.Message);
         }
 
         return false;
@@ -459,70 +609,14 @@ public class RTSS : IPlatform
 
     public bool SetEnableOSD(bool enable)
     {
-        if (!IsRunning)
-            return false;
-
-        try
-        {
-            // Ensure Global profile is loaded
-            LoadProfile();
-
-            // Set EnableOSD as requested
-            if (SetProfileProperty("EnableOSD", enable ? 1 : 0))
-            {
-                // Save and reload profile
-                SaveProfile();
-                UpdateProfiles();
-
-                return true;
-            }
-        }
-        catch
-        {
-            LogManager.LogWarning("Failed to set OSD visibility settings in RTSS");
-        }
-
-        return false;
+        return SetProfilePropertyAndUpdate("EnableOSD", enable ? 1 : 0,
+            "Failed to set OSD visibility settings in RTSS");
     }
 
     private bool SetTargetFPS(int limit)
     {
-        if (!IsRunning)
-            return false;
-
-        try
-        {
-            // Ensure Global profile is loaded
-            LoadProfile();
-
-            // Set Framerate Limit as requested
-            if (SetProfileProperty("FramerateLimit", limit))
-            {
-                // Save and reload profile
-                SaveProfile();
-                UpdateProfiles();
-
-                return true;
-            }
-        }
-        catch
-        {
-            LogManager.LogWarning("Failed to set Framerate Limit in RTSS");
-        }
-
-        /*
-        if (File.Exists(SettingsPath))
-        {
-            IniFile iniFile = new(SettingsPath);
-            if (iniFile.Write("Limit", Limit.ToString(), "Framerate"))
-            {
-                UpdateProfiles();
-                return true;
-            }
-        }
-        */
-
-        return false;
+        return SetProfilePropertyAndUpdate("FramerateLimit", limit,
+            "Failed to set Framerate Limit in RTSS");
     }
 
     private int GetTargetFPS()
@@ -542,19 +636,12 @@ public class RTSS : IPlatform
             if (GetProfileProperty("FramerateLimit", out int fpsLimit))
                 return fpsLimit;
         }
-        catch
+        catch (Exception ex)
         {
+            LogManager.LogError("Error getting RTSS target FPS: {0}", ex.Message);
         }
 
         return 0;
-
-        /*
-        if (File.Exists(SettingsPath))
-        {
-            IniFile iniFile = new(SettingsPath);
-            return Convert.ToInt32(iniFile.Read("Limit", "Framerate"));
-        }
-        */
     }
 
     public void RequestFPS(int framerate, bool immediate = false)
@@ -593,6 +680,17 @@ public class RTSS : IPlatform
 
     public override void Dispose()
     {
+        // Cancel any pending operations
+        hookCts?.Cancel();
+        hookCts?.Dispose();
+
+        // Dispose timer
+        if (PlatformWatchdog != null)
+        {
+            PlatformWatchdog.Stop();
+            PlatformWatchdog.Dispose();
+        }
+
         Stop();
         base.Dispose();
     }

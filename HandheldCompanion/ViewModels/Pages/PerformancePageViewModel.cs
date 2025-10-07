@@ -5,6 +5,7 @@ using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -99,14 +100,15 @@ namespace HandheldCompanion.ViewModels
         public bool SupportsIntelEnduranceGaming => GPUManager.GetCurrent() is IntelGpu intelGPU && intelGPU.HasEnduranceGaming(out _, out _, out _);
 
         // Platform Manager
-        public bool IsRunningRTSS => ManagerFactory.platformManager.IsReady && PlatformManager.RTSS.IsInstalled;
+        public bool IsRunningRTSS => ManagerFactory.platformManager.IsReady && (PlatformManager.RTSS?.IsInstalled ?? false);
         public bool SupportsAutoTDP
         {
             get
             {
                 if (!IsRunningRTSS)
+                {
                     return false;
-
+                }
                 return PerformanceManager.GetProcessor()?.CanChangeTDP ?? false;
             }
         }
@@ -412,12 +414,12 @@ namespace HandheldCompanion.ViewModels
 
         public int OSPowerMode
         {
-            get => Array.IndexOf(PerformanceManager.PowerModes, SelectedPreset.OSPowerMode);
+            get => Array.IndexOf([.. PerformanceManager.PowerModes.Keys.OfType<Guid>()], SelectedPreset.OSPowerMode);
             set
             {
                 if (value != OSPowerMode)
                 {
-                    SelectedPreset.OSPowerMode = PerformanceManager.PowerModes[value];
+                    SelectedPreset.OSPowerMode = PerformanceManager.PowerModes.Keys.OfType<Guid>().ToArray()[value];
                     OnPropertyChanged(nameof(OSPowerMode));
                 }
             }
@@ -909,7 +911,6 @@ namespace HandheldCompanion.ViewModels
         {
             // manage events
             PlatformManager.LibreHardware.CPUTemperatureChanged += LibreHardwareMonitor_CpuTemperatureChanged;
-
             OnPropertyChanged(nameof(SupportsAutoTDP));
         }
 
@@ -922,7 +923,7 @@ namespace HandheldCompanion.ViewModels
         {
             if (!value.HasValue) return;
 
-            // Clamp to your axis range and convert °C ? X index (0..10)
+            // Clamp to your axis range and convert °C → X index (0..10)
             double tempC = Math.Max(0, Math.Min(100, value.Value));
             double x = tempC / 10.0;
 

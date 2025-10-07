@@ -1,6 +1,8 @@
 ﻿using HandheldCompanion.Extensions;
+using HandheldCompanion.Helpers;
 using HandheldCompanion.Views.Classes;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -37,20 +39,20 @@ public enum ToastIcons
 /// </summary>
 public partial class OverlayToast : OverlayWindow
 {
-
     protected static string toastTitle = "Balanced";
     protected static string toastText = "Toast text";
     protected static ToastIcons? toastIcon = null;
-    private readonly DispatcherTimer dispatcher = new(
-        DispatcherPriority.Normal,
-        Dispatcher.CurrentDispatcher)
-    {
-        IsEnabled = false,
-        Interval = TimeSpan.FromMilliseconds(2850)
-    };
+    private readonly DispatcherTimer dispatcher;
     public OverlayToast()
     {
         InitializeComponent();
+        dispatcher = new(
+            DispatcherPriority.Normal,
+            Dispatcher.CurrentDispatcher)
+        {
+            IsEnabled = false,
+            Interval = TimeSpan.FromMilliseconds(2850)
+        };
         dispatcher.Tick += dispatcherElapsed;
         ShowInTaskbar = false;
         VerticalAlignment = VerticalAlignment.Center;
@@ -59,7 +61,7 @@ public partial class OverlayToast : OverlayWindow
 
     public void RunToast(string text, ToastIcons? icon = null)
     {
-        Application.Current.Dispatcher.Invoke(() =>
+        UIHelper.TryInvoke(() =>
         {
             dispatcher.Stop();
             toastText = text;
@@ -74,7 +76,7 @@ public partial class OverlayToast : OverlayWindow
 
     private void dispatcherElapsed(object? sender, EventArgs e)
     {
-        Application.Current.Dispatcher.Invoke(async () =>
+        UIHelper.TryInvoke(async () =>
         {
             dispatcher.Stop();
             ToastPanel.Visibility = Visibility.Hidden;

@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.Generic;
@@ -387,7 +388,7 @@ namespace HandheldCompanion.Controllers
             Inputs.GyroState.SetAccelerometer(aX, aY, aZ);
 
             // process motion
-            if (gamepadMotions.TryGetValue(gamepadIndex, out GamepadMotion gamepadMotion))
+            if (gamepadMotions.TryGetValue(gamepadIndex, out var gamepadMotion))
                 gamepadMotion.ProcessMotion(gX, gY, gZ, aX, aY, aZ, deltaMillis);
 
             // update previous counter

@@ -261,6 +261,9 @@ public partial class ProfilesPage : Page
         // UI thread
         UIHelper.TryInvoke(() =>
         {
+            if (selectedProfile is null)
+                return;
+
             cB_Framerate.Items.Clear();
 
             var fpsInLimits = frameLimits.FirstOrDefault(l => l == selectedProfile.FramerateValue);

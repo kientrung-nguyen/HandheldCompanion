@@ -385,7 +385,7 @@ public class ProcessManager : IManager
                 if (!CreateOrUpdateProcess(processId, element))
                     return;
 
-            if (!Processes.TryGetValue(processId, out ProcessEx process))
+            if (!Processes.TryGetValue(processId, out var process))
                 return;
 
             // store previous process
@@ -427,7 +427,7 @@ public class ProcessManager : IManager
         object lockObject = processLocks.GetOrAdd(processId, id => new object());
         lock (lockObject)
         {
-            if (!Processes.TryGetValue(processId, out ProcessEx processEx))
+            if (!Processes.TryGetValue(processId, out var processEx))
                 return;
 
             // If the halted process had foreground, log and raise event.
@@ -469,7 +469,7 @@ public class ProcessManager : IManager
                 if (proc.HasExited)
                     return false;
 
-                if (!Processes.TryGetValue(proc.Id, out ProcessEx processEx))
+                if (!Processes.TryGetValue(proc.Id, out var processEx))
                 {
                     // Hook exited event
                     try
@@ -637,13 +637,13 @@ public class ProcessManager : IManager
         foreach (nint handle in handles)
             ProcessUtils.NtResumeProcess(handle);
 
-        if (restoreWindow && windowsCache.ContainsKey(processEx.ProcessId))
+        if (restoreWindow && windowsCache.TryGetValue(processEx.ProcessId, out int[]? value))
         {
             // wait a bit
             await Task.Delay(500).ConfigureAwait(false); // Avoid blocking the synchronization context
 
             // restore process windows
-            foreach (int hwnd in windowsCache[processEx.ProcessId])
+            foreach (int hwnd in value)
                 ProcessUtils.ShowWindow(hwnd, (int)ProcessUtils.ShowWindowCommands.Restored);
 
             // clear cache

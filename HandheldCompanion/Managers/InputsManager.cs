@@ -279,7 +279,7 @@ public static class InputsManager
                     BufferKeys[args.IsKeyDown].Add(new KeyEventArgsExt((Keys)keyCode, args.ScanCode, args.Timestamp, args.IsKeyDown, args.IsKeyUp, false, args.Flags));
 
                 // calls current controller (if connected)
-                IController controller = ControllerManager.GetTarget();
+                var controller = ControllerManager.GetTarget();
                 controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                 // remove chord
@@ -415,7 +415,7 @@ public static class InputsManager
                             BufferKeys[args.IsKeyDown].Clear();
 
                             // calls current controller (if connected)
-                            IController controller = ControllerManager.GetTarget();
+                            var controller = ControllerManager.GetTarget();
                             controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                             return;
@@ -446,7 +446,7 @@ public static class InputsManager
                                 // store successful hotkey
                                 successkeyChords.Add(chord);
 
-                                IController controller = ControllerManager.GetTarget();
+                                var controller = ControllerManager.GetTarget();
                                 controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                                 return;
@@ -597,9 +597,6 @@ public static class InputsManager
             return;
         else
             ButtonState.Overwrite(buttonState, prevState);
-
-        if (!IsMapped)
-            return;
 
         // half-press should be removed if full-press is also present
         RemoveHalfPressIfFullPress(ButtonFlags.L2Full, ButtonFlags.L2Soft);

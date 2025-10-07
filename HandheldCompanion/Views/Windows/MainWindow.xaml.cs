@@ -1,4 +1,4 @@
-using HandheldCompanion.Controllers;
+﻿using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
@@ -153,7 +153,7 @@ public partial class MainWindow : GamepadWindow
         };
 
         notifyIconWaitTimer = new(
-            TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(500),
             DispatcherPriority.Normal,
             notifyIconWaitTimerTicked,
             Dispatcher.CurrentDispatcher)
@@ -205,7 +205,7 @@ public partial class MainWindow : GamepadWindow
                         if (overlayquickTools.Visibility == Visibility.Visible)
                             overlayquickTools.ToggleVisibility();
 
-                        Application.Current.Dispatcher.Invoke(async () =>
+                        UIHelper.TryInvoke(async () =>
                         {
                             for (int i = 0; i < 2; i++)
                             {
@@ -232,7 +232,7 @@ public partial class MainWindow : GamepadWindow
         };
 
         // paths
-        Process process = Process.GetCurrentProcess();
+        var process = Process.GetCurrentProcess();
         CurrentExe = process.MainModule.FileName;
         CurrentPath = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -336,54 +336,87 @@ public partial class MainWindow : GamepadWindow
             lastRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
             string cpuTemp = "";
+            string memStr = "";
             string gpuTemp = "";
+            string mem2Str = "";
+            string netStr = "";
             string battery = "";
             string charge = "";
 
-            if (PlatformManager.LibreHardware.GetCPUPower() != null)
-                cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardware.GetCPUPower(), 1):0.0}W";
+            if (PlatformManager.LibreHardware != null)
+            {
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetCPULoad()))
+                    cpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardware.GetCPULoad()):00}%";
 
-            if (PlatformManager.LibreHardware.GetCPUTemperature() != null)
-                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetCPUTemperature().Value)}�C";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetCPUPower()))
+                    cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetCPUPower(), 1):00.0}W";
 
-            if (PlatformManager.LibreHardware.GetCPULoad() != null)
-                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetCPULoad().Value)}%";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetCPUTemperature()))
+                    cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetCPUTemperature()):00}°C";
 
-            if (PlatformManager.LibreHardware.GetMemoryUsage() != null)
-                cpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetMemoryUsage().Value / 1024, 1)}GB";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetMemoryUsage()))
+                    memStr += $": {Math.Round((decimal)PlatformManager.LibreHardware.GetMemoryUsage() / 1024, 1):00.0}GB";
 
-            if (PlatformManager.LibreHardware.GetGPUPower() != null)
-                gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUPower().Value, 1):0.0}W";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetGPULoad()))
+                    gpuTemp += $": {Math.Round((decimal)PlatformManager.LibreHardware.GetGPULoad()):00}%";
 
-            if (PlatformManager.LibreHardware.GetGPUTemperature() != null)
-                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUTemperature().Value)}�C";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetGPUPower()))
+                    gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUPower(), 1):00.0}W";
 
-            if (PlatformManager.LibreHardware.GetGPULoad() != null)
-                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetGPULoad().Value)}%";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetGPUTemperature()))
+                    gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUTemperature()):00}°C";
 
-            if (PlatformManager.LibreHardware.GetGPUMemoryDedicated() != null)
-                gpuTemp += $" {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUMemoryDedicated().Value / 1024, 1)}GB";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetGPUMemoryDedicated()))
+                    mem2Str += $": {Math.Round((decimal)PlatformManager.LibreHardware.GetGPUMemoryDedicated() / 1024, 1):00.0}GB";
 
-            if (PlatformManager.LibreHardware.GetBatteryLevel() != null)
-                battery = $": {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryLevel().Value)}%";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetBatteryLevel()))
+                    battery = $": {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryLevel())}%";
 
-            if (PlatformManager.LibreHardware.GetBatteryPower() != null)
-                charge = $"{Properties.Resources.Discharging}: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryPower(), 1)}W";
-            else if (PlatformManager.LibreHardware.GetBatteryPower() > 0)
-                charge = $"{Properties.Resources.Charging}: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryPower(), 1)}W";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetBatteryPower()))
+                    charge = $"{Properties.Resources.Discharging}: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryPower(), 1)}W";
+                else if (PlatformManager.LibreHardware.GetBatteryPower() > 0)
+                    charge = $"{Properties.Resources.Charging}: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryPower(), 1)}W";
 
-            if (PlatformManager.LibreHardware.GetBatteryHealth() != null)
-                battery += $"\nBattery Health: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryHealth(), 1)}%";
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetBatteryHealth()))
+                    battery += $"\nBattery Health: {Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryHealth(), 1)}%";
 
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetNetworkSpeedDown()))
+                {
+                    (float _down, string _down_flag) = NormalizeSpeed(PlatformManager.LibreHardware.GetNetworkSpeedDown());
+                    netStr += $": {_down:00.0} ↓{_down_flag}";
+                }
+                if (!float.IsNaN(PlatformManager.LibreHardware.GetNetworkSpeedUp()))
+                {
+                    (float _up, string _up_flag) = NormalizeSpeed(PlatformManager.LibreHardware.GetNetworkSpeedUp());
+                    netStr += $" {_up:00.0} ↑{_up_flag}";
+                }
+            }
             string trayTip = $"CPU{cpuTemp}";
+
+            if (memStr.Length > 0) trayTip += "\nRAM" + memStr;
             if (gpuTemp.Length > 0) trayTip += "\nGPU" + gpuTemp;
+            if (mem2Str.Length > 0) trayTip += "\nVRAM" + mem2Str;
+            if (netStr.Length > 0) trayTip += "\nNET" + netStr;
             //if (PlatformManager.LibreHardware.CPUFanSpeed != null) trayTip += $"\nFan {PlatformManager.LibreHardware.CPUFanSpeed}RPM";
-            if (battery.Length > 0) trayTip += "\nBattery Remaining" + battery;
-            if (charge.Length > 0) trayTip += "\n" + charge;
+            //if (battery.Length > 0) trayTip += "\nBattery Remaining" + battery;
+            //if (charge.Length > 0) trayTip += "\n" + charge;
 
             notifyIcon.Text = trayTip;
 
         });
+    }
+
+    /// <summary>
+	/// Normalize speed in Kbps to 00.0 format with appropriate flags
+	/// </summary>
+	private static (float, string) NormalizeSpeed(float speed)
+    {
+        speed /= 1024f;
+        string unit = "Kb/s";
+        if (speed > 100) unit = "Mb/s";
+        if (speed > 100000) unit = "Gb/s";
+        while (speed.ToString().Split(".")[0].Length > 2) { speed /= 1024; }
+        return (speed, unit);
     }
 
     protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -396,8 +429,6 @@ public partial class MainWindow : GamepadWindow
                 break;
             case WM_QUERYENDSESSION:
                 break;
-
-
         }
 
         return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
@@ -463,7 +494,7 @@ public partial class MainWindow : GamepadWindow
                         GamepadUIBackDesc.Text = Properties.Resources.MainWindow_Back;
 
                         // To get the first RadioButton in the list, if any
-                        RadioButton firstRadioButton = WPFUtils.FindChildren(control).FirstOrDefault(c => c is RadioButton) as RadioButton;
+                        var firstRadioButton = WPFUtils.FindChildren(control).FirstOrDefault(c => c is RadioButton) as RadioButton;
                         if (firstRadioButton is not null)
                         {
                             GamepadUIToggle.Visibility = Visibility.Visible;
@@ -697,10 +728,10 @@ public partial class MainWindow : GamepadWindow
         SplashScreen?.Close();
 
         // load gamepad navigation manager
-        gamepadFocusManager.Loaded();
+        gamepadFocusManager?.Loaded();
 
-        HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
-        source.AddHook(WndProc); // Hook into the window's message loop
+        var source = PresentationSource.FromVisual(this) as HwndSource;
+        source?.AddHook(WndProc); // Hook into the window's message loop
 
         // restore window state
         WindowState = StartMinimized ? WindowState.Minimized : (WindowState)ManagerFactory.settingsManager.Get<int>("MainWindowState");
@@ -826,7 +857,7 @@ public partial class MainWindow : GamepadWindow
                         currentDevice.Close();
 
                         // Allow system to sleep
-                        SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
+                        _ = SystemManager.SetThreadExecutionState(SystemManager.ES_CONTINUOUS);
                         LogManager.LogInformation("Tasks completed. System can now suspend.");
                     }
                 }
@@ -861,8 +892,7 @@ public partial class MainWindow : GamepadWindow
             .FirstOrDefault(item => item.Tag?.ToString() == navItemTag);
 
         // is it a footer item ?
-        if (selectedItem is null)
-            selectedItem = navView.FooterMenuItems
+        selectedItem ??= navView.FooterMenuItems
             .OfType<NavigationViewItem>()
             .FirstOrDefault(item => item.Tag?.ToString() == navItemTag);
 
@@ -870,7 +900,7 @@ public partial class MainWindow : GamepadWindow
         navView.SelectedItem = selectedItem;
 
         // Give gamepad focus
-        gamepadFocusManager.Focus((NavigationViewItem)selectedItem);
+        gamepadFocusManager?.Focus((NavigationViewItem)selectedItem);
 
         var item = _pages.FirstOrDefault(p => p.Key.Equals(navItemTag));
         var _page = item.Value;
@@ -949,6 +979,7 @@ public partial class MainWindow : GamepadWindow
             hotkeysPage.Page_Closed();
             layoutPage.Page_Closed();
             notificationsPage.Page_Closed();
+            libraryPage.Page_Closed();
         });
 
         // remove all automation event handlers
@@ -972,7 +1003,7 @@ public partial class MainWindow : GamepadWindow
         UpdateManager.Stop();
 
         Application.Current.Shutdown();
-        await Task.Delay(250).ConfigureAwait(false);
+        await Task.Delay(2500).ConfigureAwait(false);
         Environment.Exit(0);
     }
 

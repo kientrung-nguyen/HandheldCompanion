@@ -45,7 +45,7 @@ namespace HandheldCompanion.Commands.Functions.Windows
                     // Find the OSK window. 
                     IntPtr hwndOSK = FindWindow("OSKMainClass", null);
 
-                    Screen screen = Screen.FromHandle(OverlayQuickTools.GetCurrent().hwndSource.Handle);
+                    Screen screen = Screen.FromHandle(OverlayQuickTools.GetCurrent().hWndSource.Handle);
 
                     switch (KeyboardPosition)
                     {

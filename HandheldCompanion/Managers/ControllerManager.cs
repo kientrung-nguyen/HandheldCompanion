@@ -95,6 +95,8 @@ public static class ControllerManager
         SDL.SetHint(SDL.Hints.XInputEnabled, "0");
         SDL.SetHint(SDL.Hints.JoystickHIDAPISteam, "0");
         SDL.SetHint(SDL.Hints.JoystickHIDAPISteamdeck, "0");
+        // Initialize SDL with hint to NOT steal input from other applications
+        SDL.SetHint(SDL.Hints.JoystickAllowBackgroundEvents, "1");
 
         // load SDL game controller database
         // https://github.com/mdqinc/SDL_GameControllerDB
@@ -290,7 +292,7 @@ public static class ControllerManager
                     case SDL.EventType.GamepadTouchpadDown:
                     case SDL.EventType.GamepadTouchpadUp:
                     case SDL.EventType.GamepadTouchpadMotion:
-                        if (SDLControllers.TryGetValue(e.GDevice.Which, out SDLController controller))
+                        if (SDLControllers.TryGetValue(e.GDevice.Which, out var controller))
                             controller.PumpEvent(e);
                         break;
 
@@ -326,8 +328,8 @@ public static class ControllerManager
                 }
                 else
                 {
-                    string? name = SDL.GetGamepadName(gamepad);
-                    string? path = SDL.GetGamepadPath(gamepad);
+                    var name = SDL.GetGamepadName(gamepad);
+                    var path = SDL.GetGamepadPath(gamepad);
                     uint userIndex = (uint)SDL.GetGamepadPlayerIndex(gamepad);
 
                     if (string.IsNullOrEmpty(path))
@@ -339,7 +341,7 @@ public static class ControllerManager
                     if (DeviceManager.TryExtractInterfaceGuid(path, out Guid interfaceGuid))
                         path = DeviceManager.SymLinkToInstanceId(path, interfaceGuid.ToString());
 
-                    PnPDetails? details = DeviceManager.GetDeviceFromInstanceId(path);
+                    var details = DeviceManager.GetDeviceFromInstanceId(path);
                     if (details is null)
                     {
                         LogManager.LogError($"Failed to retrieve PnPDetails for controller {deviceIndex}");
@@ -348,7 +350,7 @@ public static class ControllerManager
 
                     try
                     {
-                        Controllers.TryGetValue(details.baseContainerDeviceInstanceId, out IController controller);
+                        Controllers.TryGetValue(details.baseContainerDeviceInstanceId, out var controller);
                         PowerCyclers.TryGetValue(details.baseContainerDeviceInstanceId, out bool IsPowerCycling);
 
                         if (controller != null)
@@ -448,7 +450,7 @@ public static class ControllerManager
         {
             try
             {
-                if (SDLControllers.TryGetValue(deviceIndex, out SDLController controller))
+                if (SDLControllers.TryGetValue(deviceIndex, out var controller))
                 {
                     string path = controller.GetContainerInstanceId();
 
@@ -998,7 +1000,7 @@ public static class ControllerManager
         ControllerMuted = false;
 
         // Steam Deck specific scenario
-        if (IDevice.GetCurrent() is SteamDeck steamDeck)
+        if (IDevice.GetCurrent() is SteamDeck)
         {
             bool IsExclusiveMode = ManagerFactory.settingsManager.Get<bool>("SteamControllerMode");
 
@@ -1129,12 +1131,12 @@ public static class ControllerManager
 
     public static void Rescan()
     {
-        ManagerFactory.deviceManager.RefreshDInput();
-        ManagerFactory.deviceManager.RefreshXInput();
+        ManagerFactory.deviceManager.RefreshDInputAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+        ManagerFactory.deviceManager.RefreshXInputAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 
         // Reopen all SDL gamepads
-        uint[] gamepads = SDL.GetGamepads(out int count);
-        foreach (uint gamepad in gamepads)
+        var gamepads = SDL.GetGamepads(out _);
+        foreach (uint gamepad in gamepads ?? [])
             SDL_GamepadAdded(gamepad);
     }
 
@@ -1510,7 +1512,7 @@ public static class ControllerManager
         lock (targetLock)
         {
             // look for new controller
-            if (!Controllers.TryGetValue(baseContainerDeviceInstanceId, out IController controller))
+            if (!Controllers.TryGetValue(baseContainerDeviceInstanceId, out var controller))
                 return;
 
             // already self
@@ -1596,7 +1598,7 @@ public static class ControllerManager
             }
             catch { }
 
-            string enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
+            var enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
             switch (enumerator)
             {
                 case "USB":
@@ -1612,7 +1614,7 @@ public static class ControllerManager
             }
 
             // cycle controller
-            if (Controllers.TryGetValue(baseContainerDeviceInstanceId, out IController controller))
+            if (Controllers.TryGetValue(baseContainerDeviceInstanceId, out var controller))
                 return controller.CyclePort();
         }
         catch { }
@@ -1650,7 +1652,7 @@ public static class ControllerManager
             }
             catch { }
 
-            string enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
+            var enumerator = pnPDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName);
             switch (enumerator)
             {
                 case "USB":

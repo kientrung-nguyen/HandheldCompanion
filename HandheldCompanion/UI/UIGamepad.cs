@@ -141,7 +141,7 @@ namespace HandheldCompanion.Managers
             // set flag
             HasDialogOpen = false;
 
-            if (prevControl.TryGetValue(gamepadPage.Tag, out Control control))
+            if (prevControl.TryGetValue(gamepadPage.Tag, out var control))
             {
                 if (_focused[windowName])
                     Focus(control);
@@ -155,7 +155,7 @@ namespace HandheldCompanion.Managers
             // set flag
             HasDialogOpen = true;
 
-            Control control = gamepadWindow.controlElements.OfType<Button>().FirstOrDefault();
+            var control = gamepadWindow.controlElements.OfType<Button>().FirstOrDefault();
             Focus(control);
         }
 
@@ -348,8 +348,7 @@ namespace HandheldCompanion.Managers
                 // update status
                 _navigating = _goingForward;
 
-                Control control;
-                if (prevControl.TryGetValue(gamepadPage.Tag, out control))
+                if (prevControl.TryGetValue(gamepadPage.Tag, out var control))
                 {
                     if (_goingBack)
                     {
@@ -738,7 +737,7 @@ namespace HandheldCompanion.Managers
                             // set state
                             _navigating = true;
 
-                            if (prevControl.TryGetValue(gamepadPage.Tag, out Control control) && control is not NavigationViewItem)
+                            if (prevControl.TryGetValue(gamepadPage.Tag, out var control) && control is not NavigationViewItem)
                             {
                                 Focus(control);
                                 return;
@@ -963,7 +962,7 @@ namespace HandheldCompanion.Managers
                                     break;
                                 case true:
                                     {
-                                        if (prevControl.TryGetValue(gamepadPage.Tag, out Control control) && control is not NavigationViewItem)
+                                        if (prevControl.TryGetValue(gamepadPage.Tag, out var control) && control is not NavigationViewItem)
                                             Focus(control);
                                         else
                                         {

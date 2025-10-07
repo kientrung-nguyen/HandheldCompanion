@@ -16,6 +16,8 @@ namespace HandheldCompanion.Views.Classes
 {
     public class GamepadWindow : Window
     {
+
+        public IntPtr hWnd;
         public List<Control> controlElements => currentDialog is not null ? WPFUtils.GetElementsFromPopup<Control>(frameworkElements) : frameworkElements.OfType<Control>().ToList();
         public List<FrameworkElement> frameworkElements
         {
@@ -34,11 +36,11 @@ namespace HandheldCompanion.Views.Classes
 
         protected UIGamepad gamepadFocusManager;
 
-        public HwndSource hwndSource;
+        public HwndSource hWndSource;
 
-        public bool HasForeground() => this is OverlayQuickTools || (WinAPI.GetForegroundWindow() == this.hwndSource.Handle);
+        public bool HasForeground() => this is OverlayQuickTools || (WinAPI.GetForegroundWindow() == this.hWndSource.Handle);
         public bool IsPrimary => GetScreen().Primary;
-        public bool IsIconic => ProcessUtils.IsIconic(this.hwndSource.Handle);
+        public bool IsIconic => ProcessUtils.IsIconic(this.hWndSource.Handle);
 
         private AdornerLayer _adornerLayer;
         private HighlightAdorner _highlightAdorner;
@@ -50,9 +52,9 @@ namespace HandheldCompanion.Views.Classes
 
         protected override void OnSourceInitialized(EventArgs e)
         {
-            IntPtr hwnd = new WindowInteropHelper(this).Handle;
-            hwndSource = HwndSource.FromHwnd(hwnd);
-            hwndSource.AddHook(WndProc);
+            hWnd = new WindowInteropHelper(this).Handle;
+            hWndSource = HwndSource.FromHwnd(hWnd);
+            hWndSource.AddHook(WndProc);
 
             base.OnSourceInitialized(e);
         }
@@ -93,7 +95,7 @@ namespace HandheldCompanion.Views.Classes
 
         public Screen GetScreen()
         {
-            return Screen.FromHandle(hwndSource.Handle);
+            return Screen.FromHandle(hWndSource.Handle);
         }
 
         private void OnLayoutUpdated(object? sender, EventArgs e)

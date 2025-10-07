@@ -10,6 +10,7 @@ public class AMDProcessor : Processor
 {
     public readonly RyzenFamily family;
     public readonly IntPtr ry;
+    public readonly IntPtr rx;
 
     public AMDProcessor()
     {
@@ -58,6 +59,7 @@ public class AMDProcessor : Processor
                     break;
             }
         }
+
         // check capabilities
         CanChangeTDP |= HasOEMCPU;
         CanChangeGPU |= HasOEMGPU;

@@ -14,7 +14,10 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
 using PowerSchemeAPI = PowerManagerAPI.PowerManager;
+
+using static HandheldCompanion.Processors.IntelProcessor;
 using Timer = System.Timers.Timer;
+using System.Collections.Generic;
 
 namespace HandheldCompanion.Managers;
 
@@ -56,7 +59,12 @@ public static class PerformanceManager
     private const int COUNTER_DEFAULT = 3; // default counter value
     private const int COUNTER_AUTO = 5; // default counter value for AutoTDP
 
-    public static readonly Guid[] PowerModes = [OSPowerMode.BetterBattery, OSPowerMode.BetterPerformance, OSPowerMode.BestPerformance];
+    public static readonly Dictionary<Guid, string> PowerModes = new Dictionary<Guid, string>
+    {
+        [OSPowerMode.BetterBattery] = "Best Power Efficiency",
+        [OSPowerMode.BetterPerformance] = "Balanced",
+        [OSPowerMode.BestPerformance] = "Best Performance"
+    };
 
     private static readonly Timer autotdpWatchdog;
     private static readonly Timer tdpWatchdog;
@@ -82,6 +90,7 @@ public static class PerformanceManager
     private static double AutoTDPTargetFPS;
     private static int AutoTDPFPSSetpointMetCounter;
     private static int AutoTDPFPSSmallDipCounter;
+    private static double AutoTDPMin;
     private static double AutoTDPMax;
     private static readonly double[] fpsHistory = new double[6];
     private static readonly double[] tdpHistory = new double[6];
@@ -120,7 +129,7 @@ public static class PerformanceManager
     private static double[] currentTDP = new double[5]; // used to store current TDP
     private static readonly double[] storedTDP = new double[3]; // used to store TDP
     private static int tdpWatchdogCounter;
-	
+
     private const string dllName = "WinRing0x64.dll";
 
     private static bool IsInitialized;
@@ -261,13 +270,19 @@ public static class PerformanceManager
             case "ConfigurableTDPOverrideDown":
                 {
                     TDPMin = Convert.ToDouble(value);
-                    if (AutoTDPMax != 0d && AutoTDPMax < TDPMin) AutoTDPMax = TDPMin;
+                    if (AutoTDPMax != 0d && AutoTDPMax < TDPMin)
+                        AutoTDPMax = TDPMin;
+                    if (AutoTDPMin != 0d && AutoTDPMin > TDPMin)
+                        AutoTDPMin = TDPMin;
                 }
                 break;
             case "ConfigurableTDPOverrideUp":
                 {
                     TDPMax = Convert.ToDouble(value);
-                    if (AutoTDPMax == 0d || AutoTDPMax > TDPMax) AutoTDPMax = TDPMax;
+                    if (AutoTDPMax == 0d || AutoTDPMax > TDPMax)
+                        AutoTDPMax = TDPMax;
+                    if (AutoTDPMin == 0d || AutoTDPMin > TDPMax)
+                        AutoTDPMin = TDPMax;
                 }
                 break;
         }
@@ -301,7 +316,10 @@ public static class PerformanceManager
             // use manual slider as the starting value
             // and max limit for AutoTDP
             if (profile.TDPOverrideValues is not null)
-                AutoTDP = AutoTDPMax = profile.TDPOverrideValues[0];
+            {
+                AutoTDP = AutoTDPMax = profile.TDPOverrideValues[(int)PowerType.Fast];
+                AutoTDPMin = profile.TDPOverrideValues[(int)PowerType.Slow];
+            }
         }
         else
         {
@@ -320,6 +338,7 @@ public static class PerformanceManager
             // manual TDP override is not set
             // use the settings max limit for AutoTDP
             AutoTDP = AutoTDPMax = ManagerFactory.settingsManager.Get<int>("ConfigurableTDPOverrideUp");
+            AutoTDPMin = ManagerFactory.settingsManager.Get<int>("ConfigurableTDPOverrideDown");
         }
 
         // apply profile defined AutoTDP
@@ -509,7 +528,7 @@ public static class PerformanceManager
 		
         // restore default CPU Core Parking
         RequestCoreParkingMode(CoreParkingMode.AllCoresAuto);
-		
+
         // unapply profile defined CPU Core Count
         if (profile.CPUCoreEnabled)
         {
@@ -569,8 +588,6 @@ public static class PerformanceManager
         {
             try
             {
-                autotdpWatchdogCounter++;
-
                 bool TDPdone = false;
                 bool MSRdone = true;
                 bool forcedUpdate = false;
@@ -585,16 +602,27 @@ public static class PerformanceManager
                 // Ensure realistic process values, prevent divide by 0
                 processValueFPS = Math.Clamp(processValueFPS, 5, 500);
 
-
+                var tdpAdjusted = false;
                 if (AutoTDPFirstRun)
                 {
                     RequestMaxPerformance(true);
                     AutoTDPDipper(processValueFPS, AutoTDPTargetFPS);
                     AutoTDPFirstRun = false;
-                    ToastManager.RunToast($"AutoTDP {Resources.On}");
+                    ToastManager.RunToast($"AutoTDP {Resources.On} targeted {AutoTDPTargetFPS} FPS");
                 }
                 else
-                    AutoPerf(processValueFPS);
+                    tdpAdjusted = AutoPerf(processValueFPS);
+
+                if (tdpAdjusted)
+                {
+                    // Reset interval to default after a TDP change
+                    autotdpWatchdog.Interval = INTERVAL_AUTO;
+                }
+                else
+                {
+                    // Reduce interval to 100ms for quicker reaction next time a change is requierd
+                    autotdpWatchdog.Interval = 115;
+                }
 
                 // force update TDP periodically since we don't actually read current TDP
                 if (autotdpWatchdogCounter > COUNTER_AUTO)
@@ -646,7 +674,7 @@ public static class PerformanceManager
         }
     }
 
-    private static void AutoPerf(double processValueFPS)
+    private static bool AutoPerf(double processValueFPS)
     {
         var fpsDipper = AutoTDPDipper(processValueFPS, AutoTDPTargetFPS);
 
@@ -661,15 +689,14 @@ public static class PerformanceManager
         AutoGpu(fpsDipper > 0 ? 1d : fpsTarget / fpsGPU, processValueGPUUse, AutoTargetGPU);
         */
 
-        AutoTdp(fpsDipper, processValueFPS, AutoTDPTargetFPS);
+        return AutoTdp(fpsDipper, processValueFPS, AutoTDPTargetFPS);
 
         //LogManager.LogInformation($"AutoPerf: GPU {PlatformManager.LibreHardwareMonitor.GPUClock}mHz [{PlatformManager.LibreHardwareMonitor.GPUPower}W] | CPU {PlatformManager.LibreHardwareMonitor.CPUClock}mHz [{Math.Round(PlatformManager.LibreHardwareMonitor.CPUPower ?? 0d)}W] | TDP [{(uint)AutoTDP}W]({processValueFPS})");
 
     }
 
-    private static void AutoTdp(double fpsDipper, double fpsActual, double fpsSetPoint)
+    private static bool AutoTdp(double fpsDipper, double fpsActual, double fpsSetPoint)
     {
-        bool forcedUpdate = false;
         Array.Copy(tdpHistory, 0, tdpHistory, 1, tdpHistory.Length - 1);
         tdpHistory[0] = AutoTDP;
 
@@ -684,28 +711,36 @@ public static class PerformanceManager
             var tdpAdjustment = controllerError * AutoTDP / fpsActual * .9;// Always have a little undershoot
             var tdpDamper = AutoTDPDamper(fpsActual);
 
-            LogManager.LogDebug($"AutoTDP ({fpsActual}FPS): {AutoTDP + tdpAdjustment + tdpDamper} = {AutoTDP} + {tdpAdjustment} + {tdpDamper}");
+            LogManager.LogInformation($"AutoTDP ({fpsActual}FPS): {AutoTDP + tdpAdjustment + tdpDamper} = {AutoTDP} + {tdpAdjustment} + {tdpDamper}");
             AutoTDP += tdpAdjustment + tdpDamper;
         }
         else
             AutoTDPFirstRun = false;
 
-        AutoTDP = Math.Clamp(AutoTDP, TDPMin, AutoTDPMax);
-
-        // force update TDP periodically since we don't actually read current TDP
-        if (autotdpWatchdogCounter > COUNTER_AUTO)
-        {
-            forcedUpdate = true;
-            autotdpWatchdogCounter = 0;
-        }
+        AutoTDP = Math.Clamp(AutoTDP, AutoTDPMin, AutoTDPMax);
 
         // Only update if we have a different TDP value to set
         // or a forced update is requested
-        if (AutoTDP != AutoTDPPrev || forcedUpdate)
+        if (AutoTDP != AutoTDPPrev)
         {
-            RequestTDP([AutoTDP, AutoTDP, AutoTDP], true);
+            int TDPBump = 0;
+
+            if (GetProcessor() is IntelProcessor intelProcessor)
+            {
+                switch (intelProcessor.MicroArch)
+                {
+                    // Official specification for Lunar Lake states that PL2 should always be at least 1 W higher than PL1
+                    case IntelMicroArch.LunarLake:
+                        TDPBump = 1;
+                        break;
+                }
+            }
+
+            RequestTDP([AutoTDP, AutoTDP, AutoTDP + TDPBump], true);
             AutoTDPPrev = AutoTDP;
+            return true;
         }
+        return false;
     }
 
     private static void AutoCpu(double fpsDipper, double cpuActual, double cpuSetPoint)
@@ -751,6 +786,7 @@ public static class PerformanceManager
         // Dipper
         // Add small positive "error" if actual and target FPS are similar for a duration
         var modifier = 0.0d;
+
         // Track previous FPS values for average calculation using a rolling array
         Array.Copy(fpsHistory, 0, fpsHistory, 1, fpsHistory.Length - 1);
         fpsHistory[0] = fpsActual; // Add current FPS at the start
@@ -836,7 +872,7 @@ public static class PerformanceManager
                         if (activeScheme != currentPowerMode)
                         {
                             currentPowerMode = activeScheme;
-                            int idx = Array.IndexOf(PowerModes, activeScheme);
+                            int idx = Array.IndexOf([.. PowerModes.Keys.OfType<Guid>()], activeScheme);
                             if (idx != -1)
                                 PowerModeChanged?.Invoke(idx);
                         }
@@ -880,18 +916,8 @@ public static class PerformanceManager
         {
             try
             {
-                tdpWatchdogCounter++;
-
                 bool TDPdone = false;
                 bool MSRdone = true;
-                bool forcedUpdate = false;
-
-                // force update TDP periodically since we don't actually read current TDP
-                if (tdpWatchdogCounter > COUNTER_DEFAULT)
-                {
-                    forcedUpdate = true;
-                    tdpWatchdogCounter = 0;
-                }
 
                 // read current values and (re)apply requested TDP if needed
                 for (int idx = (int)PowerType.Slow; idx <= (int)PowerType.Fast; idx++)
@@ -912,8 +938,7 @@ public static class PerformanceManager
                         tdpWatchdog.Interval = INTERVAL_DEGRADED;
 
                     // only request an update if current limit is different than stored
-                    // or a forced update is requested
-                    if (ReadTDP != TDP || forcedUpdate)
+                    if (ReadTDP != TDP)
                         RequestTDP((PowerType)idx, TDP, true);
 
                     Thread.Sleep(200);
@@ -932,7 +957,7 @@ public static class PerformanceManager
 
                     if (TDPslow != 0.0d && TDPfast != 0.0d)
                         // only request an update if current limit is different than stored
-                        if (currentTDP[(int)PowerType.MsrSlow] != TDPslow || currentTDP[(int)PowerType.MsrFast] != TDPfast || forcedUpdate)
+                        if (currentTDP[(int)PowerType.MsrSlow] != TDPslow || currentTDP[(int)PowerType.MsrFast] != TDPfast)
                         {
                             MSRdone = false;
                             RequestMSR(TDPslow, TDPfast);
@@ -1162,7 +1187,6 @@ public static class PerformanceManager
         {
             PowerSchemeAPI.SetPowerMode(guid);
             LogManager.LogInformation("User requested power mode: {0}", guid);
-
             if (PowerSchemeAPI.GetPowerMode() is Guid curGuid && curGuid != guid)
                 LogManager.LogWarning("Failed to set requested power mode: {0}", curGuid);
             else
@@ -1190,29 +1214,29 @@ public static class PerformanceManager
         switch (coreParkingMode)
         {
             case CoreParkingMode.AllCoresPrefPCore:
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 1U, 1U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 2U, 2U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 2U, 2U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.HETEROPOLICY, 1U, 1U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SCHEDPOLICY, 2U, 2U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SHORTSCHEDPOLICY, 2U, 2U);
                 break;
             case CoreParkingMode.AllCoresPrefECore:
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 1U, 1U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 4U, 4U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 4U, 4U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.HETEROPOLICY, 1U, 1U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SCHEDPOLICY, 4U, 4U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SHORTSCHEDPOLICY, 4U, 4U);
                 break;
             case CoreParkingMode.OnlyPCore:
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 3U, 3U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 1U, 1U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 1U, 1U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.HETEROPOLICY, 3U, 3U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SCHEDPOLICY, 1U, 1U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SHORTSCHEDPOLICY, 1U, 1U);
                 break;
             case CoreParkingMode.OnlyECore:
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 2U, 2U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 3U, 3U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 3U, 3U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.HETEROPOLICY, 2U, 2U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SCHEDPOLICY, 3U, 3U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SHORTSCHEDPOLICY, 3U, 3U);
                 break;
             default:
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, 0U, 0U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, 5U, 5U);
-                PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, 5U, 5U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.HETEROPOLICY, 0U, 0U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SCHEDPOLICY, 5U, 5U);
+                PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SHORTSCHEDPOLICY, 5U, 5U);
                 break;
         }
 
@@ -1369,10 +1393,10 @@ public static class PerformanceManager
     /// <summary>
     ///     Retrieves the active overlay power scheme and returns a GUID that identifies the scheme.
     /// </summary>
-    /// <param name="EffectiveOverlayGuid">A pointer to a GUID structure.</param>
+    /// <param name="EffectiveOverlayPolicyGuid">A pointer to a GUID structure.</param>
     /// <returns>Returns zero if the call was successful, and a nonzero value if the call failed.</returns>
     [DllImportAttribute("powrprof.dll", EntryPoint = "PowerGetEffectiveOverlayScheme")]
-    private static extern uint PowerGetEffectiveOverlayScheme(out Guid EffectiveOverlayGuid);
+    private static extern uint PowerGetEffectiveOverlayScheme(out Guid EffectiveOverlayPolicyGuid);
 
     /// <summary>
     ///     Sets the active power overlay power scheme.
