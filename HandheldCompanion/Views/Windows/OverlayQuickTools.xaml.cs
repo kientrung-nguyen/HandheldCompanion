@@ -40,6 +40,7 @@ namespace HandheldCompanion.Views.Windows;
 /// </summary>
 public partial class OverlayQuickTools : GamepadWindow
 {
+    #region Win32 Constants
     private const int SC_MOVE = 0xF010;
     private readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 
@@ -48,7 +49,6 @@ public partial class OverlayQuickTools : GamepadWindow
     private const int SWP_NOACTIVATE = 0x0010;
     private const int SWP_NOZORDER = 0x0004;
 
-    // Define the Win32 API constants and functions
     private const int WM_PAINT = 0x000F;
     private const int WM_ACTIVATEAPP = 0x001C;
     private const int WM_ACTIVATE = 0x0006;
@@ -71,6 +71,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private const int GWL_STYLE = -16;
     private const int GWL_EXSTYLE = -20;
+    #endregion
 
     // animation state
     private bool _isAnimating;
@@ -183,10 +184,7 @@ public partial class OverlayQuickTools : GamepadWindow
         if (hWnd != hWndSource.Handle && autoHide)
         {
             // UI thread
-            UIHelper.TryInvoke(() =>
-            {
-                SlideHide();
-            });
+            UIHelper.TryInvoke(() => SlideHide());
         }
     }
 
@@ -1034,45 +1032,28 @@ public partial class OverlayQuickTools : GamepadWindow
             BatteryDesignCapacity.Text = $"{PlatformManager.LibreHardware.GetBatteryRemainingCapacity()}mWh";
             BatteryHealth.Text = $"{Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryHealth(), 1)}%";
             BatteryHealthRing.Value = (double)Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryHealth(), 1);
-            BatteryPower.Text = Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryPower(), 1).ToString() + "W";
         }
 
         if (PlatformManager.LibreHardware.GetBatteryPower() == 0)
         {
-            BatteryIndicatorLifeRemaining.Visibility = Visibility.Collapsed;
             BatteryLifePanel.Visibility = Visibility.Collapsed;
         }
         else
         {
-            BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
             BatteryLifePanel.Visibility = Visibility.Visible;
-            if (PlatformManager.LibreHardware.GetBatteryPower() > 0)
+            if (float.IsNormal(PlatformManager.LibreHardware.GetBatteryPower()))
             {
-                var time = PlatformManager.LibreHardware.GetBatteryTimeSpan();
-                if (time != TimeSpan.Zero)
-                {
-
-                    string remaining;
-                    if (time.TotalSeconds >= 3600)
-                        remaining = $"{time.Hours}h {time.Minutes}min";
-                    else
-                        remaining = $"{time.Minutes}min";
-                    BatteryIndicatorLife.Text = $"{remaining}";
-                    BatteryIndicatorLifeRemaining.Text = " utill full";
-                }
-            }
-            else
-            {
+                BatteryPower.Text = Math.Round((decimal)PlatformManager.LibreHardware.GetBatteryPower(), 1).ToString() + "W";
                 var time = PlatformManager.LibreHardware.GetBatteryTimeSpan();
                 if (time != TimeSpan.Zero)
                 {
                     string remaining;
                     if (time.TotalSeconds >= 3600)
-                        remaining = $"{time.Hours}h {time.Minutes}min";
+                        remaining = $" ({time.Hours}h {time.Minutes}min)";
                     else
-                        remaining = $"{time.Minutes}min";
-                    BatteryIndicatorLife.Text = $"{remaining}";
-                    BatteryIndicatorLifeRemaining.Text = " remaining";
+                        remaining = $" ({time.Minutes}min)";
+                    BatteryPower.Text += remaining;
+                    BatteryPower.Text += $" {(PlatformManager.LibreHardware.GetBatteryPower() > 0 ? "utill full" : "remaining")}";
                 }
             }
         }

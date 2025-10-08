@@ -153,7 +153,7 @@ public partial class MainWindow : GamepadWindow
         };
 
         notifyIconWaitTimer = new(
-            TimeSpan.FromMilliseconds(500),
+            TimeSpan.FromMilliseconds(200),
             DispatcherPriority.Normal,
             notifyIconWaitTimerTicked,
             Dispatcher.CurrentDispatcher)
@@ -198,7 +198,8 @@ public partial class MainWindow : GamepadWindow
                 switch (me.Button)
                 {
                     case MouseButtons.Left:
-                        notifyIconWaitTimer.Start();
+                        if (WindowState == WindowState.Minimized)
+                            notifyIconWaitTimer.Start();
                         break;
 
                     case MouseButtons.Right:

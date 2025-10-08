@@ -53,94 +53,62 @@
             <Border>
                 <Grid Margin="0,0,50,0">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
                         <ColumnDefinition Width="120" />
+
                         <ColumnDefinition />
                     </Grid.ColumnDefinitions>
 
                     <StackPanel
-                        Grid.Column="0"
-                        Margin="14,0,0,0"
-                        VerticalAlignment="Center"
-                        Orientation="Horizontal">
-                        <!--<Grid>
-                            <ui:FontIcon
-                                Name="WifiIcon"
-                                Width="24"
-                                FontSize="15"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xe874;" />
-                        </Grid>
-                        <Grid>
-                            <ui:FontIcon
-                                Name="BluetoothIcon"
-                                Width="24"
-                                FontSize="15"
-                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xe702;" />
-                        </Grid>-->
-                        <TextBlock
-                            Name="Time"
-                            Margin="0,0,0,0"
-                            VerticalAlignment="Center"
-                            FontSize="13" />
-                    </StackPanel>
-                    <StackPanel
-                        Grid.Column="1"
+                        Grid.Column="2"
                         VerticalAlignment="Center"
                         HorizontalAlignment="Right"
                         Orientation="Horizontal">
-                        <StackPanel Name="BatteryLifePanel" Margin="4,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
-                            <StackPanel 
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Left"
-                                Orientation="Horizontal">
-                                <TextBlock
-                                    Name="BatteryPower"
-                                    VerticalAlignment="Center"
-                                    Text="5W"
-                                    FontWeight="Bold"
-                                    FontSize="13" />
-                                <ui:FontIcon
-                                    Margin="4,0,0,0"
-                                    VerticalAlignment="Center"
-                                    FontSize="13"
-                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                    Glyph="&#xe945;" />
-                            </StackPanel>
-                            <StackPanel 
-                                Margin="4,0,0,0" 
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Left"
-                                Orientation="Horizontal">
-                                <TextBlock
-                                    Name="BatteryIndicatorLife"
-                                    Margin="0,0,0,0"
-                                    VerticalAlignment="Center"
-                                    FontWeight="Bold"
-                                    FontSize="13" />
-                                <TextBlock
-                                    Name="BatteryIndicatorLifeRemaining"
-                                    Margin="0,0,0,0"
-                                    VerticalAlignment="Center"
-                                    FontSize="13" />
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Margin="8,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
-                            <Grid>
+                        
+                    </StackPanel>
+
+                    <StackPanel
+                        Grid.Column="1"
+                        Margin="0,0,0,0"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <TextBlock
+                             Name="Time"
+                             Margin="0,0,0,0"
+                             VerticalAlignment="Center"
+                             FontSize="13" />
+                    </StackPanel>
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Left"
+                        Orientation="Horizontal">
+                        <StackPanel Margin="0,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
+                            <DockPanel>
                                 <ui:FontIcon 
                                     Name="BatteryIndicatorIcon"
                                     Width="30"
                                     FontSize="26"
                                     FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                     Glyph="&#xE83F;" />
-                            </Grid>
+                                <TextBlock
+                                    Name="BatteryIndicatorPercentage"
+                                    VerticalAlignment="Center"
+                                    FontSize="13" />
+                            </DockPanel>
+                        </StackPanel>
+                        <StackPanel Name="BatteryLifePanel" Margin="4,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
                             <StackPanel 
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Left"
                                 Orientation="Horizontal">
+                               
                                 <TextBlock
-                                    Name="BatteryIndicatorPercentage"
+                                    Name="BatteryPower"
                                     VerticalAlignment="Center"
+                                    Text="5W"
+                                    FontWeight="Bold"
                                     FontSize="13" />
                             </StackPanel>
                         </StackPanel>

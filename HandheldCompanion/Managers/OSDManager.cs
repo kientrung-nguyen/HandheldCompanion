@@ -874,13 +874,14 @@ public struct OverlayEntryElement
         {
             "GB" => "0.0",
             "W" => "00",
-            "%" => "00",
-            "C" => "00",
+            "%" => "000",
             "°C" => "00",
-            "mins" => "00",
+            "min" => "000",
+            "mins" => "000",
             "MB" => "0",
             "MHz" => "0",
             "GHz" => "0.0",
+            "rpm" => "0000",
             _ => defaultFormat.Replace("{0:", "").Replace("}", "")
         };
 
