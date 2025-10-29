@@ -2542,7 +2542,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Overlay</value>
   </data>
   <data name="ProfilesPage_DefaultDeviceProfile" xml:space="preserve">
-    <value>This is a default device preset and cannot be edited. These are comparable to the presets provided by the devices original software.</value>
+    <value>This is a default preset for the device, comparable to the one provided by the manufacturer. Please modify with caution.</value>
   </data>
   <data name="PowerProfileLegionGoBetterBattery" xml:space="preserve">
     <value>Efficiency</value>
@@ -3983,5 +3983,32 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="Hotkey_touchpadToggleDesc" xml:space="preserve">
     <value>Toggle touchpad on / off</value>
+  </data>
+  <data name="Hotkey_ButtonCommands" xml:space="preserve">
+    <value>Gamepad button</value>
+  </data>
+  <data name="Hotkey_ButtonCommandsDesc" xml:space="preserve">
+    <value>Simulate a gamepad button input</value>
+  </data>
+  <data name="LayoutPage_InputShiftDesc" xml:space="preserve">
+    <value>Define under which circumstances this input should be shifted</value>
+  </data>
+  <data name="ControllerPage_RelatedSupport" xml:space="preserve">
+    <value>Related support</value>
+  </data>
+  <data name="LayoutPage_PressType" xml:space="preserve">
+    <value>Action type</value>
+  </data>
+  <data name="LayoutPage_PressTypeTooltip0" xml:space="preserve">
+    <value>Trigger the action immediately when the button is pressed (or released)</value>
+  </data>
+  <data name="LayoutPage_PressTypeTooltip1" xml:space="preserve">
+    <value>Trigger the action after holding the button for the specified duration</value>
+  </data>
+  <data name="LayoutPage_PressTypeTooltip2" xml:space="preserve">
+    <value>Trigger the action on press and keep it active for the specified duration</value>
+  </data>
+  <data name="LayoutPage_PressTypeTooltip3" xml:space="preserve">
+    <value>Trigger the action when the button is pressed twice within the specified time window</value>
   </data>
 </root>

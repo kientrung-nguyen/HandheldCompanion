@@ -404,7 +404,6 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (!IsInitialized)
                 return;
 
-            //AmdGpuControl = new AmdGpuControl();
             // pull telemetry once
             GetAdlxTelemetry(deviceIdx, ref TelemetryData);
 
@@ -416,6 +415,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
             TelemetryTimer = new Timer(TelemetryInterval)
             {
+                Enabled = false,
                 AutoReset = true
             };
             TelemetryTimer.Elapsed += TelemetryTimer_Elapsed;

@@ -1,4 +1,5 @@
-﻿using iNKORE.UI.WPF.Modern.Controls;
+﻿using HandheldCompanion.Functions;
+using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,24 +9,45 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
+using static HandheldCompanion.WinAPI;
 using Control = System.Windows.Controls.Control;
 
 namespace HandheldCompanion.Utils;
 
 public static class WPFUtils
 {
-    public const int WM_KEYDOWN = 0x0100;
-    public const int WM_CHANGEUISTATE = 0x0127;
     public const int UIS_SET = 1;
     public const int UIS_CLEAR = 2;
     public const int UISF_HIDEFOCUS = 0x1;
 
-    [DllImport("user32.dll")]
-    public static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
-
     public static HwndSource GetControlHandle(Control control)
     {
-        return PresentationSource.FromVisual(control) as HwndSource;
+        return (HwndSource)PresentationSource.FromVisual(control);
+    }
+
+
+    public static double GetDisplayScaling()
+    {
+        nint hMon = WinAPI.MonitorFromPoint(new POINTSTRUCT() { x = 0, y = 0 }, MonitorDefault.MONITOR_DEFAULTTOPRIMARY);
+        WinAPI.GetDpiForMonitor(hMon, DpiType.EFFECTIVE, out uint dpiX, out uint dpiY);
+        return dpiX / 96.0f;
+    }
+
+
+    /// <summary>
+    /// Hides window in the alt-tab window by (ADDING the WS_EX_TOOLWINDOW) and 
+    /// (REMOVING the WS_EX_APPWINDOW) extended Styles
+    /// </summary>
+    /// <param name="hWnd"></param>
+    /// <returns></returns>
+    public static int HideWindowInAltTab(nint hWnd)
+    {
+        uint exStyles = User32.GetWindowLong(hWnd, GETWINDOWLONG.GWL_EXSTYLE);
+        return User32.SetWindowLong(
+            hWnd,
+            (int)GETWINDOWLONG.GWL_EXSTYLE,
+            (int)((exStyles | (uint)WINDOWSTYLE.WS_EX_TOOLWINDOW) & ~(uint)WINDOWSTYLE.WS_EX_APPWINDOW)
+        );
     }
 
     public static void MakeFocusVisible(Control c)
@@ -35,7 +57,7 @@ public static class WPFUtils
             return;
 
         IntPtr hWnd = hwndSource.Handle;
-        SendMessage(hWnd, 257, 0x0000000000000009, (IntPtr)0x00000000c00f0001);
+        WinAPI.SendMessage(hWnd, 257, 0x0000000000000009, (IntPtr)0x00000000c00f0001);
         // SendMessage(hWnd, WM_CHANGEUISTATE, (IntPtr)MakeLong((int)UIS_CLEAR, (int)UISF_HIDEFOCUS), IntPtr.Zero);
     }
 
@@ -46,7 +68,7 @@ public static class WPFUtils
             return;
 
         IntPtr hWnd = hwndSource.Handle;
-        SendMessage(hWnd, WM_CHANGEUISTATE, MakeLong(UIS_SET, UISF_HIDEFOCUS), IntPtr.Zero);
+        SendMessage(hWnd, (int)WINDOWMESSAGE.WM_CHANGEUISTATE, MakeLong(UIS_SET, UISF_HIDEFOCUS), IntPtr.Zero);
     }
 
     public static int MakeLong(int wLow, int wHigh)
@@ -64,16 +86,18 @@ public static class WPFUtils
     }
 
     // A function that takes a list of controls and returns the top-left control
-    public static Control GetTopLeftControl<T>(List<Control> controls) where T : Control
+    public static Control GetTopLeftControl<T>(List<Control> controls, List<Type> typesToIgnore = null) where T : Control
     {
         // filter list
         controls = controls.Where(c => c is T && c.IsEnabled).ToList();
 
+        // Filter based on exclusion type list
+        if (typesToIgnore is not null)
+            controls = controls.Where(c => !typesToIgnore.Contains(c.GetType())).ToList();
+
         // If no controls are found, return null
         if (controls == null || controls.Count == 0)
-        {
             return null;
-        }
 
         // Initialize the top left control with the first element of the list
         Control topLeft = controls[0];
@@ -98,7 +122,32 @@ public static class WPFUtils
 
     public enum Direction { None, Left, Right, Up, Down }
 
-    public static Control GetClosestControl<T>(Control source, List<Control> controls, Direction direction, List<Type> typesToIgnore = null) where T : Control
+    public static Control? GetClosestControl<T>(Control source, List<Control> controls, Direction direction, List<Type> typesToIgnore = null) where T : Control
+    {
+        List<Control> controlsInDirection = GetControlInDirection<T>(source, controls, direction, typesToIgnore);
+
+        // If no controls are found, return source
+        if (controlsInDirection.Count == 0) return source;
+
+        // Flatten the groups and sort controls by distance
+        Control[] clostests = controlsInDirection.OrderBy(c => GetDistanceV3(source, c, direction)).ToArray();
+        return clostests.FirstOrDefault();
+    }
+
+    public static Control? GetFurthestControl<T>(Control source, List<Control> controls, Direction direction, List<Type> typesToIgnore = null) where T : Control
+    {
+        List<Control> controlsInDirection = GetControlInDirection<T>(source, controls, direction, typesToIgnore);
+
+        // If no controls are found, return source
+        if (controlsInDirection.Count == 0) return source;
+
+        // Flatten the groups and sort controls by distance
+        Control[] furthests = controlsInDirection.OrderByDescending(c => GetDistanceV3(source, c, direction)).ToArray();
+        return furthests.FirstOrDefault();
+    }
+
+
+    private static List<Control> GetControlInDirection<T>(Control source, List<Control> controls, Direction direction, List<Type> typesToIgnore = null) where T : Control
     {
         // Filter list based on requested type
         controls = controls.Where(c => c is T && c.IsEnabled && c.Opacity != 0).ToList();
@@ -110,20 +159,7 @@ public static class WPFUtils
         // Filter out the controls that are not in the given direction
         controls = controls.Where(c => c != source && IsInDirection(source, c, direction)).ToList();
 
-        // If no controls are found, return source
-        if (controls.Count == 0) return source;
-
-        /*
-        // Group controls by their nearest common parent
-        var groupedControls = controls
-            .GroupBy(c => GetNearestCommonParent(source, c))
-            .OrderBy(g => g.Key == null ? double.MaxValue : GetDistanceV2(source, g.First(), direction))
-            .ToList();
-        */
-
-        // Flatten the groups and sort controls by distance
-        Control[] closestControls = controls.OrderBy(c => GetDistanceV3(source, c, direction)).ToArray();
-        return closestControls.FirstOrDefault();
+        return controls;
     }
 
     // Helper method to find the nearest common parent of two controls
@@ -341,6 +377,7 @@ public static class WPFUtils
                 case "ToggleButton":
                 case "CheckBox":
                 case "RadioButton":
+                case "HyperlinkButton":
                     {
                         FrameworkElement asType = (FrameworkElement)current;
                         if (asType.IsEnabled && asType.Focusable && asType.IsVisible)
@@ -484,6 +521,6 @@ public static class WPFUtils
 
     public static void SendKeyToControl(Control control, int keyCode)
     {
-        SendMessage(GetControlHandle(control).Handle.ToInt32(), WM_KEYDOWN, keyCode, IntPtr.Zero);
+        SendMessage(GetControlHandle(control).Handle.ToInt32(), (int)WINDOWMESSAGE.WM_KEYDOWN, keyCode, IntPtr.Zero);
     }
 }

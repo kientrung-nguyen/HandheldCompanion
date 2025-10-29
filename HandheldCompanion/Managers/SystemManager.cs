@@ -52,7 +52,7 @@ public static class SystemManager
     }
 
     private static bool IsPowerSuspended;
-    private static bool IsSessionLocked = true;
+    public static bool IsSessionLocked = true;
 
     private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
     private static SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
@@ -254,6 +254,7 @@ public static class SystemManager
         LogManager.LogInformation("System status set to {0} {1}", currentSystemStatus, previousSystemStatus);
         SystemStatusChanged?.Invoke(currentSystemStatus, previousSystemStatus);
 
+        // update status
         previousSystemStatus = currentSystemStatus;
     }
 

@@ -403,6 +403,7 @@
                 </ui:SettingsExpander.Items>
             </ui:SettingsExpander>
         </ikw:SimpleStackPanel>
+
         <Button
             HorizontalAlignment="Stretch"
             VerticalAlignment="Center"

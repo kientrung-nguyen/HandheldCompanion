@@ -3411,4 +3411,28 @@ Wenn die Bewegungseingabe aktiviert ist, verwenden Sie die ausgewählte(n) Taste
   <data name="Hotkey_touchpadToggleDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
     <value />
   </data>
+  <data name="Hotkey_ButtonCommands" xml:space="preserve">
+    <value>XBOX- oder PS-Taste</value>
+  </data>
+  <data name="Hotkey_ButtonCommandsDesc" xml:space="preserve">
+    <value>XBOX- oder PS-Taste simulieren</value>
+  </data>
+  <data name="LayoutPage_InputShiftDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressType" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip0" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip1" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip2" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip3" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
 </root>

@@ -3411,4 +3411,28 @@ with motion input enabled, use selected button(s) to disable motion.</value>
   <data name="Hotkey_touchpadToggleDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
     <value />
   </data>
+  <data name="Hotkey_ButtonCommands" xml:space="preserve">
+    <value>Guide or PS button</value>
+  </data>
+  <data name="Hotkey_ButtonCommandsDesc" xml:space="preserve">
+    <value>Simulate a Xbox Guide or Sony PS button input</value>
+  </data>
+  <data name="LayoutPage_InputShiftDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressType" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip0" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip1" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip2" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip3" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
 </root>

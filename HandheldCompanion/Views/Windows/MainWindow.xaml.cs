@@ -71,6 +71,7 @@ public partial class MainWindow : GamepadWindow
     public static OverlayModel overlayModel;
     public static OverlayTrackpad overlayTrackpad;
     public static OverlayToast overlayToast;
+    public static OverlayStatusBar overlayStatusBar;
     public static OverlayQuickTools overlayquickTools;
 
     public static string CurrentExe, CurrentPath;
@@ -81,8 +82,8 @@ public partial class MainWindow : GamepadWindow
     public static string CurrentPageName = string.Empty;
 
     private bool appClosing;
-    private static NotifyIcon notifyIcon;
-    private static ContextMenu notifyContextMenu;
+    private readonly NotifyIcon notifyIcon;
+    private readonly ContextMenu notifyContextMenu;
     private bool notifyInTaskbar;
     private string prevNavItemTag;
     private DispatcherTimer sensorTimer;
@@ -177,6 +178,8 @@ public partial class MainWindow : GamepadWindow
         AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow, "MainWindow");
         AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools, "QuickTools");
 
+        AddNotifyIconItem("Sambar", "Sambar");
+
         AddNotifyIconSeparator();
 
         AddNotifyIconItem(Properties.Resources.MainWindow_Exit, "Quit");
@@ -246,16 +249,6 @@ public partial class MainWindow : GamepadWindow
         // initialize title
         Title += $" ({fileVersionInfo.FileVersion})";
 
-        // initialize device
-        currentDevice = IDevice.GetCurrent();
-        currentDevice.PullSensors();
-        currentDevice.Initialize(FirstStart, NewUpdate);
-
-        // initialize title
-        Title += $" {currentDevice.ProductName}";
-
-        ManagerFactory.settingsManager.Set("FirstStart", false);
-
         // initialize UI sounds board
         UISounds uiSounds = new UISounds();
 
@@ -265,6 +258,15 @@ public partial class MainWindow : GamepadWindow
         // load page(s)
         overlayquickTools.loadPages();
         loadPages();
+
+
+        // initialize device
+        currentDevice = IDevice.GetCurrent();
+        currentDevice.PullSensors();
+        currentDevice.Initialize(FirstStart, NewUpdate);
+
+        // initialize title
+        Title += $" {currentDevice.ProductName}";
 
         // manage events
         SystemManager.SystemStatusChanged += OnSystemStatusChanged;
@@ -299,6 +301,7 @@ public partial class MainWindow : GamepadWindow
         // start non-threaded managers
         InputsManager.Start();
         TimerManager.Start();
+        MotionManager.Start();
         ManagerFactory.settingsManager.Start();
 
         // Load MVVM pages after the Models / data have been created.
@@ -319,14 +322,14 @@ public partial class MainWindow : GamepadWindow
         gamepadFocusManager = new(this, ContentFrame);
     }
 
-    private static void sensorTimer_Elapsed(object? sender, EventArgs e)
+    private void sensorTimer_Elapsed(object? sender, EventArgs e)
     {
         RefreshSensors();
     }
 
     static long lastRefresh;
 
-    private static void RefreshSensors(bool force = false)
+    private void RefreshSensors(bool force = false)
     {
         UIHelper.TryInvoke(() =>
         {
@@ -430,6 +433,8 @@ public partial class MainWindow : GamepadWindow
                 break;
             case WM_QUERYENDSESSION:
                 break;
+
+
         }
 
         return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
@@ -565,6 +570,9 @@ public partial class MainWindow : GamepadWindow
                 if (sender is MenuItem menuItem)
                     switch (menuItem.Tag)
                     {
+                        case "Sambar":
+                            overlayStatusBar.ToggleVisibility();
+                            break;
                         case "MainWindow":
                             ToggleState();
                             break;
@@ -588,7 +596,6 @@ public partial class MainWindow : GamepadWindow
         notifyContextMenu.IsOpen = false;
         notifyIcon.Visible = false;
         notifyIcon.Dispose();
-        notifyIcon = null;
     }
 
     private void AddNotifyIconSeparator()
@@ -695,6 +702,7 @@ public partial class MainWindow : GamepadWindow
         overlayTrackpad = new OverlayTrackpad();
         overlayquickTools = new OverlayQuickTools();
         overlayToast = new OverlayToast();
+        overlayStatusBar = new OverlayStatusBar();
     }
 
     private void GenericDeviceUpdated(PnPDevice device, Guid IntefaceGuid)
@@ -971,6 +979,7 @@ public partial class MainWindow : GamepadWindow
             overlayModel.Close(true);
             overlayTrackpad.Close();
             overlayquickTools.Close(true);
+            overlayStatusBar.Exit();
 
             // stop pages
             controllerPage.Page_Closed();
@@ -995,6 +1004,7 @@ public partial class MainWindow : GamepadWindow
         SensorsManager.Stop();
         ControllerManager.Stop();
         InputsManager.Stop(true);
+        TimerManager.Stop();
         OSDManager.Stop();
         SystemManager.Stop();
         DynamicLightingManager.Stop();
@@ -1071,7 +1081,7 @@ public partial class MainWindow : GamepadWindow
         }
     }
 
-    private const string HomeKey = "ControllerPage";
+    private const string HomeKey = "LibraryPage";
     private readonly CancellationTokenSource _preloadCts = new();
 
     private async void navView_Loaded(object sender, RoutedEventArgs e)

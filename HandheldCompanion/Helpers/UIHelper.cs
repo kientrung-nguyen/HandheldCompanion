@@ -1,13 +1,29 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Threading;
 
 namespace HandheldCompanion.Helpers
 {
     public static class UIHelper
     {
-        public static void TryInvoke(Action callback)
+
+        /// <summary>
+        /// Hooks the WndProc
+        /// </summary>
+        public static void Hook(this Window wnd, WndProc proc)
+        {
+            HwndSource hWndSrc = HwndSource.FromHwnd(new WindowInteropHelper(wnd).EnsureHandle());
+            HwndSourceHook hook = new(proc);
+            hWndSrc.AddHook(hook);
+            wnd.Closing += (s, e) =>
+            {
+                hWndSrc.RemoveHook(hook);
+            };
+        }
+
+        public static void TryInvoke(Action callback, DispatcherPriority dispatcherPriority = DispatcherPriority.Normal)
         {
             if (Application.Current?.Dispatcher is Dispatcher dispatcher && !dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
             {
@@ -19,7 +35,7 @@ namespace HandheldCompanion.Helpers
                     }
                     else
                     {
-                        dispatcher.Invoke(callback);
+                        dispatcher.Invoke(callback, dispatcherPriority);
                     }
                 }
                 catch (TaskCanceledException)
@@ -30,7 +46,7 @@ namespace HandheldCompanion.Helpers
             }
         }
 
-        public static void TryBeginInvoke(Action callback)
+        public static void TryBeginInvoke(Action callback, DispatcherPriority dispatcherPriority = DispatcherPriority.Normal)
         {
             if (Application.Current?.Dispatcher is Dispatcher dispatcher && !dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
             {
@@ -42,7 +58,7 @@ namespace HandheldCompanion.Helpers
                     }
                     else
                     {
-                        dispatcher.BeginInvoke(callback);
+                        dispatcher.BeginInvoke(callback, dispatcherPriority);
                     }
                 }
                 catch (TaskCanceledException)
@@ -53,7 +69,7 @@ namespace HandheldCompanion.Helpers
             }
         }
 
-        public static TResult TryInvoke<TResult>(Func<TResult> func, TResult defaultValue = default)
+        public static TResult TryInvoke<TResult>(Func<TResult> func, TResult defaultValue = default, DispatcherPriority dispatcherPriority = DispatcherPriority.Normal)
         {
             if (Application.Current?.Dispatcher is Dispatcher dispatcher && !dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
             {
@@ -65,7 +81,7 @@ namespace HandheldCompanion.Helpers
                     }
                     else
                     {
-                        return dispatcher.Invoke(func);
+                        return dispatcher.Invoke(func, dispatcherPriority);
                     }
                 }
                 catch (TaskCanceledException)

@@ -52,8 +52,7 @@ namespace HandheldCompanion.Managers
 
             foreach (PowerProfile profile in IDevice.GetCurrent().DevicePowerProfiles)
             {
-                // we want the OEM power profiles to be always up-to-date
-                if (profile.DeviceDefault || (profile.Default && !profiles.ContainsKey(profile.Guid)))
+                if ((profile.Default || profile.DeviceDefault) && !profiles.ContainsKey(profile.Guid))
                     UpdateOrCreateProfile(profile, UpdateSource.Serializer);
             }
 
@@ -214,6 +213,7 @@ namespace HandheldCompanion.Managers
                 }
             }
         }
+
         private void SystemManager_PowerLineStatusChanged(PowerLineStatus powerLineStatus)
         {
             // Get current profile
@@ -369,7 +369,7 @@ namespace HandheldCompanion.Managers
             return profiles.ContainsKey(profile.Guid);
         }
 
-        public PowerProfile GetProfile(Guid guid, PowerLineStatus powerLineStatus = PowerLineStatus.Offline)
+        public PowerProfile GetProfile(Guid guid, PowerLineStatus? powerLineStatus = null)
         {
             if (profiles.TryGetValue(guid, out var profile))
                 return profile;
@@ -377,15 +377,15 @@ namespace HandheldCompanion.Managers
             return GetDefault(powerLineStatus);
         }
 
-        private bool HasDefault(PowerLineStatus powerLineStatus = PowerLineStatus.Offline)
+        private bool HasDefault(PowerLineStatus? powerLineStatus = null)
         {
-            return profiles.Values.Count(a => a.Default && a.Guid == Defaults[(int)powerLineStatus]) != 0;
+            return profiles.Values.Count(a => a.Default && a.Guid == Defaults[(int)(powerLineStatus ?? SystemInformation.PowerStatus.PowerLineStatus)]) != 0;
         }
 
-        public PowerProfile GetDefault(PowerLineStatus powerLineStatus = PowerLineStatus.Offline)
+        public PowerProfile GetDefault(PowerLineStatus? powerLineStatus = null)
         {
             if (HasDefault(powerLineStatus))
-                return profiles.Values.First(a => a.Default && a.Guid == Defaults[(int)powerLineStatus]);
+                return profiles.Values.First(a => a.Default && a.Guid == Defaults[(int)(powerLineStatus ?? SystemInformation.PowerStatus.PowerLineStatus)]);
             return new PowerProfile();
         }
 

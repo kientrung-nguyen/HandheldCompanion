@@ -1,3 +1,4 @@
+using HandheldCompanion.Functions;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Localization;
 using HandheldCompanion.Managers;

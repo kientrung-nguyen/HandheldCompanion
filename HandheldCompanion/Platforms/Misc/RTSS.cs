@@ -30,23 +30,18 @@ public class RTSS : IPlatform
     private const int HOOK_RETRY_DELAY_MS = 1000;
     private const int HOOK_TASK_TIMEOUT_MS = 1000;
 
-    private readonly object updateLock = new object();
-
-    private volatile int hookedProcessId = 0;
-    private volatile int targetProcessId = 0;
+    private int hookedProcessId = 0;
+    private int targetProcessId = 0;
     private uint lastOsdFrameId = 0;
 
     private bool profileLoaded;
     private AppEntry? appEntry;
 
-    private volatile int RequestedFramerate;
-    private Task? hookTask;
-    private CancellationTokenSource? hookCts;
+    private int RequestedFramerate;
 
     public RTSS()
     {
         Name = "RTSS";
-        PlatformType = PlatformType.RTSS;
         ExecutableName = "RTSS.exe";
 
         ExpectedVersion = new Version(7, 3, 4);
@@ -170,11 +165,6 @@ public class RTSS : IPlatform
 
     public override bool Stop(bool kill = false)
     {
-        // Cancel any pending hook operations
-        hookCts?.Cancel();
-        hookCts?.Dispose();
-        hookCts = null;
-
         // manage events
         ManagerFactory.processManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
         ManagerFactory.processManager.ProcessStopped -= ProcessManager_ProcessStopped;
@@ -187,10 +177,7 @@ public class RTSS : IPlatform
 
     public AppEntry? GetAppEntry()
     {
-        lock (updateLock)
-        {
-            return appEntry;
-        }
+        return appEntry;
     }
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
@@ -248,28 +235,11 @@ public class RTSS : IPlatform
         // update foreground process id
         targetProcessId = processEx.ProcessId;
 
-        // Cancel any previous hook attempt
-        hookCts?.Cancel();
-        hookCts?.Dispose();
-
-        // Wait for previous task to complete (with timeout)
-        try
-        {
-            hookTask?.Wait(HOOK_TASK_TIMEOUT_MS);
-        }
-        catch (AggregateException)
-        {
-            // Task was cancelled or faulted, which is expected
-        }
-
-        // Create new cancellation token for this hook attempt
-        hookCts = new CancellationTokenSource();
-
         // try to hook new process
-        hookTask = Task.Run(() => TryHookProcess(targetProcessId, hookCts.Token));
+        new Thread(() => TryHookProcess(targetProcessId)).Start();
     }
 
-    private void TryHookProcess(int processId, CancellationToken cancellationToken)
+    private void TryHookProcess(int processId)
     {
         if (!IsRunning)
             return;
@@ -277,19 +247,14 @@ public class RTSS : IPlatform
         var count = HOOK_RETRY_COUNT;
         do
         {
-            if (cancellationToken.IsCancellationRequested)
-                return;
-
             try
             {
                 var entries = OSD.GetAppEntries()
                     .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None && x.ProcessId == processId)
                     .ToList();
 
-                lock (updateLock)
-                {
-                    appEntry = entries.FirstOrDefault();
-                }
+                appEntry = entries.FirstOrDefault();
+
             }
             catch (FileNotFoundException ex)
             {
@@ -302,28 +267,16 @@ public class RTSS : IPlatform
             }
 
             // wait a bit
-            try
-            {
-                Task.Delay(HOOK_RETRY_DELAY_MS, cancellationToken).Wait();
-            }
-            catch (AggregateException)
-            {
-                // Cancelled
-                return;
-            }
-
+            Thread.Sleep(1000);
             count--;
-        } while (appEntry is null && targetProcessId == processId && KeepAlive && count > 0 && !cancellationToken.IsCancellationRequested);
+        } while (appEntry is null && targetProcessId == processId && KeepAlive && count > 0);
 
-        if (appEntry is null || cancellationToken.IsCancellationRequested)
+        if (appEntry is null)
             return;
 
-        lock (updateLock)
-        {
-            // set HookedProcessId
-            hookedProcessId = appEntry.ProcessId;
-            lastOsdFrameId = appEntry.OSDFrameId;
-        }
+        // set HookedProcessId
+        hookedProcessId = appEntry.ProcessId;
+        lastOsdFrameId = appEntry.OSDFrameId;
 
         // raise event
         Hooked?.Invoke(appEntry);
@@ -334,14 +287,11 @@ public class RTSS : IPlatform
         if (processId != hookedProcessId)
             return;
 
-        lock (updateLock)
-        {
-            // clear RTSS target app
-            appEntry = null;
+        // clear RTSS target app
+        appEntry = null;
 
-            // clear HookedProcessId
-            hookedProcessId = 0;
-        }
+        // clear HookedProcessId
+        hookedProcessId = 0;
 
         // raise event
         Unhooked?.Invoke(processId);
@@ -351,6 +301,7 @@ public class RTSS : IPlatform
     {
         if (processEx is null || processEx.ProcessId == 0)
             return;
+
         UnhookProcess(processEx.ProcessId);
     }
 
@@ -395,35 +346,32 @@ public class RTSS : IPlatform
 
     public void RefreshAppEntry()
     {
-        lock (updateLock)
+        try
         {
-            try
-            {
-                var entries = OSD.GetAppEntries()
-                    .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None)
-                    .ToList();
+            var entries = OSD.GetAppEntries()
+                .Where(x => (x.Flags & AppFlags.MASK) != AppFlags.None)
+                .ToList();
 
-                var entry = entries.FirstOrDefault(a => a.ProcessId == (appEntry?.ProcessId ?? 0));
+            var entry = entries.FirstOrDefault(a => a.ProcessId == (appEntry?.ProcessId ?? 0));
 
-                if (entry != null)
-                {
-                    var newFrameId = entry.OSDFrameId;
-                    lastOsdFrameId = newFrameId != lastOsdFrameId ? newFrameId : 0;
-                    appEntry = entry;
-                }
-                else
-                {
-                    lastOsdFrameId = 0;
-                }
-            }
-            catch (FileNotFoundException ex)
+            if (entry != null)
             {
-                LogManager.LogDebug("RTSS shared memory not available: {0}", ex.Message);
+                var newFrameId = entry.OSDFrameId;
+                lastOsdFrameId = newFrameId != lastOsdFrameId ? newFrameId : 0;
+                appEntry = entry;
             }
-            catch (Exception ex)
+            else
             {
-                LogManager.LogError("Error refreshing RTSS app entry: {0}", ex.Message);
+                lastOsdFrameId = 0;
             }
+        }
+        catch (FileNotFoundException ex)
+        {
+            LogManager.LogDebug("RTSS shared memory not available: {0}", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError("Error refreshing RTSS app entry: {0}", ex.Message);
         }
     }
 
@@ -434,13 +382,11 @@ public class RTSS : IPlatform
             if (refresh)
                 RefreshAppEntry();
 
-            lock (updateLock)
-            {
-                if (appEntry is null || lastOsdFrameId == 0)
-                    return 0.0d;
+            if (appEntry is null || lastOsdFrameId == 0)
+                return 0.0d;
 
-                return appEntry.StatFrameTimeBufFramerate / 10.0d;
-            }
+            return appEntry.StatFrameTimeBufFramerate / 10.0d;
+
         }
         catch (InvalidDataException ex)
         {
@@ -465,13 +411,10 @@ public class RTSS : IPlatform
             if (refresh)
                 RefreshAppEntry();
 
-            lock (updateLock)
-            {
-                if (appEntry is null)
-                    return 0.0d;
+            if (appEntry is null)
+                return 0.0d;
 
-                return (double)appEntry.InstantaneousFrameTime / 1000;
-            }
+            return (double)appEntry.InstantaneousFrameTime / 1000;
         }
         catch (InvalidDataException ex)
         {
@@ -680,10 +623,6 @@ public class RTSS : IPlatform
 
     public override void Dispose()
     {
-        // Cancel any pending operations
-        hookCts?.Cancel();
-        hookCts?.Dispose();
-
         // Dispose timer
         if (PlatformWatchdog != null)
         {

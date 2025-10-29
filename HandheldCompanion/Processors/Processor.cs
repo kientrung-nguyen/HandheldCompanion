@@ -41,7 +41,7 @@ public class Processor
         Manufacturer = MotherboardInfo.ProcessorManufacturer;
     }
 
-    public static Processor GetCurrent()
+    public static Processor? GetCurrent()
     {
         if (processor is not null)
             return processor;
@@ -52,6 +52,9 @@ public class Processor
             "AuthenticAMD" => new AMDProcessor(),
             _ => throw new NotImplementedException()
         };
+
+        if (processor is not null && !processor.IsInitialized)
+            LogManager.LogError("Failed to initialize {0} processor", Manufacturer);
 
         return processor;
     }

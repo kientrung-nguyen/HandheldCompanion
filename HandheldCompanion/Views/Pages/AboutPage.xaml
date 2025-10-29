@@ -19,35 +19,15 @@
     mc:Ignorable="d">
 
     <Grid Margin="20">
-        <ikw:SimpleStackPanel Spacing="6">
+        <ikw:SimpleStackPanel Spacing="3">
 
-            <!--  Warning  -->
-            <Border
-                Padding="15,12,12,12"
-                d:Visibility="Visible"
-                ui:ThemeManager.RequestedTheme="{Binding Source={x:Static ui:ThemeManager.Current}, Path=ActualApplicationTheme, Converter={StaticResource InverseAppThemeConverter}}"
-                Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
-                CornerRadius="{DynamicResource ControlCornerRadius}"
-                Visibility="{Binding IsUnsupportedDevice, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
-
-                <DockPanel>
-                    <Grid>
-                        <ui:FontIcon
-                            ui:ThemeManager.RequestedTheme="{Binding Source={x:Static ui:ThemeManager.Current}, Path=ActualApplicationTheme, Converter={StaticResource InverseAppThemeConverter}}"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                            Glyph="&#xF136;" />
-                        <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xF13C;" />
-                    </Grid>
-                    <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                        <TextBlock
-                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                            Style="{StaticResource BodyTextBlockStyle}"
-                            Text="{l:Static resx:Resources.AboutPage_UnsupportedDevice}"
-                            TextWrapping="Wrap" />
-                    </ikw:SimpleStackPanel>
-                </DockPanel>
-            </Border>
+            <ui:InfoBar
+                Name="WarningNoPhysical"
+                Title="{l:Static resx:Resources.AboutPage_UnsupportedDevice}"
+                IsClosable="False"
+                IsOpen="True"
+                Severity="Warning"
+                Visibility="{Binding IsUnsupportedDevice, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <!--  Device details  -->
             <Border
@@ -302,7 +282,7 @@
                                     Margin="0,0,0,5"
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                     Style="{StaticResource BodyTextBlockStyle}"
-                                    Text="Nefarius, CasperH2O, B-Core, Frank东, Toomy, Havner, CoryManson, MSeys, ShadowFlare, trippyone, MiguelLedesmaC, Cheng77777, thororen1234, fighterguard, micdah, Geckon01, Bagboii, MeikoMenmaHonma, cerahmed, indiesaudi, Radther, Staubgeborener, twjmy, m33ts4k0z, howanghk, Creaous, xerootg, quangmach, MrCivsteR, 0SkillAllLuck, DevL0rd, romracer, JT, Moyogii" />
+                                    Text="Nefarius, CasperH2O, B-Core, Frank东, Toomy, Havner, CoryManson, MSeys, ShadowFlare, trippyone, MiguelLedesmaC, Cheng77777, thororen1234, fighterguard, micdah, Geckon01, Bagboii, MeikoMenmaHonma, cerahmed, indiesaudi, Radther, Staubgeborener, twjmy, m33ts4k0z, howanghk, Creaous, xerootg, quangmach, MrCivsteR, 0SkillAllLuck, DevL0rd, romracer, JT, Moyogii, Sanheiii, Hijae" />
 
                                 <!--  Description  -->
                                 <TextBlock

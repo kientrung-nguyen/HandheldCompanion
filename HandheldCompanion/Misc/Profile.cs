@@ -124,7 +124,7 @@ public partial class Profile : ICloneable, IComparable
     public bool ShowInLibrary { get; set; } = true;
 
     // GameLib
-    public PlatformType PlatformType { get; set; } = PlatformType.Windows;
+    public GamePlatform PlatformType { get; set; } = GamePlatform.Generic;
     public string LaunchString { get; set; } = string.Empty;
 
     public string Executable => System.IO.Path.GetFileName(Path);

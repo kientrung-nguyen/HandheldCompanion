@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Controllers;
+﻿using HandheldCompanion;
+using HandheldCompanion.Controllers;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers.Hid;
 using HandheldCompanion.Sensors;
@@ -6,7 +7,7 @@ using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using Microsoft.Win32.SafeHandles;
 using Nefarius.Utilities.DeviceManagement.PnP;
-using PInvoke;
+using Kernel32 = PInvoke.Kernel32;
 using SharpDX.Direct3D9;
 using System;
 using System.Collections.Concurrent;

@@ -100,10 +100,10 @@ public class DeviceUtils
             .Select(iface => iface.GetIPProperties().UnicastAddresses
                 .Where(addr => addr.Address.AddressFamily == AddressFamily.InterNetwork && addr.PrefixOrigin == PrefixOrigin.Dhcp)
             )
-            .Where(list => list.Count() != 0)
-            .ToList()[0]
-            .ToList()[0]
-            .Address;
+            .Where(list => list.Any())
+            ?.FirstOrDefault()
+            ?.FirstOrDefault()
+            ?.Address ?? IPAddress.None;
     }
 
     /// <summary>
@@ -113,11 +113,11 @@ public class DeviceUtils
     /// has the local lan ip
     /// </summary>
     /// <returns></returns>
-    public static NetworkInterface GetPrimaryNetworkInterface()
+    public static NetworkInterface? GetPrimaryNetworkInterface()
     {
         IPAddress addr = GetLANIP();
         var interfaces = NetworkInterface.GetAllNetworkInterfaces().ToList();
-        return interfaces.First(iface => iface.GetIPProperties().UnicastAddresses.Select(ucast => ucast.Address).Contains(addr));
+        return interfaces.FirstOrDefault(iface => iface.GetIPProperties().UnicastAddresses.Select(ucast => ucast.Address).Contains(addr));
     }
 
 }

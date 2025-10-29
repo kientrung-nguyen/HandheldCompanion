@@ -12,6 +12,7 @@ using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -70,6 +71,9 @@ namespace HandheldCompanion.Managers
         private Dictionary<object, Control> prevControl = [];
         // key: Window, store which window has focus
         private static ConcurrentDictionary<string, bool> _focused = new();
+
+        private bool IsQuicktools => this.windowName.Equals("QuickTools");
+        private bool IsMainWindow => !IsQuicktools;
 
         public static bool HasFocus()
         {
@@ -306,10 +310,6 @@ namespace HandheldCompanion.Managers
                 // store current Frame and listen to render events
                 if (gamepadPage != (Page)gamepadFrame.Content)
                 {
-                    // store navigation
-                    if (navigationView is not null && navigationView.SelectedItem is NavigationViewItem navigationViewItem)
-                        prevNavigation = navigationViewItem;
-
                     gamepadFrame = (Frame)sender;
                     gamepadFrame.ContentRendered += ContentRendering;
 
@@ -339,14 +339,18 @@ namespace HandheldCompanion.Managers
             UIHelper.TryInvoke(() =>
             {
                 // store top left navigation view item
-                if (prevNavigation is null && navigationView.SelectedItem is NavigationViewItem navigationViewItem)
-                {
+                if (navigationView.SelectedItem is NavigationViewItem navigationViewItem)
                     prevNavigation = navigationViewItem;
-                    _navigating = true;
-                }
 
                 // update status
                 _navigating = _goingForward;
+
+                List<Type> IgnoreList = new() { typeof(NavigationViewItem) };
+
+                if (IsQuicktools)
+                {
+                    IgnoreList.Add(typeof(AppBarButton));
+                }
 
                 if (prevControl.TryGetValue(gamepadPage.Tag, out var control))
                 {
@@ -363,20 +367,17 @@ namespace HandheldCompanion.Managers
                     }
                     else if (_navigating && control is null)
                     {
-                        control = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements);
+                        // get the nearest non-navigation control
+                        control = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements, IgnoreList);
                         Focus(control);
                     }
                 }
                 else if (_navigating)
                 {
-                    control = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements);
+                    // get the nearest non-navigation control
+                    control = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements, IgnoreList);
                     Focus(control);
                 }
-
-                // clear history on page swap
-                if (gamepadPage is not null && gamepadWindow is OverlayQuickTools)
-                    if (prevControl.ContainsKey(gamepadPage.Tag))
-                        prevControl.Remove(gamepadPage.Tag, out _);
 
                 // set rendering state
                 _rendered = true;
@@ -398,7 +399,7 @@ namespace HandheldCompanion.Managers
 
         public void Focus(Control control, Control parent = null, bool force = false)
         {
-            if (control is null)
+            if (control is null || !HasFocus())
                 return;
 
             // prevent keyboard focus from overlapping with our own tooltip logic
@@ -722,6 +723,14 @@ namespace HandheldCompanion.Managers
 
                             radioButton.Command?.Execute(radioButton.CommandParameter);
                         }
+                        else if (focusedElement is HyperlinkButton hyperlinkButton)
+                        {
+                            if (hyperlinkButton.NavigateUri is not null)
+                                Process.Start(new ProcessStartInfo(hyperlinkButton.NavigateUri.AbsoluteUri) { UseShellExecute = true });
+
+                            if (hyperlinkButton.Command is not null)
+                                hyperlinkButton.Command?.Execute(hyperlinkButton.CommandParameter);
+                        }
                         else if (focusedElement is CheckBox checkBox)
                         {
                             // set state
@@ -734,18 +743,19 @@ namespace HandheldCompanion.Managers
                             // play sound
                             UISounds.PlayOggFile(UISounds.Expanded);
 
-                            // set state
-                            _navigating = true;
-
-                            if (prevControl.TryGetValue(gamepadPage.Tag, out var control) && control is not NavigationViewItem)
+                            if (prevControl.TryGetValue(gamepadPage.Tag, out Control control) && control is not NavigationViewItem)
                             {
                                 Focus(control);
                                 return;
                             }
                             else
                             {
+                                List<Type> IgnoreList = new();
+                                if (IsQuicktools)
+                                    IgnoreList.Add(typeof(AppBarButton));
+
                                 // get the nearest non-navigation control
-                                focusedElement = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements);
+                                focusedElement = WPFUtils.GetTopLeftControl<Control>(gamepadWindow.controlElements, IgnoreList);
                                 Focus(focusedElement);
                                 return;
                             }
@@ -814,17 +824,10 @@ namespace HandheldCompanion.Managers
                         {
                             default:
                                 {
-                                    switch (gamepadPage.Tag)
+                                    if (HasDialogOpen && prevControl.TryGetValue(gamepadPage, out Control control))
                                     {
-                                        default:
-                                            {
-                                                if (HasDialogOpen && prevControl.TryGetValue(gamepadPage, out Control control))
-                                                {
-                                                    Focus(control);
-                                                    return;
-                                                }
-                                            }
-                                            break;
+                                        Focus(control);
+                                        return;
                                     }
                                 }
                                 break;
@@ -866,7 +869,7 @@ namespace HandheldCompanion.Managers
                         }
 
                         // go back to previous page
-                        if (_goingForward)
+                        if (_goingForward && !IsQuicktools)
                         {
                             if (gamepadFrame.CanGoBack)
                             {
@@ -910,6 +913,10 @@ namespace HandheldCompanion.Managers
                             elementType = prevNavigation.GetType().Name;
                             focusedElement = prevNavigation;
 
+                            // set state(s)
+                            _goingForward = true;
+                            _navigating = true;
+
                             direction = WPFUtils.Direction.Left;
                         }
                     }
@@ -922,6 +929,10 @@ namespace HandheldCompanion.Managers
                         {
                             elementType = prevNavigation.GetType().Name;
                             focusedElement = prevNavigation;
+
+                            // set state(s)
+                            _goingForward = true;
+                            _navigating = true;
 
                             direction = WPFUtils.Direction.Right;
                         }
@@ -962,7 +973,7 @@ namespace HandheldCompanion.Managers
                                     break;
                                 case true:
                                     {
-                                        if (prevControl.TryGetValue(gamepadPage.Tag, out var control) && control is not NavigationViewItem)
+                                        if (prevControl.TryGetValue(gamepadPage.Tag, out Control control) && control is not NavigationViewItem)
                                             Focus(control);
                                         else
                                         {
@@ -982,14 +993,36 @@ namespace HandheldCompanion.Managers
                     // navigation
                     if (direction != WPFUtils.Direction.None)
                     {
+                        if (!_navigating)
+                            _goingForward = false;
+
                         switch (elementType)
                         {
                             case "NavigationViewItem":
                                 {
                                     if (focusedElement is not null)
                                     {
-                                        focusedElement = WPFUtils.GetClosestControl<NavigationViewItem>(focusedElement, gamepadWindow.controlElements, direction);
-                                        Focus(focusedElement);
+                                        Control target = WPFUtils.GetClosestControl<NavigationViewItem>(focusedElement, gamepadWindow.controlElements, direction);
+
+                                        if (IsQuicktools)
+                                        {
+                                            // we're at the extreme edge ?
+                                            if (focusedElement.Equals(target))
+                                            {
+                                                switch (direction)
+                                                {
+                                                    case WPFUtils.Direction.Left:
+                                                        direction = WPFUtils.Direction.Right;
+                                                        break;
+                                                    case WPFUtils.Direction.Right:
+                                                        direction = WPFUtils.Direction.Left;
+                                                        break;
+                                                }
+                                                target = WPFUtils.GetFurthestControl<NavigationViewItem>(focusedElement, gamepadWindow.controlElements, direction);
+                                            }
+                                        }
+
+                                        Focus(target);
                                     }
                                 }
                                 return;

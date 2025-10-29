@@ -47,6 +47,7 @@ public static class DynamicLightingManager
     private static int ambilightThreadDelay = defaultThreadDelay;
     private const int defaultThreadDelay = 33;
 
+
     private static readonly object d3dLock = new object();
 
     private static bool VerticalBlackBarDetectionEnabled;

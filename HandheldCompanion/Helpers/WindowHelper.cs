@@ -19,8 +19,8 @@ namespace HandheldCompanion.Helpers
         private static bool EnumWindowCallback(IntPtr hWnd, IntPtr lParam)
         {
             // Retrieve the List<IntPtr> that we passed in.
-            List<IntPtr> windows = (List<IntPtr>)GCHandle.FromIntPtr(lParam).Target;
-            windows.Add(hWnd);
+            var windows = (List<IntPtr>)GCHandle.FromIntPtr(lParam).Target;
+            windows?.Add(hWnd);
             return true; // Continue enumeration.
         }
 

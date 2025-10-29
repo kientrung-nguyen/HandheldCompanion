@@ -3894,4 +3894,28 @@ Obrigado por utilizar o Handheld Companion e nos ajudá-lo a torná-lo melhor.</
   <data name="Hotkey_touchpadToggleDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
     <value />
   </data>
+  <data name="Hotkey_ButtonCommands" xml:space="preserve">
+    <value>Guia ou Botão PS</value>
+  </data>
+  <data name="Hotkey_ButtonCommandsDesc" xml:space="preserve">
+    <value>Simular a entrada de um botão Xbox Guia ou botão Sony PS</value>
+  </data>
+  <data name="LayoutPage_InputShiftDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressType" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip0" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip1" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip2" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip3" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
 </root>

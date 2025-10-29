@@ -1,10 +1,11 @@
-﻿using HandheldCompanion.Helpers;
+﻿using HandheldCompanion.Functions;
+using HandheldCompanion.Helpers;
 using System;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using static HandheldCompanion.WinAPI;
 
 namespace HandheldCompanion.Views.Classes;
 
@@ -13,8 +14,6 @@ public class OverlayWindow : Window
     public HorizontalAlignment _HorizontalAlignment;
     public VerticalAlignment _VerticalAlignment;
 
-    private const int WM_MOUSEACTIVATE = 0x0021;
-    private const int MA_NOACTIVATE = 0x0003;
 
     public OverlayWindow()
     {
@@ -71,21 +70,24 @@ public class OverlayWindow : Window
     private void OverlayWindow_Loaded(object sender, RoutedEventArgs e)
     {
         var source = PresentationSource.FromVisual(this) as HwndSource;
-        source.AddHook(WndProc);
+        source?.AddHook(WndProc);
 
         //Set the window style to noactivate.
-        var helper = new WindowInteropHelper(this);
-        SetWindowLong(helper.Handle, GWL_EXSTYLE, GetWindowLong(helper.Handle, GWL_EXSTYLE) | WS_EX_NOACTIVATE);
+        var interopHelper = new WindowInteropHelper(this);
+        SetWindowLong(interopHelper.Handle, (int)GETWINDOWLONG.GWL_EXSTYLE,
+            (int)(GetWindowLong(interopHelper.Handle, (int)GETWINDOWLONG.GWL_EXSTYLE) | (uint)WINDOWSTYLE.WS_EX_NOACTIVATE)
+            );
     }
 
-    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    private nint WndProc(nint hWnd, int msg, nint wparam, nint lparam, ref bool handled)
     {
-        if (msg == WM_MOUSEACTIVATE)
+        if (msg == (int)WINDOWMESSAGE.WM_MOUSEACTIVATE)
         {
             handled = true;
-            return new IntPtr(MA_NOACTIVATE);
+            return new IntPtr((uint)MOUSEACTIVATE.MA_NOACTIVATE);
         }
-        else return IntPtr.Zero;
+        else
+            return IntPtr.Zero;
     }
 
     private void UpdatePosition()
@@ -162,16 +164,16 @@ public class OverlayWindow : Window
         });
     }
 
-    #region import
+    //#region import
 
-    private const int GWL_EXSTYLE = -20;
-    private const int WS_EX_NOACTIVATE = 0x08000000;
+    //private const int GWL_EXSTYLE = -20;
+    //private const int WS_EX_NOACTIVATE = 0x08000000;
 
-    [DllImport("user32.dll")]
-    public static extern IntPtr SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    //[DllImport("user32.dll")]
+    //public static extern IntPtr SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
-    [DllImport("user32.dll")]
-    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+    //[DllImport("user32.dll")]
+    //public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
-    #endregion
+    //#endregion
 }

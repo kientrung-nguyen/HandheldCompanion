@@ -1,0 +1,20 @@
+﻿<common:OverlayWindow 
+    x:Class="HandheldCompanion.Views.Windows.OverlayStatusBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
+    xmlns:l="clr-namespace:HandheldCompanion.Localization"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
+    xmlns:resx="clr-namespace:HandheldCompanion.Properties"
+    d:Background="Transparent"
+    ui:TitleBar.ExtendViewIntoTitleBar="True"
+    ui:ThemeManager.IsThemeAware="True"
+    HorizontalAlignment="Center"
+    VerticalAlignment="Center"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
+    
+</common:OverlayWindow>

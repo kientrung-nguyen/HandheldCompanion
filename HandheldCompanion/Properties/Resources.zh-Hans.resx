@@ -3743,4 +3743,28 @@
   <data name="Hotkey_touchpadToggleDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
     <value />
   </data>
+  <data name="Hotkey_ButtonCommands" xml:space="preserve">
+    <value>XBOX/PS 按键</value>
+  </data>
+  <data name="Hotkey_ButtonCommandsDesc" xml:space="preserve">
+    <value>模拟Xbox菜单键或者索尼PS键</value>
+  </data>
+  <data name="LayoutPage_InputShiftDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressType" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip0" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip1" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip2" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="LayoutPage_PressTypeTooltip3" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
 </root>

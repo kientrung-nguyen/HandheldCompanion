@@ -38,9 +38,9 @@ namespace HandheldCompanion.Views.Classes
 
         public HwndSource hWndSource;
 
-        public bool HasForeground() => this is OverlayQuickTools || (WinAPI.GetForegroundWindow() == this.hWndSource.Handle);
+        public bool HasForeground() => this is OverlayQuickTools || (WinAPI.GetForegroundWindow() == hWndSource.Handle);
         public bool IsPrimary => GetScreen().Primary;
-        public bool IsIconic => ProcessUtils.IsIconic(this.hWndSource.Handle);
+        public bool IsIconic => ProcessUtils.IsIconic(hWndSource.Handle);
 
         private AdornerLayer _adornerLayer;
         private HighlightAdorner _highlightAdorner;

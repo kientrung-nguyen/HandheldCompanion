@@ -16,7 +16,7 @@ namespace HandheldCompanion.Misc
     {
         public FanMode FanMode = FanMode.Hardware;
 
-        //                            00, 10, 20, 30, 40, 50, 60, 70, 80, 90,  100°C
+        // y-axis: fan speed (%) at 0,10,...,100°C
         public double[] FanSpeeds = [20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100];
 
         // smoothing buffer

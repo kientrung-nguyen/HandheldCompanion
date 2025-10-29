@@ -44,7 +44,7 @@ public partial class QuickProfilesPage : Page
     private CrossThreadLock graphicLock = new();
 
     private const ButtonFlags gyroButtonFlags = ButtonFlags.HOTKEY_GYRO_ACTIVATION_QP;
-    private Hotkey GyroHotkey = new(gyroButtonFlags) { IsInternal = true };
+    private Hotkey GyroHotkey = new(gyroButtonFlags) { IsInternal = true, Name = "HOTKEY_GYRO_ACTIVATION_QP" };
 
     private Profile realProfile;
 
@@ -1187,7 +1187,7 @@ public partial class QuickProfilesPage : Page
             Title = "Power preset",
             Content = $"{powerProfile.Name} preset was created",
             PrimaryButtonText = Properties.Resources.ProfilesPage_OK
-        }.ShowAsync().ConfigureAwait(false);
+        }.ShowAsync();
     }
 
     private void cb_SubProfiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
