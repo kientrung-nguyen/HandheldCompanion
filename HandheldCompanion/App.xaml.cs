@@ -9,12 +9,14 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
+using MessageBox = iNKORE.UI.WPF.Modern.Controls.MessageBox;
 
 namespace HandheldCompanion;
 
@@ -26,6 +28,12 @@ public partial class App : Application
     public static bool IsMultiThreaded { get; } = true;
     public static string InstallPath = string.Empty;
     public static string SettingsPath = string.Empty;
+    public static string LogsPath = string.Empty;
+    public static string ApplicationName
+    {
+        get => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
+        set { /* noop */ }
+    }
 
     [return: MarshalAs(UnmanagedType.Bool)]
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -39,6 +47,8 @@ public partial class App : Application
 
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool FreeConsole();
+
+    static readonly string[] ReservedFileNames = new[] { "Certificate.pfx", "SecretKeys.cs" };
 
     /// <summary>
     ///     Initializes the singleton application object.  This is the first line of authored code
@@ -96,7 +106,7 @@ public partial class App : Application
         Environment.SetEnvironmentVariable("COMPlus_legacyCorruptedStateExceptionsPolicy", "1");
 
         // initialize log
-        LogManager.Initialize("HandheldCompanion");
+        LogManager.Initialize(ApplicationName);
         LogManager.LogInformation("----------------");
         LogManager.LogInformation("{0} ({1})", currentAssembly.GetName(), fileVersionInfo.FileVersion);
 

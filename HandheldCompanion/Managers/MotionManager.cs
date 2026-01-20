@@ -194,7 +194,7 @@ namespace HandheldCompanion.Managers
 
             if (currentLayout.GyroLayout.TryGetValue(AxisLayoutFlags.Gyroscope, out var action))
                 if (action is not null)
-                    gyroAction = (GyroActions)action;
+                    gyroAction = action as GyroActions;
 
             //toggle motion when trigger is pressed
             if (gyroAction.MotionMode == MotionMode.Toggle)

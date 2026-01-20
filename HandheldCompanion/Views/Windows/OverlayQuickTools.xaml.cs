@@ -109,8 +109,6 @@ public partial class OverlayQuickTools : GamepadWindow
         };
         clockUpdateTimer.Tick += UpdateTime;
 
-        WMPaintTimer.Elapsed += WMPaintTimer_Elapsed;
-
         // manage events
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
         ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
@@ -169,7 +167,6 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             ShowBattery();
             ShowPerformance();
-            //ShowRadios();
         });
     }
 
@@ -287,7 +284,6 @@ public partial class OverlayQuickTools : GamepadWindow
         UpdateLocation();
     }
 
-    private const double _Margin = 12;
     private const double _MaxHeight = 960;
     private const double _MaxWidth = 960;
     private const WindowStyle _Style = WindowStyle.ToolWindow;
@@ -419,8 +415,6 @@ public partial class OverlayQuickTools : GamepadWindow
         _animActive = true;
         _animWatch.Restart();
 
-        BeginAnimationBypassWmPaint(true); // keep HW path during anim
-
         _renderTick ??= OnRenderTick;
         CompositionTarget.Rendering += _renderTick;
     }
@@ -432,8 +426,6 @@ public partial class OverlayQuickTools : GamepadWindow
         CompositionTarget.Rendering -= _renderTick;
         _animActive = false;
         _animWatch.Stop();
-
-        BeginAnimationBypassWmPaint(false);
 
         // fire completion exactly once
         var cb = _animOnComplete;
@@ -619,11 +611,6 @@ public partial class OverlayQuickTools : GamepadWindow
         gamepadFocusManager.Loaded();
     }
 
-    // hack variables
-    private Timer WMPaintTimer = new(100) { AutoReset = false };
-    private bool WMPaintPending = false;
-    private DateTime prevDraw = DateTime.MinValue;
-
     protected override nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
     {
         // prevent activation on mouse click
@@ -652,56 +639,9 @@ public partial class OverlayQuickTools : GamepadWindow
                     UpdateStyle();
                 }
                 break;
-
-            case (int)WINDOWMESSAGE.WM_PAINT:
-                {
-                    if (_bypassWmPaintThrottle)
-                        break; // ignore throttling logic while animating
-
-                    DateTime drawTime = DateTime.Now;
-
-                    double drawDiff = Math.Abs((prevDraw - drawTime).TotalMilliseconds);
-                    if (drawDiff < 200)
-                    {
-                        if (!WMPaintPending)
-                        {
-                            // disable GPU acceleration
-                            RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
-
-                            // set flag
-                            WMPaintPending = true;
-
-                            LogManager.LogError("ProcessRenderMode set to {0}", RenderOptions.ProcessRenderMode);
-                        }
-                    }
-
-                    // update previous drawing time
-                    prevDraw = drawTime;
-
-                    if (WMPaintPending)
-                    {
-                        WMPaintTimer.Stop();
-                        WMPaintTimer.Start();
-                    }
-                }
-                break;
         }
 
-        return IntPtr.Zero;
-    }
-
-    private void WMPaintTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
-    {
-        if (WMPaintPending)
-        {
-            // enable GPU acceleration
-            RenderOptions.ProcessRenderMode = RenderMode.Default;
-
-            // reset flag
-            WMPaintPending = false;
-
-            LogManager.LogError("ProcessRenderMode set to {0}", RenderOptions.ProcessRenderMode);
-        }
+        return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
     }
 
     public void SetVisibility(Visibility visibility)
@@ -732,7 +672,7 @@ public partial class OverlayQuickTools : GamepadWindow
         });
     }
 
-    private void GamepadWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    protected override void Window_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         switch (Visibility)
         {
@@ -756,6 +696,8 @@ public partial class OverlayQuickTools : GamepadWindow
                 UpdateTime(sender, EventArgs.Empty);
                 break;
         }
+
+        base.Window_VisibleChanged(sender, e);
     }
 
     public void UpdateStyle()
@@ -927,8 +869,7 @@ public partial class OverlayQuickTools : GamepadWindow
         GPUName.Text = string.Join(" ",
             $"{AddElementIfNotNull(currentMetrics.GpuLoad, "%")}",
             $"{AddElementIfNotNull(OSDManager.NormalizeClock(currentMetrics.GpuClock).Item1, OSDManager.NormalizeClock(currentMetrics.GpuClock).Item2)}",
-            $"{AddElementIfNotNull(currentMetrics.GpuTemp, "°C")}",
-            $"{AddElementIfNotNull(currentMetrics.GpuPower, "W")}"
+            $"{AddElementIfNotNull(currentMetrics.GpuTemp, "°C")}"
             );
 
         Net.Text = string.Join(" ",
@@ -1058,7 +999,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
         if (float.IsNaN(currentMetrics.BattPower) && currentMetrics.BattCapacity == 100f)
         {
-            BatteryIndicatorPercentage.Text += " (fully charged)";
+            BatteryIndicatorPercentage.Text += $" (fully charged [{currentMetrics.BattRemainingCapacity}mWh, {currentMetrics.BattHealth:00}%])";
             return;
         }
 

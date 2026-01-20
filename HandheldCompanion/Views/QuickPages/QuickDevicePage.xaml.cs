@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Radios;
 using WindowsDisplayAPI;
@@ -26,20 +27,17 @@ namespace HandheldCompanion.Views.QuickPages;
 public partial class QuickDevicePage : Page
 {
     private IReadOnlyList<Radio> radios;
-    private Timer radioTimer;
+    private DispatcherTimer radioTimer;
 
     public QuickDevicePage()
     {
         InitializeComponent();
 
         // manage events
-        ManagerFactory.multimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
-        ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
-        ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
-        ManagerFactory.multimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         ManagerFactory.profileManager.Applied += ProfileManager_Applied;
         ManagerFactory.profileManager.Discarded += ProfileManager_Discarded;
+        ManagerFactory.multimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
 
         // Device specific
         AYANEOFlipDSPanel.Visibility = IDevice.GetCurrent() is AYANEOFlipDS ? Visibility.Visible : Visibility.Collapsed;
@@ -51,21 +49,24 @@ public partial class QuickDevicePage : Page
         NightLightToggle.Visibility = ManagerFactory.multimediaManager.HasNightLightSupport() ? Visibility.Visible : Visibility.Collapsed;
         NightLightSchedule.IsEnabled = NightLightToggle.IsEnabled = ManagerFactory.multimediaManager.HasNightLightSupport();
 
-        // why is that part of a timer ?
-        radioTimer = new(1000);
-        radioTimer.Elapsed += RadioTimer_Elapsed;
+        radioTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromSeconds(2) // 2s is plenty; go 5s if you like
+        };
+        radioTimer.Tick += RadioTimer_Tick;
         radioTimer.Start();
     }
 
     public void Close()
     {
         // manage events
+        ManagerFactory.multimediaManager.Initialized -= MultimediaManager_Initialized;
         ManagerFactory.multimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
         ManagerFactory.multimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
-        ManagerFactory.multimediaManager.NightLightNotification -= MultimediaManager_NightLightNotification;
         ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
         ManagerFactory.profileManager.Applied -= ProfileManager_Applied;
         ManagerFactory.profileManager.Discarded -= ProfileManager_Discarded;
+        ManagerFactory.multimediaManager.NightLightNotification -= MultimediaManager_NightLightNotification;
 
         radioTimer.Stop();
     }
@@ -75,29 +76,66 @@ public partial class QuickDevicePage : Page
         if (ManagerFactory.multimediaManager.HasNightLightSupport())
         {
             // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 NightLightToggle.IsOn = enabled;
             });
         }
     }
+    
+    public QuickDevicePage(string Tag) : this()
+    {
+        this.Tag = Tag;
+    }
+
+    private bool _loadedOnce;
+    private void QuickDevice_Loaded(object sender, RoutedEventArgs e)
+    {
+        // one-time setup
+        if (_loadedOnce) return;
+        _loadedOnce = true;
+
+        // raise events
+        switch (ManagerFactory.multimediaManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryMedia();
+                break;
+        }
+    }
+
+	private void QueryMedia()
+    {
+        // manage events
+        ManagerFactory.multimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
+        ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+
+        // raise events
+        if (ScreenControl.PrimaryDisplay is not null)
+        {
+            MultimediaManager_PrimaryScreenChanged(ScreenControl.PrimaryDisplay);
+            MultimediaManager_DisplaySettingsChanged(ScreenControl.PrimaryDisplay);
+        }
+    }
 
     private void MultimediaManager_Initialized()
     {
+        QueryMedia();
+
         if (ManagerFactory.multimediaManager.HasNightLightSupport())
         {
             // UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 NightLightToggle.IsOn = NightLight.Get() == 1;
             });
         }
     }
 
-    public QuickDevicePage(string Tag) : this()
-    {
-        this.Tag = Tag;
-    }
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
@@ -160,12 +198,12 @@ public partial class QuickDevicePage : Page
             {
                 DisplayStack.IsEnabled = true;
                 ResolutionOverrideStack.Visibility = Visibility.Collapsed;
-
-                // restore default resolution
-                if (profile.IntegerScalingDivider != 1)
-                    SetResolution();
-
             });
+
+            // restore default resolution
+            if (profile.IntegerScalingDivider != 1)
+                SetResolution();
+
         }
     }
 
@@ -201,38 +239,20 @@ public partial class QuickDevicePage : Page
         });
     }
 
-    private void RadioTimer_Elapsed(object? sender, ElapsedEventArgs e)
+    private async void RadioTimer_Tick(object? sender, EventArgs e)
     {
-        new Task(async () =>
-        {
-            // Get the Bluetooth adapter
-            BluetoothAdapter adapter = await BluetoothAdapter.GetDefaultAsync();
+        // Query radios directly; we’re on the UI dispatcher, no new Task()
+        var adapter = await BluetoothAdapter.GetDefaultAsync();
+        radios = await Radio.GetRadiosAsync();
 
-            // Get the Bluetooth radio
-            radios = await Radio.GetRadiosAsync();
+        WifiToggle.IsEnabled = radios?.Any(r => r.Kind == RadioKind.WiFi) == true;
+        BluetoothToggle.IsEnabled = radios?.Any(r => r.Kind == RadioKind.Bluetooth) == true;
 
-            // UI thread
-            UIHelper.TryInvoke(() =>
-            {
-                if (radios is null)
-                {
-                    WifiToggle.IsEnabled = false;
-                    BluetoothToggle.IsEnabled = false;
-                    return;
-                }
+        var wifi = radios?.FirstOrDefault(r => r.Kind == RadioKind.WiFi);
+        var bt = radios?.FirstOrDefault(r => r.Kind == RadioKind.Bluetooth);
 
-                Radio? wifiRadio = radios.FirstOrDefault(radio => radio.Kind == RadioKind.WiFi);
-                Radio? bluetoothRadio = radios.FirstOrDefault(radio => radio.Kind == RadioKind.Bluetooth);
-
-                // WIFI
-                WifiToggle.IsEnabled = wifiRadio != null;
-                WifiToggle.IsOn = wifiRadio?.State == RadioState.On;
-
-                // Bluetooth
-                BluetoothToggle.IsEnabled = bluetoothRadio != null;
-                BluetoothToggle.IsOn = bluetoothRadio?.State == RadioState.On;
-            });
-        }).Start();
+        WifiToggle.IsOn = wifi?.State == RadioState.On;
+        BluetoothToggle.IsOn = bt?.State == RadioState.On;
     }
 
     private CrossThreadLock multimediaLock = new();

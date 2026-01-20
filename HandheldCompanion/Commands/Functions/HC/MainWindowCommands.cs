@@ -1,5 +1,7 @@
-﻿using HandheldCompanion.Views;
+﻿using HandheldCompanion.Helpers;
+using HandheldCompanion.Views;
 using System;
+using System.Windows;
 
 namespace HandheldCompanion.Commands.Functions.HC
 {
@@ -25,12 +27,44 @@ namespace HandheldCompanion.Commands.Functions.HC
 
         public override void Execute(bool IsKeyDown, bool IsKeyUp, bool IsBackground)
         {
-            MainWindow.GetCurrent().ToggleState();
+            string pageTag = PageIndex switch
+            {
+                // 0 => "Current",
+                1 => "ControllerPage",
+                2 => "LibraryPage",
+                3 => "DevicePage",
+                4 => "PerformancePage",
+                5 => "ProfilesPage",
+                6 => "OverlayPage",
+                7 => "HotkeysPage",
+                8 => "AboutPage",
+                9 => "NotificationsPage",
+                10 => "SettingsPage",
+                _ => string.Empty
+            };
+
+            MainWindow mainWindow = MainWindow.GetCurrent();
+
+            // Toggle state
+            mainWindow.ToggleState();
+
+            // UI thread
+            UIHelper.TryInvoke(() =>
+            {
+                switch (mainWindow.Visibility)
+                {
+                    case Visibility.Visible:
+                        // Navigate to the specified page if valid
+                        if (!string.IsNullOrEmpty(pageTag))
+                            mainWindow.NavigateToPage(pageTag);
+                        break;
+                }
+            });
 
             base.Execute(IsKeyDown, IsKeyUp, false);
         }
 
-        public override bool IsToggled => MainWindow.GetCurrent().WindowState != System.Windows.WindowState.Minimized;
+        public override bool IsToggled => MainWindow.GetCurrent().WindowState != WindowState.Minimized;
 
         public override object Clone()
         {

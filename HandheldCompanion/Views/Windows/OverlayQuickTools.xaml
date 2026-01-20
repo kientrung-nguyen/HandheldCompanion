@@ -25,7 +25,6 @@
     ui:WindowHelper.SystemBackdropType="Mica"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
-    IsVisibleChanged="GamepadWindow_IsVisibleChanged"
     Loaded="Window_Loaded"
     ResizeMode="NoResize"
     ShowActivated="False"
@@ -53,7 +52,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition />
                         <ColumnDefinition />
-                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="250" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="36" />
@@ -62,12 +61,12 @@
                     <ikw:SimpleStackPanel
                         Grid.Row="0"
                         Grid.Column="0"
+                        Grid.ColumnSpan="2"
                         VerticalAlignment="Center"
                         Orientation="Horizontal">
                         <ui:FontIcon 
                             Name="BatteryIndicatorIcon"
-                            Width="28"
-                            FontSize="21"
+                            FontSize="30"
                             HorizontalAlignment="Center"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
                             Glyph="&#xE83F;" />
@@ -75,13 +74,11 @@
                             Name="BatteryIndicatorPercentage"
                             VerticalAlignment="Center"
                             Text="100%"
-                            FontSize="10"
-                            FontFamily="Unispace" />
+                            Style="{StaticResource BodyTextBlockStyle}" />
                     </ikw:SimpleStackPanel>
                     <ikw:SimpleStackPanel
                         Grid.Row="0"
-                        Grid.Column="1"
-                        Grid.ColumnSpan="2"
+                        Grid.Column="2"
                         Margin="0,0,50,0"
                         Spacing="5"
                         VerticalAlignment="Center"
@@ -91,17 +88,15 @@
                             Name="Net"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
-                            FontSize="10"
-                            Text="NET Speed"
-                            FontFamily="Unispace"/>
+                            Style="{StaticResource BodyTextBlockStyle}"
+                            Text="NET Speed" />
                         <ui:AppBarSeparator />
                         <TextBlock
                             Name="Time"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
-                            FontSize="10"
-                            Text="Time"
-                            FontFamily="Unispace"/>
+                            Style="{StaticResource BodyTextBlockStyle}"
+                            Text="Time" />
                     </ikw:SimpleStackPanel>
                     <ikw:SimpleStackPanel
                         Grid.Row="1"
@@ -113,19 +108,17 @@
                         Spacing="8">
                         <DockPanel>
                             <ui:FontIcon
-                                Width="28"
-                                FontSize="16"
+                                Width="30"
+                                FontSize="18"
                                 HorizontalAlignment="Center"
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xe9d9;" />
                             <TextBlock
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
-                                FontSize="11"
+                                Style="{StaticResource BodyTextBlockStyle}"
                                 Name="CPUName"
-                                Text="CPU"
-                                FontFamily="Unispace" />
-
+                                Text="CPU" />
 
                             <ui:AppBarSeparator />
 
@@ -140,9 +133,8 @@
                                     Name="Memory"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
-                                    FontSize="11"
-                                    Text="Mem"
-                                    FontFamily="Unispace" />
+                                    Style="{StaticResource BodyTextBlockStyle}"
+                                    Text="Mem" />
                             </DockPanel>
                             <!--<ui:FontIcon
                                 Width="28"
@@ -173,8 +165,8 @@
 
                         <DockPanel>
                             <ui:FontIcon
-                                Width="28"
-                                FontSize="16"
+                                Width="30"
+                                FontSize="18"
                                 HorizontalAlignment="Center"
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xf211;" />
@@ -182,9 +174,8 @@
                                 Name="GPUName"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
-                                FontSize="11"
-                                Text="GPU"
-                                FontFamily="Unispace" />
+                                Style="{StaticResource BodyTextBlockStyle}"
+                                Text="GPU" />
 
                             <ui:AppBarSeparator />
 
@@ -199,9 +190,8 @@
                                     Name="VRAM"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
-                                    FontSize="11"
-                                    Text="Mem"
-                                    FontFamily="Unispace" />
+                                    Style="{StaticResource BodyTextBlockStyle}"
+                                    Text="Mem" />
                             </DockPanel>
                         </DockPanel>
                     </ikw:SimpleStackPanel>

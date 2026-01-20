@@ -354,6 +354,8 @@ namespace HandheldCompanion.Managers
             DisplayGPU.TryAdd(adapterInformation, newGPU);
 
             // Wait until manager is ready
+            Task.Run(async () =>
+            {
             if (ManagerFactory.multimediaManager.IsRunning)
             {
                 while (ManagerFactory.multimediaManager.IsBusy)
@@ -363,6 +365,7 @@ namespace HandheldCompanion.Managers
                 if (ScreenControl.PrimaryDisplay != null)
                     MultimediaManager_PrimaryScreenChanged(ScreenControl.PrimaryDisplay);
             }
+            });
         }
 
         private void MultimediaManager_PrimaryScreenChanged(Display screen)

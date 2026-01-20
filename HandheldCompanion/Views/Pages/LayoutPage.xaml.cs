@@ -3,7 +3,9 @@ using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.ViewModels;
+
 using iNKORE.UI.WPF.Modern.Controls;
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,6 +14,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
+
 using Page = System.Windows.Controls.Page;
 
 namespace HandheldCompanion.Views.Pages;

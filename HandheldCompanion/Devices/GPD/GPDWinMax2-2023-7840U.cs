@@ -44,7 +44,7 @@ public class GPDWinMax2_2023_7840U : GPDWinMax2
     {
         try
         {
-            var value = ECRAMReadLong(
+            var value = ECRamReadLong(
                 ECDetails.AddressFanRPMOffset, 
                 ECDetails.AddressFanRPMLength, 
                 ECDetails);

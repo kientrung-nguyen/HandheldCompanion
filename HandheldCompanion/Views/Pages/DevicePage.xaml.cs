@@ -67,7 +67,8 @@ namespace HandheldCompanion.Views.Pages
                 // Show LegionGoPanel
                 LegionGoPanel.Visibility = Visibility.Visible;
 
-                if (device.GetType() == typeof(LegionGoTablet))
+                if (device.GetType() == typeof(LegionGoTablet) ||
+                    device.GetType() == typeof(LegionGoTablet2))
                 {
                     LegionGoSensorSelection.Visibility = Visibility.Visible;
                     LegionGoLeftController.Visibility = Visibility.Visible;
@@ -612,8 +613,7 @@ namespace HandheldCompanion.Views.Pages
         }
         #endregion
 
-        #region Legion Go Device Settings
-
+        #region Legion Go
         private void Toggle_TouchpadPassthrough_Toggled(object sender, RoutedEventArgs e)
         {
             if (!IsLoaded)

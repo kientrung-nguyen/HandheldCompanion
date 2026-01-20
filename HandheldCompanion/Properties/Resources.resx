@@ -292,11 +292,11 @@
   <data name="Hotkey_ExpandDesc" xml:space="preserve">
     <value>Press this key: Alt + Enter</value>
   </data>
-  <data name="Hotkey_Guide" xml:space="preserve">
-    <value>Guide or PS button</value>
+  <data name="Hotkey_ButtonCommands" xml:space="preserve">
+    <value>Gamepad button</value>
   </data>
-  <data name="Hotkey_GuideDesc" xml:space="preserve">
-    <value>Simulate a Xbox Guide or Sony PS button input</value>
+  <data name="Hotkey_ButtonCommandsDesc" xml:space="preserve">
+    <value>Simulate a gamepad button input</value>
   </data>
   <data name="Hotkey_Keyboard" xml:space="preserve">
     <value>Display touch keyboard</value>
@@ -3582,9 +3582,6 @@ Thank you for using HC and helping us make it better.</value>
   <data name="LayoutPage_InputShift" xml:space="preserve">
     <value>Input shift</value>
   </data>
-  <data name="LayoutPage_InputType" xml:space="preserve">
-    <value>Input type</value>
-  </data>
   <data name="QuickApplicationsPage_QuickStart" xml:space="preserve">
     <value>Quick start</value>
   </data>
@@ -4010,5 +4007,35 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="LayoutPage_PressTypeTooltip3" xml:space="preserve">
     <value>Trigger the action when the button is pressed twice within the specified time window</value>
+  </data>
+  <data name="LayoutPage_InputShiftDesc" xml:space="preserve">
+    <value>Define under which circumstances this input should be shifted</value>
+  </data>
+  <data name="ControllerPage_UncloakOnDisconnect" xml:space="preserve">
+    <value>Unhide controller on disconnect</value>
+  </data>
+  <data name="ControllerPage_UncloakOnDisconnectDesc" xml:space="preserve">
+    <value>Restore controller visibility when disconnected</value>
+  </data>
+  <data name="ControllerPage_ConnectWhenPlugged" xml:space="preserve">
+    <value>Connect when plugged</value>
+  </data>
+  <data name="ControllerPage_ConnectWhenPluggedDesc" xml:space="preserve">
+    <value>Automatically connect the last plugged controller</value>
+  </data>
+  <data name="ControllerPage_ScanForHardwareChanges" xml:space="preserve">
+    <value>Scan for hardware changes</value>
+  </data>
+  <data name="ControllerPage_HelpWithControllerSettings" xml:space="preserve">
+    <value>Help with controller settings</value>
+  </data>
+  <data name="ControllerPage_TestControllerInputs" xml:space="preserve">
+    <value>Testing your game controller inputs</value>
+  </data>
+  <data name="ControllerPage_ConfiguringControllersSettings" xml:space="preserve">
+    <value>Configuring your game controllers settings</value>
+  </data>
+  <data name="ControllerPage_TroobleshootingBluetoothControllersConnectionIssues" xml:space="preserve">
+    <value>Troobleshooting bluetooth controllers connection issues</value>
   </data>
 </root>

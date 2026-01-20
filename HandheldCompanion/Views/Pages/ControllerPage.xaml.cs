@@ -67,7 +67,10 @@ public partial class ControllerPage : Page
                     Toggle_Cloaked.IsOn = Convert.ToBoolean(value);
                     break;
                 case "HIDuncloakonclose":
-                    Toggle_Uncloak.IsOn = Convert.ToBoolean(value);
+                    Toggle_UncloakOnClose.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "HIDuncloakondisconnect":
+                    Toggle_UncloakOnDisconnect.IsOn = Convert.ToBoolean(value);
                     break;
                 case "HIDvibrateonconnect":
                     Toggle_Vibrate.IsOn = Convert.ToBoolean(value);
@@ -211,12 +214,12 @@ public partial class ControllerPage : Page
         ManagerFactory.settingsManager.Set("HIDcloakonconnect", Toggle_Cloaked.IsOn);
     }
 
-    private void Toggle_Uncloak_Toggled(object sender, RoutedEventArgs e)
+    private void Toggle_UncloakOnClose_Toggled(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
             return;
 
-        ManagerFactory.settingsManager.Set("HIDuncloakonclose", Toggle_Uncloak.IsOn);
+        ManagerFactory.settingsManager.Set("HIDuncloakonclose", Toggle_UncloakOnClose.IsOn);
     }
 
     private void SliderStrength_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -289,5 +292,13 @@ public partial class ControllerPage : Page
             return;
 
         ManagerFactory.settingsManager.Set("ConnectOnPlug", Toggle_ConnectOnPlug.IsOn);
+    }
+
+    private void Toggle_UncloakOnDisconnect_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.Set("HIDuncloakondisconnect", Toggle_UncloakOnDisconnect.IsOn);
     }
 }

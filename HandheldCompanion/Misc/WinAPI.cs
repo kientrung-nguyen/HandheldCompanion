@@ -673,13 +673,13 @@ public static class WinAPI
         {
             // Remove the border, caption, and system menu styles
             var newStyles = exStyles & ~((uint)WINDOWSTYLE.WS_BORDER | (uint)WINDOWSTYLE.WS_CAPTION | (uint)WINDOWSTYLE.WS_SYSMENU | (uint)WINDOWSTYLE.WS_THICKFRAME | (uint)WINDOWSTYLE.WS_MINIMIZEBOX | (uint)WINDOWSTYLE.WS_MAXIMIZEBOX);
-            SetWindowLong(hWnd, (int)GETWINDOWLONG.GWL_STYLE, (int)newStyles);
+            User32.SetWindowLong(hWnd, (int)GETWINDOWLONG.GWL_STYLE, (int)newStyles);
         }
         else
         {
             // Restore the border, caption, and system menu styles
             var newStyle = exStyles | (uint)WINDOWSTYLE.WS_BORDER | (uint)WINDOWSTYLE.WS_CAPTION | (uint)WINDOWSTYLE.WS_SYSMENU | (uint)WINDOWSTYLE.WS_THICKFRAME | (uint)WINDOWSTYLE.WS_MINIMIZEBOX | (uint)WINDOWSTYLE.WS_MAXIMIZEBOX;
-            SetWindowLong(hWnd, (int)GETWINDOWLONG.GWL_STYLE, (int)newStyle);
+            User32.SetWindowLong(hWnd, (int)GETWINDOWLONG.GWL_STYLE, (int)newStyle);
         }
     }
 

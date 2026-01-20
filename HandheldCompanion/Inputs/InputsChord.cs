@@ -25,7 +25,7 @@ namespace HandheldCompanion.Inputs
     {
         public InputsChord(ButtonState buttonState, List<InputsKey> keyState, InputsChordType InputsType)
         {
-            this.ButtonState = (ButtonState)buttonState.Clone();
+            this.ButtonState = buttonState.Clone() as ButtonState;
             this.KeyState.AddRange(keyState);
             this.chordType = InputsType;
         }
@@ -83,7 +83,7 @@ namespace HandheldCompanion.Inputs
         {
             InputsChord inputsChord = new();
             inputsChord.KeyState.AddRange(this.KeyState);
-            inputsChord.ButtonState = (ButtonState)this.ButtonState.Clone();
+            inputsChord.ButtonState = this.ButtonState.Clone() as ButtonState;
             inputsChord.chordType = this.chordType;
 
             return inputsChord;

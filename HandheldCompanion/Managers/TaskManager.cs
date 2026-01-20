@@ -35,9 +35,9 @@ public static class TaskManager
         try
         {
             // get current task, if any, delete it
-            task = taskService.FindTask(TaskName);
+            task = taskService.FindTask(App.ApplicationName);
             if (task is not null)
-                taskService.RootFolder.DeleteTask(TaskName);
+                taskService.RootFolder.DeleteTask(App.ApplicationName);
         }
         catch { }
 
@@ -55,7 +55,7 @@ public static class TaskManager
             taskDefinition.Triggers.Add(new LogonTrigger() { UserId = WindowsIdentity.GetCurrent().Name });
             taskDefinition.Actions.Add(new ExecAction(TaskExecutable));
 
-            task = TaskService.Instance.RootFolder.RegisterTaskDefinition(TaskName, taskDefinition);
+            task = TaskService.Instance.RootFolder.RegisterTaskDefinition(App.ApplicationName, taskDefinition);
             task.Enabled = ManagerFactory.settingsManager.Get<bool>("RunAtStartup");
         }
         catch { }

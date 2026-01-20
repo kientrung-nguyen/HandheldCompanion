@@ -1,5 +1,7 @@
 using HandheldCompanion.Commands.Functions.HC;
 using HandheldCompanion.Commands.Functions.Windows;
+using HandheldCompanion.Devices.AYANEO;
+using HandheldCompanion.Devices.Lenovo;
 using HandheldCompanion.Devices.Zotac;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
@@ -53,24 +55,10 @@ public enum TDPMethod
 
 public struct ECDetails
 {
-    // Todo, remove comments
-    // ADDR_PORT="0x4e" <-- AddressStatusCommandPort should be called address port??
-    // DATA_PORT="0x4f" <-- AddressDataPort should be called data port??
-
-    // Ayaneo LED control calls them EC_Data and EC_SC
-    //private const uint EC_DATA = 0x62; // Data Port
-    //private const uint EC_SC = 0x66;   // Status/Command Port
-
-    public ushort AddressStatusCommandPort;  // Address of the register, In EC communication, the registry address specifies the type of data or command you want to access.
-    public ushort AddressDataPort;      // Address where the data needs to go to, When interacting with the EC, the data address is where you send or receive the actual data or commands you want to communicate with the EC.
-    public ushort AddressFanControl;   // Never used?
-    public ushort AddressFanDuty;      // Never used?
-
-    // https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/12_ACPI_Embedded_Controller_Interface_Specification/embedded-controller-register-descriptions.html
-    // The embedded controller contains three registers at two address locations: EC_SC and EC_DATA.
-    // EC_SC Status Command Register
-    // EC_DATA Data register
-
+    public ushort AddressStatusCommandPort; // Address of the register, In EC communication, the registry address specifies the type of data or command you want to access.
+    public ushort AddressDataPort;          // Address where the data needs to go to, When interacting with the EC, the data address is where you send or receive the actual data or commands you want to communicate with the EC.
+    public ushort AddressFanControl;
+    public ushort AddressFanDuty;
     public short FanValueMin;
     public short FanValueMax;
     public ushort AddressFanRPMOffset;
@@ -184,9 +172,6 @@ public abstract class IDevice
     public string ProductIllustration = "device_generic";
     public string ProductModel = "default";
 
-    // minimum delay before trying to emulate a virtual controller on system resume (milliseconds)
-    public short ResumeDelay = 2000;
-
     // key press delay to use for certain scenarios
     public short KeyPressDelay = (short)(TimerManager.GetPeriod() * 2);
 
@@ -247,9 +232,11 @@ public abstract class IDevice
         if (IsOpen)
             return true;
 
+        LogManager.LogInformation("OpenLibSys initialization: {0}", UseOpenLib);
         if (UseOpenLib)
         {
             bool success = OpenLibSys();
+
             if (!success)
                 return false;
         }
@@ -268,28 +255,7 @@ public abstract class IDevice
         {
             // initialize OpenLibSys
             openLibSys = new OpenLibSys();
-
-            // Check support library sutatus
-            OlsStatus status = openLibSys.GetStatus();
-            switch (status)
-            {
-                case (uint)OlsStatus.NO_ERROR:
-                    break;
-                default:
-                    LogManager.LogError("Couldn't initialize OpenLibSys. ErrorCode: {0}", status);
-                    return false;
-            }
-
-            // Check WinRing0 status
-            OlsDllStatus dllstatus = (OlsDllStatus)openLibSys.GetDllStatus();
-            switch (dllstatus)
-            {
-                case (uint)OlsDllStatus.OLS_DLL_NO_ERROR:
-                    break;
-                default:
-                    LogManager.LogError("Couldn't initialize OpenLibSys. ErrorCode: {0}", dllstatus);
-                    return false;
-            }
+            return openLibSys.InitializeOls();
         }
         catch (Exception ex)
         {
@@ -297,8 +263,6 @@ public abstract class IDevice
             Close();
             return false;
         }
-
-        return true;
     }
 
     public virtual void OpenEvents()
@@ -619,6 +583,9 @@ public abstract class IDevice
                         case "FLIP DS":
                             device = new AYANEOFlipDS();
                             break;
+                        case "FLIP 1S DS":
+                            device = new AYANEOFlip1SDS();
+                            break;
                     }
                 }
                 break;
@@ -833,13 +800,17 @@ public abstract class IDevice
                 {
                     switch (SystemModel)
                     {
-                        case "83E1":
+                        case "83E1":    // Legion Go
                             device = new LegionGoTablet();
                             break;
-                        case "83L3": // Legion Go S Z2 Go
+                        case "83N0":    // Legion Go 2
+                        case "83N1":
+                            device = new LegionGoTablet2();
+                            break;
+                        case "83L3":    // Legion Go S Z2 Go
                             device = new LegionGoSZ2();
                             break;
-                        case "83N6": // Legion Go S Z1E
+                        case "83N6":    // Legion Go S Z1E
                         case "83Q2":
                         case "83Q3":
                             device = new LegionGoSZ1();
@@ -999,13 +970,13 @@ public abstract class IDevice
         if (ECDetails.AddressFanDuty == 0)
             return;
 
-        if (!IsOpen)
+        if (!UseOpenLib || !IsOpen)
             return;
 
         var duty = percent * (ECDetails.FanValueMax - ECDetails.FanValueMin) / 100 + ECDetails.FanValueMin;
         var data = Convert.ToByte(duty);
 
-        ECRamDirectWrite(ECDetails.AddressFanDuty, ECDetails, data);
+        ECRamDirectWriteByte(ECDetails.AddressFanDuty, ECDetails, data);
     }
 
     public virtual void SetFanControl(bool enable, int mode = 0)
@@ -1013,11 +984,11 @@ public abstract class IDevice
         if (ECDetails.AddressFanControl == 0)
             return;
 
-        if (!IsOpen)
+        if (!UseOpenLib || !IsOpen)
             return;
 
         var data = Convert.ToByte(enable);
-        ECRamDirectWrite(ECDetails.AddressFanControl, ECDetails, data);
+        ECRamDirectWriteByte(ECDetails.AddressFanControl, ECDetails, data);
     }
 
     public virtual float ReadFanDuty()
@@ -1057,51 +1028,51 @@ public abstract class IDevice
         return true;
     }
 
-    [Obsolete("ECRamReadByte is deprecated, please use ECRamReadByte with ECDetails instead.")]
-    public virtual byte ECRamReadByte(ushort address)
+    public virtual byte ECRamReadByte(ushort register)
     {
-        if (!IsOpen)
+        if (!UseOpenLib || !IsOpen)
             return 0;
 
         try
         {
-            return openLibSys.ReadIoPortByte(address);
+            return openLibSys.ReadIoPortByte(register);
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Couldn't read byte from address {0} using OpenLibSys. ErrorCode: {1}", address, ex.Message);
+            LogManager.LogError("Couldn't read byte from address {0} using OpenLibSys. ErrorCode: {1}", register, ex.Message);
             return 0;
         }
     }
 
-    [Obsolete("ECRamWriteByte is deprecated, please use ECRamDirectWrite with ECDetails instead.")]
-    public virtual bool ECRamWriteByte(ushort address, byte data)
+    public virtual bool ECRamWriteByte(ushort register, byte data)
     {
-        if (!IsOpen)
+        if (!UseOpenLib || !IsOpen)
             return false;
 
         try
         {
-            openLibSys.WriteIoPortByte(address, data);
+            openLibSys.WriteIoPortByte(register, data);
             return true;
         }
         catch (Exception ex)
         {
-            LogManager.LogError("Couldn't write byte to address {0} using OpenLibSys. ErrorCode: {1}", address, ex.Message);
+            LogManager.LogError("Couldn't write byte to address {0} using OpenLibSys. ErrorCode: {1}", register, ex.Message);
             return false;
         }
     }
 
-    public virtual byte ECRamDirectReadByte(ushort address, ECDetails details)
+    public virtual byte ECRamDirectReadByte(ushort register, ECDetails details)
     {
-        if (!IsOpen)
+        if (!UseOpenLib || !IsOpen)
             return 0;
 
-        var addr_upper = (byte)((address >> 8) & byte.MaxValue);
-        var addr_lower = (byte)(address & byte.MaxValue);
+        var addr_upper = (byte)((register >> 8) & byte.MaxValue);
+        var addr_lower = (byte)(register & byte.MaxValue);
 
         try
         {
+            openLibSys.EnterSuperIoConfig(details.AddressStatusCommandPort, details.AddressDataPort);
+
             openLibSys.WriteIoPortByte(details.AddressStatusCommandPort, 0x2E);
             openLibSys.WriteIoPortByte(details.AddressDataPort, 0x11);
             openLibSys.WriteIoPortByte(details.AddressStatusCommandPort, 0x2F);
@@ -1123,9 +1094,13 @@ public abstract class IDevice
             LogManager.LogError("Couldn't read to port using OpenLibSys. ErrorCode: {0}", ex.Message);
             return 0;
         }
+        finally
+        {
+            openLibSys.ExitSuperIoConfig(details.AddressStatusCommandPort, details.AddressDataPort);
+        }
     }
 
-    public virtual long ECRAMReadLong(ushort address, int length, ECDetails details)
+    public virtual long ECRamReadLong(ushort address, int length, ECDetails details)
     {
         var sum = 0l;
         foreach (var len in Enumerable.Range(0, length))
@@ -1136,16 +1111,18 @@ public abstract class IDevice
         return sum;
     }
 
-    public virtual bool ECRamDirectWrite(ushort address, ECDetails details, byte data)
+    public virtual bool ECRamDirectWriteByte(ushort register, ECDetails details, byte data)
     {
-        if (!IsOpen)
+        if (!UseOpenLib || !IsOpen)
             return false;
 
-        byte addr_upper = (byte)((address >> 8) & byte.MaxValue);
-        byte addr_lower = (byte)(address & byte.MaxValue);
+        byte addr_upper = (byte)((register >> 8) & byte.MaxValue);
+        byte addr_lower = (byte)(register & byte.MaxValue);
 
         try
         {
+            openLibSys.EnterSuperIoConfig(details.AddressStatusCommandPort, details.AddressDataPort);
+
             openLibSys.WriteIoPortByte(details.AddressStatusCommandPort, 0x2E);
             openLibSys.WriteIoPortByte(details.AddressDataPort, 0x11);
             openLibSys.WriteIoPortByte(details.AddressStatusCommandPort, 0x2F);
@@ -1160,6 +1137,7 @@ public abstract class IDevice
             openLibSys.WriteIoPortByte(details.AddressDataPort, 0x12);
             openLibSys.WriteIoPortByte(details.AddressStatusCommandPort, 0x2F);
             openLibSys.WriteIoPortByte(details.AddressDataPort, data);
+
             return true;
         }
         catch (Exception ex)
@@ -1167,13 +1145,20 @@ public abstract class IDevice
             LogManager.LogError("Couldn't write to port using OpenLibSys. ErrorCode: {0}", ex.Message);
             return false;
         }
+        finally
+        {
+            openLibSys.ExitSuperIoConfig(details.AddressStatusCommandPort, details.AddressDataPort);
+        }
     }
 
-    protected virtual void ECRAMWrite(byte address, byte data)
+    protected virtual void EcWriteByte(byte register, byte data)
     {
-        SendECCommand(WR_EC);
-        SendECData(address);
-        SendECData(data);
+        openLibSys.EcWriteByte(register, data);
+    }
+
+    protected virtual byte EcReadByte(byte register)
+    {
+        return openLibSys.EcReadByte(register);
     }
 
     public virtual void set_long_limit(int limit)
@@ -1190,28 +1175,6 @@ public abstract class IDevice
 
     public virtual void set_gfx_clk(uint clock)
     { }
-
-    protected virtual void SendECCommand(byte command)
-    {
-        if (IsECReady())
-            ECRamWriteByte(EC_SC, command);
-    }
-
-    protected virtual void SendECData(byte data)
-    {
-        if (IsECReady())
-            ECRamWriteByte(EC_DATA, data);
-    }
-
-    protected bool IsECReady()
-    {
-        Task timeout = Task.Delay(TimeSpan.FromMilliseconds(250));
-        while (!timeout.IsCompleted)
-            if ((ECRamReadByte(EC_SC) & EC_IBF) == 0x0)
-                return true;
-
-        return false;
-    }
 
     protected void KeyPress(ButtonFlags button)
     {

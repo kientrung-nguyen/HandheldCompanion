@@ -474,15 +474,6 @@ public class LibreHardware : IPlatform
                 break;
         }
     }
-
-    //private void HandleCPU_Load()
-    //{
-    //    currentMetrics.CpuClock = currentMetrics.CpuRatioCores.Average(v => v * currentMetrics.CpuBusClock);
-    //    currentMetrics.CpuClockMax = currentMetrics.CpuRatioCores.Max(v => v * currentMetrics.CpuBusClock);
-    //    currentMetrics.CpuLoad = currentMetrics.CpuClockEffective * 100 / ProcessorMaxClockSpeed;
-    //    currentMetrics.CpuLoadMax = currentMetrics.CpuLoadCores.Max();
-    //}
-
     private void HandleCPU_Clock(ISensor sensor)
     {
         var value = sensor.Value.GetValueOrDefault();

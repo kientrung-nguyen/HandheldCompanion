@@ -10,7 +10,6 @@ public class GPDWinMax2 : IDevice
     {
         // device specific settings
         ProductIllustration = "device_gpd_winmax2";
-
         UseOpenLib = true;
 
         // device specific capacities

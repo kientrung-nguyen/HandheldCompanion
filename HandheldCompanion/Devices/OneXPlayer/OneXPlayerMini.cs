@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Commands.Functions.HC;
+using HandheldCompanion.Commands.Functions.Windows;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
@@ -67,7 +68,7 @@ public class OneXPlayerMini : IDevice
         // prepare hotkeys
         DeviceHotkeys[typeof(MainWindowCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = true;
         DeviceHotkeys[typeof(QuickToolsCommands)].inputsChord.ButtonState[ButtonFlags.OEM3] = true;
-        DeviceHotkeys[typeof(OnScreenKeyboard)].inputsChord.ButtonState[ButtonFlags.OEM2] = true;
+        DeviceHotkeys[typeof(OnScreenKeyboardCommands)].inputsChord.ButtonState[ButtonFlags.OEM2] = true;
     }
 
     public override string GetGlyph(ButtonFlags button)
@@ -93,13 +94,13 @@ public class OneXPlayerMini : IDevice
 
         // allow OneX button to pass key inputs
         LogManager.LogInformation("Unlocked {0} OEM button", ButtonFlags.OEM1);
-        return ECRamDirectWrite(0x41E, ECDetails, 0x01);
+        return ECRamDirectWriteByte(0x41E, ECDetails, 0x01);
     }
 
     public override void Close()
     {
         LogManager.LogInformation("Locked {0} OEM button", ButtonFlags.OEM1);
-        ECRamDirectWrite(0x41E, ECDetails, 0x00);
+        ECRamDirectWriteByte(0x41E, ECDetails, 0x00);
         base.Close();
     }
 }

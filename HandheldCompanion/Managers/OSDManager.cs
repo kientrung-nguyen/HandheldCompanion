@@ -435,7 +435,7 @@ public static class OSDManager
                 NormalizeClock(metrics.CpuClockMax));
             AddElementIfNotNull(cpuEntry, metrics.CpuTemp, "°C",
                 metrics.CpuTemp < 60 ? "" : metrics.CpuTemp < 70 ? COLOR_ORANGE : COLOR_RED);
-            AddElementIfNotNull(cpuEntry, metrics.CpuPower, "W");
+            //AddElementIfNotNull(cpuEntry, metrics.CpuPower, "W");
             AddElementIfNotNull(cpuEntry,
                 NormalizeBytes(metrics.MemUsed * MB_TO_BYTES),
                 NormalizeBytes((metrics.MemUsed + metrics.MemAvailable) * MB_TO_BYTES), COLOR_STEAM_BLUE);
@@ -452,7 +452,7 @@ public static class OSDManager
                 NormalizeClock(metrics.GpuClock));
             AddElementIfNotNull(gpuEntry, metrics.GpuTemp, "°C",
                 metrics.GpuTemp < 60 ? "" : metrics.GpuTemp < 70 ? COLOR_ORANGE : COLOR_RED);
-            AddElementIfNotNull(gpuEntry, metrics.GpuPower, "W");
+            //AddElementIfNotNull(gpuEntry, metrics.GpuPower, "W");
             AddElementIfNotNull(gpuEntry,
                 NormalizeBytes((metrics.GpuMemDedicated + currentMetrics.GpuMemShared) * MB_TO_BYTES),
                 NormalizeBytes((metrics.GpuMemDedicated + currentMetrics.GpuMemDedicatedAvailable) * MB_TO_BYTES), COLOR_STEAM_BLUE);
@@ -463,8 +463,8 @@ public static class OSDManager
 
         using (OverlayRow rowTdp = new())
         {
-            using OverlayEntry tdpEntry = new("TDP", "363D8B");
-            AddElementIfNotNull(tdpEntry, PerformanceManager.CurrentTDP <= 0 ? float.NaN : PerformanceManager.CurrentTDP, "W");
+            using OverlayEntry tdpEntry = new("PWR", "363D8B");
+            AddElementIfNotNull(tdpEntry, metrics.CpuPower, "W");
             AddElementIfNotNull(tdpEntry, currentMetrics.FanSpeed, "rpm");
             rowTdp.entries.Add(tdpEntry);
             rows.Add(rowTdp.ToString());

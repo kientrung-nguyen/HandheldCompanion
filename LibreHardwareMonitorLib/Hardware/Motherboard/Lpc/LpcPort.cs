@@ -6,7 +6,7 @@
 
 namespace LibreHardwareMonitor.Hardware.Motherboard.Lpc;
 
-internal class LpcPort
+public class LpcPort
 {
     private PawnIo.LpcIo _pawnModule;
 
