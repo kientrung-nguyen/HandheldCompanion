@@ -1429,12 +1429,84 @@ namespace HandheldCompanion.Properties
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public double RyzenAdjCoall {
+        public double RyzenAdjCoAll {
             get {
-                return ((double)(this["RyzenAdjCoall"]));
+                return ((double)(this["RyzenAdjCoAll"]));
             }
             set {
-                this["RyzenAdjCoall"] = value;
+                this["RyzenAdjCoAll"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double RyzenAdjCoGfx {
+            get {
+                return ((double)(this["RyzenAdjCoGfx"]));
+            }
+            set {
+                this["RyzenAdjCoGfx"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double MsrUndervoltCore {
+            get {
+                return ((double)(this["MsrUndervoltCore"]));
+            }
+            set {
+                this["MsrUndervoltCore"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double MsrUndervoltGpu {
+            get {
+                return ((double)(this["MsrUndervoltGpu"]));
+            }
+            set {
+                this["MsrUndervoltGpu"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double MsrUndervoltSoc {
+            get {
+                return ((double)(this["MsrUndervoltSoc"]));
+            }
+            set {
+                this["MsrUndervoltSoc"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnhancedSleep {
+            get {
+                return ((bool)(this["EnhancedSleep"]));
+            }
+            set {
+                this["EnhancedSleep"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool GoBackToSleep {
+            get {
+                return ((bool)(this["GoBackToSleep"]));
+            }
+            set {
+                this["GoBackToSleep"] = value;
             }
         }
     }

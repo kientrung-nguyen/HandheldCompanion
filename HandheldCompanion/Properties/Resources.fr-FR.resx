@@ -602,7 +602,7 @@
     <value> %</value>
   </data>
   <data name="ProfilesPage_AreYouSureDelete1" xml:space="preserve">
-    <value>Êtes-vous sûr de vouloir supprimer?</value>
+    <value>Êtes-vous sûr de vouloir supprimer {0}?</value>
   </data>
   <data name="ProfilesPage_AreYouSureDelete2" xml:space="preserve">
     <value>Cet élément sera supprimé immédiatement. Vous ne pouvez pas annuler cette action.</value>
@@ -2855,7 +2855,7 @@ Interrupteur d'entrée de mouvement : appuyez sur le(s) bouton(s) sélectionné(
     <value>Activé les données de télémétrie à envoyer automatiquement en cas de plantage</value>
   </data>
   <data name="ControllerPage_ControllerManagement_Content" xml:space="preserve">
-    <value>Initialisation de la reconfiguration du contrôleur… Veuillez patienter.</value>
+    <value>Initialisation de la reconfiguration du contrôleur... Veuillez patienter.</value>
   </data>
   <data name="ControllerPage_ControllerManagement_Attempt0" xml:space="preserve">
     <value>Nous sommes en train de réordonner les contrôleurs pour améliorer la compatibilité du jeu. Veuillez patienter.</value>
@@ -4020,10 +4020,10 @@ Merci d’utiliser HC et de nous aider à l’améliorer.</value>
   <data name="SettingsPage_AdvancedSettingsDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
     <value />
   </data>
-  <data name="SettingsPage_CurveOptimiser" type="System.Resources.ResXNullRef, System.Windows.Forms">
+  <data name="SettingsPage_AllCurveOptimiser" type="System.Resources.ResXNullRef, System.Windows.Forms">
     <value />
   </data>
-  <data name="SettingsPage_CurveOptimiserDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
+  <data name="SettingsPage_AllCurveOptimiserDesc" type="System.Resources.ResXNullRef, System.Windows.Forms">
     <value />
   </data>
 </root>

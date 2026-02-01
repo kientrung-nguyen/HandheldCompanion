@@ -19,7 +19,7 @@ namespace HandheldCompanion.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "18.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class Resources {
@@ -529,7 +529,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Initializing controller reconfiguration… Please wait..
+        ///   Looks up a localized string similar to Initializing controller reconfiguration... Please wait..
         /// </summary>
         public static string ControllerPage_ControllerManagement_Content {
             get {
@@ -1402,6 +1402,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Enhanced sleep.
+        /// </summary>
+        public static string DevicePage_EnhancedSleep {
+            get {
+                return ResourceManager.GetString("DevicePage_EnhancedSleep", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Optimizes Modern Standby power policies to reduce sleep drain (e.g., disables wake timers and network activity)..
+        /// </summary>
+        public static string DevicePage_EnhancedSleepDesc {
+            get {
+                return ResourceManager.GetString("DevicePage_EnhancedSleepDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Sets the fan to max speed.
         /// </summary>
         public static string DevicePage_FullFanSpeedDesc {
@@ -1434,6 +1452,24 @@ namespace HandheldCompanion.Properties {
         public static string DevicePage_GamingZone_VRAMDesc {
             get {
                 return ResourceManager.GetString("DevicePage_GamingZone_VRAMDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Go back to sleep.
+        /// </summary>
+        public static string DevicePage_GoBackToSleep {
+            get {
+                return ResourceManager.GetString("DevicePage_GoBackToSleep", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to If the device wakes from Modern Standby for any reason other than the power button, it will be sent back to sleep..
+        /// </summary>
+        public static string DevicePage_GoBackToSleepDesc {
+            get {
+                return ResourceManager.GetString("DevicePage_GoBackToSleepDesc", resourceCulture);
             }
         }
         
@@ -4723,6 +4759,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Toggle emulated controller status.
+        /// </summary>
+        public static string Hotkey_ChangeHIDStatus {
+            get {
+                return ResourceManager.GetString("Hotkey_ChangeHIDStatus", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toggle between Connected and Disconnected.
+        /// </summary>
+        public static string Hotkey_ChangeHIDStatusDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_ChangeHIDStatusDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Command name.
         /// </summary>
         public static string Hotkey_CommandName {
@@ -5547,6 +5601,42 @@ namespace HandheldCompanion.Properties {
         public static string Hotkey_overlayTrackpadsDesc {
             get {
                 return ResourceManager.GetString("Hotkey_overlayTrackpadsDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to PowerShell.
+        /// </summary>
+        public static string Hotkey_PowerShell {
+            get {
+                return ResourceManager.GetString("Hotkey_PowerShell", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Script.
+        /// </summary>
+        public static string Hotkey_PowerShellContent {
+            get {
+                return ResourceManager.GetString("Hotkey_PowerShellContent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to PowerShell script to run when this hotkey is triggered. The script is executed as-is (multiline supported). Use with caution..
+        /// </summary>
+        public static string Hotkey_PowerShellContentDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_PowerShellContentDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Execute the user-provided powershell script.
+        /// </summary>
+        public static string Hotkey_PowerShellDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_PowerShellDesc", resourceCulture);
             }
         }
         
@@ -8301,7 +8391,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Are you sure you want to delete?.
+        ///   Looks up a localized string similar to Are you sure you want to delete {0}?.
         /// </summary>
         public static string ProfilesPage_AreYouSureDelete1 {
             get {
@@ -10697,6 +10787,33 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to CPU curve optimiser.
+        /// </summary>
+        public static string SettingsPage_AllCurveOptimiser {
+            get {
+                return ResourceManager.GetString("SettingsPage_AllCurveOptimiser", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Change the CPU curve optimiser value.
+        /// </summary>
+        public static string SettingsPage_AllCurveOptimiserDesc {
+            get {
+                return ResourceManager.GetString("SettingsPage_AllCurveOptimiserDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Values are curve steps, not millivolts. Use negative values (steps) to undervolt. Any option other than 0 can lead to system instability or crashes..
+        /// </summary>
+        public static string SettingsPage_AllCurveOptimiserTooltip {
+            get {
+                return ResourceManager.GetString("SettingsPage_AllCurveOptimiserTooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Language.
         /// </summary>
         public static string SettingsPage_AppLanguage {
@@ -10850,24 +10967,6 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to CPU Curve Optimiser (All Cores).
-        /// </summary>
-        public static string SettingsPage_CurveOptimiser {
-            get {
-                return ResourceManager.GetString("SettingsPage_CurveOptimiser", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Change the all core Curve Optimiser Frequency/Voltage curve offset (negative values to undervolt, positive to add margin).
-        /// </summary>
-        public static string SettingsPage_CurveOptimiserDesc {
-            get {
-                return ResourceManager.GetString("SettingsPage_CurveOptimiserDesc", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Download.
         /// </summary>
         public static string SettingsPage_Download {
@@ -10940,6 +11039,33 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to iGPU curve optimiser.
+        /// </summary>
+        public static string SettingsPage_GfxCurveOptimiser {
+            get {
+                return ResourceManager.GetString("SettingsPage_GfxCurveOptimiser", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Change the iGPU curve optimiser value.
+        /// </summary>
+        public static string SettingsPage_GfxCurveOptimiserDesc {
+            get {
+                return ResourceManager.GetString("SettingsPage_GfxCurveOptimiserDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Values are curve steps, not millivolts. Use negative values (steps) to undervolt. Any option other than 0 can lead to system instability or crashes..
+        /// </summary>
+        public static string SettingsPage_GfxCurveOptimiserTooltip {
+            get {
+                return ResourceManager.GetString("SettingsPage_GfxCurveOptimiserTooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Hide when loses focus.
         /// </summary>
         public static string SettingsPage_HideWhenLoseFocus {
@@ -10972,6 +11098,87 @@ namespace HandheldCompanion.Properties {
         public static string SettingsPage_LastChecked {
             get {
                 return ResourceManager.GetString("SettingsPage_LastChecked", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to CPU voltage offset.
+        /// </summary>
+        public static string SettingsPage_MsrCPUUndervolt {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrCPUUndervolt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Applies a voltage offset in millivolts to CPU core and cache rails.
+        /// </summary>
+        public static string SettingsPage_MsrCPUUndervoltDesc {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrCPUUndervoltDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use negative values (-mV) to undervolt. Any option other than 0 can lead to system instability or crashes..
+        /// </summary>
+        public static string SettingsPage_MsrCPUUndervoltTooltip {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrCPUUndervoltTooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to iGPU voltage offset.
+        /// </summary>
+        public static string SettingsPage_MsrGPUUndervolt {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrGPUUndervolt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Applies a voltage offset in millivolts to the integrated GPU.
+        /// </summary>
+        public static string SettingsPage_MsrGPUUndervoltDesc {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrGPUUndervoltDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use negative values (-mV) to undervolt. Any option other than 0 can lead to system instability or crashes..
+        /// </summary>
+        public static string SettingsPage_MsrGPUUndervoltTooltip {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrGPUUndervoltTooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SoC voltage offset.
+        /// </summary>
+        public static string SettingsPage_MsrSocUndervolt {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrSocUndervolt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Applies a voltage offset in millivolts to the SoC.
+        /// </summary>
+        public static string SettingsPage_MsrSocUndervoltDesc {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrSocUndervoltDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use negative values (-mV) to undervolt. Any option other than 0 can lead to system instability or crashes..
+        /// </summary>
+        public static string SettingsPage_MsrSocUndervoltTooltip {
+            get {
+                return ResourceManager.GetString("SettingsPage_MsrSocUndervoltTooltip", resourceCulture);
             }
         }
         

@@ -157,7 +157,8 @@
                         VerticalAlignment="Stretch"
                         Command="{Binding PinButtonCommand}"
                         IsChecked="{Binding IsPinned, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                        IsEnabled="{Binding CanUnpin, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                        IsEnabled="{Binding CanUnpin, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        Tag="Hotkey">
                         <ui:FontIcon
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -195,6 +196,7 @@
                         <ComboBoxItem Content="{l:Static resx:Resources.Hotkey_Function}" ToolTip="{l:Static resx:Resources.Hotkey_FunctionDesc}" />
                         <ComboBoxItem Content="{l:Static resx:Resources.Hotkey_Keystrokes}" ToolTip="{l:Static resx:Resources.Hotkey_KeystrokesDesc}" />
                         <ComboBoxItem Content="{l:Static resx:Resources.Hotkey_Executable}" ToolTip="{l:Static resx:Resources.Hotkey_ExecutableDesc}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.Hotkey_PowerShell}" ToolTip="{l:Static resx:Resources.Hotkey_PowerShellDesc}" />
                     </ComboBox>
                 </ui:SettingsCard>
 
@@ -384,10 +386,11 @@
                     <TextBox Width="290" Text="{Binding ExecutableArguments, Mode=TwoWay}" />
                 </ui:SettingsCard>
 
+                <!--  Executable, PowerShell (CommandTypeIndex == 3,4)  -->
                 <ui:SettingsCard
                     Description="{l:Static resx:Resources.Hotkey_WindowStyleDesc}"
                     Header="{l:Static resx:Resources.Hotkey_WindowStyle}"
-                    Visibility="{Binding CommandTypeIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3}">
+                    Visibility="{Binding CommandTypeIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3|4}">
                     <ComboBox SelectedIndex="{Binding ExecutableWindowStyle, Mode=TwoWay}">
                         <ComboBoxItem Content="{l:Static resx:Resources.Hotkey_WindowStyle_Normal}" />
                         <ComboBoxItem Content="{l:Static resx:Resources.Hotkey_WindowStyle_Hidden}" />
@@ -396,11 +399,26 @@
                     </ComboBox>
                 </ui:SettingsCard>
 
+                <!--  Executable, PowerShell (CommandTypeIndex == 3,4)  -->
                 <ui:SettingsCard
                     Description="{l:Static resx:Resources.Hotkey_RunAsAdministratorDesc}"
                     Header="{l:Static resx:Resources.Hotkey_RunAsAdministrator}"
-                    Visibility="{Binding CommandTypeIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3}">
+                    Visibility="{Binding CommandTypeIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3|4}">
                     <ui:ToggleSwitch HorizontalAlignment="Right" IsOn="{Binding ExecutableRunAs, Mode=TwoWay}" />
+                </ui:SettingsCard>
+
+                <!--  PowerShell (CommandTypeIndex == 4)  -->
+                <ui:SettingsCard
+                    Description="{l:Static resx:Resources.Hotkey_PowerShellContent}"
+                    Header="{l:Static resx:Resources.Hotkey_PowerShellContentDesc}"
+                    Visibility="{Binding CommandTypeIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
+                    <TextBox
+                        Width="290"
+                        MinHeight="140"
+                        AcceptsReturn="True"
+                        Text="{Binding ScriptContent, UpdateSourceTrigger=PropertyChanged}"
+                        TextWrapping="Wrap"
+                        VerticalScrollBarVisibility="Auto" />
                 </ui:SettingsCard>
 
                 <!--  finally: Delete hotkey  -->
@@ -1128,7 +1146,7 @@
                         </ComboBox>
 
                         <ComboBox
-                            MinWidth="180"
+                            MinWidth="240"
                             Margin="3,0,0,0"
                             DisplayMemberPath="Content"
                             ItemsSource="{Binding Targets, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
@@ -1154,9 +1172,38 @@
                 </ui:SettingsExpander.Content>
 
                 <ui:SettingsExpander.Items>
+                    <!--  Move mouse cursor to X,Y  -->
+                    <!--  TODO: Translate me  -->
+                    <ui:SettingsCard Header="Mouse position" Visibility="{Binding Button2MouseTo, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}">
+                        <StackPanel>
+                            <WrapPanel Orientation="Horizontal">
+                                <TextBlock VerticalAlignment="Center" Text="X" />
+                                <ui:NumberBox
+                                    MinWidth="20"
+                                    Margin="6,0,0,0"
+                                    Minimum="0"
+                                    SpinButtonPlacementMode="Inline"
+                                    Value="{Binding Button2MouseToX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </WrapPanel>
+                            <WrapPanel Orientation="Horizontal">
+                                <TextBlock VerticalAlignment="Center" Text="Y" />
+                                <ui:NumberBox
+                                    MinWidth="20"
+                                    Margin="6,0,0,0"
+                                    Minimum="0"
+                                    SpinButtonPlacementMode="Inline"
+                                    Value="{Binding Button2MouseToY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </ui:SettingsCard>
+                    <!--  TODO: Translate me  -->
+                    <ui:SettingsCard Header="Restore previous position" Visibility="{Binding Button2MouseTo, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}">
+                        <ui:ToggleSwitch IsOn="{Binding Button2MouseRestore, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </ui:SettingsCard>
+
                     <!--  Keyboard/Mouse  -->
                     <!--  Modifiers  -->
-                    <ui:SettingsCard Header="Modifier(s)" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3|4}">
+                    <ui:SettingsCard Header="Modifier(s)" Visibility="{Binding HasModifier, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <ComboBox SelectedIndex="{Binding ModifierIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                             <ComboBoxItem Content="None" />
                             <ComboBoxItem Content="Shift" />
@@ -1234,10 +1281,9 @@
                                 Margin="3,0,0,0"
                                 VerticalAlignment="Center"
                                 IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
                                 Maximum="1000"
                                 Minimum="0"
-                                TickFrequency="1"
+                                TickFrequency="100"
                                 TickPlacement="BottomRight"
                                 ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                 Value="{Binding StartDelay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -1295,12 +1341,15 @@
                         Header="{x:Static resx:Resources.LayoutPage_InputShift}"
                         Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|2|3|4|5|6|7|8|9|10}">
                         <StackPanel Orientation="Horizontal">
-                            <ComboBox SelectedIndex="{Binding ShiftModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="140">
+                            <ComboBox MinWidth="140" SelectedIndex="{Binding ShiftModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                 <ComboBoxItem Content="Disabled on shift" />
                                 <ComboBoxItem Content="Always enabled" />
                                 <ComboBoxItem Content="Enabled on shift" />
                             </ComboBox>
-                            <WrapPanel Orientation="Horizontal" Margin="8,0,0,0" Visibility="{Binding ShowShiftSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <WrapPanel
+                                Margin="8,0,0,0"
+                                Orientation="Horizontal"
+                                Visibility="{Binding ShowShiftSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <CheckBox Content="A" IsChecked="{Binding ShiftA, Mode=TwoWay}" />
                                 <CheckBox Content="B" IsChecked="{Binding ShiftB, Mode=TwoWay}" />
                                 <CheckBox Content="C" IsChecked="{Binding ShiftC, Mode=TwoWay}" />
@@ -1367,7 +1416,7 @@
                     </ComboBox>
 
                     <ComboBox
-                        Width="180"
+                        MinWidth="240"
                         Margin="3,0,0,0"
                         DisplayMemberPath="Content"
                         ItemsSource="{Binding Targets, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
@@ -1742,7 +1791,7 @@
                         </ComboBox>
 
                         <ComboBox
-                            MinWidth="180"
+                            MinWidth="240"
                             Margin="3,0,0,0"
                             VerticalAlignment="Center"
                             DisplayMemberPath="Content"
@@ -1801,7 +1850,7 @@
                                 Maximum="32000"
                                 Minimum="1000"
                                 SmallChange="1000"
-                                TickFrequency="4000"
+                                TickFrequency="2000"
                                 TickPlacement="BottomRight"
                                 ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                 Value="{Binding Axis2ButtonThreshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -1851,10 +1900,9 @@
                                 Margin="3,0,0,0"
                                 VerticalAlignment="Center"
                                 IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
                                 Maximum="1000"
                                 Minimum="0"
-                                TickFrequency="1"
+                                TickFrequency="100"
                                 TickPlacement="BottomRight"
                                 ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                 Value="{Binding StartDelay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -2065,12 +2113,15 @@
                         Header="{x:Static resx:Resources.LayoutPage_InputShift}"
                         Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|2|3|4|5|6|7|8|9|10}">
                         <StackPanel Orientation="Horizontal">
-                            <ComboBox SelectedIndex="{Binding ShiftModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="140">
+                            <ComboBox MinWidth="140" SelectedIndex="{Binding ShiftModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                 <ComboBoxItem Content="Disabled on shift" />
                                 <ComboBoxItem Content="Always enabled" />
                                 <ComboBoxItem Content="Enabled on shift" />
                             </ComboBox>
-                            <WrapPanel Orientation="Horizontal" Margin="8,0,0,0" Visibility="{Binding ShowShiftSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <WrapPanel
+                                Margin="8,0,0,0"
+                                Orientation="Horizontal"
+                                Visibility="{Binding ShowShiftSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <CheckBox Content="A" IsChecked="{Binding ShiftA, Mode=TwoWay}" />
                                 <CheckBox Content="B" IsChecked="{Binding ShiftB, Mode=TwoWay}" />
                                 <CheckBox Content="C" IsChecked="{Binding ShiftC, Mode=TwoWay}" />
@@ -2116,7 +2167,7 @@
                         </ComboBox>
 
                         <ComboBox
-                            Width="180"
+                            MinWidth="240"
                             Margin="3,0,0,0"
                             DisplayMemberPath="Content"
                             ItemsSource="{Binding Targets, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
@@ -2209,10 +2260,9 @@
                                 Margin="3,0,0,0"
                                 VerticalAlignment="Center"
                                 IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
                                 Maximum="1000"
                                 Minimum="0"
-                                TickFrequency="1"
+                                TickFrequency="100"
                                 TickPlacement="BottomRight"
                                 ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                 Value="{Binding StartDelay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -2298,12 +2348,15 @@
                         Header="{x:Static resx:Resources.LayoutPage_InputShift}"
                         Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|2|3|4|5|6|7|8|9|10}">
                         <StackPanel Orientation="Horizontal">
-                            <ComboBox SelectedIndex="{Binding ShiftModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="140">
+                            <ComboBox MinWidth="140" SelectedIndex="{Binding ShiftModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                 <ComboBoxItem Content="Disabled on shift" />
                                 <ComboBoxItem Content="Always enabled" />
                                 <ComboBoxItem Content="Enabled on shift" />
                             </ComboBox>
-                            <WrapPanel Orientation="Horizontal" Margin="8,0,0,0" Visibility="{Binding ShowShiftSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <WrapPanel
+                                Margin="8,0,0,0"
+                                Orientation="Horizontal"
+                                Visibility="{Binding ShowShiftSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <CheckBox Content="A" IsChecked="{Binding ShiftA, Mode=TwoWay}" />
                                 <CheckBox Content="B" IsChecked="{Binding ShiftB, Mode=TwoWay}" />
                                 <CheckBox Content="C" IsChecked="{Binding ShiftC, Mode=TwoWay}" />

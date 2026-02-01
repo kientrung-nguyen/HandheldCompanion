@@ -1,6 +1,8 @@
+using HandheldCompanion.Devices.AYANEO;
+
 namespace HandheldCompanion.Devices;
 
-public class AYANEOAIRPlus : AYANEO.AYANEODeviceCEii
+public class AYANEOAIRPlus : AYANEODeviceCEii
 {
     public AYANEOAIRPlus()
     {

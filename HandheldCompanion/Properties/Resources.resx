@@ -620,7 +620,7 @@
     <value> %</value>
   </data>
   <data name="ProfilesPage_AreYouSureDelete1" xml:space="preserve">
-    <value>Are you sure you want to delete?</value>
+    <value>Are you sure you want to delete {0}?</value>
   </data>
   <data name="ProfilesPage_AreYouSureDelete2" xml:space="preserve">
     <value>This item will be deleted immediatly. You can't undo this action.</value>
@@ -2863,7 +2863,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Enabled telemetry data to be automatically be sent in case of a crash</value>
   </data>
   <data name="ControllerPage_ControllerManagement_Content" xml:space="preserve">
-    <value>Initializing controller reconfiguration… Please wait.</value>
+    <value>Initializing controller reconfiguration... Please wait.</value>
   </data>
   <data name="ControllerPage_ControllerManagement_Attempt0" xml:space="preserve">
     <value>We are reordering controllers to improve game compatibility. Please wait a moment.</value>
@@ -4026,10 +4026,79 @@ Thank you for using HC and helping us make it better.</value>
   <data name="SettingsPage_AdvancedSettingsDesc" xml:space="preserve">
     <value>Allows advanced device settings modifications, including power and voltage values</value>
   </data>
-  <data name="SettingsPage_CurveOptimiser" xml:space="preserve">
-    <value>CPU Curve Optimiser (All Cores)</value>
+  <data name="SettingsPage_AllCurveOptimiser" xml:space="preserve">
+    <value>CPU curve optimiser</value>
   </data>
-  <data name="SettingsPage_CurveOptimiserDesc" xml:space="preserve">
-    <value>Change the all core Curve Optimiser Frequency/Voltage curve offset (negative values to undervolt, positive to add margin)</value>
+  <data name="SettingsPage_AllCurveOptimiserDesc" xml:space="preserve">
+    <value>Change the CPU curve optimiser value</value>
+  </data>
+  <data name="SettingsPage_GfxCurveOptimiser" xml:space="preserve">
+    <value>iGPU curve optimiser</value>
+  </data>
+  <data name="SettingsPage_GfxCurveOptimiserDesc" xml:space="preserve">
+    <value>Change the iGPU curve optimiser value</value>
+  </data>
+  <data name="SettingsPage_MsrCPUUndervolt" xml:space="preserve">
+    <value>CPU voltage offset</value>
+  </data>
+  <data name="SettingsPage_MsrGPUUndervolt" xml:space="preserve">
+    <value>iGPU voltage offset</value>
+  </data>
+  <data name="SettingsPage_MsrGPUUndervoltDesc" xml:space="preserve">
+    <value>Applies a voltage offset in millivolts to the integrated GPU</value>
+  </data>
+  <data name="SettingsPage_MsrCPUUndervoltDesc" xml:space="preserve">
+    <value>Applies a voltage offset in millivolts to CPU core and cache rails</value>
+  </data>
+  <data name="SettingsPage_MsrSocUndervolt" xml:space="preserve">
+    <value>SoC voltage offset</value>
+  </data>
+  <data name="SettingsPage_MsrSocUndervoltDesc" xml:space="preserve">
+    <value>Applies a voltage offset in millivolts to the SoC</value>
+  </data>
+  <data name="SettingsPage_AllCurveOptimiserTooltip" xml:space="preserve">
+    <value>Values are curve steps, not millivolts. Use negative values (steps) to undervolt. Any option other than 0 can lead to system instability or crashes.</value>
+  </data>
+  <data name="SettingsPage_GfxCurveOptimiserTooltip" xml:space="preserve">
+    <value>Values are curve steps, not millivolts. Use negative values (steps) to undervolt. Any option other than 0 can lead to system instability or crashes.</value>
+  </data>
+  <data name="SettingsPage_MsrCPUUndervoltTooltip" xml:space="preserve">
+    <value>Use negative values (-mV) to undervolt. Any option other than 0 can lead to system instability or crashes.</value>
+  </data>
+  <data name="SettingsPage_MsrGPUUndervoltTooltip" xml:space="preserve">
+    <value>Use negative values (-mV) to undervolt. Any option other than 0 can lead to system instability or crashes.</value>
+  </data>
+  <data name="SettingsPage_MsrSocUndervoltTooltip" xml:space="preserve">
+    <value>Use negative values (-mV) to undervolt. Any option other than 0 can lead to system instability or crashes.</value>
+  </data>
+  <data name="Hotkey_ChangeHIDStatus" xml:space="preserve">
+    <value>Toggle emulated controller status</value>
+  </data>
+  <data name="Hotkey_ChangeHIDStatusDesc" xml:space="preserve">
+    <value>Toggle between Connected and Disconnected</value>
+  </data>
+  <data name="Hotkey_PowerShell" xml:space="preserve">
+    <value>PowerShell</value>
+  </data>
+  <data name="Hotkey_PowerShellDesc" xml:space="preserve">
+    <value>Execute the user-provided powershell script</value>
+  </data>
+  <data name="Hotkey_PowerShellContent" xml:space="preserve">
+    <value>Script</value>
+  </data>
+  <data name="Hotkey_PowerShellContentDesc" xml:space="preserve">
+    <value>PowerShell script to run when this hotkey is triggered. The script is executed as-is (multiline supported). Use with caution.</value>
+  </data>
+  <data name="DevicePage_EnhancedSleep" xml:space="preserve">
+    <value>Enhanced sleep</value>
+  </data>
+  <data name="DevicePage_EnhancedSleepDesc" xml:space="preserve">
+    <value>Optimizes Modern Standby power policies to reduce sleep drain (e.g., disables wake timers and network activity).</value>
+  </data>
+  <data name="DevicePage_GoBackToSleep" xml:space="preserve">
+    <value>Go back to sleep</value>
+  </data>
+  <data name="DevicePage_GoBackToSleepDesc" xml:space="preserve">
+    <value>If the device wakes from Modern Standby for any reason other than the power button, it will be sent back to sleep.</value>
   </data>
 </root>

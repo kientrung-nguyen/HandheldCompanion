@@ -64,13 +64,15 @@
                                     HorizontalContentAlignment="Stretch"
                                     Command="{Binding ExecuteCommand}"
                                     IsChecked="{Binding IsToggled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                    IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                    IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Tag="Hotkey">
                                     <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical">
                                         <ui:FontIcon
                                             Width="24"
                                             Height="24"
                                             HorizontalAlignment="Center"
                                             FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                            FontSize="{Binding FontSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                                             Glyph="{Binding LiveGlyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                 </ToggleButton>

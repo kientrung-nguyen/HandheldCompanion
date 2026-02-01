@@ -281,8 +281,26 @@ namespace HandheldCompanion.Views.Pages
                     case "SensorPlacementUpsideDown":
                         Toggle_SensorPlacementUpsideDown.IsOn = Convert.ToBoolean(value);
                         break;
-                    case "RyzenAdjCoall":
-                        Slider_SetCoall.Value = Convert.ToInt32(value);
+                    case "RyzenAdjCoAll":
+                        NumberBox_SetCoAll.Value = Convert.ToInt32(value);
+                        break;
+                    case "RyzenAdjCoGfx":
+                        NumberBox_SetCoGfx.Value = Convert.ToInt32(value);
+                        break;
+                    case "MsrUndervoltCore":
+                        NumberBox_SetMsrCore.Value = Convert.ToInt32(value);
+                        break;
+                    case "MsrUndervoltGpu":
+                        NumberBox_SetMsrGpu.Value = Convert.ToInt32(value);
+                        break;
+                    case "MsrUndervoltSoc":
+                        NumberBox_SetMsrSoc.Value = Convert.ToInt32(value);
+                        break;
+                    case "EnhancedSleep":
+                        Toggle_EnhancedSleep.IsOn = Convert.ToBoolean(value);
+                        break;
+                    case "GoBackToSleep":
+                        Toggle_GoBackToSleep.IsOn = Convert.ToBoolean(value);
                         break;
                 }
             });
@@ -551,16 +569,80 @@ namespace HandheldCompanion.Views.Pages
             ManagerFactory.settingsManager.SetProperty("BatteryBypassChargingMode", CB_BatteryBypassCharging.SelectedIndex);
         }
 
-        private void Slider_SetCoall_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        private void NumberBox_SetCoAll_ValueChanged(NumberBox? sender, NumberBoxValueChangedEventArgs? args)
         {
-            var value = Slider_SetCoall.Value;
+            var value = NumberBox_SetCoAll.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            ManagerFactory.settingsManager.SetProperty("RyzenAdjCoall", value);
+            ManagerFactory.settingsManager.SetProperty("RyzenAdjCoAll", value);
+        }
+
+        private void NumberBox_SetCoGfx_ValueChanged(NumberBox? sender, NumberBoxValueChangedEventArgs? args)
+        {
+            var value = NumberBox_SetCoGfx.Value;
+            if (double.IsNaN(value))
+                return;
+
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.SetProperty("RyzenAdjCoGfx", value);
+        }
+
+        private void NumberBox_SetMsrCore_ValueChanged(NumberBox? sender, NumberBoxValueChangedEventArgs? args)
+        {
+            var value = NumberBox_SetMsrCore.Value;
+            if (double.IsNaN(value))
+                return;
+
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.SetProperty("MsrUndervoltCore", value);
+        }
+
+        private void NumberBox_SetMsrGpu_ValueChanged(NumberBox? sender, NumberBoxValueChangedEventArgs? args)
+        {
+            var value = NumberBox_SetMsrGpu.Value;
+            if (double.IsNaN(value))
+                return;
+
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.SetProperty("MsrUndervoltGpu", value);
+        }
+
+        private void NumberBox_SetMsrSoc_ValueChanged(NumberBox? sender, NumberBoxValueChangedEventArgs? args)
+        {
+            var value = NumberBox_SetMsrSoc.Value;
+            if (double.IsNaN(value))
+                return;
+
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.SetProperty("MsrUndervoltSoc", value);
+        }
+
+        private void Toggle_EnhancedSleep_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.SetProperty("EnhancedSleep", Toggle_EnhancedSleep.IsOn);
+        }
+
+        private void Toggle_GoBackToSleep_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.SetProperty("GoBackToSleep", Toggle_GoBackToSleep.IsOn);
         }
 
         #region Sensor

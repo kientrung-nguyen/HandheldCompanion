@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Controllers;
+﻿using HandheldCompanion.Actions;
+using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Misc;
@@ -671,6 +672,18 @@ public class ProfileManager : IManager
                 }
             }
 
+            // hacky, fix broken profiles with Turbo and Toggle enabled across all actions
+            // the elements inside (IActions instances) are the same references as the ones stored in profile.Layout.ButtonLayout
+            List<IActions> allActions = profile.Layout.ButtonLayout.Values.SelectMany(list => list).ToList();
+            if (allActions.Any() && allActions.All(a => a.HasTurbo && a.HasToggle))
+            {
+                foreach (IActions action in allActions)
+                {
+                    action.HasTurbo = false;
+                    action.HasToggle = false;
+                }
+            }
+
             // in case of updated profile naming convention
             if (!profile.FileName.Equals(profile.GetFileName(), StringComparison.InvariantCultureIgnoreCase))
             {
@@ -949,7 +962,17 @@ public class ProfileManager : IManager
                 profile.LastUsed = profile.DateModified;
 
             // download arts
-            ManagerFactory.libraryManager.RefreshProfileArts(profile);
+            switch(profile.Executable)
+            {
+                // skip Windows Explorer
+                case "explorer.exe":
+                    profile.ShowInLibrary = false;
+                    break;
+
+                default:
+                    ManagerFactory.libraryManager.RefreshProfileArts(profile);
+                    break;
+            }
         }
 
         // used to get and store a few previous values

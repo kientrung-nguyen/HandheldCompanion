@@ -14,6 +14,7 @@ namespace HandheldCompanion.Commands
             Function = 1,
             Keyboard = 2,
             Executable = 3,
+            PowerShell = 4,
         }
 
         public delegate void ExecutedEventHandler(ICommands command);
@@ -69,6 +70,7 @@ namespace HandheldCompanion.Commands
         }
 
         [JsonIgnore] public string FontFamily = "Segoe Fluent Icons";
+        [JsonIgnore] public int FontSize = 16;
 
         public CommandType commandType;
         public Type deviceType = null;

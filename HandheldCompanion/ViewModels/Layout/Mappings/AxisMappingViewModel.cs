@@ -31,7 +31,7 @@ namespace HandheldCompanion.ViewModels
             set
             {
                 if (Action is null || value == ShiftModeIndex) return;
-                
+
                 switch (value)
                 {
                     case 0: // Disabled on shift
@@ -329,6 +329,20 @@ namespace HandheldCompanion.ViewModels
                     OnPropertyChanged(nameof(Axis2MouseFilterCutoff));
                 }
             }
+        }
+
+        public override void OnPropertyChanged(string propertyName)
+        {
+            switch (propertyName)
+            {
+                case "SelectedTarget":
+                case "ActionTypeIndex":
+                    OnPropertyChanged(nameof(Axis2MouseVisibility));
+                    OnPropertyChanged(nameof(Axis2ButtonVisibility));
+                    break;
+            }
+
+            base.OnPropertyChanged(propertyName);
         }
 
         #endregion
