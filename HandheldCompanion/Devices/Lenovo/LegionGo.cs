@@ -201,7 +201,7 @@ public class LegionGo : IDevice
         BatteryBypassMin = 80;
         BatteryBypassMax = 80;
 
-        // Legion Go - Quiet
+        // Quiet
         DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileLegionGoBetterBattery, Properties.Resources.PowerProfileLegionGoBetterBatteryDesc)
         {
             Default = true,

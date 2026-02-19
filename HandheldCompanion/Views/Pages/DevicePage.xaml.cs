@@ -281,6 +281,9 @@ namespace HandheldCompanion.Views.Pages
                     case "SensorPlacementUpsideDown":
                         Toggle_SensorPlacementUpsideDown.IsOn = Convert.ToBoolean(value);
                         break;
+                    case "RyzenAdjCoall":
+                        Slider_SetCoall.Value = Convert.ToInt32(value);
+                        break;
                 }
             });
         }
@@ -546,6 +549,18 @@ namespace HandheldCompanion.Views.Pages
                 return;
 
             ManagerFactory.settingsManager.Set("BatteryBypassChargingMode", CB_BatteryBypassCharging.SelectedIndex);
+        }
+
+        private void Slider_SetCoall_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            var value = Slider_SetCoall.Value;
+            if (double.IsNaN(value))
+                return;
+
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.Set("RyzenAdjCoall", value);
         }
 
         #region Sensor

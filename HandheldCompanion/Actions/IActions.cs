@@ -1,3 +1,4 @@
+using HandheldCompanion.Converters;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
@@ -111,6 +112,14 @@ namespace HandheldCompanion.Actions
         public bool HasInterruptable = true;
         public float TurboDelay = 30.0f;
 
+        // Delay before action triggers (in ms)
+        [JsonProperty("StartDelay")]
+        public float StartDelay = 0.0f;
+        [JsonIgnore]
+        private float StartDelayTimer = -1.0f;  // -1 inactive, >= 0 counting
+        [JsonIgnore]
+        private bool StartDelayRisingEdge = false;  // Remember if delay was started by a rising edge
+
         [JsonIgnore]
         private bool IsToggled = false;
         [JsonIgnore]
@@ -127,6 +136,7 @@ namespace HandheldCompanion.Actions
 
         private int PressCount = 0;     // used for double tap
 
+        [JsonConverter(typeof(ShiftSlotConverter))]
         public ShiftSlot ShiftSlot = ShiftSlot.Any;
 
         public HapticMode HapticMode = HapticMode.Off;
@@ -139,6 +149,18 @@ namespace HandheldCompanion.Actions
         protected bool axisSlotDisabled;
 
         public IActions() { }
+
+        /// <summary>
+        /// Override in derived classes that use shared toggle state (e.g., KeyboardActions, MouseActions).
+        /// This allows multiple bindings targeting the same key/button to share toggle state.
+        /// Also enables detection of external releases (user physically pressing the key).
+        /// </summary>
+        /// <param name="risingEdge">True if this is a button press (rising edge)</param>
+        /// <returns>(useShared, toggleState) - if useShared is true, use the provided toggleState instead of local state</returns>
+        protected virtual (bool useShared, bool toggleState) GetSharedToggleState(bool risingEdge)
+        {
+            return (false, false); // Default: use local toggle state
+        }
 
         public virtual void SetHaptic(ButtonFlags button, bool released)
         {
@@ -178,6 +200,40 @@ namespace HandheldCompanion.Actions
             // shift gating
             if (!IsShiftAllowed(shiftSlot, ShiftSlot))
                 value = false;
+
+            // Start delay logic - delays the action trigger by StartDelay ms
+            // Similar pattern to PressType.Hold: continues even after button release
+            // Note: TimerManager has minimum 10ms tick, so if StartDelay < 10ms, use tick period + StartDelay
+            if (StartDelay > 0)
+            {
+                int period = TimerManager.GetPeriod();
+                float effectiveDelay = (StartDelay < period) ? (period + StartDelay) : StartDelay;
+
+                // Start timer on button press (edge detection)
+                // Remember that this was a rising edge for toggle logic later
+                if (value && !prevBool)
+                {
+                    StartDelayTimer = 0.0f;
+                    StartDelayRisingEdge = true;
+                }
+
+                // Timer is active: keep counting until delay reached
+                if (StartDelayTimer >= 0 && StartDelayTimer < effectiveDelay)
+                {
+                    StartDelayTimer += delta;
+                    outBool = false;
+                    // Don't update prevBool here - it would lose the rising edge info
+                    return;
+                }
+
+                // Delay elapsed: trigger once then reset
+                if (StartDelayTimer >= effectiveDelay)
+                {
+                    StartDelayTimer = -1.0f;  // Reset for next press
+                    value = true;  // Force trigger the action
+                    // Note: StartDelayRisingEdge will be consumed by toggle logic below
+                }
+            }
 
             switch (pressType)
             {
@@ -302,10 +358,25 @@ namespace HandheldCompanion.Actions
             // Toggle
             if (HasToggle)
             {
-                if (prevBool != value && value) IsToggled = !IsToggled;
+                // Rising edge: either normal edge detection OR delayed action that was started by rising edge
+                bool risingEdge = (prevBool != value && value) || StartDelayRisingEdge;
+                StartDelayRisingEdge = false;  // Consume the delayed rising edge
+                
+                // Check if derived class provides shared toggle state
+                var (useShared, sharedState) = GetSharedToggleState(risingEdge);
+                if (useShared)
+                {
+                    IsToggled = sharedState;
+                }
+                else
+                {
+                    // Default local toggle behavior
+                    if (risingEdge) IsToggled = !IsToggled;
+                }
             }
             else
             {
+                StartDelayRisingEdge = false;  // Clear even if toggle not enabled
                 IsToggled = false;
             }
 
@@ -344,12 +415,14 @@ namespace HandheldCompanion.Actions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static bool IsShiftAllowed(ShiftSlot current, ShiftSlot required)
         {
-            switch (required)
-            {
-                case ShiftSlot.None: return current == ShiftSlot.None;
-                case ShiftSlot.Any: return true;
-                default: return (current & required) != 0;
-            }
+            // Any flag means always enabled regardless of shift state
+            if (required.HasFlag(ShiftSlot.Any))
+                return true;
+            // None means only trigger when no shifts are pressed
+            if (required == ShiftSlot.None)
+                return current == ShiftSlot.None;
+            // For specific shift combinations, require exact match
+            return current == required;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -33,9 +33,11 @@ public class AMDProcessor : Processor
             case RyzenFamily.FAM_MENDOCINO:
             case RyzenFamily.FAM_PHOENIX:
             case RyzenFamily.FAM_HAWKPOINT:
-            case RyzenFamily.FAM_KRACKANPOINT: /* Added to debug on KRK, STX, & STXH */
+            case RyzenFamily.FAM_KRACKANPOINT:
             case RyzenFamily.FAM_STRIXPOINT:
             case RyzenFamily.FAM_STRIXHALO:
+            case RyzenFamily.FAM_DRAGONRANGE:
+            case RyzenFamily.FAM_FIRERANGE:
                 CanChangeGPU = true;
                 break;
         }
@@ -57,7 +59,7 @@ public class AMDProcessor : Processor
             case RyzenFamily.FAM_MENDOCINO:
             case RyzenFamily.FAM_PHOENIX:
             case RyzenFamily.FAM_HAWKPOINT:
-            case RyzenFamily.FAM_KRACKANPOINT:
+            case RyzenFamily.FAM_KRACKANPOINT: /* Added to debug on KRK, STX, & STXH */
             case RyzenFamily.FAM_STRIXPOINT:
             case RyzenFamily.FAM_STRIXHALO:
                 CanChangeTDP = true;
@@ -165,9 +167,18 @@ public class AMDProcessor : Processor
         }
     }
 
-    public void SetCoall(uint value)
+    public float SetCoall(int steps)
     {
-        RyzenAdj.set_coall(ry, value);
+        lock (updateLock)
+        {
+            if (!CanChangeTDP)
+                return 0.0f;
+
+            if (ry != IntPtr.Zero)
+                return RyzenAdj.set_coall(ry, RyzenAdj.EncodeCurveOffset(steps));
+
+            return 0.0f;
+        }
     }
 
     public override void SetMaxPerformance(int result)

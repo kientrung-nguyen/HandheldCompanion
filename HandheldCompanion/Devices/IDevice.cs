@@ -586,6 +586,9 @@ public abstract class IDevice
                         case "FLIP 1S DS":
                             device = new AYANEOFlip1SDS();
                             break;
+                        case "FLIP 1S KB":
+                            device = new AYANEOFlip1SKB();
+                            break;
                     }
                 }
                 break;
@@ -701,6 +704,12 @@ public abstract class IDevice
                         case "ONEXPLAYER X1Pro":
                             device = new OneXPlayerX1Pro();
                             break;
+                        case "ONEXPLAYER G1 i":
+                            device = new OneXPlayerG1Intel();
+                            break;
+                        case "ONEXPLAYER G1 A":
+                            device = new OneXPlayerG1AMD();
+                            break;
                         case "ONEXPLAYER F1":
                             {
                                 switch (Version)
@@ -773,12 +782,17 @@ public abstract class IDevice
                 {
                     switch (ProductName)
                     {
-                        // Todo, figure out if theres a diff between Z1 and Z1 extreme versions
                         case "RC71L":
                             device = new ROGAlly();
                             break;
                         case "RC72LA":
                             device = new ROGAllyX();
+                            break;
+                        case "RC73YA":
+                            device = new XboxROGAlly();
+                            break;
+                        case "RC73XA":
+                            device = new XboxROGAllyX();
                             break;
                     }
                 }
@@ -1153,11 +1167,17 @@ public abstract class IDevice
 
     protected virtual void EcWriteByte(byte register, byte data)
     {
+        if (!UseOpenLib || !IsOpen)
+            return;
+
         openLibSys.EcWriteByte(register, data);
     }
 
     protected virtual byte EcReadByte(byte register)
     {
+        if (!UseOpenLib || !IsOpen)
+            return 0;
+
         return openLibSys.EcReadByte(register);
     }
 
@@ -1184,6 +1204,16 @@ public abstract class IDevice
     protected void KeyRelease(ButtonFlags button)
     {
         KeyReleased?.Invoke(button);
+    }
+
+    protected void KeyPressAndRelease(ButtonFlags button, short delay)
+    {
+        Task.Run(async () =>
+        {
+            KeyPress(button);
+            await Task.Delay(delay).ConfigureAwait(false); // Avoid blocking the synchronization context
+            KeyRelease(button);
+        });
     }
 
     public bool HasKey()

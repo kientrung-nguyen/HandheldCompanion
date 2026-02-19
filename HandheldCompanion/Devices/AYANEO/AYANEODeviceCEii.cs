@@ -64,6 +64,8 @@ namespace HandheldCompanion.Devices.AYANEO
             // prepare hotkeys
             DeviceHotkeys[typeof(MainWindowCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = true;
             DeviceHotkeys[typeof(QuickToolsCommands)].inputsChord.ButtonState[ButtonFlags.OEM2] = true;
+
+            this.rgbConfirmation = false;
         }
 
         public byte ECRamDirectRead(byte address, byte offset = 0xd1)
@@ -83,7 +85,7 @@ namespace HandheldCompanion.Devices.AYANEO
             if (ECDetails.AddressFanDuty == 0)
                 return;
 
-            if (!IsOpen)
+            if (!UseOpenLib || !IsOpen)
                 return;
 
             var duty = percent * (ECDetails.FanValueMax - ECDetails.FanValueMin) / 100 + ECDetails.FanValueMin;
@@ -97,7 +99,7 @@ namespace HandheldCompanion.Devices.AYANEO
             if (this.ECDetails.AddressFanControl == 0)
                 return;
 
-            if (!this.IsOpen)
+            if (!UseOpenLib || !IsOpen)
                 return;
 
             byte data = enable ? (byte)0xa5 : (byte)0x00;
@@ -107,6 +109,13 @@ namespace HandheldCompanion.Devices.AYANEO
         // Based on CEiiEcHelper_RgbI2cWrite (AYASpace) but renamed to override existing function
         protected override void CEcControl_RgbI2cWrite(LEDGroup group, byte command, byte argument)
         {
+            if (group == LEDGroup.StickBoth)
+            {
+                this.CEcControl_RgbI2cWrite(LEDGroup.StickLeft, command, argument);
+                this.CEcControl_RgbI2cWrite(LEDGroup.StickRight, command, argument);
+                return;
+            }
+
             byte applyAddress = group == LEDGroup.StickLeft ? (byte)0xc6 : (byte)0x86;
             short groupAddress = group == LEDGroup.StickLeft ? (short)0xb0 : (short)0x70;
 
@@ -139,15 +148,15 @@ namespace HandheldCompanion.Devices.AYANEO
         // Based on CEiiEcHelper_BypassChargeOpen (AYASpace) but renamed to override existing function
         protected override void CEcControl_BypassChargeOpen()
         {
-            if (this.ECRamDirectRead(0xd1) != 0x65)
-                this.ECRamDirectWrite(0xd1, 0x65);
+            if (this.ECRamDirectRead(0xd1) != 0x01)
+                this.ECRamDirectWrite(0xd1, 0x01);
         }
 
         // Based on CEiiEcHelper_BypassChargeClose (AYASpace) but renamed to override existing function
         protected override void CEcControl_BypassChargeClose()
         {
-            if (this.ECRamDirectRead(0xd1) != 0x01)
-                this.ECRamDirectWrite(0xd1, 0x01);
+            if (this.ECRamDirectRead(0xd1) != 0x65)
+                this.ECRamDirectWrite(0xd1, 0x65);
         }
     }
 }

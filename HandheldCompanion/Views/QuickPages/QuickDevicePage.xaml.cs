@@ -108,7 +108,7 @@ public partial class QuickDevicePage : Page
         }
     }
 
-	private void QueryMedia()
+    private void QueryMedia()
     {
         // manage events
         ManagerFactory.multimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;

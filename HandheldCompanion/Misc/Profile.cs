@@ -131,7 +131,7 @@ public partial class Profile : ICloneable, IComparable
     public List<string> Executables { get; set; } = new();
 
     public bool Enabled { get; set; }
-    public bool IsPinned { get; set; } = true;
+    public bool IsLiked { get; set; } = false;
     public bool SuspendOnSleep { get; set; }
     public bool SuspendOnQT { get; set; }
 
@@ -298,7 +298,7 @@ public partial class Profile : ICloneable, IComparable
 
     public List<string> GetExecutables(bool addMain)
     {
-        List<string> execs = [.. Executables];
+        List<string> execs = new(Executables);
 
         if (addMain)
             execs.Add(Path);

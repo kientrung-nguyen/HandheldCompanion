@@ -219,6 +219,8 @@ public static class PerformanceManager
         // raise events
         SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", ManagerFactory.settingsManager.Get<string>("ConfigurableTDPOverrideDown"), false);
         SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", ManagerFactory.settingsManager.Get<string>("ConfigurableTDPOverrideUp"), false);
+
+        SettingsManager_SettingValueChanged("RyzenAdjCoall", ManagerFactory.settingsManager.Get<string>("RyzenAdjCoall"), false);
     }
 
     public static void Stop()
@@ -283,6 +285,15 @@ public static class PerformanceManager
                         AutoTDPMax = TDPMax;
                     if (AutoTDPMin == 0d || AutoTDPMin > TDPMax)
                         AutoTDPMin = TDPMax;
+                }
+                break;
+            case "RyzenAdjCoall":
+                {
+                    if (processor is AMDProcessor AMDProcessor)
+                    {
+                        int steps = Convert.ToInt32(value);
+                        bool output = AMDProcessor.SetCoall(steps) == 0 ? true : false;
+                    }
                 }
                 break;
         }
@@ -525,7 +536,7 @@ public static class PerformanceManager
             // restore default EPP
             RequestEPP(0x00000032);
         }
-		
+
         // restore default CPU Core Parking
         RequestCoreParkingMode(CoreParkingMode.AllCoresAuto);
 

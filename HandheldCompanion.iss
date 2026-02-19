@@ -6,15 +6,8 @@
 ; requires netcorecheck.exe and netcorecheck_x64.exe (see download link below)
 #define UseNetCoreCheck
 #ifdef UseNetCoreCheck
-  #define UseDotNet90
+  #define UseDotNet10
 #endif
-
-;#define UseVC2005
-;#define UseVC2008
-;#define UseVC2010
-;#define UseVC2012
-;#define UseVC2013
-;#define UseVC2015To2019
 
 #define UseDirectX
 ;Install ViGem first
@@ -25,7 +18,7 @@
 #define InstallerVersion        "0.2"
 #define MyAppSetupName         "Handheld Companion"
 #define MyBuildId              "HandheldCompanion"
-#define MyAppVersion           "0.28.1.5"
+#define MyAppVersion           "0.28.2.3"
 #define MyAppPublisher         "BenjaminLSR"
 #define MyAppCopyright         "Copyright © BenjaminLSR"
 #define MyAppURL               "https://github.com/Valkirie/HandheldCompanion"

@@ -226,8 +226,6 @@ public static class SystemManager
             case SessionSwitchReason.SessionLock:
                 IsSessionLocked = true;
                 break;
-            default:
-                return;
         }
 
         LogManager.LogDebug("Session switched to {0}", e.Reason);

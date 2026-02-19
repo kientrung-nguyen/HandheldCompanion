@@ -661,7 +661,7 @@ namespace HandheldCompanion.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
         public int QuickToolsLocation {
             get {
                 return ((int)(this["QuickToolsLocation"]));
@@ -1424,6 +1424,30 @@ namespace HandheldCompanion.Properties {
             }
             set {
                 this["QuickToolsApplyNoise"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool HIDuncloakondisconnect {
+            get {
+                return ((bool)(this["HIDuncloakondisconnect"]));
+            }
+            set {
+                this["HIDuncloakondisconnect"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double RyzenAdjCoall {
+            get {
+                return ((double)(this["RyzenAdjCoall"]));
+            }
+            set {
+                this["RyzenAdjCoall"] = value;
             }
         }
     }

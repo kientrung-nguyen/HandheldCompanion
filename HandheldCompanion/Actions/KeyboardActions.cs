@@ -32,6 +32,23 @@ namespace HandheldCompanion.Actions
             Key = key;
         }
 
+        /// <summary>
+        /// Use shared toggle state from KeyboardSimulator.
+        /// This allows multiple bindings targeting the same key to share toggle state,
+        /// and detects when the key is released externally (by user or other app).
+        /// </summary>
+        protected override (bool useShared, bool toggleState) GetSharedToggleState(bool risingEdge)
+        {
+            // First, check current state (this also detects external key releases)
+            bool currentState = KeyboardSimulator.GetToggleState(Key);
+
+            // Flip toggle on rising edge (button press)
+            if (risingEdge)
+                currentState = KeyboardSimulator.FlipToggle(Key);
+
+            return (true, currentState);
+        }
+
         public override void Execute(ButtonFlags button, bool value, ShiftSlot shiftSlot, float delta)
         {
             base.Execute(button, value, shiftSlot, delta);

@@ -363,25 +363,25 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             if (result != ADLX_RESULT.ADLX_OK)
                 return;
 
-            if (adapterCount > 1)
+            if (adapterCount == 0)
+                return;
+
+            for (int idx = 0; idx < adapterCount; idx++)
             {
-	            for (int idx = 0; idx < adapterCount; idx++)
-	            {
-	                var displayName = new StringBuilder(256); // Assume display name won't exceed 255 characters
+                var displayName = new StringBuilder(256); // Assume display name won't exceed 255 characters
 
-	                // skip if failed to retrieve display
-	                result = GetDisplayName(idx, displayName, displayName.Capacity);
-	                if (result != ADLX_RESULT.ADLX_OK)
-	                    continue;
+                // skip if failed to retrieve display
+                result = GetDisplayName(idx, displayName, displayName.Capacity);
+                if (result != ADLX_RESULT.ADLX_OK)
+                    continue;
 
-	                // skip if display is not the one we're looking for
-	                if (!displayName.ToString().Equals(friendlyName))
-	                    continue;
+                // skip if display is not the one we're looking for
+                if (!displayName.ToString().Equals(friendlyName))
+                    continue;
 
-	                // update displayIdx
-	                displayIdx = idx;
-	                break;
-                }
+                // update displayIdx
+                displayIdx = idx;
+                break;
             }
 
             // we couldn't pick a display by its name, pick first
@@ -415,7 +415,6 @@ namespace HandheldCompanion.GraphicsProcessingUnit
 
             TelemetryTimer = new Timer(TelemetryInterval)
             {
-                Enabled = false,
                 AutoReset = true
             };
             TelemetryTimer.Elapsed += TelemetryTimer_Elapsed;

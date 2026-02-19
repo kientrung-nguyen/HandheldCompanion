@@ -313,7 +313,7 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             // Common settings across cases 0 and 1
             MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfBounds.Width);
-            Width = 650; // (int)Math.Max(MinWidth, ManagerFactory.settingsManager.GetDouble("QuickToolsWidth"));
+            Width = 550; // (int)Math.Max(MinWidth, ManagerFactory.settingsManager.GetDouble("QuickToolsWidth"));
             MaxHeight = Math.Min(targetScreen.WpfBounds.Height - (Margin.Top + Margin.Bottom), _MaxHeight);
             Height = MinHeight = MaxHeight;
             WindowStyle = _Style;
@@ -506,90 +506,6 @@ public partial class OverlayQuickTools : GamepadWindow
         });
     }
 
-    /*
-    private static readonly Duration ShowDuration = TimeSpan.FromMilliseconds(220);
-    private static readonly Duration HideDuration = TimeSpan.FromMilliseconds(180);
-
-    private void AnimateTop(double from, double to, bool isShowing, Action? onCompleted = null)
-    {
-        _isAnimating = true;
-
-        // Strong easing like Start menu
-        IEasingFunction ease =
-            isShowing
-            ? new ExponentialEase { EasingMode = EasingMode.EaseOut, Exponent = 6.0 } // snappy settle
-            : new ExponentialEase { EasingMode = EasingMode.EaseIn, Exponent = 5.0 }; // quick drop
-
-        var anim = new DoubleAnimation
-        {
-            From = from,
-            To = to,
-            Duration = isShowing ? ShowDuration : HideDuration,
-            EasingFunction = ease,
-            FillBehavior = FillBehavior.Stop
-        };
-
-        // Target 60fps (helps on some rigs)
-        Timeline.SetDesiredFrameRate(anim, 60);
-
-        anim.Completed += (_, __) =>
-        {
-            Top = Math.Round(to);   // snap to pixel to avoid subpixel shimmer
-            _isAnimating = false;
-            onCompleted?.Invoke();
-        };
-
-        BeginAnimation(Window.TopProperty, anim, HandoffBehavior.SnapshotAndReplace);
-    }
-
-    public void SlideShow()
-    {
-        if (_isAnimating) return;
-        UpdateLocation();
-        Left = _Left;
-
-        if (!IsVisible)
-            try { Show(); } catch { }
-
-        // start off-screen, then ease-out up
-        Top = _hiddenTop;
-        BeginAnimationBypassWmPaint(true);
-        AnimateTop(_hiddenTop, _targetTop, isShowing: true, onCompleted: () => BeginAnimationBypassWmPaint(false));
-    }
-
-    public void SlideHide()
-    {
-        if (_isAnimating) return;
-
-        BeginAnimationBypassWmPaint(true);
-        AnimateTop(Top, _hiddenTop, isShowing: false, onCompleted: () =>
-        {
-            try { Hide(); } catch { }
-            Top = _targetTop; // reset resting Y
-            BeginAnimationBypassWmPaint(false);
-        });
-    }
-
-    // stop any running animation; optionally snap to resting Y
-    private void StopAnyAnimation(bool snapToRest)
-    {
-        // if you kept the storyboard path, stop it here as well
-        if (_animActive)
-        {
-            CompositionTarget.Rendering -= _renderTick;
-            _animActive = false;
-            _animWatch.Stop();
-            BeginAnimationBypassWmPaint(false);
-            _animOnComplete = null;
-        }
-
-        if (snapToRest)
-        {
-            // If visible, ensure we're at the on-screen resting Y; if hidden, off-screen
-            Top = (IsVisible && Visibility == Visibility.Visible) ? _targetTop : _hiddenTop;
-        }
-    }
-    */
 
     private bool _bypassWmPaintThrottle;
 
@@ -885,82 +801,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
     }
 
-    /*
-    private IReadOnlyList<Radio> radios;
-
-    private void ShowRadios()
-    {
-        if (Math.Abs(DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastRadioRefresh) < 20_000) return;
-        lastRadioRefresh = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-
-        Task.Run(async () =>
-        {
-            // Get the Bluetooth radio
-            radios = await Radio.GetRadiosAsync();
-            // UI thread
-            // UI thread
-            UIHelper.TryInvoke(() =>
-            {
-                if (radios is null)
-                {
-                    return;
-                }
-
-                Radio? wifiRadio = radios.FirstOrDefault(radio => radio.Kind == RadioKind.WiFi);
-                Radio? bluetoothRadio = radios.FirstOrDefault(radio => radio.Kind == RadioKind.Bluetooth);
-                if (bluetoothRadio is not null)
-                {
-                    BluetoothIcon.Visibility = Visibility.Visible;
-                    BluetoothIcon.Glyph = "\uec41";
-                }
-                else
-                    BluetoothIcon.Visibility = Visibility.Hidden;
-                if (wifiRadio is not null && wifiRadio.State == RadioState.On)
-                {
-                    var wifiAdapters = WiFiAdapter.FindAllAdaptersAsync().GetAwaiter().GetResult();
-                    foreach (var adapter in wifiAdapters)
-                    {
-                        foreach (var network in adapter.NetworkReport.AvailableNetworks)
-                        {
-                            WifiIcon.Glyph = network.SignalBars switch
-                            {
-                                1 => "\uec3c",
-                                2 => "\uec3d",
-                                3 => "\uec3e",
-                                4 or 5 => "\uec3f",
-                                _ => "\uf384"
-                            };
-                            break;
-                        }
-
-                    }
-                }
-                else
-                {
-                    var isEthernet = false;
-                    var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
-                    foreach (NetworkInterface networkInterface in networkInterfaces)
-                    {
-                        if (networkInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet &&
-                            networkInterface.OperationalStatus == OperationalStatus.Up)
-                        {
-                            WifiIcon.Glyph = "\ue839";
-                            isEthernet = true;
-                            break;
-                        }
-                    }
-
-                    if (!isEthernet)
-                    {
-                        WifiIcon.Glyph = "\uf384";
-                    }
-
-
-                }
-            });
-        });
-    }
-    */
+    
     private void ShowBattery()
     {
         if (!float.IsNaN(currentMetrics.BattCapacity))

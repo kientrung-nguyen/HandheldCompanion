@@ -3,6 +3,7 @@ using GregsStack.InputSimulatorStandard;
 using GregsStack.InputSimulatorStandard.Native;
 using HandheldCompanion.Inputs;
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using WindowsInput.Events;
@@ -13,9 +14,68 @@ public static class KeyboardSimulator
 {
     private static readonly InputSimulator InputSimulator;
 
+    // Shared toggle state per key - all bindings targeting the same key share this state
+    private static readonly Dictionary<VirtualKeyCode, bool> ToggleStates = new();
+    private static readonly object ToggleLock = new();
+
     static KeyboardSimulator()
     {
         InputSimulator = new InputSimulator();
+    }
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    /// <summary>
+    /// Flip the toggle state for a key. Returns the new toggle state.
+    /// Call this on button press (rising edge) when HasToggle is enabled.
+    /// </summary>
+    public static bool FlipToggle(VirtualKeyCode key)
+    {
+        lock (ToggleLock)
+        {
+            bool wasToggled = ToggleStates.TryGetValue(key, out var state) && state;
+            bool newState = !wasToggled;
+            ToggleStates[key] = newState;
+            return newState;
+        }
+    }
+
+    /// <summary>
+    /// Get the current toggle state for a key.
+    /// Also checks if key was released externally and resets toggle if so.
+    /// </summary>
+    public static bool GetToggleState(VirtualKeyCode key)
+    {
+        lock (ToggleLock)
+        {
+            if (!ToggleStates.TryGetValue(key, out var state) || !state)
+                return false;
+
+            // Check if key is actually pressed using Windows API (detect external release)
+            short keyState = GetAsyncKeyState((int)key);
+            bool isActuallyPressed = (keyState & 0x8000) != 0;
+
+            if (!isActuallyPressed)
+            {
+                // External release detected (user pressed physical key, or another app released it)
+                ToggleStates[key] = false;
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Reset toggle state for a key without sending KeyUp.
+    /// </summary>
+    public static void ResetToggle(VirtualKeyCode key)
+    {
+        lock (ToggleLock)
+        {
+            ToggleStates[key] = false;
+        }
     }
 
     [DllImport("user32.dll")]

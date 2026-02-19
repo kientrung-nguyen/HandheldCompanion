@@ -46,12 +46,18 @@ public class Processor
         if (processor is not null)
             return processor;
 
-        processor = Manufacturer switch
+        switch (Manufacturer)
         {
-            "GenuineIntel" => new IntelProcessor(),
-            "AuthenticAMD" => new AMDProcessor(),
-            _ => throw new NotImplementedException()
-        };
+            case "GenuineIntel":
+                processor = new IntelProcessor();
+                break;
+            case "AuthenticAMD":
+                processor = new AMDProcessor();
+                break;
+            default:
+                LogManager.LogError("Failed to retrieve processor family: {0}", Manufacturer);
+                break;
+        }
 
         if (processor is not null && !processor.IsInitialized)
             LogManager.LogError("Failed to initialize {0} processor", Manufacturer);

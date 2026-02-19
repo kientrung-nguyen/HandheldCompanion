@@ -7,7 +7,6 @@ namespace HandheldCompanion.Managers;
 
 public static class TaskManager
 {
-    private const string TaskName = "HandheldCompanion";
     private static string TaskExecutable;
 
     // TaskManager vars

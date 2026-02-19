@@ -263,6 +263,7 @@
                         Content="{l:Static resx:Resources.QuickOverlayPage_Title}"
                         FontSize="12"
                         Style="{StaticResource NavigationViewItemStyle1}"
+			Tag="QuickOverlayPage"
                         Visibility="Collapsed">
                         <ui:NavigationViewItem.Icon>
                             <ui:FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE78B;" />
@@ -313,46 +314,72 @@
                     -->
                 </ui:NavigationView.MenuItems>
 
-                <Grid>
-                    <ui:CommandBar x:Name="Control1" DefaultLabelPosition="Collapsed">
-                        <ui:CommandBar.PrimaryCommands>
-                            <ui:AppBarButton Click="QuicKeyboard_Click">
-                                <ui:AppBarButton.Icon>
-                                    <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.KeyboardClassic}" />
-                                </ui:AppBarButton.Icon>
-                            </ui:AppBarButton>
+            <Grid>
+                <ui:CommandBar x:Name="Control1" DefaultLabelPosition="Collapsed">
+                    <ui:CommandBar.PrimaryCommands>
+                        <ui:AppBarElementContainer VerticalContentAlignment="Stretch">
+                            <ui:DropDownButton
+                                Margin="0,6,0,6"
+                                VerticalAlignment="Stretch"
+                                Background="Transparent"
+                                BorderBrush="Transparent">
+                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.PowerButton}" />
+                                <ui:DropDownButton.Flyout>
+                                    <ui:MenuFlyout Placement="Bottom">
+                                        <MenuItem
+                                            Command="{Binding PowerDropCommand}"
+                                            CommandParameter="Lock"
+                                            Header="Lock">
+                                            <MenuItem.Icon>
+                                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.Lock}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem
+                                            Command="{Binding PowerDropCommand}"
+                                            CommandParameter="Sleep"
+                                            Header="Sleep">
+                                            <MenuItem.Icon>
+                                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.MobQuietHours}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem
+                                            Command="{Binding PowerDropCommand}"
+                                            CommandParameter="Shutdown"
+                                            Header="Shutdown">
+                                            <MenuItem.Icon>
+                                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.PowerButton}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem
+                                            Command="{Binding PowerDropCommand}"
+                                            CommandParameter="Restart"
+                                            Header="Restart">
+                                            <MenuItem.Icon>
+                                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.UpdateRestore}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ui:MenuFlyout>
+                                </ui:DropDownButton.Flyout>
+                            </ui:DropDownButton>
+                        </ui:AppBarElementContainer>
 
-                            <ui:AppBarSeparator />
+                        <ui:AppBarSeparator />
 
-                            <!--
-                            <ui:AppBarElementContainer VerticalContentAlignment="Stretch">
-                                <ui:DropDownButton
-                                    Margin="0,6,0,6"
-                                    VerticalAlignment="Stretch"
-                                    Background="Transparent"
-                                    BorderBrush="Transparent">
-                                    <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.PowerButton}" />
-                                </ui:DropDownButton>
-                            </ui:AppBarElementContainer>
-                            -->
+                        <ui:AppBarButton Click="QuicKeyboard_Click">
+                            <ui:AppBarButton.Icon>
+                                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.KeyboardClassic}" />
+                            </ui:AppBarButton.Icon>
+                        </ui:AppBarButton>
 
-                            <!--
-                            <ui:AppBarButton Click="QuickTrackpad_Click">
-                                <ui:AppBarButton.Icon>
-                                    <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.Touchpad}" />
-                                </ui:AppBarButton.Icon>
-                            </ui:AppBarButton>
+                        <ui:AppBarSeparator />
 
-                            <ui:AppBarSeparator />
-                            -->
-
-                            <ui:AppBarButton Click="QuickGoBack_Click">
-                                <ui:AppBarButton.Icon>
-                                    <ui:FontIcon FontSize="10" Icon="{x:Static ui:SegoeFluentIcons.Back}" />
-                                </ui:AppBarButton.Icon>
-                            </ui:AppBarButton>
-                        </ui:CommandBar.PrimaryCommands>
-                    </ui:CommandBar>
+                        <ui:AppBarButton Click="QuickGoBack_Click">
+                            <ui:AppBarButton.Icon>
+                                <ui:FontIcon FontSize="10" Icon="{x:Static ui:SegoeFluentIcons.Back}" />
+                            </ui:AppBarButton.Icon>
+                        </ui:AppBarButton>
+                    </ui:CommandBar.PrimaryCommands>
+                </ui:CommandBar>
 
                     <ui:ContentDialog Name="ContentDialog" d:Visibility="Collapsed" />
                     <ui:ScrollViewerEx

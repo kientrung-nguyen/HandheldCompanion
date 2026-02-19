@@ -416,10 +416,13 @@ internal class LpcIO
                             case Model.B840M_GAMING_PLUS_WIFI6E:
                             case Model.B850_GAMING_PLUS_WIFI:
                             case Model.B850_GAMING_PLUS_WIFI6E:
+                            case Model.B850_GAMING_PLUS_WIFI_PZ:
+                            case Model.B850M_GAMING_PLUS_WIFI:
                             case Model.B850M_GAMING_PLUS_WIFI6E:
                             case Model.B850P_PRO_WIFI:
                             case Model.B850MA_PRO_WIFI:
                             case Model.B850MP_PRO_WIFI:
+                            case Model.B850M_MORTAR:
                             case Model.B850M_MORTAR_WIFI:
                             case Model.B850_TOMAHAWK_MAX_WIFI:
                             case Model.B850_EDGE_TI_WIFI:
@@ -432,6 +435,7 @@ internal class LpcIO
                             case Model.X870P_PRO_WIFI:
                             case Model.X870EP_PRO_WIFI:
                             case Model.X870E_TOMAHAWK_WIFI:
+                            case Model.X870E_TOMAHAWK_MAX_WIFI_PZ:
                             case Model.X870E_CARBON_WIFI:
                             case Model.X870E_EDGE_TI_WIFI:
                             case Model.X870E_GODLIKE:
@@ -439,6 +443,7 @@ internal class LpcIO
                             case Model.Z890_CARBON_WIFI:
                             case Model.Z890_GAMING_PLUS_WIFI:
                             case Model.Z890_TOMAHAWK_WIFI:
+                            case Model.Z890_UNIFY_X:
                             case Model.Z890_EDGE_TI_WIFI:
                             case Model.Z890I_EDGE_TI_WIFI:
                             case Model.Z890P_PRO_WIFI:

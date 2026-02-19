@@ -26,6 +26,7 @@ using WindowsDisplayAPI;
 using static HandheldCompanion.GraphicsProcessingUnit.GPU;
 using static HandheldCompanion.Utils.XInputPlusUtils;
 using Page = System.Windows.Controls.Page;
+using PowerLineStatus = System.Windows.Forms.PowerLineStatus;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Views.Pages;
@@ -354,12 +355,13 @@ public partial class ProfilesPage : Page
 
             // check on path rather than profile
             bool exists = false;
-            if (ManagerFactory.profileManager.Contains(path))
+            Profile parentProfile = ManagerFactory.profileManager.GetProfileFromPath(path, true, true);
+            if (parentProfile is not null && !parentProfile.Default)
             {
                 Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
                 {
-                    Title = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite1, profile.Name),
-                    Content = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite2, profile.Name),
+                    Title = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite1, parentProfile.Name),
+                    Content = string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite2, parentProfile.Name),
                     CloseButtonText = Properties.Resources.ProfilesPage_Cancel,
                     PrimaryButtonText = Properties.Resources.ProfilesPage_Yes,
                     SecondaryButtonText = Properties.Resources.ProfilesPage_AreYouSureOverwriteSecondary,
@@ -542,7 +544,7 @@ public partial class ProfilesPage : Page
 
                     // Global settings
                     cB_Whitelist.IsChecked = selectedProfile.Whitelisted;
-                    cB_Pinned.IsChecked = selectedProfile.IsPinned;
+                    b_ProfileLike.IsChecked = selectedProfile.IsLiked;
                     cB_Suspend.IsChecked = selectedProfile.SuspendOnSleep;
                     cB_Wrapper.SelectedIndex = (int)selectedProfile.XInputPlus;
 
@@ -750,16 +752,6 @@ public partial class ProfilesPage : Page
         UpdateProfile();
     }
 
-    private void cB_Pinned_Checked(object sender, RoutedEventArgs e)
-    {
-        // prevent update loop
-        if (profileLock.IsEntered())
-            return;
-
-        selectedProfile.IsPinned = (bool)cB_Pinned.IsChecked;
-        UpdateProfile();
-    }
-
     private void cB_Suspend_Checked(object sender, RoutedEventArgs e)
     {
         // prevent update loop
@@ -767,6 +759,16 @@ public partial class ProfilesPage : Page
             return;
 
         selectedProfile.SuspendOnSleep = (bool)cB_Suspend.IsChecked;
+        UpdateProfile();
+    }
+
+    private void b_ProfileLike_Click(object sender, RoutedEventArgs e)
+    {
+        // prevent update loop
+        if (profileLock.IsEntered())
+            return;
+
+        selectedProfile.IsLiked = (bool)b_ProfileLike.IsChecked;
         UpdateProfile();
     }
 

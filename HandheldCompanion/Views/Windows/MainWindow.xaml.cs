@@ -36,8 +36,10 @@ using System.Windows.Shell;
 using System.Windows.Threading;
 using Windows.UI.ViewManagement;
 using Application = System.Windows.Application;
+using ContextMenu = System.Windows.Controls.ContextMenu;
 using Control = System.Windows.Controls.Control;
 using Frame = System.Windows.Controls.Frame;
+using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = iNKORE.UI.WPF.Modern.Controls.MessageBox;
 using MouseEventArgs = System.Windows.Forms.MouseEventArgs;
 using Page = System.Windows.Controls.Page;
@@ -276,6 +278,7 @@ public partial class MainWindow : GamepadWindow
 
         // prepare toast manager
         ToastManager.Start();
+        ToastManager.SendToast(Title, "is starting");
 
         // start non-static managers
         foreach (IManager manager in ManagerFactory.Managers)
@@ -832,9 +835,13 @@ public partial class MainWindow : GamepadWindow
                     // open device, when ready
                     new Task(async () =>
                     {
-                        // wait for all HIDs to be ready
-                        while (!currentDevice.IsReady())
+                        // wait for the current device to be ready (for 10 seconds)
+                        Task timeout = Task.Delay(TimeSpan.FromSeconds(10));
+                        while (!timeout.IsCompleted && !currentDevice.IsReady())
                             await Task.Delay(250).ConfigureAwait(false);
+
+                        if (!currentDevice.IsReady())
+                            LogManager.LogCritical("Failed to initialize {0} from {1}", currentDevice.ProductName, currentDevice.ManufacturerName);
 
                         // open current device (threaded to avoid device to hang)
                         if (currentDevice.Open())
@@ -917,7 +924,7 @@ public partial class MainWindow : GamepadWindow
         navView.SelectedItem = selectedItem;
 
         // Give gamepad focus
-        gamepadFocusManager?.Focus((NavigationViewItem)selectedItem);
+        gamepadFocusManager?.Focus(selectedItem);
 
         var item = _pages.FirstOrDefault(p => p.Key.Equals(navItemTag));
         var _page = item.Value;
