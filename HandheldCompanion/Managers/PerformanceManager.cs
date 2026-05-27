@@ -40,6 +40,8 @@ public enum CPUBoostLevel
     Agressive = 2,
     EfficientEnabled = 3,
     EfficientAgressive = 4,
+    AggressiveAtGuaranteed = 5,
+    EfficientAggressiveAtGuaranteed = 6
 }
 
 public static class PerformanceManager

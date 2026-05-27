@@ -34,6 +34,7 @@ using System.Windows.Navigation;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using Windows.UI.ViewManagement;
+using ContextMenu = System.Windows.Controls.ContextMenu;
 using Control = System.Windows.Controls.Control;
 using MessageBox = iNKORE.UI.WPF.Modern.Controls.MessageBox;
 using Page = System.Windows.Controls.Page;
@@ -85,6 +86,7 @@ public partial class MainWindow : GamepadWindow
     private bool appClosing;
     private readonly NotifyIcon notifyIcon;
     private readonly ContextMenuStrip trayContextMenu;
+    private DispatcherTimer notifyIconWaitTimer;
     private bool NotifyInTaskbar;
     public string prevNavItemTag = string.Empty;
 
@@ -128,6 +130,13 @@ public partial class MainWindow : GamepadWindow
     private static bool StartMaximized => ManagerFactory.settingsManager.GetBoolean("StartMaximized");
     private static bool ShowSplashScreen => ManagerFactory.settingsManager.GetBoolean("ShowSplashScreen");
 
+    private void notifyIconWaitTimerTicked(object? sender, EventArgs e)
+    {
+        notifyIconWaitTimer?.Stop();
+        overlayquickTools.ToggleVisibility();
+    }
+
+
     public MainWindow(FileVersionInfo _fileVersionInfo, Assembly CurrentAssembly)
     {
         // initialize splash screen
@@ -168,6 +177,15 @@ public partial class MainWindow : GamepadWindow
         // define current directory
         Directory.SetCurrentDirectory(CurrentPath);
 
+        notifyIconWaitTimer = new(
+            TimeSpan.FromMilliseconds(200),
+            DispatcherPriority.Normal,
+            notifyIconWaitTimerTicked,
+            Dispatcher.CurrentDispatcher)
+        {
+            IsEnabled = false
+        };
+
         // initialize notifyIcon
         trayContextMenu = new ContextMenuStrip
         {
@@ -183,7 +201,13 @@ public partial class MainWindow : GamepadWindow
             Visible = false
         };
 
-        notifyIcon.DoubleClick += (sender, e) => { ToggleState(); };
+        notifyIcon.DoubleClick += (sender, e) =>
+        {
+            notifyIconWaitTimer?.Stop();
+            if (overlayquickTools.Visibility == Visibility.Visible)
+                overlayquickTools.ToggleVisibility();
+            ToggleState();
+        };
         notifyIcon.MouseUp += NotifyIcon_MouseUp;
 
         // Build initial tray menu (will be updated when ProfileManager initializes)
@@ -716,7 +740,15 @@ public partial class MainWindow : GamepadWindow
     private void NotifyIcon_MouseUp(object? sender, System.Windows.Forms.MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Right)
+        {
+            if (trayContextMenu.Visible)
+                trayContextMenu.Close();
+
+            if (WindowState == WindowState.Minimized)
+                notifyIconWaitTimer.Start();
+
             return;
+        }
 
         ShowTrayMenu();
     }
@@ -727,6 +759,9 @@ public partial class MainWindow : GamepadWindow
         {
             if (!trayContextMenu.Items.OfType<ToolStripItem>().Any(item => item.Available))
                 return;
+
+            if (overlayquickTools.Visibility == Visibility.Visible)
+                overlayquickTools.ToggleVisibility();
 
             if (trayContextMenu.Visible)
                 trayContextMenu.Close();

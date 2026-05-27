@@ -1,4 +1,7 @@
-﻿using HandheldCompanion.Utils;
+﻿
+using HandheldCompanion.Shared;
+using HandheldCompanion.Utils;
+using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Win32;
 using System;
 
@@ -15,6 +18,31 @@ namespace HandheldCompanion.Misc
         @"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\" +
         @"Store\\DefaultAccount\\Current\\default$windows.data.bluelightreduction.bluelightreductionstate\\" +
         @"windows.data.bluelightreduction.bluelightreductionstate", "Data");
+
+        public static int Get()
+        {
+            if (!Supported)
+                return -1;
+
+            if (_registryKey?.GetValue("Data") is not byte[] registry || registry.Length < 19)
+                return 0;
+
+            var data = new byte[registry.Length];
+            Array.Copy(registry, 0, data, 0, registry.Length);
+            return data[18] == 0x15 ? 1 : 0;
+        }
+
+        public static bool? Set(bool value)
+        {
+            if (!Supported) return null;
+            var intValue = value ? 1 : 0;
+            if (Get() != intValue)
+            { 
+                Toggle();
+                return value;
+            }
+            return value;
+        }
 
         public static bool Enabled
         {
@@ -51,24 +79,22 @@ namespace HandheldCompanion.Misc
                 {
                     // Try to create the parent key structure
                     string parentKey = _key.Substring(0, _key.LastIndexOf('\\'));
-                    using (var parent = Registry.CurrentUser.CreateSubKey(parentKey))
+                    using var parent = Registry.CurrentUser.CreateSubKey(parentKey);
+                    if (parent != null)
                     {
-                        if (parent != null)
+                        // Open the key with write access
+                        _registryKey = Registry.CurrentUser.OpenSubKey(_key, true);
+
+                        // If still null, create the full path
+                        if (_registryKey == null)
                         {
-                            // Open the key with write access
-                            _registryKey = Registry.CurrentUser.OpenSubKey(_key, true);
+                            _registryKey = Registry.CurrentUser.CreateSubKey(_key);
+                        }
 
-                            // If still null, create the full path
-                            if (_registryKey == null)
-                            {
-                                _registryKey = Registry.CurrentUser.CreateSubKey(_key);
-                            }
-
-                            // Initialize with default Night Light disabled state
-                            if (_registryKey != null)
-                            {
-                                InitializeDefaultData();
-                            }
+                        // Initialize with default Night Light disabled state
+                        if (_registryKey != null)
+                        {
+                            InitializeDefaultData();
                         }
                     }
                 }
@@ -120,9 +146,28 @@ namespace HandheldCompanion.Misc
         public static event ToggledEventHandler? Toggled;
         public delegate void ToggledEventHandler(bool enabled);
 
+        public static void SubscribeToEvents(Action<object?, RegistryChangedEventArgs> EventHandler)
+        {
+            try
+            {
+                _nightLightStateWatcher.RegistryChanged += new EventHandler<RegistryChangedEventArgs>(EventHandler);
+                _nightLightStateWatcher.StartWatching();
+            }
+            catch
+            {
+                LogManager.LogError("Cannot connect to Night Light registry");
+                throw;
+            }
+        }
+
+        public static void Unsubscribe()
+        {
+            _nightLightStateWatcher.StopWatching();
+        }
+
         private static void Toggle()
         {
-            RegistryKey? registryKey = _registryKey;
+            var registryKey = _registryKey;
             if (registryKey is null)
                 return;
 

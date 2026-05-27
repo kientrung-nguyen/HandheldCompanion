@@ -5812,6 +5812,42 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Toggle touchpad.
+        /// </summary>
+        public static string Hotkey_touchpadToggle {
+            get {
+                return ResourceManager.GetString("Hotkey_touchpadToggle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toggle touchpad on/off.
+        /// </summary>
+        public static string Hotkey_touchpadToggleDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_touchpadToggleDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toggle touchscreen.
+        /// </summary>
+        public static string Hotkey_touchscreenToggle {
+            get {
+                return ResourceManager.GetString("Hotkey_touchscreenToggle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toggle touchscreen on/off.
+        /// </summary>
+        public static string Hotkey_touchscreenToggleDesc {
+            get {
+                return ResourceManager.GetString("Hotkey_touchscreenToggleDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Window style.
         /// </summary>
         public static string Hotkey_WindowStyle {
@@ -6848,6 +6884,15 @@ namespace HandheldCompanion.Properties {
         public static string MainWindow_Toggle {
             get {
                 return ResourceManager.GetString("MainWindow_Toggle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Muted.
+        /// </summary>
+        public static string Muted {
+            get {
+                return ResourceManager.GetString("Muted", resourceCulture);
             }
         }
         
@@ -12214,6 +12259,15 @@ namespace HandheldCompanion.Properties {
         public static string TriggersPage_Trigger_Right_Button {
             get {
                 return ResourceManager.GetString("TriggersPage_Trigger_Right_Button", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unmuted.
+        /// </summary>
+        public static string Unmuted {
+            get {
+                return ResourceManager.GetString("Unmuted", resourceCulture);
             }
         }
         

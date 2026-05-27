@@ -97,12 +97,22 @@
             <ui:NavigationViewItemSeparator Margin="-15,0,-6,0" />
 
             <DockPanel>
-                <ui:FontIcon
-                    Height="40"
-                    HorizontalAlignment="Center"
-                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                    Glyph="&#xE706;" />
-
+                <Button 
+                    Name="BrightnessButton"
+                    Click="BrightnessButton_Click"
+                    Height="40" Width="40"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    BorderBrush="{x:Null}"
+                    Background="{x:Null}"
+                    Padding="0,0,0,1">
+                    <ui:FontIcon
+                        Name="LightIcon"
+                        Height="40"
+                        HorizontalAlignment="Center"
+                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                        Glyph="&#xE706;" />
+                </Button>
                 <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
                     <Slider
                         x:Name="SliderBrightness"
@@ -120,13 +130,22 @@
             </DockPanel>
 
             <DockPanel>
-                <ui:FontIcon
-                    Name="VolumeIcon"
-                    Height="40"
-                    HorizontalAlignment="Center"
-                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                    Glyph="&#xE767;" />
-
+                <Button 
+                    Name="VolumeButton"
+                    Click="VolumeButton_Click"
+                    Height="40" Width="40"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    BorderBrush="{x:Null}"
+                    Background="{x:Null}"
+                    Padding="0,0,0,0">
+                    <ui:FontIcon
+                        Name="VolumeIcon"
+                        Height="40"
+                        HorizontalAlignment="Center"
+                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                        Glyph="&#xE767;" />
+                </Button>
                 <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
                     <Slider
                         x:Name="SliderVolume"

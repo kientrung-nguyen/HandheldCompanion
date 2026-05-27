@@ -173,6 +173,7 @@ public abstract class IDevice
     public short KeyPressDelay = 200;
 
     // LibreHardwareMonitor
+    public bool NetworkMonitor = true;
     public bool CpuMonitor = true;
     public bool GpuMonitor = true;
     public bool MemoryMonitor = true;

@@ -1,9 +1,14 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Shared;
+using HandheldCompanion.Utils;
 using LibreHardwareMonitor.Hardware;
 using System;
+using System.Diagnostics;
+using System.Net.NetworkInformation;
+using System.Text.RegularExpressions;
 using System.Timers;
+using Windows.UI.WebUI;
 
 namespace HandheldCompanion.Platforms.Misc
 {
@@ -15,6 +20,8 @@ namespace HandheldCompanion.Platforms.Misc
         private const int MinimumBatteryPollingInterval = 5000;
 
         private Computer computer;
+        private NetworkInterface? networkInterface;
+
         private bool computerOpened;
 
         private Timer updateTimer;
@@ -51,6 +58,10 @@ namespace HandheldCompanion.Platforms.Misc
         private float? BatteryPower;
         private float? BatteryTimeSpan;
 
+        // NETWORK
+        private float? NetworkSpeedUp;
+        private float? NetworkSpeedDown;
+
         public LibreHardwarePlatform()
         {
             Name = "LibreHardwareMonitor";
@@ -63,6 +74,7 @@ namespace HandheldCompanion.Platforms.Misc
             // prepare for sensors reading
             computer = new Computer
             {
+                IsNetworkEnabled = IDevice.GetCurrent().NetworkMonitor,
                 IsCpuEnabled = IDevice.GetCurrent().CpuMonitor,
                 IsGpuEnabled = IDevice.GetCurrent().GpuMonitor,
                 IsMemoryEnabled = IDevice.GetCurrent().MemoryMonitor,
@@ -95,6 +107,9 @@ namespace HandheldCompanion.Platforms.Misc
                     break;
             }
 
+            networkInterface ??= DeviceUtils.GetPrimaryNetworkInterface();
+
+
             if (computer is not null)
             {
                 // open computer, slow task
@@ -103,9 +118,9 @@ namespace HandheldCompanion.Platforms.Misc
                     computer.Open();
                     computerOpened = true;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    LogManager.LogError("LibreHardwareMonitor computer.Open() failed");
+                    LogManager.LogError($"LibreHardwareMonitor computer.Open() failed {ex}");
                     computerOpened = false;
                 }
 
@@ -192,6 +207,9 @@ namespace HandheldCompanion.Platforms.Misc
                         case HardwareType.Memory:
                             HandleMemory(hardware);
                             break;
+                        case HardwareType.Network when networkInterface != null && hardware.Name.Equals(networkInterface.Name, StringComparison.OrdinalIgnoreCase):
+                            HandleNetwork(hardware);
+                            break;
                         case HardwareType.Battery:
                             HandleBattery(hardware);
                             break;
@@ -276,50 +294,67 @@ namespace HandheldCompanion.Platforms.Misc
             if (!sensorValue.HasValue)
                 return;
 
-            if (sensor.Name == "GPU Memory Used")
+            switch (sensor.Name)
             {
-                float value = sensorValue.Value / 1024.0f; // MB to GB
-                if (GPUMemory != value)
-                {
-                    GPUMemory = value;
-                    GPUMemoryChanged?.Invoke(GPUMemory);
-                }
-            }
-            else if (sensor.Name == "D3D Dedicated Memory Used")
-            {
-                float value = sensorValue.Value / 1024.0f; // MB to GB
-                if (GPUMemoryDedicated != value)
-                {
-                    GPUMemoryDedicated = value;
-                    GPUMemoryDedicatedChanged?.Invoke(GPUMemoryDedicated);
-                }
-            }
-            else if (sensor.Name == "D3D Shared Memory Used")
-            {
-                float value = sensorValue.Value / 1024.0f; // MB to GB
-                if (GPUMemoryShared != value)
-                {
-                    GPUMemoryShared = value;
-                    GPUMemorySharedChanged?.Invoke(GPUMemoryShared);
-                }
-            }
-            else if (sensor.Name == "GPU Memory Total")
-            {
-                float value = sensorValue.Value / 1024.0f; // MB to GB
-                if (GPUMemoryTotal != value)
-                    GPUMemoryTotal = value;
-            }
-            else if (sensor.Name == "D3D Dedicated Memory Total")
-            {
-                float value = sensorValue.Value / 1024.0f; // MB to GB
-                if (GPUMemoryDedicatedTotal != value)
-                    GPUMemoryDedicatedTotal = value;
-            }
-            else if (sensor.Name == "D3D Shared Memory Total")
-            {
-                float value = sensorValue.Value / 1024.0f; // MB to GB
-                if (GPUMemorySharedTotal != value)
-                    GPUMemorySharedTotal = value;
+                case "GPU Memory Used":
+                    {
+                        float value = sensorValue.Value / 1024.0f; // MB to GB
+                        if (GPUMemory != value)
+                        {
+                            GPUMemory = value;
+                            GPUMemoryChanged?.Invoke(GPUMemory);
+                        }
+
+                        break;
+                    }
+
+                case "D3D Dedicated Memory Used":
+                    {
+                        float value = sensorValue.Value / 1024.0f; // MB to GB
+                        if (GPUMemoryDedicated != value)
+                        {
+                            GPUMemoryDedicated = value;
+                            GPUMemoryDedicatedChanged?.Invoke(GPUMemoryDedicated);
+                        }
+
+                        break;
+                    }
+
+                case "D3D Shared Memory Used":
+                    {
+                        float value = sensorValue.Value / 1024.0f; // MB to GB
+                        if (GPUMemoryShared != value)
+                        {
+                            GPUMemoryShared = value;
+                            GPUMemorySharedChanged?.Invoke(GPUMemoryShared);
+                        }
+
+                        break;
+                    }
+
+                case "GPU Memory Total":
+                    {
+                        float value = sensorValue.Value / 1024.0f; // MB to GB
+                        if (GPUMemoryTotal != value)
+                            GPUMemoryTotal = value;
+                        break;
+                    }
+
+                case "D3D Dedicated Memory Total":
+                    {
+                        float value = sensorValue.Value / 1024.0f; // MB to GB
+                        if (GPUMemoryDedicatedTotal != value)
+                            GPUMemoryDedicatedTotal = value;
+                        break;
+                    }
+
+                case "D3D Shared Memory Total":
+                    {
+                        float value = sensorValue.Value / 1024.0f; // MB to GB
+                        if (GPUMemorySharedTotal != value)
+                            GPUMemorySharedTotal = value;
+                        break;
+                    }
             }
         }
 
@@ -390,14 +425,20 @@ namespace HandheldCompanion.Platforms.Misc
             if (!sensorValue.HasValue)
                 return;
 
-            if (sensor.Name == "GPU Core")
+            switch (sensor.Name)
             {
-                float value = sensorValue.Value;
-                if (GPUTemperature != value)
-                {
-                    GPUTemperature = value;
-                    GPUTemperatureChanged?.Invoke(GPUTemperature);
-                }
+                case "GPU Core":
+                case "GPU VR SoC":
+                    {
+                        float value = sensorValue.Value;
+                        if (GPUTemperature != value)
+                        {
+                            GPUTemperature = value;
+                            GPUTemperatureChanged?.Invoke(GPUTemperature);
+                        }
+
+                        break;
+                    }
             }
         }
         #endregion
@@ -418,6 +459,9 @@ namespace HandheldCompanion.Platforms.Misc
 
                 switch (sensor.SensorType)
                 {
+                    case SensorType.Factor:
+                        HandleCPU_Factor(sensor);
+                        break;
                     case SensorType.Load:
                         HandleCPU_Load(sensor);
                         break;
@@ -428,9 +472,41 @@ namespace HandheldCompanion.Platforms.Misc
                         HandleCPU_Power(sensor);
                         break;
                     case SensorType.Temperature:
-                        HandleCPU_Temperature(sensor);
+                        try
+                        {
+                            using var ct = new PerformanceCounter("Thermal Zone Information", "Temperature", @"\_TZ.TZ01", true);
+                            float value = ct.NextValue() - 273.15f;
+                            if (CPUTemperature != value)
+                            {
+                                CPUTemperature = value;
+                                CPUTemperatureChanged?.Invoke(CPUTemperature);
+                            }
+                        }
+                        catch
+                        {
+                            HandleCPU_Temperature(sensor);
+                        }
                         break;
                 }
+            }
+        }
+
+        private void HandleCPU_Factor(ISensor sensor)
+        {
+            var value = sensor.Value.GetValueOrDefault();
+            switch (sensor.Name)
+            {
+                default:
+                    if (sensor.Name.StartsWith("Core #", StringComparison.OrdinalIgnoreCase) ||
+                        sensor.Name.StartsWith("CPU Core #", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Extract core number using regex
+                        var match = Regex.Match(sensor.Name, @"Core #(\d+)", RegexOptions.IgnoreCase);
+                        if (match.Success && int.TryParse(match.Groups[1].Value, out int coreNumber) && coreNumber <= MotherboardInfo.NumberOfCores)
+                        {
+                        }
+                    }
+                    break;
             }
         }
 
@@ -457,7 +533,8 @@ namespace HandheldCompanion.Platforms.Misc
             if (!sensorValue.HasValue)
                 return currentHighest;
 
-            if (sensor.Name.StartsWith("CPU Core #", StringComparison.Ordinal) || sensor.Name.StartsWith("Core #", StringComparison.Ordinal))
+            if (sensor.Name.StartsWith("CPU Core #", StringComparison.Ordinal)
+                || sensor.Name.StartsWith("Core #", StringComparison.Ordinal))
             {
                 float value = sensorValue.Value;
                 if (value > currentHighest)
@@ -501,14 +578,20 @@ namespace HandheldCompanion.Platforms.Misc
             if (!sensorValue.HasValue)
                 return;
 
-            if (sensor.Name == "CPU Package" || sensor.Name == "Core (Tctl/Tdie)")
+            switch (sensor.Name)
             {
-                float value = sensorValue.Value;
-                if (CPUTemperature != value)
-                {
-                    CPUTemperature = value;
-                    CPUTemperatureChanged?.Invoke(CPUTemperature);
-                }
+                case "CPU Package":
+                case "Core (Tctl/Tdie)":
+                    {
+                        float value = sensorValue.Value;
+                        if (CPUTemperature != value)
+                        {
+                            CPUTemperature = value;
+                            CPUTemperatureChanged?.Invoke(CPUTemperature);
+                        }
+
+                        break;
+                    }
             }
         }
         #endregion
@@ -546,26 +629,83 @@ namespace HandheldCompanion.Platforms.Misc
             if (!sensorValue.HasValue)
                 return;
 
-            if (sensor.Name == "Memory Used")
+            switch (sensor.Name)
             {
-                float value = sensorValue.Value;
-                if (MemoryUsage != value)
-                {
-                    MemoryUsage = value;
-                    MemoryUsageChanged?.Invoke(MemoryUsage);
-                }
-            }
-            else if (sensor.Name == "Memory Available")
-            {
-                float value = sensorValue.Value;
-                if (MemoryAvailable != value)
-                {
-                    MemoryAvailable = value;
-                    MemoryAvailableChanged?.Invoke(MemoryAvailable);
-                }
+                case "Memory Used":
+                    {
+                        float value = sensorValue.Value;
+                        if (MemoryUsage != value)
+                        {
+                            MemoryUsage = value;
+                            MemoryUsageChanged?.Invoke(MemoryUsage);
+                        }
+
+                        break;
+                    }
+
+                case "Memory Available":
+                    {
+                        float value = sensorValue.Value;
+                        if (MemoryAvailable != value)
+                        {
+                            MemoryAvailable = value;
+                            MemoryAvailableChanged?.Invoke(MemoryAvailable);
+                        }
+
+                        break;
+                    }
             }
         }
         #endregion
+
+        private void HandleNetwork(IHardware network)
+        {
+            foreach (var sensor in network.Sensors)
+            {
+                // May crash the app when Value is null, better to check first
+                if (!sensor.Value.HasValue || sensor.Value == 0)
+                    continue;
+
+                switch (sensor.SensorType)
+                {
+                    case SensorType.Throughput:
+                        HandleNetwork_Throughput(sensor);
+                        break;
+                    default: continue;
+                }
+            }
+        }
+
+
+        private void HandleNetwork_Throughput(ISensor sensor)
+        {
+            float? sensorValue = sensor.Value;
+            if (!sensorValue.HasValue)
+                return;
+            switch (sensor.Name)
+            {
+                case "Upload Speed":
+                    {
+                        float value = sensorValue.Value;
+                        if (NetworkSpeedUp != value)
+                        {
+                            NetworkSpeedUp = value;
+                            NetworkSpeedUpChanged?.Invoke(NetworkSpeedUp);
+                        }
+                        break;
+                    }
+                case "Download Speed":
+                    {
+                        float value = sensorValue.Value;
+                        if (NetworkSpeedDown != value)
+                        {
+                            NetworkSpeedDown = value;
+                            NetworkSpeedDownChanged?.Invoke(NetworkSpeedDown);
+                        }
+                        break;
+                    }
+            }
+        }
 
         #region battery updates
         public float? GetBatteryLevel() => computer?.IsBatteryEnabled ?? false ? BatteryLevel : null;
@@ -674,6 +814,9 @@ namespace HandheldCompanion.Platforms.Misc
 
         public event ChangedHandler? MemoryUsageChanged;
         public event ChangedHandler? MemoryAvailableChanged;
+
+        public event ChangedHandler? NetworkSpeedUpChanged;
+        public event ChangedHandler? NetworkSpeedDownChanged;
 
         public event ChangedHandler? BatteryLevelChanged;
         public event ChangedHandler? BatteryPowerChanged;
