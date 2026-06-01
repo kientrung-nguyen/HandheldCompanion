@@ -2460,6 +2460,9 @@
     <Reference Include="Nefarius.ViGEm.Client">
       <HintPath>..\Resources\Nefarius.ViGEm.Client.dll</HintPath>
     </Reference>
+    <Reference Include="PowerManagerAPI">
+      <HintPath>Resources\Power\PowerManagerAPI.dll</HintPath>
+    </Reference>
     <Reference Include="RTSSSharedMemoryNET">
       <HintPath>Resources\RTSSSharedMemoryNET.dll</HintPath>
     </Reference>

@@ -30,45 +30,28 @@ public class MultimediaManager : IManager
     private readonly object _displayLock = new();
 
     // Audio management
-    //private readonly MMDeviceEnumerator _deviceEnumerator;
-    //private MMDevice? _multimediaDevice;
-    //private readonly MMDeviceNotificationClient _notificationClient;
-    private bool _volumeSupport;
+    private readonly bool _volumeSupport;
+    private readonly bool _microphoneSupport;
 
     // Brightness management
-    //private readonly ManagementEventWatcher _brightnessWatcher;
-    //private readonly ManagementScope _scope;
     private readonly bool _brightnessSupport;
-
     private readonly bool _nightlightSupport;
 
     public MultimediaManager()
     {
         // Setup audio endpoint
-        //_notificationClient = new MMDeviceNotificationClient(this);
-        //_deviceEnumerator = new MMDeviceEnumerator();
-        //_deviceEnumerator.RegisterEndpointNotificationCallback(_notificationClient);
-        //SetDefaultAudioEndPoint();
-        _volumeSupport = SoundControl.AudioGet() >= 0;
+        AudioControl.SubscribeToEvents(AudioVolumeNotificationEventArrived);
+        MicrophoneControl.SubscribeToEvents(MicrophoneVolumeNotificationEventArrived);
 
-        _nightlightSupport = NightLight.Get() >= 0;
-
-        // Setup brightness monitoring
-        //_scope = new ManagementScope(@"\\.\root\wmi");
-        //_scope.Connect();
-
-        //_brightnessWatcher = new ManagementEventWatcher(_scope, new EventQuery("Select * From WmiMonitorBrightnessEvent"));
-
-        // Check if we have control over brightness
-        _brightnessSupport = ScreenBrightness.Get() >= 0;
-
-
-
-        SoundControl.SubscribeToEvents(VolumeNotificationEventArrived);
         NightLight.SubscribeToEvents(NightLightNotificationEventArrived);
         ScreenBrightness.SubscribeToEvents(BrightnessWatcherEventArrived);
 
-        //_brightnessSupport = GetBrightness() != -1;
+        _volumeSupport = AudioControl.Get() >= 0;
+        _nightlightSupport = NightLight.Get() >= 0;
+        _microphoneSupport = MicrophoneControl.Get() >= 0;
+        // Check if we have control over brightness
+        // Setup brightness monitoring
+        _brightnessSupport = ScreenBrightness.Get() >= 0;
     }
 
     public override void Start()
@@ -79,10 +62,6 @@ public class MultimediaManager : IManager
         base.PrepareStart();
 
         // Start brightness monitoring
-        //_brightnessWatcher.EventArrived += OnWMIEvent;
-        //_brightnessWatcher.Start();
-
-        // Subscribe to display settings changes
         SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
 
         // Subscribe to settings manager
@@ -121,15 +100,11 @@ public class MultimediaManager : IManager
         base.PrepareStop();
 
         // Unregister audio callbacks
-        SoundControl.Unsubscribe();
-        //_deviceEnumerator.UnregisterEndpointNotificationCallback(_notificationClient);
-
+        AudioControl.Unsubscribe();
         // Stop brightness monitoring
         ScreenBrightness.Unsubscribe();
-
         NightLight.Unsubscribe();
-        //_brightnessWatcher.EventArrived -= OnWMIEvent;
-        //_brightnessWatcher.Stop();
+        MicrophoneControl.Unsubscribe();
 
         // Unsubscribe from events
         SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
@@ -139,45 +114,21 @@ public class MultimediaManager : IManager
         base.Stop();
     }
 
-
-    private void VolumeNotificationEventArrived(SoundDirections flow, float volume, bool muted)
+    private void AudioVolumeNotificationEventArrived(AudioVolumeNotificationData data)
     {
-        if (muted)
+        if (data.Muted)
             VolumeNotification?.Invoke(-1f);
         else
-            VolumeNotification?.Invoke(volume);
+            VolumeNotification?.Invoke(data.MasterVolume * 100f);
     }
 
-    //private void AudioEndpointVolume_OnVolumeNotification(AudioVolumeNotificationData data)
-    //{
-    //    VolumeNotification?.Invoke(data.MasterVolume * 100.0f);
-    //}
-
-    //private void SetDefaultAudioEndPoint()
-    //{
-    //    try
-    //    {
-    //        if (_multimediaDevice?.AudioEndpointVolume is not null)
-    //        {
-    //            _volumeSupport = false;
-    //            _multimediaDevice.AudioEndpointVolume.OnVolumeNotification -= AudioEndpointVolume_OnVolumeNotification;
-    //        }
-
-    //        _multimediaDevice = _deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-
-    //        if (_multimediaDevice?.AudioEndpointVolume is not null)
-    //        {
-    //            _volumeSupport = true;
-    //            _multimediaDevice.AudioEndpointVolume.OnVolumeNotification += AudioEndpointVolume_OnVolumeNotification;
-    //        }
-
-    //        VolumeNotification?.Invoke((float)GetVolume());
-    //    }
-    //    catch (Exception)
-    //    {
-    //        LogManager.LogError("No AudioEndpoint available");
-    //    }
-    //}
+    private void MicrophoneVolumeNotificationEventArrived(AudioVolumeNotificationData data)
+    {
+        if (data.Muted)
+            MicrophoneVolumeNotification?.Invoke(-1f);
+        else
+            MicrophoneVolumeNotification?.Invoke(data.MasterVolume * 100f);
+    }
 
     private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
     {
@@ -195,11 +146,6 @@ public class MultimediaManager : IManager
         NightLightNotification?.Invoke(NightLight.Get() == 1);
     }
 
-    //private void OnWMIEvent(object sender, EventArrivedEventArgs e)
-    //{
-    //    int brightness = Convert.ToInt32(e.NewEvent.Properties["Brightness"].Value);
-    //    BrightnessNotification?.Invoke(brightness);
-    //}
 
     #region Display Helper Methods
 
@@ -664,44 +610,60 @@ public class MultimediaManager : IManager
         return _volumeSupport;
     }
 
+    public bool HasMicrophoneSupport()
+    {
+        return _microphoneSupport;
+    }
+
     public void SetVolume(double volume)
     {
         if (!_volumeSupport)
             return;
-
-        volume = Math.Clamp(volume, 0.0d, 100.0d);
-        SoundControl.AudioSet(volume);
-
-        //if (_multimediaDevice?.AudioEndpointVolume is null)
-        //    return;
-
-        //_multimediaDevice.AudioEndpointVolume.MasterVolumeLevelScalar = (float)(volume / 100.0d);
+        AudioControl.Set(volume);
     }
+
+    public void SetMicVolume(double volume)
+    {
+        if (!_microphoneSupport)
+            return;
+        MicrophoneControl.Set(volume);
+    }
+
 
     public double GetVolume()
     {
         if (!_volumeSupport)
             return 0.0d;
 
-        return SoundControl.AudioGet();
-        //if (_multimediaDevice?.AudioEndpointVolume is null)
-        //    return 0.0d;
+        return AudioControl.Get();
+    }
 
-        //return _multimediaDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100.0d;
+    public double GetMicVolume()
+    {
+        if (!_microphoneSupport)
+            return 0.0d;
+
+        return MicrophoneControl.Get();
     }
 
     public void IncreaseVolume()
     {
-        int stepRoundDn = (int)Math.Ceiling(Math.Round(GetVolume() / 2.0d));
-        int volume = stepRoundDn * 2 + 2;
-        SetVolume(volume);
+        if (!_volumeSupport)
+            return;
+        //int stepRoundDn = (int)Math.Ceiling(Math.Round(GetVolume() / 2.0d));
+        //int volume = stepRoundDn * 2 + 2;
+        //SetVolume(volume);
+        AudioControl.Adjust(2);
     }
 
     public void DecreaseVolume()
     {
-        int stepRoundUp = (int)Math.Ceiling(Math.Round(GetVolume() / 2.0d));
-        int volume = stepRoundUp * 2 - 2;
-        SetVolume(volume);
+        if (!_volumeSupport)
+            return;
+        //int stepRoundUp = (int)Math.Ceiling(Math.Round(GetVolume() / 2.0d));
+        //int volume = stepRoundUp * 2 - 2;
+        //SetVolume(volume);
+        AudioControl.Adjust(-2);
     }
 
     public void Mute()
@@ -709,12 +671,7 @@ public class MultimediaManager : IManager
         if (!_volumeSupport)
             return;
 
-        SoundControl.AudioMute(true);
-
-        //if (_multimediaDevice?.AudioEndpointVolume is null)
-        //    return;
-
-        //_multimediaDevice.AudioEndpointVolume.Mute = true;
+        AudioControl.Mute(true);
     }
 
     public void Unmute()
@@ -722,12 +679,15 @@ public class MultimediaManager : IManager
         if (!_volumeSupport)
             return;
 
-        SoundControl.AudioMute(false);
+        AudioControl.Mute(false);
+    }
 
-        //if (_multimediaDevice?.AudioEndpointVolume is null)
-        //    return;
+    public void MicUnmute()
+    {
+        if (!_microphoneSupport)
+            return;
 
-        //_multimediaDevice.AudioEndpointVolume.Mute = false;
+        MicrophoneControl.Mute(false);
     }
 
     public void ToggleMute()
@@ -735,11 +695,15 @@ public class MultimediaManager : IManager
         if (!_volumeSupport)
             return;
 
-        SoundControl.ToggleAudio();
-        //if (_multimediaDevice?.AudioEndpointVolume is null)
-        //    return;
+        AudioControl.Toggle();
+    }
 
-        //_multimediaDevice.AudioEndpointVolume.Mute = !_multimediaDevice.AudioEndpointVolume.Mute;
+    public void ToggleMicMute()
+    {
+        if (!_microphoneSupport)
+            return;
+
+        MicrophoneControl.Toggle();
     }
 
     public bool IsMuted()
@@ -747,13 +711,30 @@ public class MultimediaManager : IManager
         if (!_volumeSupport)
             return true;
 
-        return SoundControl.AudioMuted() ?? true;
-        //return _multimediaDevice?.AudioEndpointVolume?.Mute ?? true;
+        return AudioControl.IsMuted() ?? true;
+    }
+
+    public bool IsMicMuted()
+    {
+        if (!_microphoneSupport)
+            return true;
+
+        return MicrophoneControl.IsMuted() ?? true;
     }
 
     #endregion
 
     #region Brightness Management
+
+    public bool HasNightLightSupport()
+    {
+        return _nightlightSupport;
+    }
+
+    public int GetNightLight()
+    {
+        return NightLight.Get();
+    }
 
     public bool HasBrightnessSupport()
     {
@@ -770,34 +751,17 @@ public class MultimediaManager : IManager
         try
         {
             ScreenBrightness.Set(brightness);
-            //using ManagementClass mclass = new ManagementClass("WmiMonitorBrightnessMethods")
-            //{
-            //    Scope = new ManagementScope(@"\\.\root\wmi")
-            //};
-
-            //using ManagementObjectCollection instances = mclass.GetInstances();
-            //foreach (ManagementObject instance in instances)
-            //{
-            //    object[] args = { 1, brightness };
-            //    instance.InvokeMethod("WmiSetBrightness", args);
-            //}
         }
         catch { }
     }
 
     public void IncreaseBrightness()
     {
-        //int stepRoundDn = (int)Math.Floor(GetBrightness() / 2.0d);
-        //int brightness = stepRoundDn * 2 + 2;
-        //SetBrightness(brightness);
         ScreenBrightness.Adjust(2);
     }
 
     public void DecreaseBrightness()
     {
-        //int stepRoundUp = (int)Math.Ceiling(GetBrightness() / 2.0d);
-        //int brightness = stepRoundUp * 2 - 2;
-        //SetBrightness(brightness);
         ScreenBrightness.Adjust(-2);
     }
 
@@ -806,14 +770,6 @@ public class MultimediaManager : IManager
         try
         {
             return ScreenBrightness.Get();
-            //using ManagementClass mclass = new ManagementClass("WmiMonitorBrightness")
-            //{
-            //    Scope = new ManagementScope(@"\\.\root\wmi")
-            //};
-
-            //using ManagementObjectCollection instances = mclass.GetInstances();
-            //foreach (ManagementObject instance in instances)
-            //    return (byte)instance.GetPropertyValue("CurrentBrightness");
         }
         catch { }
 
@@ -894,6 +850,9 @@ public class MultimediaManager : IManager
 
     public event VolumeNotificationEventHandler? VolumeNotification;
     public delegate void VolumeNotificationEventHandler(float volume);
+
+    public event MicrophoneVolumeNotificationEventHandler? MicrophoneVolumeNotification;
+    public delegate void MicrophoneVolumeNotificationEventHandler(float volume);
 
     public event BrightnessNotificationEventHandler? BrightnessNotification;
     public delegate void BrightnessNotificationEventHandler(int brightness);

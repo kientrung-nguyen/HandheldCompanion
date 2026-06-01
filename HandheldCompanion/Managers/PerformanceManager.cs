@@ -4,6 +4,7 @@ using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
+using PowerManagerAPI;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using static HandheldCompanion.Processors.Intel.KX;
 using static HandheldCompanion.Processors.IntelProcessor;
+using PowerSchemeAPI = PowerManagerAPI.PowerManager;
 using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
@@ -538,7 +540,10 @@ public static class PerformanceManager
     {
         // On power status change, force refresh TDP and AutoTDP
         PowerProfile profile = ManagerFactory.powerProfileManager.GetDefault();
-        RequestTDP(profile.TDPOverrideValues, immediate);
+        if (profile.TDPQuickValues is not null && profile.TDPQuickValues.Length > 0)
+            RequestTDP(profile.TDPQuickValues, immediate);
+        else
+            RequestTDP(profile.TDPOverrideValues, immediate);
 
         if (profile.TDPOverrideValues is not null && profile.TDPOverrideValues.Length > 0)
             AutoTDP = profile.TDPOverrideValues[0];
@@ -1024,7 +1029,7 @@ public static class PerformanceManager
         }
     }
 
-    private static async void RequestTDP(double[] values, bool immediate = false)
+    private static async void RequestTDP(double[]? values, bool immediate = false)
     {
         // Handle null or insufficient array scenario
         if (values == null || values.Length <= (int)PowerType.Fast)
@@ -1070,7 +1075,8 @@ public static class PerformanceManager
 
     private static void RequestPowerMode(Guid guid)
     {
-        if (PowerGetEffectiveOverlayScheme(out Guid activeScheme) == 0)
+        //if (PowerGetEffectiveOverlayScheme(out Guid activeScheme) == 0)
+        if (PowerSchemeAPI.GetPowerMode() is Guid activeScheme)
         {
             if (activeScheme == guid)
             {
@@ -1088,15 +1094,18 @@ public static class PerformanceManager
 
         LogManager.LogDebug("User requested power scheme: {0}", guid);
 
-        if (PowerSetActiveOverlayScheme(guid) != 0)
-            LogManager.LogWarning("Failed to set requested power scheme: {0}", guid);
-        else
+        try
         {
+            PowerSchemeAPI.SetPowerMode(guid);
             currentPowerMode = guid;
 
             int idx = Array.IndexOf(PowerModes, currentPowerMode);
             if (idx != -1)
                 PowerModeChanged?.Invoke(idx);
+        }
+        catch
+        {
+            LogManager.LogWarning("Failed to set requested power scheme: {0}", guid);
         }
     }
 
@@ -1116,7 +1125,6 @@ public static class PerformanceManager
          * 4: Prefer E-Cores (favor E-Cores but allow P-Cores occasionally)
          * 5: No specific preference (Windows decides automatically)
          */
-
         uint policyAC, policyDC, threadAC, threadDC, shortAC, shortDC;
         switch (coreParkingMode)
         {
@@ -1138,18 +1146,18 @@ public static class PerformanceManager
         }
 
         // Are the values already correct?
-        uint[] curPolicy = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY);
-        uint[] curThread = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY);
-        uint[] curShort = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY);
+        var curPolicy = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.HETEROPOLICY);
+        var curThread = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SCHEDPOLICY);
+        var curShort = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SHORTSCHEDPOLICY);
 
-        if (curPolicy[0] == policyAC && curPolicy[1] == policyDC &&
-            curThread[0] == threadAC && curThread[1] == threadDC &&
-            curShort[0] == shortAC && curShort[1] == shortDC)
+        if (curPolicy.ACValue == policyAC && curPolicy.DCValue == policyDC &&
+            curThread.ACValue == threadAC && curThread.DCValue == threadDC &&
+            curShort.ACValue == shortAC && curShort.DCValue == shortDC)
             return;
 
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_POLICY, policyAC, policyDC);
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_THREAD_SCHEDULING_POLICY, threadAC, threadDC);
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.HETEROGENEOUS_SHORT_THREAD_SCHEDULING_POLICY, shortAC, shortDC);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.HETEROPOLICY, policyAC, policyDC);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SCHEDPOLICY, threadAC, threadDC);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SHORTSCHEDPOLICY, shortAC, shortDC);
 
         LogManager.LogDebug("User requested Core Parking Mode: {0}", coreParkingMode);
     }
@@ -1187,73 +1195,72 @@ public static class PerformanceManager
         uint currentCoreCountPercent = (uint)((100.0d / MotherboardInfo.NumberOfCores) * CoreCount);
 
         // Is the CPMINCORES value already correct?
-        uint[] CPMINCORES = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMINCORES);
-        bool CPMINCORESReady = (CPMINCORES[0] == currentCoreCountPercent && CPMINCORES[1] == currentCoreCountPercent);
+        var CPMINCORES = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES);
+        bool CPMINCORESReady = CPMINCORES.ACValue == currentCoreCountPercent && CPMINCORES.DCValue == currentCoreCountPercent;
 
         // Is the CPMAXCORES value already correct?
-        uint[] CPMAXCORES = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMAXCORES);
-        bool CPMAXCORESReady = (CPMAXCORES[0] == currentCoreCountPercent && CPMAXCORES[1] == currentCoreCountPercent);
+        var CPMAXCORES = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES);
+        bool CPMAXCORESReady = CPMAXCORES.ACValue == currentCoreCountPercent && CPMAXCORES.DCValue == currentCoreCountPercent;
 
         if (CPMINCORESReady && CPMAXCORESReady)
             return;
 
         // Set profile CPMINCORES and CPMAXCORES
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMINCORES, currentCoreCountPercent, currentCoreCountPercent);
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMAXCORES, currentCoreCountPercent, currentCoreCountPercent);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.CPMINCORES, Setting.CPMINCORES1], currentCoreCountPercent, currentCoreCountPercent);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.CPMAXCORES, Setting.CPMAXCORES1], currentCoreCountPercent, currentCoreCountPercent);
 
         LogManager.LogDebug("User requested CoreCount: {0} ({1}%)", CoreCount, currentCoreCountPercent);
 
         // Has the CPMINCORES value been applied?
-        CPMINCORES = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMINCORES);
-        if (CPMINCORES[0] != currentCoreCountPercent || CPMINCORES[1] != currentCoreCountPercent)
+        CPMINCORES = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES);
+        if (CPMINCORES.ACValue != currentCoreCountPercent || CPMINCORES.DCValue != currentCoreCountPercent)
             LogManager.LogWarning("Failed to set requested CPMINCORES");
 
         // Has the CPMAXCORES value been applied?
-        CPMAXCORES = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.CPMAXCORES);
-        if (CPMAXCORES[0] != currentCoreCountPercent || CPMAXCORES[1] != currentCoreCountPercent)
+        CPMAXCORES = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES);
+        if (CPMAXCORES.ACValue != currentCoreCountPercent || CPMAXCORES.DCValue != currentCoreCountPercent)
             LogManager.LogWarning("Failed to set requested CPMAXCORES");
     }
 
     private static void RequestPerfBoostMode(uint value)
     {
         // Is the PerfBoostMode value already correct?
-        uint[] perfBoostMode = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE);
-        bool IsReady = (perfBoostMode[0] == value && perfBoostMode[1] == value);
+        var (ACValue, DCValue) = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE);
+        bool IsReady = (ACValue == value && DCValue == value);
 
         if (IsReady)
             return;
 
         // Set profile PerfBoostMode
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE, value, value);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE, value, value);
 
         LogManager.LogDebug("User requested perfboostmode: {0}", value);
 
         // Has the value been applied?
-        perfBoostMode = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFBOOSTMODE);
-        if (perfBoostMode[0] != value || perfBoostMode[1] != value)
+        (ACValue, DCValue) = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE);
+        if (ACValue != value || DCValue != value)
             LogManager.LogWarning("Failed to set requested perfboostmode");
     }
 
     private static void RequestCPUClock(uint cpuClock)
     {
         // Is the PROCFREQMAX value already correct?
-        uint[] currentClock = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PROCFREQMAX);
-        bool IsReady = (currentClock[0] == cpuClock && currentClock[1] == cpuClock);
+        var currentClock = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX);
+        bool IsReady = (currentClock.ACValue == cpuClock && currentClock.DCValue == cpuClock);
 
         if (IsReady)
             return;
 
         // Set profile max processor frequency
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PROCFREQMAX, cpuClock, cpuClock);
-        PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PROCFREQMAX1, cpuClock, cpuClock);
+        PowerSchemeAPI.SetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, [Setting.PROCFREQMAX, Setting.PROCFREQMAX1], cpuClock, cpuClock);
 
         double maxClock = MotherboardInfo.ProcessorMaxTurboSpeed;
         double cpuPercentage = cpuClock / maxClock * 100.0d;
         LogManager.LogDebug("User requested PROCFREQMAX: {0} ({1}%)", cpuClock, cpuPercentage);
 
         // Has the value been applied?
-        currentClock = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PROCFREQMAX);
-        if (currentClock[0] != cpuClock || currentClock[1] != cpuClock)
+        currentClock = PowerSchemeAPI.GetActivePlanSetting(SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX);
+        if (currentClock.ACValue != cpuClock || currentClock.DCValue != cpuClock)
             LogManager.LogWarning("Failed to set requested PROCFREQMAX");
     }
 

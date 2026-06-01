@@ -48,7 +48,8 @@ namespace HandheldCompanion.Misc
         {
             get
             {
-                if (!Supported) return false;
+                if (!Supported)
+                    return false;
 
                 byte[]? registry = _registryKey?.GetValue("Data") as byte[];
                 if (registry == null || registry.Length < 19) return false;
@@ -78,7 +79,7 @@ namespace HandheldCompanion.Misc
                 try
                 {
                     // Try to create the parent key structure
-                    string parentKey = _key.Substring(0, _key.LastIndexOf('\\'));
+                    var parentKey = _key.Substring(0, _key.LastIndexOf('\\'));
                     using var parent = Registry.CurrentUser.CreateSubKey(parentKey);
                     if (parent != null)
                     {
@@ -86,10 +87,7 @@ namespace HandheldCompanion.Misc
                         _registryKey = Registry.CurrentUser.OpenSubKey(_key, true);
 
                         // If still null, create the full path
-                        if (_registryKey == null)
-                        {
-                            _registryKey = Registry.CurrentUser.CreateSubKey(_key);
-                        }
+                        _registryKey ??= Registry.CurrentUser.CreateSubKey(_key);
 
                         // Initialize with default Night Light disabled state
                         if (_registryKey != null)
@@ -108,19 +106,19 @@ namespace HandheldCompanion.Misc
             if (!Supported)
                 return;
 
-            _nightLightStateWatcher.RegistryChanged += UpdateNightLight;
-            _nightLightStateWatcher.StartWatching();
+            //_nightLightStateWatcher.RegistryChanged += UpdateNightLight;
+            //_nightLightStateWatcher.StartWatching();
         }
 
         private static void InitializeDefaultData()
         {
-            RegistryKey? registryKey = _registryKey;
+            var registryKey = _registryKey;
             if (registryKey is null)
                 return;
 
             // Default Night Light disabled state
             // This is the minimal binary data structure for a disabled Night Light state
-            byte[] defaultData = new byte[41]
+            var defaultData = new byte[41]
             {
                 0x43, 0x42, 0x01, 0x00, 0x0A, 0xCA, 0x14, 0x5B, 0xB0, 0x10, 0xE5, 0x01, 0xD2, 0x8C, 0x01, 0x00,
                 0x00, 0x00, 0x13, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x2A, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -138,13 +136,13 @@ namespace HandheldCompanion.Misc
             }
         }
 
-        private static void UpdateNightLight(object? sender, RegistryChangedEventArgs e)
-        {
-            Toggled?.Invoke(Enabled);
-        }
+        //private static void UpdateNightLight(object? sender, RegistryChangedEventArgs e)
+        //{
+        //    Toggled?.Invoke(Enabled);
+        //}
 
-        public static event ToggledEventHandler? Toggled;
-        public delegate void ToggledEventHandler(bool enabled);
+        //public static event ToggledEventHandler? Toggled;
+        //public delegate void ToggledEventHandler(bool enabled);
 
         public static void SubscribeToEvents(Action<object?, RegistryChangedEventArgs> EventHandler)
         {

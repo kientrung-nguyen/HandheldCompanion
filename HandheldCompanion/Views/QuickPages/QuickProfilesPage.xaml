@@ -201,14 +201,14 @@
                     d:IsExpanded="true"
                     IsExpanded="False">
                     <Expander.Header>
-                        <DockPanel Margin="0,12,12,12">
+                        <DockPanel Margin="6,12,12,12">
                             <ui:FontIcon
                                 Height="40"
                                 HorizontalAlignment="Center"
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Glyph="&#xE8B4;" />
 
-                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ikw:SimpleStackPanel Margin="20,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_MotionControlSettings}" />
                                 <TextBlock
                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -638,14 +638,14 @@
                                 <ColumnDefinition Width="3*" MinWidth="120" />
                             </Grid.ColumnDefinitions>
 
-                            <DockPanel Margin="0,12,12,12">
+                            <DockPanel Margin="6,12,12,12">
                                 <ui:FontIcon
                                     Height="40"
                                     HorizontalAlignment="Center"
                                     FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                     Glyph="&#xE790;" />
 
-                                <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <ikw:SimpleStackPanel Margin="20,0,0,0" VerticalAlignment="Center">
                                     <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_GraphicsSettings}" />
                                     <TextBlock
                                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -678,8 +678,8 @@
                                     Spacing="3">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="5*" />
-                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="6*" />
+                                            <ColumnDefinition Width="4*" />
                                         </Grid.ColumnDefinitions>
 
                                         <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -706,8 +706,8 @@
                                     <StackPanel d:Visibility="Visible" Visibility="{Binding ElementName=GPUScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="5*" />
-                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="6*" />
+                                                <ColumnDefinition Width="4*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -747,8 +747,8 @@
                                     Visibility="{Binding IsAMDGPU, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="5*" />
-                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="6*" />
+                                            <ColumnDefinition Width="4*" />
                                         </Grid.ColumnDefinitions>
 
                                         <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -775,7 +775,6 @@
 
                                     <DockPanel
                                         Grid.Column="1"
-                                        Margin="12,0,0,0"
                                         d:Visibility="Visible"
                                         Visibility="{Binding ElementName=RSRToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
 
@@ -799,7 +798,7 @@
                                             TickFrequency="5"
                                             TickPlacement="BottomRight"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                            Value="{Binding RSRValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                            Value="{Binding RSRValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,-7,0" />
                                     </DockPanel>
                                 </ikw:SimpleStackPanel>
 
@@ -819,8 +818,8 @@
                                     Visibility="{Binding IsAMDGPU, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="5*" />
-                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="6*" />
+                                            <ColumnDefinition Width="4*" />
                                         </Grid.ColumnDefinitions>
 
                                         <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -852,8 +851,8 @@
 
                                         <Grid IsEnabled="{Binding AFMFEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="5*" />
-                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="6*" />
+                                                <ColumnDefinition Width="4*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -880,8 +879,8 @@
 
                                         <Grid IsEnabled="{Binding AFMFEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="5*" />
-                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="6*" />
+                                                <ColumnDefinition Width="4*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -953,8 +952,8 @@
                                         Visibility="{Binding ElementName=IntegerScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="5*" />
-                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="6*" />
+                                                <ColumnDefinition Width="4*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -1009,8 +1008,8 @@
                                             MinHeight="40"
                                             d:Background="Blue">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="5*" />
-                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="6*" />
+                                                <ColumnDefinition Width="4*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -1073,7 +1072,6 @@
 
                                     <DockPanel
                                         Grid.Column="1"
-                                        Margin="12,0,0,0"
                                         d:Visibility="Visible"
                                         Visibility="{Binding ElementName=RISToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
 
@@ -1097,7 +1095,7 @@
                                             TickFrequency="5"
                                             TickPlacement="BottomRight"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                            Value="{Binding RISValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                            Value="{Binding RISValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,0,0" />
                                     </DockPanel>
                                 </ikw:SimpleStackPanel>
                             </ikw:SimpleStackPanel>

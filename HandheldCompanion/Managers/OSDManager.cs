@@ -1,12 +1,14 @@
 ﻿using HandheldCompanion.Shared;
-
+using Microsoft.Extensions.Logging.Abstractions;
 using RTSSSharedMemoryNET;
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Timers;
+using Windows.Media.AppBroadcasting;
 
 namespace HandheldCompanion.Managers;
 
@@ -15,18 +17,23 @@ public static class OSDManager
     public delegate void InitializedEventHandler();
     public static event InitializedEventHandler? Initialized;
 
+    private const string COLOR_STEAM_BLUE = "5858F2";
+    private const string COLOR_GRAY = "d7d7d7";
     // C1: GPU
     // C2: CPU
     // C3: RAM
     // C4: VRAM
     // C5: BATT
     // C6: FPS
-    private const string Header = "<C0=FFFFFF><C1=8000FF><A0=-4><S0=-50><S1=50>";
+    private const string Header = $"<C0={COLOR_GRAY}><C1={COLOR_STEAM_BLUE}><A0=-4><S0=-50><S1=90>";
+    private const string Row = $"<P1><L0><C=80000000><B=0,0>\b<C>{{0}}<C><S>";
+    private const string Column = $"<P0><L0><C=80000000><B=0,0>\b<C>{{0}}<C><S>";
 
     private static bool IsInitialized;
     public static string[] OverlayOrder = [];
     public static int OverlayCount;
     public static short OverlayLevel;
+    public static short OverlayDirection;
     public static short OverlayTimeLevel;
     public static short OverlayFPSLevel;
     public static short OverlayCPULevel;
@@ -116,6 +123,7 @@ public static class OSDManager
         // raise events
         SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", ManagerFactory.settingsManager.GetString("OnScreenDisplayRefreshRate"), false);
         SettingsManager_SettingValueChanged("OnScreenDisplayLevel", ManagerFactory.settingsManager.GetString("OnScreenDisplayLevel"), false);
+        SettingsManager_SettingValueChanged("OnScreenDisplayDirection", ManagerFactory.settingsManager.GetString("OnScreenDisplayDirection"), false);
         SettingsManager_SettingValueChanged("OnScreenDisplayOrder", ManagerFactory.settingsManager.GetString("OnScreenDisplayOrder"), false);
         SettingsManager_SettingValueChanged("OnScreenDisplayTimeLevel", ManagerFactory.settingsManager.GetString("OnScreenDisplayTimeLevel"), false);
         SettingsManager_SettingValueChanged("OnScreenDisplayFPSLevel", ManagerFactory.settingsManager.GetString("OnScreenDisplayFPSLevel"), false);
@@ -217,13 +225,13 @@ public static class OSDManager
         Content.Clear();
         try
         {
-            var config = _overlayManager.GetConfig(OverlayLevel);
+            var config = _overlayManager.GetConfig(OverlayLevel, OverlayDirection);
             if (config is null)
             {
                 goto Exit;
             }
 
-            Content.Add(Header + config);
+            Content.Add(Header + string.Format(OverlayDirection == 0 ? Row : Column, config));
         }
         catch (NotImplementedException)
         {
@@ -261,7 +269,51 @@ public static class OSDManager
                     }
                 }
                 break;
+            case "OnScreenDisplayDirection":
+                {
+                    try
+                    {
+                        OverlayDirection = Convert.ToInt16(value);
+                        if (OverlayLevel > 0)
+                        {
+                            if (OverlayLevel == 5)
+                            {
+                                // No need to update OSD in External
+                                RefreshTimer.Stop();
 
+                                // Remove previous UI in External
+                                foreach (var pair in OnScreenDisplays)
+                                {
+                                    var processOSD = pair.Value;
+                                    processOSD.Update("");
+                                }
+                            }
+                            else
+                            {
+                                // Other modes need the refresh timer to update OSD
+                                if (!RefreshTimer.Enabled)
+                                    RefreshTimer.Start();
+                            }
+                        }
+                        else
+                        {
+                            RefreshTimer.Stop();
+
+                            // clear UI on stop
+                            foreach (var pair in OnScreenDisplays)
+                            {
+                                var processOSD = pair.Value;
+                                processOSD.Update("");
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        ManagerFactory.settingsManager.SetProperty("OnScreenDisplayDirection", 0);
+                        OverlayDirection = 0;
+                    }
+                    break;
+                }
             case "OnScreenDisplayLevel":
                 {
                     OverlayLevel = Convert.ToInt16(value);
@@ -348,13 +400,13 @@ public struct OverlayEntryElement
 
     public OverlayEntryElement(float value, string unit)
     {
-        Value = FormatValue(value, unit);
+        Value = FormatValue(value, unit, true);
         SzUnit = unit;
     }
 
     public OverlayEntryElement(float value, float available, string unit)
     {
-        Value = FormatValue(value, unit) + "/" + FormatValue(available, unit);
+        Value = FormatValue(value, unit, true) + "/" + FormatValue(available, unit, false);
         SzUnit = unit;
     }
 
@@ -364,21 +416,39 @@ public struct OverlayEntryElement
         SzUnit = unit;
     }
 
-    private static string FormatValue(float value, string unit)
+    private static string FormatValue(float value, string unit, bool? padLeft = null)
     {
         string format = unit switch
         {
             "GB" => "0.0", // One decimal
             "W" => "00",   // Two digits forced, no decimal
             "%" => "00",   // Two digits forced, no decimal
-            "C" => "00",   // Two digits forced, no decimal
+            "°C" or "°" or "C" => "00", // Two digits forced, no decimal
             "h" => "00", // Two digits forced, no decimal
             "min" => "00", // Two digits forced, no decimal
+            "mins" => "000", // Two digits forced, no decimal
             "MB" => "0",   // No leading zeros, no decimal
+            "MHz" => "000",
+            "GHz" => "0.0",
             _ => "0.##"    // Default format (no leading zeros, up to 2 decimals)
         };
 
-        return value.ToString(format, CultureInfo.InvariantCulture);
+        var input = value.ToString(format, CultureInfo.InvariantCulture);
+        if (padLeft is null) return input;
+        // Count leading zeros (but stop before decimal point)
+        int leadingZeroCount = 0;
+        while (leadingZeroCount < input.Length && input[leadingZeroCount] == '0')
+        {
+            if (leadingZeroCount + 1 > input.Length - 1 ||
+                leadingZeroCount + 1 < input.Length && input[leadingZeroCount + 1] == '.')
+                break;
+
+            leadingZeroCount++;
+
+        }
+        if (padLeft.Value)
+            return input[leadingZeroCount..].PadLeft(input.Length, ' ');
+        return input[leadingZeroCount..].PadRight(input.Length, ' ');
     }
 }
 
@@ -388,10 +458,19 @@ public class OverlayEntry : IDisposable
 
     public OverlayEntry(string name, string colorScheme = "", bool indent = false)
     {
-        Name = indent ? name + "\t" : name;
+        Name = BuildName(name, indent);// indent ? name + "\t" : name;
 
-        if (!string.IsNullOrEmpty(colorScheme))
+        if (!string.IsNullOrEmpty(colorScheme) && !string.IsNullOrEmpty(name))
             Name = "<C=" + colorScheme + ">" + Name + "<C>";
+    }
+
+    private static string BuildName(string name, bool indent)
+    {
+        if (string.IsNullOrEmpty(name))
+            return string.Empty;
+
+        var formatted = name.PadRight(Math.Abs(7 - name.Length));
+        return indent ? formatted : name;
     }
 
     ~OverlayEntry()
@@ -403,7 +482,8 @@ public class OverlayEntry : IDisposable
 
     public void Dispose()
     {
-        elements.Clear();
+        elements?.Clear();
+        GC.SuppressFinalize(this);
     }
 }
 
@@ -419,6 +499,7 @@ public class OverlayRow : IDisposable
     public void Dispose()
     {
         entries.Clear();
+        GC.SuppressFinalize(this);
     }
 
     public override string ToString()
@@ -435,7 +516,7 @@ public class OverlayRow : IDisposable
             foreach (var element in entry.elements)
                 entriesStr.Add(element.ToString());
 
-            var ItemStr = string.Join(" ", entriesStr);
+            var ItemStr = string.Join(" ", entriesStr.Where(v => v != null && v.Length > 0));
             rowStr.Add(ItemStr);
         }
 

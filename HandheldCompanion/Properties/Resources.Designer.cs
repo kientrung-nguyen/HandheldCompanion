@@ -7329,6 +7329,24 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Column.
+        /// </summary>
+        public static string OverlayPage_OverlayDisplayDirection_Column {
+            get {
+                return ResourceManager.GetString("OverlayPage_OverlayDisplayDirection_Column", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Row.
+        /// </summary>
+        public static string OverlayPage_OverlayDisplayDirection_Row {
+            get {
+                return ResourceManager.GetString("OverlayPage_OverlayDisplayDirection_Row", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Overlay display level.
         /// </summary>
         public static string OverlayPage_OverlayDisplayLevel {

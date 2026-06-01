@@ -41,11 +41,11 @@ public class FPSWidget : IWidget
         switch (_level)
         {
             case WidgetLevel.MINIMAL:
-                entry.elements.Add(new OverlayEntryElement("<FR>", "FPS"));
+                entry.elements.Add(new OverlayEntryElement("<FR>", ""));
                 break;
             case WidgetLevel.FULL:
-                entry.elements.Add(new OverlayEntryElement("<FR>", "FPS"));
-                entry.elements.Add(new OverlayEntryElement("<FT>", "ms"));
+                entry.elements.Add(new OverlayEntryElement("<FR>", ""));
+                //entry.elements.Add(new OverlayEntryElement("<FT>", "ms"));
                 entry.elements.Add(new OverlayEntryElement($"<C={GraphColor}><OBJ={graphOffset:X8}><C>"));
 
                 /*

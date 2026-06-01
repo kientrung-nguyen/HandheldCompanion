@@ -11,7 +11,7 @@ using System.Configuration;
 
 namespace HandheldCompanion.Properties
 {
-
+    
     [SettingsProvider(typeof(CustomSettingsProvider))]
     internal sealed partial class Settings : ApplicationSettingsBase
     {
@@ -1567,6 +1567,18 @@ namespace HandheldCompanion.Properties
             }
             set {
                 this["LibraryPageEnabled"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int OnScreenDisplayDirection {
+            get {
+                return ((int)(this["OnScreenDisplayDirection"]));
+            }
+            set {
+                this["OnScreenDisplayDirection"] = value;
             }
         }
     }

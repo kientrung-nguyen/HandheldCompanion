@@ -1,14 +1,16 @@
+using Sentry.Protocol;
+
 namespace HandheldCompanion.Managers.Overlay.Strategy;
 
 
 public class FullStrategy : IOverlayStrategy
 {
-    public string? GetConfig()
+    public string? GetConfig(int direction = 0)
     {
         OverlayRow row1 = new(); // GPU
         OverlayRow row2 = new(); // CPU  
         OverlayRow row3 = new(); // RAM
-        OverlayRow row4 = new(); // VRAM
+        //OverlayRow row4 = new(); // VRAM
         OverlayRow row5 = new(); // Battery
         OverlayRow row6 = new(); // FPS
 
@@ -16,9 +18,9 @@ public class FullStrategy : IOverlayStrategy
         WidgetFactory.CreateWidget("GPU", GPUentry, WidgetLevel.FULL);
         row1.entries.Add(GPUentry);
 
-        OverlayEntry VRAMentry = new("VRAM", OverlayColors.VRAM_COLOR, true);
-        WidgetFactory.CreateWidget("VRAM", VRAMentry, WidgetLevel.FULL);
-        row4.entries.Add(VRAMentry);
+        //OverlayEntry VRAMentry = new("VRAM", OverlayColors.VRAM_COLOR, true);
+        //WidgetFactory.CreateWidget("VRAM", VRAMentry, WidgetLevel.FULL);
+        //row4.entries.Add(VRAMentry);
 
         OverlayEntry CPUentry = new("CPU", OverlayColors.CPU_COLOR, true);
         WidgetFactory.CreateWidget("CPU", CPUentry, WidgetLevel.FULL);
@@ -36,11 +38,19 @@ public class FullStrategy : IOverlayStrategy
         WidgetFactory.CreateWidget("FPS", fpsEntry, WidgetLevel.FULL);
         row6.entries.Add(fpsEntry);
 
-        return string.Join("\n",
+        return direction == 0
+            ? string.Join("<C1> | <C>",
+                row6.ToString(),
+                row1.ToString(),
+                row2.ToString(),
+                row3.ToString(),
+                //row4.ToString(),
+                row5.ToString())
+            : string.Join("\n",
             row1.ToString(),
             row2.ToString(),
             row3.ToString(),
-            row4.ToString(),
+            //row4.ToString(),
             row5.ToString(),
             row6.ToString()
         );

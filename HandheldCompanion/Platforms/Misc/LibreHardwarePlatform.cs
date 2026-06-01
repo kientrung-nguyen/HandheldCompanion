@@ -33,7 +33,9 @@ namespace HandheldCompanion.Platforms.Misc
 
         // CPU
         private float? CPULoad;
+        private float? CPULoadMax;
         private float? CPUClock;
+        private float? CPUClockMax;
         private float? CPUPower;
         private float? CPUTemperature;
 
@@ -445,12 +447,14 @@ namespace HandheldCompanion.Platforms.Misc
 
         #region cpu updates
         public float? GetCPULoad() => computer?.IsCpuEnabled ?? false ? CPULoad : null;
+        public float? GetCPULoadMax() => computer?.IsCpuEnabled ?? false ? CPULoadMax : null;
+        public float? GetCPUClock() => computer?.IsCpuEnabled ?? false ? CPUClock : null;
+        public float? GetCPUClockMax() => computer?.IsCpuEnabled ?? false ? CPUClockMax : null;
         public float? GetCPUPower() => computer?.IsCpuEnabled ?? false ? CPUPower : null;
         public float? GetCPUTemperature() => computer?.IsCpuEnabled ?? false ? CPUTemperature : null;
 
         private void HandleCPU(IHardware cpu)
         {
-            float highestClock = 0;
             foreach (var sensor in cpu.Sensors)
             {
                 // May crash the app when Value is null, better to check first
@@ -459,14 +463,11 @@ namespace HandheldCompanion.Platforms.Misc
 
                 switch (sensor.SensorType)
                 {
-                    case SensorType.Factor:
-                        HandleCPU_Factor(sensor);
-                        break;
                     case SensorType.Load:
                         HandleCPU_Load(sensor);
                         break;
                     case SensorType.Clock:
-                        highestClock = HandleCPU_Clock(sensor, highestClock);
+                        HandleCPU_Clock(sensor);
                         break;
                     case SensorType.Power:
                         HandleCPU_Power(sensor);
@@ -491,63 +492,69 @@ namespace HandheldCompanion.Platforms.Misc
             }
         }
 
-        private void HandleCPU_Factor(ISensor sensor)
-        {
-            var value = sensor.Value.GetValueOrDefault();
-            switch (sensor.Name)
-            {
-                default:
-                    if (sensor.Name.StartsWith("Core #", StringComparison.OrdinalIgnoreCase) ||
-                        sensor.Name.StartsWith("CPU Core #", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Extract core number using regex
-                        var match = Regex.Match(sensor.Name, @"Core #(\d+)", RegexOptions.IgnoreCase);
-                        if (match.Success && int.TryParse(match.Groups[1].Value, out int coreNumber) && coreNumber <= MotherboardInfo.NumberOfCores)
-                        {
-                        }
-                    }
-                    break;
-            }
-        }
-
         private void HandleCPU_Load(ISensor sensor)
         {
             float? sensorValue = sensor.Value;
             if (!sensorValue.HasValue)
                 return;
 
-            if (sensor.Name == "CPU Total")
+            switch (sensor.Name)
             {
-                float value = sensorValue.Value;
-                if (CPULoad != value)
-                {
-                    CPULoad = value;
-                    CPULoadChanged?.Invoke(CPULoad);
-                }
+                case "Max CPU Usage":
+                    {
+                        float value = sensorValue.Value;
+                        if (CPULoadMax != value)
+                        {
+                            CPULoadMax = value;
+                        }
+
+                        break;
+                    }
+                case "Total CPU Usage":
+                    {
+                        float value = sensorValue.Value;
+                        if (CPULoad != value)
+                        {
+                            CPULoad = value;
+                            CPULoadChanged?.Invoke(CPULoad);
+                        }
+
+                        break;
+                    }
             }
         }
 
-        private float HandleCPU_Clock(ISensor sensor, float currentHighest)
+        private void HandleCPU_Clock(ISensor sensor)
         {
             float? sensorValue = sensor.Value;
             if (!sensorValue.HasValue)
-                return currentHighest;
+                return;
 
-            if (sensor.Name.StartsWith("CPU Core #", StringComparison.Ordinal)
-                || sensor.Name.StartsWith("Core #", StringComparison.Ordinal))
+            //if (sensor.Name.StartsWith("CPU Core #", StringComparison.Ordinal)
+            //    || sensor.Name.StartsWith("Core #", StringComparison.Ordinal))
+            switch (sensor.Name)
             {
-                float value = sensorValue.Value;
-                if (value > currentHighest)
-                {
-                    if (CPUClock != value)
+                case "Max Core Effective Clock":
                     {
-                        CPUClock = value;
-                        CPUClockChanged?.Invoke(CPUClock);
+                        float value = sensorValue.Value;
+                        if (CPUClockMax != value)
+                        {
+                            CPUClockMax = value;
+                        }
+                        break;
                     }
-                    return value;
-                }
+                case "Average Core Effective Clock":
+                    {
+                        float value = sensorValue.Value;
+
+                        if (CPUClock != value)
+                        {
+                            CPUClock = value;
+                            CPUClockChanged?.Invoke(CPUClock);
+                        }
+                        break;
+                    }
             }
-            return currentHighest;
         }
 
         private void HandleCPU_Power(ISensor sensor)

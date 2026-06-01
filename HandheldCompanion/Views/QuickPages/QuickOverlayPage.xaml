@@ -141,7 +141,7 @@
                             <ui:FontIcon
                                 Height="31"
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xeb3c;" />
+                                Glyph="&#xe945;" />
                             <DockPanel>
                                 <TextBlock
                                     MinWidth="20"
@@ -219,7 +219,7 @@
                             <ui:FontIcon
                                 Height="31"
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                Glyph="&#xeb3c;" />
+                                Glyph="&#xe945;" />
                             <DockPanel>
                                 <TextBlock
                                     MinWidth="20"
@@ -280,19 +280,25 @@
                 CornerRadius="{DynamicResource ControlCornerRadius}">
 
                 <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition></RowDefinition>
+                        <RowDefinition></RowDefinition>
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="5*" MinWidth="100" />
-                        <ColumnDefinition Width="5*" MinWidth="100" />
+                        <ColumnDefinition Width="6*" MinWidth="100" />
+                        <ColumnDefinition Width="4*" />
                     </Grid.ColumnDefinitions>
 
-                    <DockPanel>
+                    <DockPanel Margin="6,0,0,0"
+                               Grid.Row="0"
+                               Grid.RowSpan="2">
                         <ui:FontIcon
                             Height="40"
                             HorizontalAlignment="Center"
                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
                             Glyph="&#xE78B;" />
 
-                        <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <ikw:SimpleStackPanel Margin="20,0,0,0" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_OverlayDisplayLevel}" />
                             <TextBlock
                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -318,11 +324,24 @@
                         <ComboBoxItem Content="{l:Static resx:Resources.OverlayPage_OverlayDisplayLevel_Custom}" />
                         <ComboBoxItem Content="{l:Static resx:Resources.OverlayPage_OverlayDisplayLevel_External}" />
                     </ComboBox>
+                    <ComboBox
+                        Grid.Row="2"
+                        Grid.Column="1"
+                        Margin="6,6,0,0"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center"
+                        IsEnabled="{Binding IsRunningRTSS, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsReadOnly="True"
+                        SelectedIndex="{Binding OnScreenDisplayDirection, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+
+                        <ComboBoxItem Content="{l:Static resx:Resources.OverlayPage_OverlayDisplayDirection_Row}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.OverlayPage_OverlayDisplayDirection_Column}" />
+                    </ComboBox>
                 </Grid>
             </Border>
 
             <!--  Custom Settings  -->
-            <ikw:SimpleStackPanel Name="StackCustomSettings" Spacing="3">
+            <ikw:SimpleStackPanel Name="StackCustomSettings" Spacing="0">
                 <ikw:SimpleStackPanel.Style>
                     <Style TargetType="{x:Type ikw:SimpleStackPanel}">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -335,17 +354,16 @@
                 </ikw:SimpleStackPanel.Style>
 
                 <Border
-                    Padding="15,12,12,12"
-                    Background="{DynamicResource ExpanderHeaderBackground}"
-                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                    Padding="0,12,12,12"
+                    Background="{DynamicResource ExpanderHeaderBackground}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
-                        <DockPanel>
+                        <DockPanel Margin="-12,0,0,0">
                             <ikw:SimpleStackPanel Margin="30,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_TimeLevel}" />
                                 <TextBlock
@@ -371,17 +389,16 @@
                 </Border>
 
                 <Border
-                    Padding="15,12,12,12"
-                    Background="{DynamicResource ExpanderHeaderBackground}"
-                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                    Padding="0,12,12,12"
+                    Background="{DynamicResource ExpanderHeaderBackground}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
-                        <DockPanel>
+                        <DockPanel Margin="-12,0,0,0">
                             <ikw:SimpleStackPanel Margin="30,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_FPSLevel}" />
                                 <TextBlock
@@ -407,17 +424,16 @@
                 </Border>
 
                 <Border
-                    Padding="15,12,12,12"
-                    Background="{DynamicResource ExpanderHeaderBackground}"
-                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                    Padding="0,12,12,12"
+                    Background="{DynamicResource ExpanderHeaderBackground}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
-                        <DockPanel>
+                        <DockPanel Margin="-12,0,0,0">
                             <ikw:SimpleStackPanel Margin="30,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_CPULevel}" />
                                 <TextBlock
@@ -443,17 +459,16 @@
                 </Border>
 
                 <Border
-                    Padding="15,12,12,12"
-                    Background="{DynamicResource ExpanderHeaderBackground}"
-                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                    Padding="0,12,12,12"
+                    Background="{DynamicResource ExpanderHeaderBackground}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
-                        <DockPanel>
+                        <DockPanel Margin="-12,0,0,0">
                             <ikw:SimpleStackPanel Margin="30,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_RAMLevel}" />
                                 <TextBlock
@@ -479,17 +494,16 @@
                 </Border>
 
                 <Border
-                    Padding="15,12,12,12"
-                    Background="{DynamicResource ExpanderHeaderBackground}"
-                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                    Padding="0,12,12,12"
+                    Background="{DynamicResource ExpanderHeaderBackground}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
-                        <DockPanel>
+                        <DockPanel Margin="-12,0,0,0">
                             <ikw:SimpleStackPanel Margin="30,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_GPULevel}" />
                                 <TextBlock
@@ -515,17 +529,16 @@
                 </Border>
 
                 <Border
-                    Padding="15,12,12,12"
-                    Background="{DynamicResource ExpanderHeaderBackground}"
-                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                    Padding="0,12,12,12"
+                    Background="{DynamicResource ExpanderHeaderBackground}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
-                        <DockPanel>
+                        <DockPanel Margin="-12,0,0,0">
                             <ikw:SimpleStackPanel Margin="30,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_VRAMLevel}" />
                                 <TextBlock
@@ -551,17 +564,16 @@
                 </Border>
 
                 <Border
-                    Padding="15,12,12,12"
-                    Background="{DynamicResource ExpanderHeaderBackground}"
-                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                    Padding="0,12,12,12"
+                    Background="{DynamicResource ExpanderHeaderBackground}">
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="5*" MinWidth="200" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="6*" MinWidth="200" />
+                            <ColumnDefinition Width="4*" />
                         </Grid.ColumnDefinitions>
 
-                        <DockPanel>
+                        <DockPanel Margin="-12,0,0,0">
                             <ikw:SimpleStackPanel Margin="30,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.OverlayPage_BATTLevel}" />
                                 <TextBlock

@@ -17,11 +17,15 @@ public class GpuWidget : IWidget
         {
             case WidgetLevel.FULL:
                 OSDManager.AddElementIfNotNull(entry, _gpu.HasLoad() ? _gpu.GetLoad() : PlatformManager.LibreHardware.GetGPULoad(), "%");
+                OSDManager.AddElementIfNotNull(entry, _gpu.HasTemperature() ? _gpu.GetTemperature() : PlatformManager.LibreHardware.GetGPUTemperature(), "°C");
                 OSDManager.AddElementIfNotNull(entry, _gpu.HasPower() ? _gpu.GetPower() : PlatformManager.LibreHardware.GetGPUPower(), "W");
-                OSDManager.AddElementIfNotNull(entry, _gpu.HasTemperature() ? _gpu.GetTemperature() : PlatformManager.LibreHardware.GetGPUTemperature(), "C");
+                OSDManager.AddElementIfNotNull(entry,
+                    PlatformManager.LibreHardware.GetGPUMemoryDedicated() + PlatformManager.LibreHardware.GetGPUMemoryShared(),
+                    PlatformManager.LibreHardware.GetGPUMemoryDedicatedTotal(), "GB");
                 break;
             case WidgetLevel.MINIMAL:
                 OSDManager.AddElementIfNotNull(entry, _gpu.HasLoad() ? _gpu.GetLoad() : PlatformManager.LibreHardware.GetGPULoad(), "%");
+                OSDManager.AddElementIfNotNull(entry, _gpu.HasTemperature() ? _gpu.GetTemperature() : PlatformManager.LibreHardware.GetGPUTemperature(), "°C");
                 OSDManager.AddElementIfNotNull(entry, _gpu.HasPower() ? _gpu.GetPower() : PlatformManager.LibreHardware.GetGPUPower(), "W");
                 break;
         }

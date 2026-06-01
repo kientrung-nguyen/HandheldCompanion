@@ -31,6 +31,8 @@ namespace HandheldCompanion.Commands
             typeof(TDPDecrease),
             typeof(RogGPU),
             Resources.Hotkey_FunctionCategory_Windows,
+            typeof(TouchpadToggle),
+            typeof(TouchscreenToggle),
             typeof(OnScreenKeyboardCommands),
             typeof(OnScreenKeyboardLegacyCommands),
             typeof(ActionCenterCommands),

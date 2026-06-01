@@ -5,7 +5,6 @@ using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Windows;
 using System;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using Page = System.Windows.Controls.Page;
@@ -22,14 +21,18 @@ public partial class QuickHomePage : Page
         this.Tag = Tag;
 
         ManagerFactory.multimediaManager.VolumeNotification += SystemManager_VolumeNotification;
+        ManagerFactory.multimediaManager.MicrophoneVolumeNotification += SystemManager_MicrophoneVolumeNotification;
         ManagerFactory.multimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
+        ManagerFactory.multimediaManager.NightLightNotification += SystemManager_NightLightNotification;
         ManagerFactory.multimediaManager.Initialized += SystemManager_Initialized;
     }
 
     public void Close()
     {
         ManagerFactory.multimediaManager.VolumeNotification -= SystemManager_VolumeNotification;
+        ManagerFactory.multimediaManager.MicrophoneVolumeNotification -= SystemManager_MicrophoneVolumeNotification;
         ManagerFactory.multimediaManager.BrightnessNotification -= SystemManager_BrightnessNotification;
+        ManagerFactory.multimediaManager.NightLightNotification -= SystemManager_NightLightNotification;
         ManagerFactory.multimediaManager.Initialized -= SystemManager_Initialized;
     }
 
@@ -53,14 +56,17 @@ public partial class QuickHomePage : Page
             {
                 SliderBrightness.IsEnabled = true;
 
-                brightnessLock.Enter();
-                try
+                if (brightnessLock.TryEnter())
                 {
-                    SliderBrightness.Value = ManagerFactory.multimediaManager.GetBrightness();
-                }
-                finally
-                {
-                    brightnessLock.Exit();
+                    try
+                    {
+                        SliderBrightness.Value = ManagerFactory.multimediaManager.GetBrightness();
+                    }
+                    catch { }
+                    finally
+                    {
+                        brightnessLock.Exit();
+                    }
                 }
             });
         }
@@ -69,21 +75,69 @@ public partial class QuickHomePage : Page
         {
             UIHelper.TryBeginInvoke(() =>
             {
+                VolumeButton.IsEnabled = true;
                 SliderVolume.IsEnabled = true;
 
                 var vol = ManagerFactory.multimediaManager.GetVolume();
                 var rounded = Math.Round(vol);
 
-                volumeLock.Enter();
-                try
+                if (volumeLock.TryEnter())
                 {
-                    UpdateVolumeIcon(rounded);
-                    SliderVolume.Value = rounded;
+                    try
+                    {
+                        UpdateVolumeIcon(rounded);
+                        SliderVolume.Value = rounded;
+                    }
+                    finally
+                    {
+                        volumeLock.Exit();
+                    }
                 }
-                finally
+            });
+        }
+
+        if (ManagerFactory.multimediaManager.HasMicrophoneSupport())
+        {
+            UIHelper.TryBeginInvoke(() =>
+            {
+                MicButton.IsEnabled = true;
+                SliderMic.IsEnabled = true;
+
+                var vol = ManagerFactory.multimediaManager.GetMicVolume();
+                var rounded = Math.Round(vol);
+
+                if (volumeLock.TryEnter())
                 {
-                    volumeLock.Exit();
+                    try
+                    {
+                        MicIcon.Glyph = ManagerFactory.multimediaManager.IsMicMuted() ? "\uf781" : "\ue720";
+                        SliderMic.Value = rounded;
+                    }
+                    finally
+                    {
+                        volumeLock.Exit();
+                    }
                 }
+            });
+        }
+
+        if (ManagerFactory.multimediaManager.HasNightLightSupport())
+        {
+            UIHelper.TryBeginInvoke(() =>
+            {
+                BrightnessButton.IsEnabled = true;
+                if (brightnessLock.TryEnter())
+                {
+                    try
+                    {
+                        LightIcon.Glyph = ManagerFactory.multimediaManager.GetNightLight() < 1 ? "\uE706" : "\uf08c";
+                    }
+                    finally
+                    {
+                        brightnessLock.Exit();
+                    }
+                }
+
             });
         }
     }
@@ -95,14 +149,18 @@ public partial class QuickHomePage : Page
             if (Math.Abs(SliderBrightness.Value - brightness) < double.Epsilon)
                 return;
 
-            brightnessLock.Enter();
-            try
+            if (brightnessLock.TryEnter())
             {
-                SliderBrightness.Value = brightness;
-            }
-            finally
-            {
-                brightnessLock.Exit();
+                try
+                {
+                    if (SliderBrightness.Value != brightness)
+                        SliderBrightness.Value = brightness;
+                }
+                catch { }
+                finally
+                {
+                    brightnessLock.Exit();
+                }
             }
         });
     }
@@ -120,14 +178,63 @@ public partial class QuickHomePage : Page
             if (volume < 0 || Math.Abs(SliderVolume.Value - rounded) < double.Epsilon)
                 return;
 
-            volumeLock.Enter();
-            try
+            if (volumeLock.TryEnter())
             {
-                SliderVolume.Value = rounded;
+                try
+                {
+                    SliderVolume.Value = rounded;
+                }
+                catch { }
+                finally
+                {
+                    volumeLock.Exit();
+                }
             }
-            finally
+        });
+    }
+
+    private void SystemManager_MicrophoneVolumeNotification(float volume)
+    {
+        var rounded = Math.Round(Convert.ToDouble(volume));
+
+        UIHelper.TryBeginInvoke(() =>
+        {
+            MicIcon.Glyph = rounded < 0 ? "\uf781" : "\ue720";
+
+            SliderMic.IsEnabled = volume >= 0;
+
+            if (volume < 0 || Math.Abs(SliderMic.Value - rounded) < double.Epsilon)
+                return;
+
+            if (volumeLock.TryEnter())
             {
-                volumeLock.Exit();
+                try
+                {
+                    SliderMic.Value = rounded;
+                }
+                catch { }
+                finally
+                {
+                    volumeLock.Exit();
+                }
+            }
+        });
+    }
+
+    private void SystemManager_NightLightNotification(bool enabled)
+    {
+        UIHelper.TryBeginInvoke(() =>
+        {
+            if (brightnessLock.TryEnter())
+            {
+                try
+                {
+                    LightIcon.Glyph = !enabled ? "\uE706" : "\uf08c";
+                }
+                finally
+                {
+                    brightnessLock.Exit();
+                }
             }
         });
     }
@@ -143,7 +250,10 @@ public partial class QuickHomePage : Page
 
         try
         {
-            ManagerFactory.multimediaManager.SetBrightness(SliderBrightness.Value);
+            lock (brightnessLock)
+            {
+                ManagerFactory.multimediaManager.SetBrightness(SliderBrightness.Value);
+            }
         }
         catch { }
     }
@@ -158,22 +268,37 @@ public partial class QuickHomePage : Page
 
         try
         {
-            ManagerFactory.multimediaManager.SetVolume(SliderVolume.Value);
+            lock (volumeLock)
+            {
+                ManagerFactory.multimediaManager.Unmute();
+                ManagerFactory.multimediaManager.SetVolume(SliderVolume.Value);
+            }
+        }
+        catch { }
+    }
+
+
+    private void SliderMic_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+            return;
+
+        if (volumeLock.IsEntered())
+            return;
+
+        try
+        {
+            lock (volumeLock)
+            {
+                ManagerFactory.multimediaManager.MicUnmute();
+                ManagerFactory.multimediaManager.SetMicVolume(SliderMic.Value);
+            }
         }
         catch { }
     }
 
     private void UpdateVolumeIcon(double volume, bool mute = false)
     {
-        string glyph;
-
-        //if (volume == 0) glyph = "\uE992";
-        //else if (volume <= 33) glyph = "\uE993";
-        //else if (volume <= 65) glyph = "\uE994";
-        //else glyph = "\uE995";
-
-        //VolumeIcon.Glyph = glyph;
-
         VolumeIcon.Glyph = mute ? "\uE74F" :
             volume switch
             {
@@ -224,13 +349,35 @@ public partial class QuickHomePage : Page
                 // UI thread
                 UIHelper.TryBeginInvoke(() =>
                 {
-                    var isMute = SoundControl.ToggleAudio();
-                    UpdateVolumeIcon(SoundControl.AudioGet(), isMute ?? true);
-                    if (isMute is not null)
-                        ;
+                    ManagerFactory.multimediaManager.ToggleMute();
+                    UpdateVolumeIcon(
+                        ManagerFactory.multimediaManager.GetVolume(),
+                        ManagerFactory.multimediaManager.IsMuted()
+                        );
                     //ToastManager.RunToast(
                     //    isMute.Value ? Properties.Resources.Muted : Properties.Resources.Unmuted,
                     //    isMute.Value ? ToastIcons.VolumeMute : ToastIcons.Volume);
+                });
+            }
+            catch { }
+            finally
+            {
+                volumeLock.Exit();
+            }
+        }
+    }
+
+    private void MicButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (volumeLock.TryEnter())
+        {
+            try
+            {
+                // UI thread
+                UIHelper.TryBeginInvoke(() =>
+                {
+                    ManagerFactory.multimediaManager.ToggleMicMute();
+                    MicIcon.Glyph = ManagerFactory.multimediaManager.IsMicMuted() ? "\uf781" : "\ue720";
                 });
             }
             catch { }

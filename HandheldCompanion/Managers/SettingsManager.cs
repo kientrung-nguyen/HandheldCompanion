@@ -22,6 +22,7 @@ public static class Settings
 
     public static readonly string OnScreenDisplayRefreshRate = "OnScreenDisplayRefreshRate";
     public static readonly string OnScreenDisplayLevel = "OnScreenDisplayLevel";
+    public static readonly string OnScreenDisplayDirection = "OnScreenDisplayDirection";
     public static readonly string OnScreenDisplayTimeLevel = "OnScreenDisplayTimeLevel";
     public static readonly string OnScreenDisplayFPSLevel = "OnScreenDisplayFPSLevel";
     public static readonly string OnScreenDisplayCPULevel = "OnScreenDisplayCPULevel";

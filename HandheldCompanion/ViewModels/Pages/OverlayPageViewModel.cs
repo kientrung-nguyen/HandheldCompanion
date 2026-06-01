@@ -34,6 +34,22 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        private int _onScreenDisplayDirection;
+        public int OnScreenDisplayDirection
+        {
+            get => _onScreenDisplayDirection;
+            set
+            {
+                if (value != _onScreenDisplayDirection)
+                {
+                    _onScreenDisplayDirection = value;
+                    OnPropertyChanged(nameof(OnScreenDisplayDirection));
+
+                    ManagerFactory.settingsManager.SetProperty(Settings.OnScreenDisplayDirection, value);
+                }
+            }
+        }
+
         private int _onScreenDisplayTimeLevel;
         public int OnScreenDisplayTimeLevel
         {
@@ -483,6 +499,7 @@ namespace HandheldCompanion.ViewModels
             // raise events
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayRefreshRate, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayRefreshRate), false);
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayLevel), false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayDirection, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayDirection), false);
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayTimeLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayTimeLevel), false);
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayFPSLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayFPSLevel), false);
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayCPULevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayCPULevel), false);
@@ -726,6 +743,8 @@ namespace HandheldCompanion.ViewModels
                 framerateInterval = Convert.ToInt32(value);
                 framerateTimer.Interval = framerateInterval;
             }
+            else if (name == Settings.OnScreenDisplayDirection)
+                _onScreenDisplayDirection = Convert.ToInt32(value);
             else if (name == Settings.OnScreenDisplayLevel)
                 _onScreenDisplayLevel = Convert.ToInt32(value);
             else if (name == Settings.OnScreenDisplayTimeLevel)

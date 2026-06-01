@@ -69,7 +69,9 @@
                 Header="{l:Static resx:Resources.ProfilesPage_TDPOverride}"
                 IsEnabled="{Binding SupportsTDP, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
                 <ui:SettingsExpander.HeaderIcon>
-                    <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xeb3c;" />
+                    <!--&#xe945;
+                        &#xeb3c;-->
+                    <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe945;" />
                 </ui:SettingsExpander.HeaderIcon>
 
                 <ui:ToggleSwitch Name="TDPOverrideToggle" IsOn="{Binding TDPOverrideEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -364,6 +366,8 @@
                     <ComboBoxItem Content="Aggressive" />
                     <ComboBoxItem Content="Efficient enabled" />
                     <ComboBoxItem Content="Efficient aggressive" />
+                    <ComboBoxItem Content="Aggressive at Guaranteed" />
+                    <ComboBoxItem Content="Efficient Aggressive at Guaranteed" />
                 </ComboBox>
             </ui:SettingsCard>
 

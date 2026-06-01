@@ -56,27 +56,76 @@ public class GenericCpu : Hardware
         // Check if processor supports an invariant TSC.
         _isInvariantTimeStampCounter = cpuId[0][0].ExtData.GetLength(0) > 7 && (cpuId[0][0].ExtData[7, 3] & 0x100) != 0;
 
-        _totalLoad = _coreCount > 1 ? new Sensor("CPU Total", 0, SensorType.Load, this, settings) : null;
-        _maxLoad = _coreCount > 1 ? new Sensor("CPU Core Max", 1, SensorType.Load, this, settings) : null;
+        _totalLoad = _coreCount > 1 ? new Sensor("Total CPU Usage", 0, SensorType.Load, this, settings) : null;
+        _maxLoad = _coreCount > 1 ? new Sensor("Max CPU Usage", 1, SensorType.Load, this, settings) : null;
 
         _cpuLoad = new CpuLoad(cpuId);
         if (_cpuLoad.IsAvailable)
         {
             _threadLoads = new Sensor[_threadCount];
-            for (int coreIdx = 0; coreIdx < cpuId.Length; coreIdx++)
+            switch (this)
             {
-                for (int threadIdx = 0; threadIdx < cpuId[coreIdx].Length; threadIdx++)
-                {
-                    int thread = cpuId[coreIdx][threadIdx].Thread;
-                    if (thread < _threadLoads.Length)
+                case AmdCpu:
                     {
-                        // Some cores may have 2 threads while others have only one (e.g. P-cores vs E-cores on Intel 12th gen).
-                        string sensorName = CoreString(coreIdx) + (cpuId[coreIdx].Length > 1 ? $" Thread #{threadIdx + 1}" : string.Empty);
-                        _threadLoads[thread] = new Sensor(sensorName, thread + 2, SensorType.Load, this, settings);
+                        // Add all numa nodes.
+                        int coreId = 0;
+                        int lastCoreId = -1; // Invalid id.
+                        int threadIdx = 0;
 
-                        ActivateSensor(_threadLoads[thread]);
+                        // Ryzen 3000's skip some core ids.
+                        // So start at 1 and count upwards when the read core changes.
+                        foreach (CpuId[] cpu in cpuId.OrderBy(x => x[0].ExtData[0x1e, 1] & 0xFF))
+                        {
+                            CpuId thread = cpu[0];
+
+                            // CPUID_Fn8000001E_EBX, Register ..1E_1, [7:0]
+                            // threads per core =  CPUID_Fn8000001E_EBX[15:8] + 1
+                            // CoreId: core ID =  CPUID_Fn8000001E_EBX[7:0]
+                            int coreIdRead = (int)(thread.ExtData[0x1e, 1] & 0xff);
+
+                            // CPUID_Fn8000001E_ECX, Node Identifiers, Register ..1E_2
+                            // NodesPerProcessor =  CPUID_Fn8000001E_ECX[10:8]
+                            // nodeID =  CPUID_Fn8000001E_ECX[7:0]
+                            int nodeId = (int)(thread.ExtData[0x1e, 2] & 0xff);
+
+                            threadIdx++;
+                            if (coreIdRead != lastCoreId)
+                            {
+                                coreId++;
+                                threadIdx = 0;
+                            }
+
+                            lastCoreId = coreIdRead;
+                            // Some cores may have 2 threads while others have only one (e.g. P-cores vs E-cores on Intel 12th gen).
+                            string sensorName = CoreString(coreId - 1) + $" T{threadIdx} Usage";
+                            _threadLoads[thread.Thread] = new Sensor(sensorName, thread.Thread + 2, SensorType.Load, this, settings);
+
+                            ActivateSensor(_threadLoads[thread.Thread]);
+                        }
+
+                        break;
                     }
-                }
+
+                default:
+                    {
+                        for (int coreIdx = 0; coreIdx < cpuId.Length; coreIdx++)
+                        {
+                            for (int threadIdx = 0; threadIdx < cpuId[coreIdx].Length; threadIdx++)
+                            {
+                                int thread = cpuId[coreIdx][threadIdx].Thread;
+                                if (thread < _threadLoads.Length)
+                                {
+                                    // Some cores may have 2 threads while others have only one (e.g. P-cores vs E-cores on Intel 12th gen).
+                                    string sensorName = CoreString(coreIdx) + (cpuId[coreIdx].Length > 1 ? $" Thread #{threadIdx + 1}" : string.Empty);
+                                    _threadLoads[thread] = new Sensor(sensorName, thread + 2, SensorType.Load, this, settings);
+
+                                    ActivateSensor(_threadLoads[thread]);
+                                }
+                            }
+                        }
+
+                        break;
+                    }
             }
 
             if (_totalLoad != null)
@@ -127,7 +176,7 @@ public class GenericCpu : Hardware
         if (_coreCount == 1)
             return "CPU Core";
 
-        return "CPU Core #" + (i + 1);
+        return "Core #" + (i + 1);
     }
 
     private static Identifier CreateIdentifier(Vendor vendor, int processorIndex)

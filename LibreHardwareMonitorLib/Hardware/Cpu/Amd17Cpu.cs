@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using LibreHardwareMonitor.PawnIo;
 
 namespace LibreHardwareMonitor.Hardware.Cpu;
@@ -39,7 +40,7 @@ internal sealed class Amd17Cpu : AmdCpu
         // Add all numa nodes.
         int coreId = 0;
         int lastCoreId = -1; // Invalid id.
-
+        
         // Ryzen 3000's skip some core ids.
         // So start at 1 and count upwards when the read core changes.
         foreach (CpuId[] cpu in cpuId.OrderBy(x => x[0].ExtData[0x1e, 1] & 0xFF))
@@ -139,15 +140,15 @@ internal sealed class Amd17Cpu : AmdCpu
             _coreVoltage = new Sensor("Core (SVI2 TFN)", _cpu._sensorTypeIndex[SensorType.Voltage]++, SensorType.Voltage, _cpu, _cpu._settings);
             _socVoltage = new Sensor("SoC (SVI2 TFN)", _cpu._sensorTypeIndex[SensorType.Voltage]++, SensorType.Voltage, _cpu, _cpu._settings);
             _busClock = new Sensor("Bus Speed", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
-            _avgClock = new Sensor("Cores (Average)", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
-            _maxClock = new Sensor("Cores (Max)", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
-            _avgClockEffective = new Sensor("Cores (Average Effective)", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
-            _maxClockEffective = new Sensor("Cores (Max Effective)", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
+            _avgClock = new Sensor("Average Core Clock", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
+            _maxClock = new Sensor("Max Core Clock", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
+            _avgClockEffective = new Sensor("Average Core Effective Clock", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
+            _maxClockEffective = new Sensor("Max Core Effective Clock", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
 
             _cpu.ActivateSensor(_packagePower);
             _cpu.ActivateSensor(_avgClock);
-            _cpu.ActivateSensor(_maxClock);
             _cpu.ActivateSensor(_avgClockEffective);
+            _cpu.ActivateSensor(_maxClock);
             _cpu.ActivateSensor(_maxClockEffective);
 
             foreach (KeyValuePair<uint, RyzenSMU.SmuSensorType> sensor in _cpu._smu.GetPmTableStructure())
@@ -432,13 +433,13 @@ internal sealed class Amd17Cpu : AmdCpu
             double clock = Nodes.Average(x => x.PerformanceClock);
             _avgClock.Value = (float)Math.Round(clock, 0);
 
-            clock = Nodes.Max(x => x.Cores.Max(c => c.PerformanceClock));
+            clock = Nodes.SelectMany(x => x.Cores).Max(c => c.PerformanceClock);//.Max(x => x.Cores.Max(c => c.PerformanceClock));
             _maxClock.Value = (float)Math.Round(clock, 0);
 
             clock = Nodes.Average(x => x.EffectiveClock);
             _avgClockEffective.Value = (float)Math.Round(clock, 0);
 
-            clock = Nodes.Max(x => x.Cores.Max(c => new double[] { c.EffectiveClockT0, c.EffectiveClockT1 }.Max()));
+            clock = Nodes.SelectMany(x => x.Cores).Max(c => Math.Max(c.EffectiveClockT0, c.EffectiveClockT1));//.Max(x => x.Cores.Max(c => new double[] { c.EffectiveClockT0, c.EffectiveClockT1 }.Max()));
             _maxClockEffective.Value = (float)Math.Round(clock, 0);
         }
 
@@ -650,7 +651,8 @@ internal sealed class Amd17Cpu : AmdCpu
     private class Core
     {
         private readonly Sensor _clock;
-        private readonly Sensor _clockEffective;
+        private readonly Sensor _clockEffectiveT0;
+        private readonly Sensor _clockEffectiveT1;
         private readonly Amd17Cpu _cpu;
         private readonly Sensor _multiplier;
         private readonly Sensor _power;
@@ -669,13 +671,15 @@ internal sealed class Amd17Cpu : AmdCpu
             _cpu = cpu;
             CoreId = id;
             _clock = new Sensor("Core #" + CoreId + " Clock", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, cpu, cpu._settings);
-            _clockEffective = new Sensor("Core #" + CoreId + " Clock (Effective)", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, cpu, cpu._settings);
-            _multiplier = new Sensor("Core #" + CoreId, cpu._sensorTypeIndex[SensorType.Factor]++, SensorType.Factor, cpu, cpu._settings);
-            _power = new Sensor("Core #" + CoreId + " (SMU)", cpu._sensorTypeIndex[SensorType.Power]++, SensorType.Power, cpu, cpu._settings);
+            _clockEffectiveT0 = new Sensor("Core #" + CoreId + " T0 Effective Clock", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, cpu, cpu._settings);
+            _clockEffectiveT1 = new Sensor("Core #" + CoreId + " T1 Effective Clock", _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, cpu, cpu._settings);
+            _multiplier = new Sensor("Core #" + CoreId + " Ratio", cpu._sensorTypeIndex[SensorType.Factor]++, SensorType.Factor, cpu, cpu._settings);
+            _power = new Sensor("Core #" + CoreId + " SMU", cpu._sensorTypeIndex[SensorType.Power]++, SensorType.Power, cpu, cpu._settings);
             _vcore = new Sensor("Core #" + CoreId + " VID", cpu._sensorTypeIndex[SensorType.Voltage]++, SensorType.Voltage, cpu, cpu._settings);
 
             cpu.ActivateSensor(_clock);
-            cpu.ActivateSensor(_clockEffective);
+            cpu.ActivateSensor(_clockEffectiveT0);
+            cpu.ActivateSensor(_clockEffectiveT1);
             cpu.ActivateSensor(_multiplier);
             cpu.ActivateSensor(_power);
             cpu.ActivateSensor(_vcore);
@@ -750,7 +754,9 @@ internal sealed class Amd17Cpu : AmdCpu
             Threads.ForEach(t => t.UpdateMeasurements());
             EffectiveClockT0 = Threads[0].EffectiveClock;
             EffectiveClockT1 = Threads[1].EffectiveClock;
-            _clockEffective.Value = (float)Threads.Average(x => x.EffectiveClock);
+            //_clockEffectiveT0.Value = (float)Threads.Average(x => x.EffectiveClock);
+            _clockEffectiveT0.Value = (float)Threads[0].EffectiveClock;
+            _clockEffectiveT1.Value = (float)Threads[1].EffectiveClock;
 
             if (thread.HasValidCounters())
             {

@@ -17,11 +17,11 @@ public class OverlayManager
         { 5, new ExternalStrategy()}
     };
 
-    public string? GetConfig(int level)
+    public string? GetConfig(int level, int direction = 0)
     {
         if (!_configs.TryGetValue(level, out var config))
             throw new InvalidOperationException("Unknown overlay level " + level);
 
-        return config?.GetConfig();
+        return config?.GetConfig(direction);
     }
 }

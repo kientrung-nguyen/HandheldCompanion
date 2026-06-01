@@ -314,7 +314,7 @@ namespace HandheldCompanion.ViewModels
 
         private void SetupManagerEvents()
         {
-            NightLight.Toggled += NightLight_Toggled;
+            //NightLight.Toggled += NightLight_Toggled;
 
             // raise events
             switch (ManagerFactory.settingsManager.Status)
@@ -436,6 +436,7 @@ namespace HandheldCompanion.ViewModels
         {
             ManagerFactory.multimediaManager.PrimaryScreenChanged += MultimediaManager_PrimaryScreenChanged;
             ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+            ManagerFactory.multimediaManager.NightLightNotification += MultimediaManager_NightLightNotification;
 
             if (ManagerFactory.multimediaManager.PrimaryDesktop is not null)
             {
@@ -592,7 +593,9 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private void NightLight_Toggled(bool enabled)
+
+
+        private void MultimediaManager_NightLightNotification(bool enabled)
         {
             isLoadingDisplay = true;
             try
@@ -604,6 +607,19 @@ namespace HandheldCompanion.ViewModels
                 isLoadingDisplay = false;
             }
         }
+
+        //private void NightLight_Toggled(bool enabled)
+        //{
+        //    isLoadingDisplay = true;
+        //    try
+        //    {
+        //        IsNightLightEnabled = enabled;
+        //    }
+        //    finally
+        //    {
+        //        isLoadingDisplay = false;
+        //    }
+        //}
 
         private void SettingsManager_SettingValueChanged(string? name, object? value, bool temporary)
         {
@@ -761,13 +777,14 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.multimediaManager.Initialized -= MultimediaManager_Initialized;
                 ManagerFactory.multimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
                 ManagerFactory.multimediaManager.DisplaySettingsChanged -= MultimediaManager_DisplaySettingsChanged;
+                ManagerFactory.multimediaManager.NightLightNotification -= MultimediaManager_NightLightNotification;
                 ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
                 ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
                 ManagerFactory.profileManager.Initialized -= ProfileManager_Initialized;
                 ManagerFactory.profileManager.Applied -= ProfileManager_Applied;
                 ManagerFactory.profileManager.Updated -= ProfileManager_Updated;
                 ManagerFactory.profileManager.Discarded -= ProfileManager_Discarded;
-                NightLight.Toggled -= NightLight_Toggled;
+                //NightLight.Toggled -= NightLight_Toggled;
 
                 if (radioTimer != null)
                 {

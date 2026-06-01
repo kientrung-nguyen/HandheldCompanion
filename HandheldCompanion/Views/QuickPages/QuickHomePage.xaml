@@ -92,20 +92,83 @@
         <ikw:SimpleStackPanel
             Grid.Row="1"
             VerticalAlignment="Bottom"
-            Spacing="12">
-
+            Spacing="3">
+            <DockPanel IsEnabled="{Binding SupportsTDP, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                <ui:FontIcon
+                    Height="40"
+                    Width="40"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                    Glyph="&#xe945;" />
+                <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_TDPOverride}" />
+                    <DockPanel Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ui:SettingsCard}}">
+                        <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                            <Label Margin="0,0,8,0">PL1</Label>
+                            <TextBlock Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" Text="{Binding PL1OverrideValue, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+                            <TextBlock
+                                Margin="2,0,0,0"
+                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                Text=" W" />
+                        </StackPanel>
+                        <Slider
+                            Margin="8,0,0,0"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center"
+                            AutoToolTipPrecision="0"
+                            IsMoveToPointEnabled="True"
+                            IsSnapToTickEnabled="True"
+                            LargeChange="5"
+                            Maximum="{Binding ConfigurableTDPOverrideUp, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                            Minimum="{Binding ConfigurableTDPOverrideDown, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                            SmallChange="1"
+                            TickFrequency="1"
+                            TickPlacement="BottomRight"
+                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                            Value="{Binding PL1OverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </DockPanel>
+                    <DockPanel Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ui:SettingsCard}}">
+                        <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                            <Label Margin="0,0,8,0">PL2</Label>
+                            <TextBlock Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" Text="{Binding PL2OverrideValue, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+                            <TextBlock
+                                Margin="2,0,0,0"
+                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                Text=" W" />
+                        </StackPanel>
+                        <Slider
+                            Margin="8,0,0,0"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center"
+                            AutoToolTipPrecision="0"
+                            IsMoveToPointEnabled="True"
+                            IsSnapToTickEnabled="True"
+                            LargeChange="5"
+                            Maximum="{Binding ConfigurableTDPOverrideUp, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                            Minimum="{Binding ConfigurableTDPOverrideDown, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                            SmallChange="1"
+                            TickFrequency="1"
+                            TickPlacement="BottomRight"
+                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                            Value="{Binding PL2OverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </DockPanel>
+                </ikw:SimpleStackPanel>
+            </DockPanel>
+            
             <ui:NavigationViewItemSeparator Margin="-15,0,-6,0" />
 
             <DockPanel>
                 <Button 
                     Name="BrightnessButton"
+                    IsEnabled="False"
                     Click="BrightnessButton_Click"
-                    Height="40" Width="40"
+                    Height="35" Width="35"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
                     BorderBrush="{x:Null}"
                     Background="{x:Null}"
-                    Padding="0,0,0,1">
+                    Padding="0,0,0,0">
                     <ui:FontIcon
                         Name="LightIcon"
                         Height="40"
@@ -132,8 +195,9 @@
             <DockPanel>
                 <Button 
                     Name="VolumeButton"
+                    IsEnabled="False"
                     Click="VolumeButton_Click"
-                    Height="40" Width="40"
+                    Height="35" Width="35"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
                     BorderBrush="{x:Null}"
@@ -149,6 +213,7 @@
                 <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
                     <Slider
                         x:Name="SliderVolume"
+                        IsEnabled="False"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
                         LargeChange="10"
@@ -158,6 +223,39 @@
                         TickFrequency="1"
                         ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                         ValueChanged="SliderVolume_ValueChanged" />
+                </ikw:SimpleStackPanel>
+            </DockPanel>
+            <DockPanel>
+                <Button 
+                    Name="MicButton"
+                    IsEnabled="False"
+                    Click="MicButton_Click"
+                    Height="35" Width="35"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    BorderBrush="{x:Null}"
+                    Background="{x:Null}"
+                    Padding="0,0,0,0">
+                    <ui:FontIcon
+                        Name="MicIcon"
+                        Height="40"
+                        HorizontalAlignment="Center"
+                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                        Glyph="&#xe720;" />
+                </Button>
+                <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
+                    <Slider
+                        x:Name="SliderMic"
+                        IsEnabled="False"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        LargeChange="10"
+                        Maximum="100"
+                        Minimum="0"
+                        SmallChange="1"
+                        TickFrequency="1"
+                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        ValueChanged="SliderMic_ValueChanged"/>
                 </ikw:SimpleStackPanel>
             </DockPanel>
         </ikw:SimpleStackPanel>

@@ -20,6 +20,8 @@ namespace HandheldCompanion.Misc
         public bool TDPOverrideEnabled { get; set; }
         public double[]? TDPOverrideValues { get; set; }
 
+        public double[]? TDPQuickValues { get; set; }
+
         public bool CPUOverrideEnabled { get; set; }
         public double CPUOverrideValue { get; set; }
 

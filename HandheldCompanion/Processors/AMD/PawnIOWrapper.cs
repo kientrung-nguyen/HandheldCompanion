@@ -380,15 +380,15 @@ namespace HandheldCompanion.Processors.AMD
                     Buffer.BlockCopy(inBuffer, 0, totalInput, FN_NAME_LENGTH, inSize * 8);
                 }
 
-                byte[] outBuffer = outSize > 0 ? new byte[outSize * 8] : null;
+                byte[] outBuffer = outSize > 0 ? new byte[outSize * 8] : null!;
 
                 // Use SafeFileHandle for execute calls
                 bool result = DeviceIoControl(
-                    _safeHandle,
+                    _safeHandle!,
                     ControlCode.Execute,
                     totalInput,
                     (uint)totalInput.Length,
-                    outBuffer,
+                    outBuffer!,
                     (uint)(outBuffer?.Length ?? 0),
                     out uint bytesReturned,
                     IntPtr.Zero);

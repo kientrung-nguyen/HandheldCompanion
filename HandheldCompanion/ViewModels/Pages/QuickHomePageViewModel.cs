@@ -1,9 +1,15 @@
 ﻿using GongSolutions.Wpf.DragDrop;
+using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Misc;
+using HandheldCompanion.Processors;
+using HandheldCompanion.Shared;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Data;
+using static HandheldCompanion.Processors.IntelProcessor;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -20,6 +26,24 @@ namespace HandheldCompanion.ViewModels
             ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
             ManagerFactory.hotkeysManager.Deleted += HotkeysManager_Deleted;
 
+            if (PerformanceManager.IsInitialized && PerformanceManager.GetProcessor() is Processor processor)
+                PerformanceManager_Initialized(processor.CanChangeTDP, processor.CanChangeGPU);
+            else
+                PerformanceManager.Initialized += PerformanceManager_Initialized;
+
+
+            // raise events
+            switch (ManagerFactory.powerProfileManager.Status)
+            {
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.powerProfileManager.Initialized += PowerProfileManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QueryPowerProfile();
+                    break;
+            }
+
             // raise events
             switch (ManagerFactory.hotkeysManager.Status)
             {
@@ -31,7 +55,176 @@ namespace HandheldCompanion.ViewModels
                     QueryHotkeys();
                     break;
             }
+
+            PropertyChanged += (sender, e) =>
+            {
+                LogManager.LogInformation("{0} PropertyChanged '{1}'", "QuickHome", e.PropertyName ?? string.Empty);
+                if (SelectedPreset is null || SelectedPreset.Name is null)
+                    return;
+
+                // skip PropertyChanged updates for specific properties
+                switch (e.PropertyName)
+                {
+                    case "ModifyPresetName":
+                    case "ModifyPresetDescription":
+                    case "AutoTDPMaximum":
+                    case "ConfigurableTDPOverride":
+                    case "ConfigurableTDPOverrideDown":
+                    case "ConfigurableTDPOverrideUp":
+                    case "SupportsTDP":
+                        return;
+                }
+
+                // No need to update 
+
+                // trigger power profile update but don't freeze UI
+                // todo: implement proper debounce
+                SubmitSelectedPreset();
+            };
         }
+
+        private void PowerProfileManager_Initialized()
+        {
+            QueryPowerProfile();
+        }
+
+
+        private void QueryPowerProfile()
+        {
+            // manage events
+            OnPropertyChanged(nameof(PL1OverrideValue));
+            OnPropertyChanged(nameof(PL2OverrideValue));
+        }
+
+
+        private void SubmitSelectedPreset()
+        {
+            Task.Run(() =>
+            {
+                ManagerFactory.powerProfileManager.UpdateOrCreateProfile(SelectedPreset, UpdateSource.QuickProfilesPage);
+            });
+        }
+
+        private void PerformanceManager_Initialized(bool CanChangeTDP, bool CanChangeGPU)
+        {
+            OnPropertyChanged(nameof(SupportsTDP));
+        }
+
+        public PowerProfile SelectedPreset
+        {
+            get => ManagerFactory.powerProfileManager.GetCurrent();
+        }
+
+        public bool SupportsTDP => PerformanceManager.GetProcessor()?.CanChangeTDP ?? false;
+
+        public double ConfigurableTDPOverrideDown
+        {
+            get => ManagerFactory.settingsManager.GetDouble(Settings.ConfigurableTDPOverrideDown);
+        }
+
+        public double ConfigurableTDPOverrideUp
+        {
+            get => ManagerFactory.settingsManager.GetDouble(Settings.ConfigurableTDPOverrideUp);
+        }
+
+        private bool _coerceGuard;
+        private double RequiredDelta
+        {
+            get
+            {
+                if (PerformanceManager.GetProcessor() is IntelProcessor ip)
+                {
+                    // Official specification for Lunar Lake states that PL2 should always be at least 1 W higher than PL1
+                    if (ip.MicroArch == IntelMicroArch.LunarLake)
+                        return 1.0d;
+                }
+
+                return 0.0d;
+            }
+        }
+
+
+        // PL1 = Long/Sustained
+        // On AMD also = STAPM ?
+        public double PL1OverrideValue
+        {
+            get
+            {
+                double[] tdp = SelectedPreset?.TDPQuickValues ?? IDevice.GetCurrent().nTDP;
+                if (tdp is not null)
+                    return tdp[(int)PowerType.Slow];
+
+                return PerformanceManager.GetProcessor()?.GetTDPLimit(PowerType.Slow) ?? IDevice.GetCurrent().nTDP[(int)PowerType.Slow];
+            }
+            set
+            {
+                if (Math.Abs(value - PL1OverrideValue) < double.Epsilon) return;
+
+                double clamped = Math.Max(ConfigurableTDPOverrideDown,
+                                  Math.Min(value, ConfigurableTDPOverrideUp));
+
+                if (SelectedPreset is null)
+                    return;
+
+                var selectedPreset = SelectedPreset;
+                if (selectedPreset is null)
+                    return;
+
+                double[] tdpOverrideValues = selectedPreset.TDPQuickValues ??= (double[])IDevice.GetCurrent().nTDP.Clone();
+
+                tdpOverrideValues[(int)PowerType.Slow] = clamped;
+                tdpOverrideValues[(int)PowerType.Stapm] = clamped;
+
+                // If PL1 crosses PL2, bump PL2 up to maintain PL2 >= PL1 + Δ
+                double minPl2 = clamped + RequiredDelta;
+
+                if (!_coerceGuard && PL2OverrideValue < minPl2)
+                {
+                    try
+                    {
+                        _coerceGuard = true;
+                        tdpOverrideValues[(int)PowerType.Fast] = Math.Min(ConfigurableTDPOverrideUp, minPl2);
+                        OnPropertyChanged(nameof(PL2OverrideValue));
+                    }
+                    finally { _coerceGuard = false; }
+                }
+
+                OnPropertyChanged(nameof(PL1OverrideValue));
+            }
+        }
+
+        // PL2 = Fast/Short
+        public double PL2OverrideValue
+        {
+            get
+            {
+                double[] tdp = SelectedPreset?.TDPQuickValues ?? IDevice.GetCurrent().nTDP;
+                if (tdp is not null)
+                    return tdp[(int)PowerType.Fast];
+
+                return PerformanceManager.GetProcessor()?.GetTDPLimit(PowerType.Fast) ?? IDevice.GetCurrent().nTDP[(int)PowerType.Fast];
+            }
+            set
+            {
+                if (Math.Abs(value - PL2OverrideValue) < double.Epsilon) return;
+
+                double minPl2 = PL1OverrideValue + RequiredDelta;
+                double clamped = Math.Max(minPl2, Math.Min(value, ConfigurableTDPOverrideUp));
+
+                var selectedPreset = SelectedPreset;
+                if (selectedPreset is null)
+                    return;
+
+                double[] tdpOverrideValues = selectedPreset.TDPQuickValues ??= (double[])IDevice.GetCurrent().nTDP.Clone();
+
+                if (tdpOverrideValues[(int)PowerType.Fast] != clamped)
+                {
+                    tdpOverrideValues[(int)PowerType.Fast] = clamped;
+                    OnPropertyChanged(nameof(PL2OverrideValue));
+                }
+            }
+        }
+
 
         private void HotkeysManager_Initialized()
         {
