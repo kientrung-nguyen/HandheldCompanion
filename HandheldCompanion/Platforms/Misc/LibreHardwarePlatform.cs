@@ -6,9 +6,7 @@ using LibreHardwareMonitor.Hardware;
 using System;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
-using System.Text.RegularExpressions;
 using System.Timers;
-using Windows.UI.WebUI;
 
 namespace HandheldCompanion.Platforms.Misc
 {
@@ -16,6 +14,7 @@ namespace HandheldCompanion.Platforms.Misc
     {
         private const int MinimumCpuPollingInterval = 500;
         private const int MinimumGpuPollingInterval = 500;
+        private const int MinimumFanPollingInterval = 3000;
         private const int MinimumMemoryPollingInterval = 2000;
         private const int MinimumBatteryPollingInterval = 5000;
 
@@ -26,8 +25,10 @@ namespace HandheldCompanion.Platforms.Misc
 
         private Timer updateTimer;
         private int updateInterval = 1000;
+
         private long lastCpuUpdateTick;
         private long lastGpuUpdateTick;
+        private long lastFanUpdateTick;
         private long lastMemoryUpdateTick;
         private long lastBatteryUpdateTick;
 
@@ -60,9 +61,16 @@ namespace HandheldCompanion.Platforms.Misc
         private float? BatteryPower;
         private float? BatteryTimeSpan;
 
+        private float? BatteryDesignCapacity;
+        private float? BatteryFullCapacity;
+        private float? BatteryRemainingCapacity;
+
         // NETWORK
         private float? NetworkSpeedUp;
         private float? NetworkSpeedDown;
+
+        // FAN
+        private float? CPUFanSpeed;
 
         public LibreHardwarePlatform()
         {
@@ -110,8 +118,6 @@ namespace HandheldCompanion.Platforms.Misc
             }
 
             networkInterface ??= DeviceUtils.GetPrimaryNetworkInterface();
-
-
             if (computer is not null)
             {
                 // open computer, slow task
@@ -186,9 +192,22 @@ namespace HandheldCompanion.Platforms.Misc
                 long now = Environment.TickCount64;
                 bool shouldUpdateCpu = ShouldUpdateHardware(now, ref lastCpuUpdateTick, MinimumCpuPollingInterval);
                 bool shouldUpdateGpu = ShouldUpdateHardware(now, ref lastGpuUpdateTick, MinimumGpuPollingInterval);
+                bool shouldUpdateFan = ShouldUpdateHardware(now, ref lastFanUpdateTick, MinimumFanPollingInterval);
                 bool shouldUpdateMemory = ShouldUpdateHardware(now, ref lastMemoryUpdateTick, MinimumMemoryPollingInterval);
                 bool shouldUpdateBattery = ShouldUpdateHardware(now, ref lastBatteryUpdateTick, MinimumBatteryPollingInterval);
 
+                if (shouldUpdateFan)
+                {
+                    var sensorValue = IDevice.GetCurrent().ReadFanSpeed();
+                    if (!float.IsNaN(sensorValue) && sensorValue > 0)
+                    {
+                        if (CPUFanSpeed != sensorValue)
+                        {
+                            CPUFanSpeed = sensorValue;
+                            CPUFanSpeedChanged?.Invoke(sensorValue);
+                        }
+                    }
+                }
                 foreach (IHardware? hardware in computer.Hardware)
                 {
                     if (!ShouldUpdateHardware(hardware, shouldUpdateCpu, shouldUpdateGpu, shouldUpdateMemory, shouldUpdateBattery))
@@ -248,6 +267,7 @@ namespace HandheldCompanion.Platforms.Misc
 
         #region gpu updates
         public float? GetGPULoad() => computer?.IsGpuEnabled ?? false ? GPULoad : null;
+        public float? GetGPUClock() => computer?.IsCpuEnabled ?? false ? CPUClock : null;
         public float? GetGPUPower() => computer?.IsGpuEnabled ?? false ? GPUPower : null;
         public float? GetGPUTemperature() => computer?.IsGpuEnabled ?? false ? GPUTemperature : null;
 
@@ -261,7 +281,6 @@ namespace HandheldCompanion.Platforms.Misc
 
         private void HandleGPU(IHardware gpu)
         {
-            float highestClock = 0;
             foreach (var sensor in gpu.Sensors)
             {
                 // May crash the app when Value is null, better to check first
@@ -274,7 +293,7 @@ namespace HandheldCompanion.Platforms.Misc
                         HandleGPU_Load(sensor);
                         break;
                     case SensorType.Clock:
-                        highestClock = HandleGPU_Clock(sensor, highestClock);
+                        HandleGPU_Clock(sensor);
                         break;
                     case SensorType.Power:
                         HandleGPU_Power(sensor);
@@ -377,26 +396,21 @@ namespace HandheldCompanion.Platforms.Misc
             }
         }
 
-        private float HandleGPU_Clock(ISensor sensor, float currentHighest)
+        private void HandleGPU_Clock(ISensor sensor)
         {
             float? sensorValue = sensor.Value;
             if (!sensorValue.HasValue)
-                return currentHighest;
+                return;
 
             if (sensor.Name == "GPU Core")
             {
                 float value = sensorValue.Value;
-                if (value > currentHighest)
+                if (GPUClock != value)
                 {
-                    if (GPUClock != value)
-                    {
-                        GPUClock = value;
-                        GPUClockChanged?.Invoke(GPUClock);
-                        return value;
-                    }
+                    GPUClock = value;
+                    GPUClockChanged?.Invoke(GPUClock);
                 }
             }
-            return currentHighest;
         }
 
         private void HandleGPU_Power(ISensor sensor)
@@ -534,7 +548,7 @@ namespace HandheldCompanion.Platforms.Misc
             //    || sensor.Name.StartsWith("Core #", StringComparison.Ordinal))
             switch (sensor.Name)
             {
-                case "Max Core Effective Clock":
+                case "Max Core Clock":
                     {
                         float value = sensorValue.Value;
                         if (CPUClockMax != value)
@@ -543,7 +557,7 @@ namespace HandheldCompanion.Platforms.Misc
                         }
                         break;
                     }
-                case "Average Core Effective Clock":
+                case "Average Core Clock":
                     {
                         float value = sensorValue.Value;
 
@@ -718,6 +732,9 @@ namespace HandheldCompanion.Platforms.Misc
         public float? GetBatteryLevel() => computer?.IsBatteryEnabled ?? false ? BatteryLevel : null;
         public float? GetBatteryPower() => computer?.IsBatteryEnabled ?? false ? BatteryPower : null;
         public float? GetBatteryTimeSpan() => computer?.IsBatteryEnabled ?? false ? BatteryTimeSpan : null;
+        public float? GetBatteryRemainingCapacity() => computer?.IsBatteryEnabled ?? false ? BatteryRemainingCapacity : null;
+        public float? GetBatteryFullCapacity() => computer?.IsBatteryEnabled ?? false ? BatteryFullCapacity : null;
+        public float? GetCPUFanSpeed() => CPUFanSpeed;
 
         private void HandleBattery(IHardware cpu)
         {
@@ -735,12 +752,36 @@ namespace HandheldCompanion.Platforms.Misc
                     case SensorType.Power:
                         HandleBattery_Power(sensor);
                         break;
+                    case SensorType.Energy:
+                        HandleBattery_Energy(sensor);
+                        break;
                     case SensorType.TimeSpan:
                         HandleBattery_TimeSpan(sensor);
                         break;
                 }
             }
         }
+
+
+        private void HandleBattery_Energy(ISensor sensor)
+        {
+            float? sensorValue = sensor.Value;
+            if (!sensorValue.HasValue)
+                return;
+            switch (sensor.Name)
+            {
+                case "Designed Capacity":
+                    BatteryDesignCapacity = sensorValue;
+                    break;
+                case "Full-Charged Capacity":
+                    BatteryFullCapacity = sensorValue;
+                    break;
+                case "Remaining Capacity":
+                    BatteryRemainingCapacity = sensorValue;
+                    break;
+            }
+        }
+
 
         private void HandleBattery_Level(ISensor sensor)
         {
@@ -765,23 +806,31 @@ namespace HandheldCompanion.Platforms.Misc
             if (!sensorValue.HasValue)
                 return;
 
-            if (sensor.Name == "Charge Rate")
+            switch (sensor.Name)
             {
-                float value = sensorValue.Value;
-                if (BatteryPower != value)
-                {
-                    BatteryPower = value;
-                    BatteryPowerChanged?.Invoke(BatteryPower);
-                }
-            }
-            if (sensor.Name == "Discharge Rate")
-            {
-                float value = -sensorValue.Value;
-                if (BatteryPower != value)
-                {
-                    BatteryPower = value;
-                    BatteryPowerChanged?.Invoke(BatteryPower);
-                }
+                case "Charge Rate":
+                    {
+                        float value = sensorValue.Value;
+                        if (BatteryPower != value)
+                        {
+                            BatteryPower = value;
+                            BatteryPowerChanged?.Invoke(BatteryPower);
+                        }
+
+                        break;
+                    }
+
+                case "Discharge Rate":
+                    {
+                        float value = -sensorValue.Value;
+                        if (BatteryPower != value)
+                        {
+                            BatteryPower = value;
+                            BatteryPowerChanged?.Invoke(BatteryPower);
+                        }
+
+                        break;
+                    }
             }
         }
 
@@ -810,6 +859,7 @@ namespace HandheldCompanion.Platforms.Misc
         public event ChangedHandler? CPUPowerChanged;
         public event ChangedHandler? CPUClockChanged;
         public event ChangedHandler? CPUTemperatureChanged;
+        public event ChangedHandler? CPUFanSpeedChanged;
 
         public event ChangedHandler? GPULoadChanged;
         public event ChangedHandler? GPUPowerChanged;

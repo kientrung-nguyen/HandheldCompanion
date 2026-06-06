@@ -6,6 +6,7 @@ using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using PowerManagerAPI;
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -394,7 +395,7 @@ public static class PerformanceManager
             if (profile.TDPOverrideValues is not null && profile.TDPOverrideValues.Length > 0)
             {
                 // Validate TDP value meets minimum threshold
-                double tdpValue = profile.TDPOverrideValues[0];
+                double tdpValue = profile.TDPOverrideValues.Max();
                 if (tdpValue >= TDPMin)
                     AutoTDP = AutoTDPMax = tdpValue;
                 else
@@ -427,6 +428,9 @@ public static class PerformanceManager
             // manual TDP override is not set
             // use the settings max limit for AutoTDP
             AutoTDP = AutoTDPMax = ManagerFactory.settingsManager.GetInt("ConfigurableTDPOverrideUp");
+
+            if (profile.TDPQuickValues is not null && profile.TDPQuickValues.Length > 0)
+                AutoTDPMax = profile.TDPQuickValues.Max();
         }
 
         // apply profile defined AutoTDP
@@ -539,11 +543,8 @@ public static class PerformanceManager
     private static void RestoreTDP(bool immediate)
     {
         // On power status change, force refresh TDP and AutoTDP
-        PowerProfile profile = ManagerFactory.powerProfileManager.GetDefault();
-        if (profile.TDPQuickValues is not null && profile.TDPQuickValues.Length > 0)
-            RequestTDP(profile.TDPQuickValues, immediate);
-        else
-            RequestTDP(profile.TDPOverrideValues, immediate);
+        PowerProfile profile = ManagerFactory.powerProfileManager.GetCurrent();
+        RequestTDP(profile.TDPOverrideValues ?? IDevice.GetCurrent().nTDP, immediate);
 
         if (profile.TDPOverrideValues is not null && profile.TDPOverrideValues.Length > 0)
             AutoTDP = profile.TDPOverrideValues[0];
@@ -1018,18 +1019,21 @@ public static class PerformanceManager
         if (immediate)
         {
             // TODO: Implement proper TDP reading
-            // CurrentTDP[idx] = value;
+            if (RequestedTDP[idx] != CurrentTDP[idx])
+            {
+                CurrentTDP[idx] = value;
 
-            if (processor is IntelProcessor)
-                // Intel doesn't have stapm
-                if (type == PowerType.Stapm)
-                    return;
+                if (processor is IntelProcessor)
+                    // Intel doesn't have stapm
+                    if (type == PowerType.Stapm)
+                        return;
 
-            processor.SetTDPLimit((PowerType)idx, value, immediate);
+                processor.SetTDPLimit((PowerType)idx, value, immediate);
+            }
         }
     }
 
-    private static async void RequestTDP(double[]? values, bool immediate = false)
+    private static async void RequestTDP(double[] values, bool immediate = false)
     {
         // Handle null or insufficient array scenario
         if (values == null || values.Length <= (int)PowerType.Fast)
@@ -1075,7 +1079,6 @@ public static class PerformanceManager
 
     private static void RequestPowerMode(Guid guid)
     {
-        //if (PowerGetEffectiveOverlayScheme(out Guid activeScheme) == 0)
         if (PowerSchemeAPI.GetPowerMode() is Guid activeScheme)
         {
             if (activeScheme == guid)

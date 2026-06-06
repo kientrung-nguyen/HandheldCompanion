@@ -37,7 +37,7 @@ namespace HandheldCompanion.Misc
             if (!Supported) return null;
             var intValue = value ? 1 : 0;
             if (Get() != intValue)
-            { 
+            {
                 Toggle();
                 return value;
             }
@@ -144,11 +144,11 @@ namespace HandheldCompanion.Misc
         //public static event ToggledEventHandler? Toggled;
         //public delegate void ToggledEventHandler(bool enabled);
 
-        public static void SubscribeToEvents(Action<object?, RegistryChangedEventArgs> EventHandler)
+        public static void SubscribeToEvents(Action<object?, RegistryChangedEventArgs> eventHandler)
         {
             try
             {
-                _nightLightStateWatcher.RegistryChanged += new EventHandler<RegistryChangedEventArgs>(EventHandler);
+                _nightLightStateWatcher.RegistryChanged += new EventHandler<RegistryChangedEventArgs>(eventHandler);
                 _nightLightStateWatcher.StartWatching();
             }
             catch
@@ -160,7 +160,11 @@ namespace HandheldCompanion.Misc
 
         public static void Unsubscribe()
         {
-            _nightLightStateWatcher.StopWatching();
+            try
+            {
+                _nightLightStateWatcher?.StopWatching();
+            }
+            catch { }
         }
 
         private static void Toggle()

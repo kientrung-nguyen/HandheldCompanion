@@ -314,8 +314,6 @@ namespace HandheldCompanion.ViewModels
 
         private void SetupManagerEvents()
         {
-            //NightLight.Toggled += NightLight_Toggled;
-
             // raise events
             switch (ManagerFactory.settingsManager.Status)
             {
@@ -608,19 +606,6 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        //private void NightLight_Toggled(bool enabled)
-        //{
-        //    isLoadingDisplay = true;
-        //    try
-        //    {
-        //        IsNightLightEnabled = enabled;
-        //    }
-        //    finally
-        //    {
-        //        isLoadingDisplay = false;
-        //    }
-        //}
-
         private void SettingsManager_SettingValueChanged(string? name, object? value, bool temporary)
         {
             isLoadingDisplay = true;
@@ -784,7 +769,6 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.profileManager.Applied -= ProfileManager_Applied;
                 ManagerFactory.profileManager.Updated -= ProfileManager_Updated;
                 ManagerFactory.profileManager.Discarded -= ProfileManager_Discarded;
-                //NightLight.Toggled -= NightLight_Toggled;
 
                 if (radioTimer != null)
                 {

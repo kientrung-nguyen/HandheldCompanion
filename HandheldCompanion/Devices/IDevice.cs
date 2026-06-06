@@ -59,6 +59,9 @@ public struct ECDetails
     public ushort AddressFanDuty;
     public short FanValueMin;
     public short FanValueMax;
+    public short FanRPMMax;
+    public ushort AddressFanRPM;
+    public short FanRPMLength;
 }
 
 public struct HidFilter
@@ -173,7 +176,7 @@ public abstract class IDevice
     public short KeyPressDelay = 200;
 
     // LibreHardwareMonitor
-    public bool NetworkMonitor = true;
+    public bool NetworkMonitor = false;
     public bool CpuMonitor = true;
     public bool GpuMonitor = true;
     public bool MemoryMonitor = true;
@@ -968,6 +971,28 @@ public abstract class IDevice
             return 0;
 
         // todo: implement me
+        return 0;
+    }
+
+    public virtual bool ReadFanControl()
+    {
+        if (ECDetails.AddressFanControl == 0)
+            return false;
+
+        if (!UseOpenLib || !IsOpen)
+            return false;
+
+        return false;
+    }
+
+    public virtual float ReadFanSpeed()
+    {
+        if (ECDetails.AddressFanControl == 0)
+            return 0;
+
+        if (!UseOpenLib || !IsOpen)
+            return 0;
+
         return 0;
     }
 

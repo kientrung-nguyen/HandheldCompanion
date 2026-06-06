@@ -17,6 +17,7 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Navigation;
 using System.Windows.Threading;
+using Windows.Devices.Power;
 using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
@@ -24,6 +25,7 @@ using static HandheldCompanion.WinAPI;
 using Page = System.Windows.Controls.Page;
 using PowerLineStatus = System.Windows.Forms.PowerLineStatus;
 using Screen = WpfScreenHelper.Screen;
+using SystemInformation = System.Windows.Forms.SystemInformation;
 using SystemManager = HandheldCompanion.Managers.SystemManager;
 using SystemPowerManager = Windows.System.Power.PowerManager;
 
@@ -83,6 +85,8 @@ public partial class OverlayQuickTools : GamepadWindow
         };
         clockUpdateTimer.Tick += UpdateTime;
 
+        navView.MouseDoubleClick += NavView_MouseDoubleClick;
+
         // manage events
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
         ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
@@ -107,6 +111,60 @@ public partial class OverlayQuickTools : GamepadWindow
 
         // load gamepad navigation manager
         gamepadFocusManager = new(this, ContentFrame);
+    }
+
+    private void NavView_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        chargeWatt = !chargeWatt;
+        UIHelper.TryInvoke(() =>
+        {
+            PowerManager_PowerStatusChanged(SystemInformation.PowerStatus);
+        });
+    }
+
+    private static bool chargeWatt;
+    private static decimal? batteryFullCapacity;
+    private static decimal? batteryDesignCapacity;
+
+    private decimal? BatteryChargeRateInWatts()
+    {
+        BatteryReport report = Battery.AggregateBattery.GetReport();
+        if (report.ChargeRateInMilliwatts.HasValue)
+            return Math.Round((decimal)report.ChargeRateInMilliwatts / 1000, 1);
+
+        return null;
+    }
+
+    private decimal? BatteryDesignCapacityInWattHours()
+    {
+        if (batteryDesignCapacity is null or 0)
+        {
+            BatteryReport report = Battery.AggregateBattery.GetReport();
+            if (report.DesignCapacityInMilliwattHours.HasValue)
+                batteryDesignCapacity = Math.Round((decimal)report.DesignCapacityInMilliwattHours / 1000, 1);
+        }
+
+        return batteryDesignCapacity;
+    }
+
+    private decimal? BatteryFullCapacityInWattHours()
+    {
+        if (batteryFullCapacity is null or 0)
+        {
+            BatteryReport report = Battery.AggregateBattery.GetReport();
+            if (report.FullChargeCapacityInMilliwattHours.HasValue)
+                batteryFullCapacity = Math.Round((decimal)report.FullChargeCapacityInMilliwattHours / 1000, 1);
+        }
+
+        return batteryFullCapacity;
+    }
+    private decimal? BatteryRemainingCapacityInWattHours()
+    {
+        BatteryReport report = Battery.AggregateBattery.GetReport();
+        if (report.RemainingCapacityInMilliwattHours.HasValue)
+            return Math.Round((decimal)report.RemainingCapacityInMilliwattHours / 1000, 1);
+
+        return null;
     }
 
     public ContentDialog LaunchProfileContentDialog => FindName("LaunchProfileDialog") as ContentDialog
@@ -147,7 +205,7 @@ public partial class OverlayQuickTools : GamepadWindow
         homePage = new("quickhome");
         devicePage = new("quickdevice");
         profilesPage = new("quickprofiles");
-        overlayPage = new QuickOverlayPage();
+        //overlayPage = new QuickOverlayPage();
         performancePage = new QuickPerformancePage();
         applicationsPage = new("quickapplications");
         keyboardPage = new("quickkeyboard");
@@ -155,7 +213,7 @@ public partial class OverlayQuickTools : GamepadWindow
         _pages.Add("QuickHomePage", homePage);
         _pages.Add("QuickDevicePage", devicePage);
         _pages.Add("QuickProfilesPage", profilesPage);
-        _pages.Add("QuickOverlayPage", overlayPage);
+        //_pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickPerformancePage", performancePage);
         _pages.Add("QuickApplicationsPage", applicationsPage);
         _pages.Add("QuickKeyboardPage", keyboardPage);
@@ -405,7 +463,9 @@ public partial class OverlayQuickTools : GamepadWindow
         UIHelper.TryInvoke(() =>
         {
             var BatteryLifePercent = (int)Math.Truncate(status.BatteryLifePercent * 100.0f);
-            BatteryIndicatorPercentage.Text = $"{BatteryLifePercent}%";
+            BatteryIndicatorPercentage.Text = $"{(chargeWatt
+                ? $"{BatteryRemainingCapacityInWattHours()}/{BatteryFullCapacityInWattHours()}"
+                : BatteryLifePercent)}{(chargeWatt ? $"Wh, Health: {Math.Round((BatteryFullCapacityInWattHours() / BatteryDesignCapacityInWattHours() * 100) ?? 0, 1)}%" : "%")}";
 
             // get status key
             var KeyStatus = string.Empty;
@@ -439,20 +499,29 @@ public partial class OverlayQuickTools : GamepadWindow
             if (status.BatteryLifeRemaining > 0)
             {
                 var time = TimeSpan.FromSeconds(status.BatteryLifeRemaining);
-
-                string remaining;
-                if (status.BatteryLifeRemaining >= 3600)
-                    remaining = $"{time.Hours}h {time.Minutes}min";
-                else
-                    remaining = $"{time.Minutes}min";
-
-                BatteryIndicatorLifeRemaining.Text = $"({remaining} remaining)";
+                string remaining = status.BatteryLifeRemaining >= 3600 ? $"{time.Hours}h {time.Minutes}min" : $"{time.Minutes}min";
+                BatteryIndicatorLifeRemaining.Text = chargeWatt 
+                    ? $"({BatteryChargeRateInWatts()}W)" 
+                    : $"({remaining} remaining)";
                 BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
             }
             else
             {
-                BatteryIndicatorLifeRemaining.Text = string.Empty;
-                BatteryIndicatorLifeRemaining.Visibility = Visibility.Collapsed;
+                var batteryLifeFull = (double?)((BatteryFullCapacityInWattHours() - BatteryRemainingCapacityInWattHours()) / BatteryChargeRateInWatts() * 60);
+                var time = TimeSpan.FromMinutes(batteryLifeFull ?? 0);
+                if (batteryLifeFull == null || batteryLifeFull <= 0 || time == TimeSpan.Zero)
+                {
+                    BatteryIndicatorLifeRemaining.Text = string.Empty;
+                    BatteryIndicatorLifeRemaining.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    string remaining = batteryLifeFull >= 60 ? $"{time.Hours}h {time.Minutes}min" : $"{time.Minutes}min";
+                    BatteryIndicatorLifeRemaining.Text = chargeWatt
+                        ? $"{(BatteryChargeRateInWatts() is null or 0 ? "" : ("(" + BatteryChargeRateInWatts() + "W)"))}"
+                        : $"({(BatteryChargeRateInWatts() is null or 0 ? "" : (BatteryChargeRateInWatts() + "W, "))}{remaining} til full)";
+                    BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
+                }
             }
         });
     }
@@ -510,8 +579,12 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             if (!IsVisible || Visibility != Visibility.Visible)
             {
+                NavigateToPage("QuickHomePage");
                 IsHitTestVisible = true;
                 ShowInstant();
+
+                batteryFullCapacity = null;
+                PowerManager_PowerStatusChanged(SystemInformation.PowerStatus);
             }
             else
             {

@@ -40,7 +40,15 @@ public partial class QuickHomePage : Page
     {
         DataContext = new QuickHomePageViewModel();
         InitializeComponent();
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
+
+    private void OnLoaded(object sender, RoutedEventArgs e) =>
+        ((QuickHomePageViewModel)DataContext).OnNavigatedTo();
+
+    private void OnUnloaded(object sender, RoutedEventArgs e) =>
+        ((QuickHomePageViewModel)DataContext).OnNavigatedFrom();
 
     private void QuickButton_Click(object sender, RoutedEventArgs e)
     {
@@ -54,10 +62,10 @@ public partial class QuickHomePage : Page
         {
             UIHelper.TryBeginInvoke(() =>
             {
-                SliderBrightness.IsEnabled = true;
 
                 if (brightnessLock.TryEnter())
                 {
+                    SliderBrightness.IsEnabled = true;
                     try
                     {
                         SliderBrightness.Value = ManagerFactory.multimediaManager.GetBrightness();
@@ -75,17 +83,16 @@ public partial class QuickHomePage : Page
         {
             UIHelper.TryBeginInvoke(() =>
             {
-                VolumeButton.IsEnabled = true;
-                SliderVolume.IsEnabled = true;
-
-                var vol = ManagerFactory.multimediaManager.GetVolume();
-                var rounded = Math.Round(vol);
-
                 if (volumeLock.TryEnter())
                 {
+                    VolumeButton.IsEnabled = true;
+                    SliderVolume.IsEnabled = true;
+                    var vol = ManagerFactory.multimediaManager.GetVolume();
+                    var isMuted = ManagerFactory.multimediaManager.IsMuted();
+                    var rounded = Math.Round(vol);
                     try
                     {
-                        UpdateVolumeIcon(rounded);
+                        UpdateVolumeIcon(rounded, isMuted);
                         SliderVolume.Value = rounded;
                     }
                     finally
@@ -100,17 +107,18 @@ public partial class QuickHomePage : Page
         {
             UIHelper.TryBeginInvoke(() =>
             {
-                MicButton.IsEnabled = true;
-                SliderMic.IsEnabled = true;
-
-                var vol = ManagerFactory.multimediaManager.GetMicVolume();
-                var rounded = Math.Round(vol);
 
                 if (volumeLock.TryEnter())
                 {
+                    MicButton.IsEnabled = true;
+                    SliderMic.IsEnabled = true;
+
+                    var vol = ManagerFactory.multimediaManager.GetMicVolume();
+                    var isMuted = ManagerFactory.multimediaManager.IsMicMuted();
+                    var rounded = Math.Round(vol);
                     try
                     {
-                        MicIcon.Glyph = ManagerFactory.multimediaManager.IsMicMuted() ? "\uf781" : "\ue720";
+                        MicIcon.Glyph = isMuted ? "\uf781" : "\ue720";
                         SliderMic.Value = rounded;
                     }
                     finally
@@ -165,17 +173,15 @@ public partial class QuickHomePage : Page
         });
     }
 
-    private void SystemManager_VolumeNotification(float volume)
+    private void SystemManager_VolumeNotification(float volume, bool isMuted)
     {
         var rounded = Math.Round(Convert.ToDouble(volume));
 
         UIHelper.TryBeginInvoke(() =>
         {
-            UpdateVolumeIcon(rounded);
+            UpdateVolumeIcon(rounded, isMuted);
 
-            SliderVolume.IsEnabled = volume >= 0;
-
-            if (volume < 0 || Math.Abs(SliderVolume.Value - rounded) < double.Epsilon)
+            if (Math.Abs(SliderVolume.Value - rounded) < double.Epsilon)
                 return;
 
             if (volumeLock.TryEnter())
@@ -193,15 +199,13 @@ public partial class QuickHomePage : Page
         });
     }
 
-    private void SystemManager_MicrophoneVolumeNotification(float volume)
+    private void SystemManager_MicrophoneVolumeNotification(float volume, bool isMuted)
     {
         var rounded = Math.Round(Convert.ToDouble(volume));
 
         UIHelper.TryBeginInvoke(() =>
         {
-            MicIcon.Glyph = rounded < 0 ? "\uf781" : "\ue720";
-
-            SliderMic.IsEnabled = volume >= 0;
+            MicIcon.Glyph = isMuted ? "\uf781" : "\ue720";
 
             if (volume < 0 || Math.Abs(SliderMic.Value - rounded) < double.Epsilon)
                 return;

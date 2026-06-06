@@ -146,6 +146,7 @@
                                 <TextBlock
                                     MinWidth="20"
                                     d:Text="100"
+                                    TextAlignment="Right"
                                     Text="{Binding CPUPower, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
                                     W
@@ -162,6 +163,7 @@
                                 <TextBlock
                                     MinWidth="20"
                                     d:Text="100"
+                                    TextAlignment="Right"
                                     Text="{Binding CPUTemperature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
                                     °C
@@ -181,6 +183,7 @@
                                 <TextBlock
                                     MinWidth="20"
                                     d:Text="50"
+                                    TextAlignment="Right"
                                     Text="{Binding CPULoad, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
                                     %
@@ -224,6 +227,7 @@
                                 <TextBlock
                                     MinWidth="20"
                                     d:Text="100"
+                                    TextAlignment="Right"
                                     Text="{Binding GPUPower, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
                                     W
@@ -240,6 +244,7 @@
                                 <TextBlock
                                     MinWidth="20"
                                     d:Text="100"
+                                    TextAlignment="Right"
                                     Text="{Binding GPUTemperature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
                                     °C
@@ -259,6 +264,7 @@
                                 <TextBlock
                                     MinWidth="20"
                                     d:Text="50"
+                                    TextAlignment="Right"
                                     Text="{Binding GPULoad, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}">
                                     %

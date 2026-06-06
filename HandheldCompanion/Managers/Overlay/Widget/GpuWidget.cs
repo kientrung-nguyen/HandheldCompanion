@@ -17,6 +17,11 @@ public class GpuWidget : IWidget
         {
             case WidgetLevel.FULL:
                 OSDManager.AddElementIfNotNull(entry, _gpu.HasLoad() ? _gpu.GetLoad() : PlatformManager.LibreHardware.GetGPULoad(), "%");
+                if ((_gpu.HasClock() ? _gpu.GetClock() : PlatformManager.LibreHardware.GetGPUClock()) > 1000f)
+                    OSDManager.AddElementIfNotNull(entry, (_gpu.HasClock() ? _gpu.GetClock() : PlatformManager.LibreHardware.GetGPUClock()) / 1000f, "GHz");
+                else
+                    OSDManager.AddElementIfNotNull(entry, (_gpu.HasClock() ? _gpu.GetClock() : PlatformManager.LibreHardware.GetGPUClock()), "MHz");
+
                 OSDManager.AddElementIfNotNull(entry, _gpu.HasTemperature() ? _gpu.GetTemperature() : PlatformManager.LibreHardware.GetGPUTemperature(), "°C");
                 OSDManager.AddElementIfNotNull(entry, _gpu.HasPower() ? _gpu.GetPower() : PlatformManager.LibreHardware.GetGPUPower(), "W");
                 OSDManager.AddElementIfNotNull(entry,

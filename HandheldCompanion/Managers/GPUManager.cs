@@ -387,6 +387,8 @@ namespace HandheldCompanion.Managers
             // Add to dictionary
             DisplayGPU.TryAdd(adapterInformation, newGPU);
 
+            lock (_reconcileLock)
+                _reconcileRunning = false;
             // request a reconciliation pass
             RequestReconcile();
         }
@@ -423,6 +425,7 @@ namespace HandheldCompanion.Managers
                 {
                     while (true)
                     {
+                        LogManager.LogInformation("Request a reconciliation pass {0}", _reconcileRequested);
                         DesktopScreen? screen;
                         lock (_reconcileLock)
                         {
@@ -436,7 +439,10 @@ namespace HandheldCompanion.Managers
                             screen = _lastPrimaryScreen ?? ManagerFactory.multimediaManager.PrimaryDesktop;
                         }
 
-                        if (screen is null)
+                        if (screen is null 
+                            || screen.screen is null 
+                            || screen.screen.DeviceName is null 
+                            || screen.screen.DeviceName.Length == 0)
                             continue;
 
                         TryConnectPrimaryGpu(screen);
@@ -456,10 +462,16 @@ namespace HandheldCompanion.Managers
             // Map the primary screen to a GPU adapter.
             AdapterInformation? key = DisplayGPU.Keys.FirstOrDefault(a => a.Details.DeviceName == screen.screen?.DeviceName);
             if (key is null)
+            {
+                LogManager.LogInformation("Try Connect PrimaryGpu key null {0}", screen.screen?.DeviceName ?? string.Empty);
                 return;
+            }
 
             if (!DisplayGPU.TryGetValue(key, out GPU? gpu) || gpu is null)
+            {
+                LogManager.LogInformation("Try Get Display GPU null {0}, VendorID:{1}, DeviceId:{2}", key.Details.Description, key.Details.VendorId, key.Details.DeviceId);
                 return;
+            }
 
             LogManager.LogInformation("Retrieved DisplayAdapter: {0} for screen: {1}", gpu.ToString(), screen.ToString());
 

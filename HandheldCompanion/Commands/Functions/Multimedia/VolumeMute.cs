@@ -18,7 +18,7 @@ namespace HandheldCompanion.Commands.Functions.Multimedia
             ManagerFactory.multimediaManager.VolumeNotification += MultimediaManager_VolumeNotification;
         }
 
-        private void MultimediaManager_VolumeNotification(float volume)
+        private void MultimediaManager_VolumeNotification(float volume, bool isMuted)
         {
             Update();
         }

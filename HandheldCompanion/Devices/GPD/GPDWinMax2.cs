@@ -1,6 +1,8 @@
 ﻿using HandheldCompanion.Commands.Functions.HC;
 using HandheldCompanion.Inputs;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using WindowsInput.Events;
 
@@ -19,12 +21,32 @@ public class GPDWinMax2 : IDevice
 
         ECDetails = new ECDetails
         {
-            AddressFanControl = 0x275,
-            AddressFanDuty = 0x1809,
             AddressStatusCommandPort = 0x4E,
             AddressDataPort = 0x4F,
+            AddressFanControl = 0x275,
+            AddressFanDuty = 0x1809,
+            AddressFanRPM = 0x218,
             FanValueMin = 0,
-            FanValueMax = 184
+            FanValueMax = 184, // FAN__RPMWRITE_MAX
+            FanRPMMax = 4968, // FAN__RPMVALUE_MAX
+            FanRPMLength = 2
+            // 4968 FAN_RPMVALUE_MAX
+            // "FAN_RAM_RPMREAD_OFFSET":0x218,
+            // "FAN_RAM_RPMREAD_LENGTH":2,
+
+            /*
+            FAN_EC_CONFIG=[{
+            "FAN_RAM_REG_ADDR":0x4E,
+            "FAN_RAM_REG_DATA":0x4F,
+            "FAN_RAM_MANUAL_OFFSET":0x275,
+            "FAN_RAM_RPMWRITE_OFFSET":0x1809,
+            "FAN_RAM_RPMREAD_OFFSET":0x218,
+            "FAN_RAM_RPMREAD_LENGTH":2,
+
+            "FAN_RPMWRITE_MAX":184,
+            "FAN_RPMVALUE_MAX":4968
+            }]
+            */
         };
 
         GyrometerAxis = new Vector3(1.0f, -1.0f, -1.0f);
@@ -79,5 +101,46 @@ public class GPDWinMax2 : IDevice
         }
 
         return defaultGlyph;
+    }
+
+    public override void SetFanControl(bool enable, int mode = 0)
+    {
+        if (ECDetails.AddressFanControl == 0)
+            return;
+
+        if (!UseOpenLib || !IsOpen)
+            return;
+
+        var data = Convert.ToByte(enable);
+        ECRamDirectWriteByte(ECDetails.AddressFanControl, ECDetails, data);
+    }
+
+    public override float ReadFanDuty()
+    {
+        if (ECDetails.AddressFanControl == 0)
+            return 0;
+
+
+        if (!UseOpenLib || !IsOpen)
+            return 0;
+
+
+        var value = ECRamDirectReadByte(ECDetails.AddressFanDuty, ECDetails);
+        return (float)(100f * (Convert.ToDouble(value) / ECDetails.FanValueMax));
+    }
+
+    public override float ReadFanSpeed()
+    {
+        try
+        {
+            var sum = 0L;
+            foreach (var len in Enumerable.Range(0, ECDetails.FanRPMLength))
+            {
+                var value = ECRamDirectReadByte((ushort)(ECDetails.AddressFanRPM + len), ECDetails);
+                sum = (sum << 8) + value;
+            }
+            return sum;
+        }
+        catch { return 0; }
     }
 }

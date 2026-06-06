@@ -64,11 +64,11 @@ public static class ScreenBrightness
         return brightness;
     }
 
-    public static void SubscribeToEvents(Action<object, EventArrivedEventArgs> EventHandler)
+    public static void SubscribeToEvents(Action<object, EventArrivedEventArgs> eventHandler)
     {
         try
         {
-            watcher.EventArrived += new EventArrivedEventHandler(EventHandler);
+            watcher.EventArrived += new EventArrivedEventHandler(eventHandler);
             watcher.Start();
         }
         catch
@@ -82,7 +82,7 @@ public static class ScreenBrightness
     {
         try
         {
-            watcher.Stop();
+            watcher?.Stop();
         }
         catch
         {

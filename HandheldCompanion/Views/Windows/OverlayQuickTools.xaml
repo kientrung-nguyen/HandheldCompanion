@@ -58,8 +58,9 @@
                 Style="{StaticResource BodyTextBlockStyle}" />
             <TextBlock
                 Name="Time"
-                Margin="12,0,0,0"
+                Margin="12,0,50,0"
                 VerticalAlignment="Center"
+                HorizontalAlignment="Right"
                 Style="{StaticResource BodyTextBlockStyle}" />
         </DockPanel>
 
@@ -126,6 +127,7 @@
                     Name="navOverlay"
                     Content="{l:Static resx:Resources.QuickOverlayPage_Title}"
                     FontSize="12"
+                    Visibility="Collapsed"
                     Style="{StaticResource NavigationViewItemStyle1}"
                     Tag="QuickOverlayPage">
                     <ui:NavigationViewItem.Icon>

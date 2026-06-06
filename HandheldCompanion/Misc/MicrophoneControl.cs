@@ -80,9 +80,18 @@ public static class MicrophoneControl
                 enumerator.RegisterEndpointNotificationCallback(commAudioNotificationClient);
             }
 
-            commDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
+            commDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
             if (commDevice?.AudioEndpointVolume is not null)
+            { 
                 commDevice.AudioEndpointVolume.OnVolumeNotification += new AudioEndpointVolumeNotificationDelegate(eventHandler);
+                eventHandler?.Invoke(new AudioVolumeNotificationData(
+                    Guid.NewGuid(),
+                    commDevice.AudioEndpointVolume.Mute,
+                    commDevice.AudioEndpointVolume.MasterVolumeLevelScalar,
+                    [],
+                    Guid.NewGuid()
+                    ));
+            }
         }
         catch
         {

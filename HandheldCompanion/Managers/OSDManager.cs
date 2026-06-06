@@ -416,7 +416,7 @@ public struct OverlayEntryElement
         SzUnit = unit;
     }
 
-    private static string FormatValue(float value, string unit, bool? padLeft = null)
+    public static string FormatValue(float value, string unit, bool? padLeft = null)
     {
         string format = unit switch
         {
@@ -430,6 +430,7 @@ public struct OverlayEntryElement
             "MB" => "0",   // No leading zeros, no decimal
             "MHz" => "000",
             "GHz" => "0.0",
+            "rpm" => "0000",
             _ => "0.##"    // Default format (no leading zeros, up to 2 decimals)
         };
 

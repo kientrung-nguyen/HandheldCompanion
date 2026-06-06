@@ -116,18 +116,12 @@ public class MultimediaManager : IManager
 
     private void AudioVolumeNotificationEventArrived(AudioVolumeNotificationData data)
     {
-        if (data.Muted)
-            VolumeNotification?.Invoke(-1f);
-        else
-            VolumeNotification?.Invoke(data.MasterVolume * 100f);
+        VolumeNotification?.Invoke(data.MasterVolume * 100f, data.Muted);
     }
 
     private void MicrophoneVolumeNotificationEventArrived(AudioVolumeNotificationData data)
     {
-        if (data.Muted)
-            MicrophoneVolumeNotification?.Invoke(-1f);
-        else
-            MicrophoneVolumeNotification?.Invoke(data.MasterVolume * 100f);
+        MicrophoneVolumeNotification?.Invoke(data.MasterVolume * 100f, data.Muted);
     }
 
     private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
@@ -778,33 +772,6 @@ public class MultimediaManager : IManager
 
     #endregion
 
-    #region Nested Classes
-
-    //private class MMDeviceNotificationClient : IMMNotificationClient
-    //{
-    //    private readonly MultimediaManager _multimediaManager;
-
-    //    public MMDeviceNotificationClient(MultimediaManager multimediaManager)
-    //    {
-    //        _multimediaManager = multimediaManager;
-    //    }
-
-    //    public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
-    //    {
-    //        _multimediaManager?.SetDefaultAudioEndPoint();
-    //    }
-
-    //    public void OnDeviceAdded(string deviceId) { }
-
-    //    public void OnDeviceRemoved(string deviceId) { }
-
-    //    public void OnDeviceStateChanged(string deviceId, DeviceState newState) { }
-
-    //    public void OnPropertyValueChanged(string deviceId, PropertyKey key) { }
-    //}
-
-    #endregion
-
     #region P/Invoke
 
     public enum DMDO
@@ -849,14 +816,13 @@ public class MultimediaManager : IManager
     public delegate void ScreenDisconnectedEventHandler(DesktopScreen screen);
 
     public event VolumeNotificationEventHandler? VolumeNotification;
-    public delegate void VolumeNotificationEventHandler(float volume);
+    public delegate void VolumeNotificationEventHandler(float volume, bool isMuted);
 
     public event MicrophoneVolumeNotificationEventHandler? MicrophoneVolumeNotification;
-    public delegate void MicrophoneVolumeNotificationEventHandler(float volume);
+    public delegate void MicrophoneVolumeNotificationEventHandler(float volume, bool isMuted);
 
     public event BrightnessNotificationEventHandler? BrightnessNotification;
     public delegate void BrightnessNotificationEventHandler(int brightness);
-
 
     public event NightLightNotificationEventHandler? NightLightNotification;
     public delegate void NightLightNotificationEventHandler(bool enabled);
