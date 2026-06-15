@@ -843,7 +843,7 @@ namespace HandheldCompanion.ViewModels
             #region General Setup
 
             // manage events
-            PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
+            //PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
 
             if (PerformanceManager.IsInitialized && PerformanceManager.GetProcessor() is Processor processor)
                 PerformanceManager_Initialized(processor.CanChangeTDP, processor.CanChangeGPU);
@@ -1220,7 +1220,7 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
                 ManagerFactory.multimediaManager.PrimaryScreenChanged -= MultimediaManager_PrimaryScreenChanged;
                 ManagerFactory.multimediaManager.Initialized -= MultimediaManager_Initialized;
-                PerformanceManager.EPPChanged -= PerformanceManager_EPPChanged;
+                //PerformanceManager.EPPChanged -= PerformanceManager_EPPChanged;
                 PerformanceManager.Initialized -= PerformanceManager_Initialized;
                 ManagerFactory.powerProfileManager.Updated -= PowerProfileManager_Updated;
                 ManagerFactory.powerProfileManager.Deleted -= PowerProfileManager_Deleted;
@@ -1301,11 +1301,11 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(SupportsGPUFreq));
         }
 
-        private void PerformanceManager_EPPChanged(uint epp)
-        {
-            if (SelectedPreset is not null)
-                EPPOverrideValue = epp;
-        }
+        //private void PerformanceManager_EPPChanged(uint epp)
+        //{
+        //    if (SelectedPreset is not null)
+        //        EPPOverrideValue = epp;
+        //}
 
         private void PowerProfileManager_Updated(PowerProfile preset, UpdateSource source)
         {

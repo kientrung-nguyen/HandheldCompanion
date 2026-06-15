@@ -4,6 +4,7 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
@@ -81,11 +82,9 @@ public partial class OverlayQuickTools : GamepadWindow
 
         clockUpdateTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(500)
+            Interval = TimeSpan.FromMilliseconds(1000)
         };
         clockUpdateTimer.Tick += UpdateTime;
-
-        navView.MouseDoubleClick += NavView_MouseDoubleClick;
 
         // manage events
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
@@ -113,60 +112,7 @@ public partial class OverlayQuickTools : GamepadWindow
         gamepadFocusManager = new(this, ContentFrame);
     }
 
-    private void NavView_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        chargeWatt = !chargeWatt;
-        UIHelper.TryInvoke(() =>
-        {
-            PowerManager_PowerStatusChanged(SystemInformation.PowerStatus);
-        });
-    }
-
     private static bool chargeWatt;
-    private static decimal? batteryFullCapacity;
-    private static decimal? batteryDesignCapacity;
-
-    private decimal? BatteryChargeRateInWatts()
-    {
-        BatteryReport report = Battery.AggregateBattery.GetReport();
-        if (report.ChargeRateInMilliwatts.HasValue)
-            return Math.Round((decimal)report.ChargeRateInMilliwatts / 1000, 1);
-
-        return null;
-    }
-
-    private decimal? BatteryDesignCapacityInWattHours()
-    {
-        if (batteryDesignCapacity is null or 0)
-        {
-            BatteryReport report = Battery.AggregateBattery.GetReport();
-            if (report.DesignCapacityInMilliwattHours.HasValue)
-                batteryDesignCapacity = Math.Round((decimal)report.DesignCapacityInMilliwattHours / 1000, 1);
-        }
-
-        return batteryDesignCapacity;
-    }
-
-    private decimal? BatteryFullCapacityInWattHours()
-    {
-        if (batteryFullCapacity is null or 0)
-        {
-            BatteryReport report = Battery.AggregateBattery.GetReport();
-            if (report.FullChargeCapacityInMilliwattHours.HasValue)
-                batteryFullCapacity = Math.Round((decimal)report.FullChargeCapacityInMilliwattHours / 1000, 1);
-        }
-
-        return batteryFullCapacity;
-    }
-    private decimal? BatteryRemainingCapacityInWattHours()
-    {
-        BatteryReport report = Battery.AggregateBattery.GetReport();
-        if (report.RemainingCapacityInMilliwattHours.HasValue)
-            return Math.Round((decimal)report.RemainingCapacityInMilliwattHours / 1000, 1);
-
-        return null;
-    }
-
     public ContentDialog LaunchProfileContentDialog => FindName("LaunchProfileDialog") as ContentDialog
         ?? throw new InvalidOperationException("LaunchProfileDialog was not found.");
 
@@ -313,7 +259,7 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             // Common settings across cases 0 and 1
             MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfBounds.Width);
-            Width = 450; // (int)Math.Max(MinWidth, ManagerFactory.settingsManager.GetDouble("QuickToolsWidth"));
+            Width = 500; // (int)Math.Max(MinWidth, ManagerFactory.settingsManager.GetDouble("QuickToolsWidth"));
             MaxHeight = Math.Min(targetScreen.WpfBounds.Height - (Margin.Top + Margin.Bottom), _MaxHeight);
             Height = MinHeight = MaxHeight;
             WindowStyle = WindowStyle.ToolWindow; // default style
@@ -462,10 +408,11 @@ public partial class OverlayQuickTools : GamepadWindow
         // UI thread
         UIHelper.TryInvoke(() =>
         {
-            var BatteryLifePercent = (int)Math.Truncate(status.BatteryLifePercent * 100.0f);
-            BatteryIndicatorPercentage.Text = $"{(chargeWatt
-                ? $"{BatteryRemainingCapacityInWattHours()}/{BatteryFullCapacityInWattHours()}"
-                : BatteryLifePercent)}{(chargeWatt ? $"Wh, Health: {Math.Round((BatteryFullCapacityInWattHours() / BatteryDesignCapacityInWattHours() * 100) ?? 0, 1)}%" : "%")}";
+            //var BatteryLifePercent = (int)Math.Truncate(status.BatteryLifePercent * 100.0f);
+            BatteryIndicatorPercentage.Text =
+                $"{(chargeWatt ? $"{HardwareControl.BatteryRemainingCapacity}/{HardwareControl.BatteryFullCapacity}" : HardwareControl.BatteryCapacity)}" +
+                $"{(chargeWatt ? $"Wh, Health: {HardwareControl.BatteryHealth}%" : "%")}";
+
 
             // get status key
             var KeyStatus = string.Empty;
@@ -488,7 +435,8 @@ public partial class OverlayQuickTools : GamepadWindow
             }
 
             // get battery key
-            var KeyValue = (int)Math.Truncate(status.BatteryLifePercent * 10);
+            //var KeyValue = (int)Math.Truncate(status.BatteryLifePercent * 10);
+            var KeyValue = (int)Math.Truncate((HardwareControl.BatteryCapacity / 10f) ?? (status.BatteryLifePercent * 10));
 
             // set key
             var Key = $"Battery{KeyStatus}{KeyValue}";
@@ -496,30 +444,31 @@ public partial class OverlayQuickTools : GamepadWindow
             if (SystemManager.PowerStatusIcon.TryGetValue(Key, out var glyph))
                 BatteryIndicatorIcon.Glyph = glyph;
 
-            if (status.BatteryLifeRemaining > 0)
+            if (((HardwareControl.TimeLeftInMinutes * 60f) ?? (status.BatteryLifeRemaining / 60f)) is float timeLeftInSeconds && timeLeftInSeconds > 0)
             {
-                var time = TimeSpan.FromSeconds(status.BatteryLifeRemaining);
-                string remaining = status.BatteryLifeRemaining >= 3600 ? $"{time.Hours}h {time.Minutes}min" : $"{time.Minutes}min";
-                BatteryIndicatorLifeRemaining.Text = chargeWatt 
-                    ? $"({BatteryChargeRateInWatts()}W)" 
-                    : $"({remaining} remaining)";
+
+                var time = TimeSpan.FromSeconds(timeLeftInSeconds);
+                string remaining = time.TotalSeconds >= 3600 ? $"{time:h\\h\\ m\\m}" : $"{time:m\\mins}";//$"{time.Hours}h {time.Minutes}min" : $"{time.Minutes}min";
+                BatteryIndicatorLifeRemaining.Text = chargeWatt
+                    ? $"({HardwareControl.BatteryChargeRate}W)"
+                    : $"({HardwareControl.BatteryChargeRate}W, {remaining} remaining)";
                 BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
             }
             else
             {
-                var batteryLifeFull = (double?)((BatteryFullCapacityInWattHours() - BatteryRemainingCapacityInWattHours()) / BatteryChargeRateInWatts() * 60);
-                var time = TimeSpan.FromMinutes(batteryLifeFull ?? 0);
-                if (batteryLifeFull == null || batteryLifeFull <= 0 || time == TimeSpan.Zero)
+                if (HardwareControl.TimeFullInMinutes is null)
                 {
                     BatteryIndicatorLifeRemaining.Text = string.Empty;
                     BatteryIndicatorLifeRemaining.Visibility = Visibility.Collapsed;
                 }
                 else
                 {
-                    string remaining = batteryLifeFull >= 60 ? $"{time.Hours}h {time.Minutes}min" : $"{time.Minutes}min";
+                    var time = TimeSpan.FromMinutes(HardwareControl.TimeFullInMinutes ?? 0);
+                    string remaining = HardwareControl.TimeFullInMinutes >= 60 ? $"{time:h\\h\\ m\\m}" : $"{Math.Truncate(time.TotalMinutes)}mins";
                     BatteryIndicatorLifeRemaining.Text = chargeWatt
-                        ? $"{(BatteryChargeRateInWatts() is null or 0 ? "" : ("(" + BatteryChargeRateInWatts() + "W)"))}"
-                        : $"({(BatteryChargeRateInWatts() is null or 0 ? "" : (BatteryChargeRateInWatts() + "W, "))}{remaining} til full)";
+                        ? $"{(HardwareControl.BatteryChargeRate is null or 0 ? "--" : ("(" + HardwareControl.BatteryChargeRate + "W)"))}"
+                        : $"({(HardwareControl.BatteryChargeRate is null or 0 ? "--" : (HardwareControl.BatteryChargeRate + "W, "))}{remaining} til full)";
+
                     BatteryIndicatorLifeRemaining.Visibility = Visibility.Visible;
                 }
             }
@@ -543,6 +492,14 @@ public partial class OverlayQuickTools : GamepadWindow
         switch (msg)
         {
             case WM_INPUTLANGCHANGE:
+                break;
+            case WM_NCLBUTTONDOWN:
+                if (wParam.ToInt32() == HTCAPTION)
+                {
+                    chargeWatt = !chargeWatt;
+                    PowerManager_PowerStatusChanged(SystemInformation.PowerStatus);
+                    handled = false; // Let normal behavior continue
+                }
                 break;
 
             case WM_SYSCOMMAND:
@@ -579,11 +536,11 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             if (!IsVisible || Visibility != Visibility.Visible)
             {
-                NavigateToPage("QuickHomePage");
+                //NavigateToPage("QuickHomePage");
                 IsHitTestVisible = true;
                 ShowInstant();
 
-                batteryFullCapacity = null;
+                HardwareControl.RefreshBatteryHealth();
                 PowerManager_PowerStatusChanged(SystemInformation.PowerStatus);
             }
             else

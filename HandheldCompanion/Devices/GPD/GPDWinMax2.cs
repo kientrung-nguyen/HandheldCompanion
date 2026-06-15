@@ -21,10 +21,10 @@ public class GPDWinMax2 : IDevice
 
         ECDetails = new ECDetails
         {
-            AddressStatusCommandPort = 0x4E,
-            AddressDataPort = 0x4F,
             AddressFanControl = 0x275,
             AddressFanDuty = 0x1809,
+            AddressStatusCommandPort = 0x4E,
+            AddressDataPort = 0x4F,
             AddressFanRPM = 0x218,
             FanValueMin = 0,
             FanValueMax = 184, // FAN__RPMWRITE_MAX

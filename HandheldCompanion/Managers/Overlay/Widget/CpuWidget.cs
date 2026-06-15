@@ -1,3 +1,5 @@
+using HandheldCompanion.Misc;
+
 namespace HandheldCompanion.Managers.Overlay.Widget;
 
 public class CpuWidget : IWidget
@@ -9,7 +11,7 @@ public class CpuWidget : IWidget
         {
             case WidgetLevel.MINIMAL:
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPULoad(), "%");
-                OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUTemperature(), "°C");
+                OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUTemperature(), "°");
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUPower(), "W");
                 break;
             case WidgetLevel.FULL:
@@ -18,7 +20,7 @@ public class CpuWidget : IWidget
                     OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUClock() / 1000f, "GHz");
                 else
                     OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUClock(), "MHz");
-                OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUTemperature(), "°C");
+                OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUTemperature(), "°");
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUPower(), "W");
                 break;
         }

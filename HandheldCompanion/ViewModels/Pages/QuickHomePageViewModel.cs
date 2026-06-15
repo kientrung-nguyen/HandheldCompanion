@@ -4,6 +4,7 @@ using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
+using HandheldCompanion.Shared;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -58,7 +59,18 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            switch (ManagerFactory.settingsManager.Status)
+            {
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QuerySettings();
+                    break;
+            }
 
+            ManagerFactory.powerProfileManager.Applied += PowerProfileManager_Applied;
             // raise events
             switch (ManagerFactory.powerProfileManager.Status)
             {
@@ -99,7 +111,7 @@ namespace HandheldCompanion.ViewModels
                 SelectedPreset.FanProfile.fanMode = FanMode.Hardware;
                 // Temporary until view dependencies could be removed
                 OnPropertyChanged(nameof(FanSpeedOverrideValue));
-                OnPropertyChanged(nameof(IsFanModeSoftware));
+                OnPropertyChanged(nameof(IsFanModeBalance));
                 OnPropertyChanged(nameof(IsFanModeHardware));
                 OnPropertyChanged(nameof(SupportsFanMode));
             });
@@ -107,11 +119,12 @@ namespace HandheldCompanion.ViewModels
             FanPresetSoftwareCommand = new DelegateCommand(() =>
             {
                 SelectedPreset.FanProfile.fanMode = FanMode.Software;
+                SelectedPreset.FanProfile.fanModePreset = FanModePreset.Balance;
                 for (int idx = 0; idx < SelectedPreset.FanProfile.fanSpeeds.Length; idx++)
                     SelectedPreset.FanProfile.fanSpeeds[idx] = IDevice.GetCurrent().fanPresets[1][idx];
                 // Temporary until view dependencies could be removed
                 OnPropertyChanged(nameof(FanSpeedOverrideValue));
-                OnPropertyChanged(nameof(IsFanModeSoftware));
+                OnPropertyChanged(nameof(IsFanModeBalance));
                 OnPropertyChanged(nameof(IsFanModeHardware));
                 OnPropertyChanged(nameof(SupportsFanMode));
             });
@@ -119,12 +132,12 @@ namespace HandheldCompanion.ViewModels
             FanPresetSilentCommand = new DelegateCommand(() =>
             {
                 SelectedPreset.FanProfile.fanMode = FanMode.Software;
-
+                SelectedPreset.FanProfile.fanModePreset = FanModePreset.Quiet;
                 for (int idx = 0; idx < SelectedPreset.FanProfile.fanSpeeds.Length; idx++)
                     SelectedPreset.FanProfile.fanSpeeds[idx] = IDevice.GetCurrent().fanPresets[0][idx];
                 // Temporary until view dependencies could be removed
                 OnPropertyChanged(nameof(FanSpeedOverrideValue));
-                OnPropertyChanged(nameof(IsFanModeSoftware));
+                OnPropertyChanged(nameof(IsFanModeBalance));
                 OnPropertyChanged(nameof(IsFanModeHardware));
                 OnPropertyChanged(nameof(SupportsFanMode));
             });
@@ -132,11 +145,12 @@ namespace HandheldCompanion.ViewModels
             FanPresetTurboCommand = new DelegateCommand(() =>
             {
                 SelectedPreset.FanProfile.fanMode = FanMode.Software;
+                SelectedPreset.FanProfile.fanModePreset = FanModePreset.Turbo;
                 for (int idx = 0; idx < SelectedPreset.FanProfile.fanSpeeds.Length; idx++)
                     SelectedPreset.FanProfile.fanSpeeds[idx] = IDevice.GetCurrent().fanPresets[2][idx];
                 // Temporary until view dependencies could be removed
                 OnPropertyChanged(nameof(FanSpeedOverrideValue));
-                OnPropertyChanged(nameof(IsFanModeSoftware));
+                OnPropertyChanged(nameof(IsFanModeBalance));
                 OnPropertyChanged(nameof(IsFanModeHardware));
                 OnPropertyChanged(nameof(SupportsFanMode));
             });
@@ -156,6 +170,11 @@ namespace HandheldCompanion.ViewModels
                         // todo: implement proper debounce
                         SubmitSelectedPreset();
                         break;
+
+                    case "":
+                    case "SelectedPreset":
+                    default:
+                        return;
                 }
 
             };
@@ -190,15 +209,11 @@ namespace HandheldCompanion.ViewModels
         private void QueryPlatforms()
         {
             // manage events
-
-            if (IDevice.GetCurrent().CpuMonitor)
-            {
-                PlatformManager.LibreHardware.CPUPowerChanged += LibreHardwareMonitor_CPUPowerChanged;
-                PlatformManager.LibreHardware.CPUTemperatureChanged += LibreHardwareMonitor_CPUTemperatureChanged;
-                PlatformManager.LibreHardware.CPULoadChanged += LibreHardwareMonitor_CPULoadChanged;
-                PlatformManager.LibreHardware.CPUFanSpeedChanged += LibreHardware_CPUFanSpeedChanged;
-                PlatformManager.LibreHardware.CPUClockChanged += LibreHardware_CPUClockChanged;
-            }
+            PlatformManager.LibreHardware.CPUPowerChanged += LibreHardwareMonitor_CPUPowerChanged;
+            PlatformManager.LibreHardware.CPUTemperatureChanged += LibreHardwareMonitor_CPUTemperatureChanged;
+            PlatformManager.LibreHardware.CPULoadChanged += LibreHardwareMonitor_CPULoadChanged;
+            PlatformManager.LibreHardware.CPUFanSpeedChanged += LibreHardware_CPUFanSpeedChanged;
+            PlatformManager.LibreHardware.CPUClockChanged += LibreHardware_CPUClockChanged;
 
             OnPropertyChanged(nameof(IsRunningLHM));
         }
@@ -240,6 +255,7 @@ namespace HandheldCompanion.ViewModels
                 return;
 
             CPUFanSpeed = OverlayEntryElement.FormatValue((float)value, "rpm");
+            CPUFanLoad = OverlayEntryElement.FormatValue((float)IDevice.GetCurrent().ReadFanDuty(), "%");
         }
 
         private void LibreHardware_CPUClockChanged(float? value)
@@ -323,13 +339,9 @@ namespace HandheldCompanion.ViewModels
 
         private void QueryPowerProfile()
         {
-            // manage events
-            OnPropertyChanged(nameof(PL1OverrideValue));
-            OnPropertyChanged(nameof(PL2OverrideValue));
-            OnPropertyChanged(nameof(FanSpeedOverrideValue));
-            OnPropertyChanged(nameof(IsFanModeSoftware));
-            OnPropertyChanged(nameof(IsFanModeHardware));
-            OnPropertyChanged(nameof(SupportsFanMode));
+            ManagerFactory.powerProfileManager.Updated += PowerProfileManager_Updated;
+            ManagerFactory.powerProfileManager.Deleted += PowerProfileManager_Deleted;
+            SelectedPreset = ManagerFactory.powerProfileManager.GetCurrent();
         }
 
 
@@ -346,9 +358,68 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(SupportsTDP));
         }
 
+        private void SettingsManager_Initialized()
+        {
+            QuerySettings();
+        }
+
+        private void QuerySettings()
+        {
+            // manage events
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+            // raise events
+            OnPropertyChanged("ConfigurableTDPOverride");
+            OnPropertyChanged("ConfigurableTDPOverrideDown");
+            OnPropertyChanged("ConfigurableTDPOverrideUp");
+        }
+
+
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        {
+            if (value is null)
+                return;
+
+            switch (name)
+            {
+                case "ConfigurableTDPOverride":
+                case "ConfigurableTDPOverrideDown":
+                case "ConfigurableTDPOverrideUp":
+                    OnPropertyChanged(name);
+                    break;
+            }
+        }
+
+        private PowerProfile _selectedProfile;
+
+        private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+        {
+            SelectedPreset = profile;
+        }
+
+        private void PowerProfileManager_Updated(PowerProfile preset, UpdateSource source)
+        {
+            if (SelectedPreset?.Guid != preset.Guid)
+                return;
+
+            OnPropertyChanged(string.Empty);
+        }
+
+        private void PowerProfileManager_Deleted(PowerProfile preset)
+        {
+        }
+
         public PowerProfile SelectedPreset
         {
-            get => ManagerFactory.powerProfileManager.GetCurrent();
+            get => _selectedProfile;
+            set
+            {
+                if (_selectedProfile != value)
+                {
+                    _selectedProfile = value;
+                    OnPropertyChanged(string.Empty);
+                }
+            }
         }
 
         public bool IsFanModeHardware
@@ -356,9 +427,22 @@ namespace HandheldCompanion.ViewModels
             get => SelectedPreset?.FanProfile.fanMode == FanMode.Hardware;
         }
 
-        public bool IsFanModeSoftware
+        public bool IsFanModeBalance
         {
-            get => SelectedPreset?.FanProfile.fanMode == FanMode.Software;
+            get => SelectedPreset?.FanProfile.fanMode == FanMode.Software
+                && SelectedPreset?.FanProfile.fanModePreset == FanModePreset.Balance;
+        }
+
+        public bool IsFanModeQuiet
+        {
+            get => SelectedPreset?.FanProfile.fanMode == FanMode.Software
+                && SelectedPreset?.FanProfile.fanModePreset == FanModePreset.Quiet;
+        }
+
+        public bool IsFanModeTurbo
+        {
+            get => SelectedPreset?.FanProfile.fanMode == FanMode.Software
+                && SelectedPreset?.FanProfile.fanModePreset == FanModePreset.Turbo;
         }
 
         public bool SupportsFanMode => SelectedPreset?.FanProfile.fanMode == FanMode.Software;
@@ -367,12 +451,16 @@ namespace HandheldCompanion.ViewModels
 
         public double ConfigurableTDPOverrideDown
         {
-            get => ManagerFactory.settingsManager.GetDouble(Settings.ConfigurableTDPOverrideDown);
+            get => ManagerFactory.settingsManager.GetBoolean("ConfigurableTDPOverride")
+                ? ManagerFactory.settingsManager.GetDouble(Settings.ConfigurableTDPOverrideDown)
+                : IDevice.GetCurrent().cTDP[0];
         }
 
         public double ConfigurableTDPOverrideUp
         {
-            get => ManagerFactory.settingsManager.GetDouble(Settings.ConfigurableTDPOverrideUp);
+            get => ManagerFactory.settingsManager.GetBoolean("ConfigurableTDPOverride")
+                ? ManagerFactory.settingsManager.GetDouble(Settings.ConfigurableTDPOverrideUp)
+                : IDevice.GetCurrent().cTDP[1];
         }
 
         private bool _coerceGuard;
@@ -393,7 +481,7 @@ namespace HandheldCompanion.ViewModels
 
         public double FanSpeedOverrideValue
         {
-            get => Math.Truncate(SelectedPreset?.FanProfile.fanSpeeds.Average() ?? IDevice.GetCurrent().fanPresets[1].Average());
+            get => Math.Truncate(SelectedPreset?.FanProfile.fanSpeeds.Average() ?? 0);
             set
             {
                 if (SelectedPreset?.FanProfile.fanSpeeds is null)
@@ -401,7 +489,11 @@ namespace HandheldCompanion.ViewModels
 
                 if (value != FanSpeedOverrideValue)
                 {
-                    Array.Fill(SelectedPreset.FanProfile.fanSpeeds, value);
+                    var fanSpeeds = SelectedPreset.FanProfile.fanSpeeds
+                        .Select(v => v - FanSpeedOverrideValue)
+                        .Select(s => Math.Truncate(Math.Clamp(value + s * 1, 0, 100)))
+                        .ToArray();
+                    SelectedPreset.FanProfile.fanSpeeds = fanSpeeds;
                     OnPropertyChanged(nameof(FanSpeedOverrideValue));
                 }
             }
@@ -577,6 +669,20 @@ namespace HandheldCompanion.ViewModels
                 {
                     _CPUFanSpeed = value;
                     OnPropertyChanged(nameof(CPUFanSpeed));
+                }
+            }
+        }
+
+        private string _CPUFanLoad;
+        public string CPUFanLoad
+        {
+            get => _CPUFanLoad;
+            set
+            {
+                if (value != CPUFanLoad)
+                {
+                    _CPUFanLoad = value;
+                    OnPropertyChanged(nameof(CPUFanLoad));
                 }
             }
         }
@@ -784,7 +890,6 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-
         public void OnNavigatedTo()
         {
             updateTimer.Start();
@@ -795,17 +900,21 @@ namespace HandheldCompanion.ViewModels
             updateTimer.Stop();
         }
 
-
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
                 updateTimer.Stop();
                 updateTimer.Dispose();
+                ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+                ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+                ManagerFactory.platformManager.Initialized -= PlatformManager_Initialized;
                 ManagerFactory.gpuManager.Hooked -= GPUManager_Hooked;
                 ManagerFactory.gpuManager.Initialized -= GpuManager_Initialized;
                 ManagerFactory.hotkeysManager.Initialized -= HotkeysManager_Initialized;
                 ManagerFactory.powerProfileManager.Initialized -= PowerProfileManager_Initialized;
+                ManagerFactory.powerProfileManager.Applied -= PowerProfileManager_Applied;
+                ManagerFactory.powerProfileManager.Updated -= PowerProfileManager_Updated;
             }
 
             base.Dispose(disposing);

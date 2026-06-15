@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using WindowsDisplayAPI;
+using DisplayDevice = HandheldCompanion.Misc.DisplayDevice;
 
 namespace HandheldCompanion.Managers.Desktop;
 
@@ -106,6 +108,7 @@ public enum ScreenOrientation
 public class DesktopScreen : IDisposable
 {
     public DisplayDevice devMode;
+    public Display display;
     public Screen? screen;
     public string DevicePath;
     public string FriendlyName;
@@ -120,8 +123,9 @@ public class DesktopScreen : IDisposable
     // Flag: Has Dispose already been called?
     private bool _disposed = false;
 
-    public DesktopScreen(Screen screen)
+    public DesktopScreen(Screen screen, Display display)
     {
+        this.display = display;
         this.screen = screen;
         devMode = MultimediaManager.GetDisplay(screen.DeviceName);
         FriendlyName = MultimediaManager.GetDisplayFriendlyName(screen.DeviceName);
@@ -130,7 +134,7 @@ public class DesktopScreen : IDisposable
 
     public override string ToString()
     {
-        return $"{FriendlyName} - {screen?.DeviceName}";
+        return $"{FriendlyName} / {display.ScreenName} / {devMode.dmDeviceName} - {screen?.DeviceName} - {DevicePath}";
     }
 
     public bool HasResolution(ScreenResolution resolution)

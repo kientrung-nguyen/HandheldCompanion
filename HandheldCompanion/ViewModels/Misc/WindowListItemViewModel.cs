@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -267,7 +268,7 @@ namespace HandheldCompanion.ViewModels.Misc
             OnPropertyChanged(nameof(HasTwoScreen));
         }
 
-        private void MultimediaManager_DisplaySettingsChanged(Managers.Desktop.DesktopScreen screen, Managers.Desktop.ScreenResolution resolution)
+        private void MultimediaManager_DisplaySettingsChanged(DesktopScreen screen, ScreenResolution resolution)
         {
             if (_processWindow != null)
             {

@@ -20,8 +20,6 @@ namespace HandheldCompanion.Misc
         public bool TDPOverrideEnabled { get; set; }
         public double[]? TDPOverrideValues { get; set; }
 
-        public double[]? TDPQuickValues { get; set; }
-
         public bool CPUOverrideEnabled { get; set; }
         public double CPUOverrideValue { get; set; }
 
@@ -32,10 +30,10 @@ namespace HandheldCompanion.Misc
         public float AutoTDPRequestedFPS { get; set; } = 30.0f;
         public int FramerateValue { get; set; } = 0; // default RTSS value
 
-        [Obsolete("This property is deprecated and will be removed in future versions.")]
+        //[Obsolete("This property is deprecated and will be removed in future versions.")]
         public bool EPPOverrideEnabled { get; set; }
 
-        [Obsolete("This property is deprecated and will be removed in future versions.")]
+        //[Obsolete("This property is deprecated and will be removed in future versions.")]
         public uint EPPOverrideValue { get; set; } = 50;
 
         public bool CPUCoreEnabled { get; set; }

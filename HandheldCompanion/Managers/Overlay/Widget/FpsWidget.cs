@@ -46,7 +46,7 @@ public class FPSWidget : IWidget
             case WidgetLevel.FULL:
                 entry.elements.Add(new OverlayEntryElement("<FR>", ""));
                 //entry.elements.Add(new OverlayEntryElement("<FT>", "ms"));
-                entry.elements.Add(new OverlayEntryElement($"<C={GraphColor}><OBJ={graphOffset:X8}><C>"));
+                //entry.elements.Add(new OverlayEntryElement($"<C={GraphColor}><OBJ={graphOffset:X8}><C>"));
 
                 /*
                 entry.elements.Add(new OverlayEntryElement($"<S=50><C=808080>min:<C=00FF00>{minFt:F1}", "ms"));

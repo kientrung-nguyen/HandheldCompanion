@@ -153,7 +153,7 @@ public abstract class IDevice
     {
         { new double[] { 20, 20, 20, 20, 20, 25, 30, 40, 70, 70,  100 } },  // Quiet
         { new double[] { 20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100 } },  // Default
-        { new double[] { 40, 40, 40, 40, 40, 50, 70, 80, 90, 100, 100 } },  // Aggressive
+        { new double[] { 40, 40, 40, 40, 40, 60, 70, 80, 90, 100, 100 } },  // Aggressive
     };
 
     // trigger specific settings
@@ -987,7 +987,7 @@ public abstract class IDevice
 
     public virtual float ReadFanSpeed()
     {
-        if (ECDetails.AddressFanControl == 0)
+        if (ECDetails.AddressFanRPM == 0)
             return 0;
 
         if (!UseOpenLib || !IsOpen)

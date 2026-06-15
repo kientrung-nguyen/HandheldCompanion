@@ -1,4 +1,6 @@
-﻿using HandheldCompanion.Shared;
+﻿using HandheldCompanion.Misc;
+using HandheldCompanion.Platforms.Misc;
+using HandheldCompanion.Shared;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -51,7 +53,7 @@ public static class SystemManager
 
     private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
     private static SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
-    private static PowerLineStatus previousPowerLineStatus = PowerLineStatus.Offline;
+    private static PowerLineStatus previousPowerLineStatus = SystemInformation.PowerStatus.PowerLineStatus;
 
     public static bool IsInitialized;
 
@@ -168,6 +170,7 @@ public static class SystemManager
         {
             case PowerModes.Resume:
                 IsPowerSuspended = false;
+                PerformPowerCheck();
                 break;
 
             case PowerModes.Suspend:
@@ -176,22 +179,28 @@ public static class SystemManager
 
             default:
             case PowerModes.StatusChange:
-                {
-                    if (previousPowerLineStatus != SystemInformation.PowerStatus.PowerLineStatus)
-                    {
-                        // raise event
-                        PowerLineStatusChanged?.Invoke(SystemInformation.PowerStatus.PowerLineStatus);
-
-                        // update status
-                        previousPowerLineStatus = SystemInformation.PowerStatus.PowerLineStatus;
-                    }
-                }
+                PerformPowerCheck();
                 return;
         }
 
         LogManager.LogDebug("Device power mode set to {0}", e.Mode);
 
         PerformSystemRoutine();
+    }
+
+    private static void PerformPowerCheck()
+    {
+        var status = SystemInformation.PowerStatus.PowerLineStatus;
+        if (previousPowerLineStatus != status)
+        {
+            HardwareControl.ReadBatteryState();
+
+            // raise event
+            PowerLineStatusChanged?.Invoke(status);
+
+            // update status
+            previousPowerLineStatus = status;
+        }
     }
 
     private static void OnSessionSwitch(object sender, SessionSwitchEventArgs e)

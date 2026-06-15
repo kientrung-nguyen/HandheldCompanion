@@ -183,6 +183,9 @@ public partial class QuickHomePage : Page
 
             if (Math.Abs(SliderVolume.Value - rounded) < double.Epsilon)
                 return;
+            
+            if (volumeLock.IsEntered())
+                return;
 
             if (volumeLock.TryEnter())
             {
@@ -208,6 +211,9 @@ public partial class QuickHomePage : Page
             MicIcon.Glyph = isMuted ? "\uf781" : "\ue720";
 
             if (volume < 0 || Math.Abs(SliderMic.Value - rounded) < double.Epsilon)
+                return;
+
+            if (volumeLock.IsEntered())
                 return;
 
             if (volumeLock.TryEnter())
@@ -254,12 +260,13 @@ public partial class QuickHomePage : Page
 
         try
         {
-            lock (brightnessLock)
+            if (brightnessLock.TryEnter())
             {
                 ManagerFactory.multimediaManager.SetBrightness(SliderBrightness.Value);
             }
         }
         catch { }
+        finally { brightnessLock.Exit(); }
     }
 
     private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -272,13 +279,14 @@ public partial class QuickHomePage : Page
 
         try
         {
-            lock (volumeLock)
+            if (volumeLock.TryEnter())
             {
                 ManagerFactory.multimediaManager.Unmute();
                 ManagerFactory.multimediaManager.SetVolume(SliderVolume.Value);
             }
         }
         catch { }
+        finally { volumeLock.Exit(); }
     }
 
 
@@ -292,13 +300,14 @@ public partial class QuickHomePage : Page
 
         try
         {
-            lock (volumeLock)
+            if (volumeLock.TryEnter())
             {
                 ManagerFactory.multimediaManager.MicUnmute();
                 ManagerFactory.multimediaManager.SetMicVolume(SliderMic.Value);
             }
         }
         catch { }
+        finally { volumeLock.Exit(); }
     }
 
     private void UpdateVolumeIcon(double volume, bool mute = false)

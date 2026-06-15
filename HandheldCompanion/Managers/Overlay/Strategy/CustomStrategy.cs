@@ -11,7 +11,7 @@ public class CustomStrategy : IOverlayStrategy
         for (int i = 0; i < OSDManager.OverlayCount; i++)
         {
             var name = OSDManager.OverlayOrder[i];
-            var content = EntryContent(name);
+            var content = EntryContent(name, direction);
             if (content == "") continue;
             Content.Add(content);
         }
@@ -21,7 +21,7 @@ public class CustomStrategy : IOverlayStrategy
     }
 
 
-    private static string EntryContent(string name)
+    private static string EntryContent(string name, int direction = 0)
     {
         OverlayRow row = new();
         OverlayEntry entry = new(
@@ -29,7 +29,7 @@ public class CustomStrategy : IOverlayStrategy
             ? string.Empty 
             : name.Equals("FPS", StringComparison.Ordinal)
             ? "<APP>"
-            : name, OverlayColors.EntryColor(name), true);
+            : name, OverlayColors.EntryColor(name), direction != 0);
         WidgetFactory.CreateWidget(name, entry);
 
         // Skip empty rows

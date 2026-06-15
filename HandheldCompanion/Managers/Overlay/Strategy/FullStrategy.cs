@@ -14,7 +14,7 @@ public class FullStrategy : IOverlayStrategy
         OverlayRow row5 = new(); // Battery
         OverlayRow row6 = new(); // FPS
 
-        OverlayEntry GPUentry = new("GPU", OverlayColors.GPU_COLOR, true);
+        OverlayEntry GPUentry = new("GPU", OverlayColors.GPU_COLOR, direction != 0);
         WidgetFactory.CreateWidget("GPU", GPUentry, WidgetLevel.FULL);
         row1.entries.Add(GPUentry);
 
@@ -22,19 +22,19 @@ public class FullStrategy : IOverlayStrategy
         //WidgetFactory.CreateWidget("VRAM", VRAMentry, WidgetLevel.FULL);
         //row4.entries.Add(VRAMentry);
 
-        OverlayEntry CPUentry = new("CPU", OverlayColors.CPU_COLOR, true);
+        OverlayEntry CPUentry = new("CPU", OverlayColors.CPU_COLOR, direction != 0);
         WidgetFactory.CreateWidget("CPU", CPUentry, WidgetLevel.FULL);
         row2.entries.Add(CPUentry);
 
-        OverlayEntry RAMentry = new("RAM", OverlayColors.RAM_COLOR, true);
+        OverlayEntry RAMentry = new("RAM", OverlayColors.RAM_COLOR, direction != 0);
         WidgetFactory.CreateWidget("RAM", RAMentry, WidgetLevel.FULL);
         row3.entries.Add(RAMentry);
 
-        OverlayEntry BATTentry = new("BATT", OverlayColors.BATT_COLOR, true);
+        OverlayEntry BATTentry = new("BATT", OverlayColors.BATT_COLOR, direction != 0);
         WidgetFactory.CreateWidget("BATT", BATTentry, WidgetLevel.FULL);
         row5.entries.Add(BATTentry);
 
-        OverlayEntry fpsEntry = new("<APP>", OverlayColors.FPS_COLOR, true);
+        OverlayEntry fpsEntry = new("<APP>", OverlayColors.FPS_COLOR, direction != 0);
         WidgetFactory.CreateWidget("FPS", fpsEntry, WidgetLevel.FULL);
         row6.entries.Add(fpsEntry);
 

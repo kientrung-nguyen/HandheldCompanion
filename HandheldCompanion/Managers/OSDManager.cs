@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Shared;
+using HandheldCompanion.Utils;
 using Microsoft.Extensions.Logging.Abstractions;
 using RTSSSharedMemoryNET;
 
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Timers;
+using System.Windows.Navigation;
 using Windows.Media.AppBroadcasting;
 
 namespace HandheldCompanion.Managers;
@@ -25,7 +27,7 @@ public static class OSDManager
     // C4: VRAM
     // C5: BATT
     // C6: FPS
-    private const string Header = $"<C0={COLOR_GRAY}><C1={COLOR_STEAM_BLUE}><A0=-4><S0=-50><S1=90>";
+    private const string Header = $"<C0={COLOR_GRAY}><C1={COLOR_STEAM_BLUE}><A0=-4><S0=-80><S1=-80>";
     private const string Row = $"<P1><L0><C=80000000><B=0,0>\b<C>{{0}}<C><S>";
     private const string Column = $"<P0><L0><C=80000000><B=0,0>\b<C>{{0}}<C><S>";
 
@@ -243,8 +245,9 @@ public static class OSDManager
 
     public static void AddElementIfNotNull(OverlayEntry entry, float? value, string unit)
     {
-        if (value is not null)
-            entry.elements.Add(new OverlayEntryElement((float)value, unit));
+        //if (value is not null)
+        //    entry.elements.Add(new OverlayEntryElement((float)value, unit));
+        entry.elements.Add(new OverlayEntryElement(value, unit));
     }
 
     public static void AddElementIfNotNull(OverlayEntry entry, float? value, float? available, string unit)
@@ -395,10 +398,12 @@ public struct OverlayEntryElement
 
     public override string ToString()
     {
+        if (Value == "--")
+            return string.Format("<C0>{0:00}<C>", Value);
         return string.Format("<C0>{0:00}<S1>{1}<S><C>", Value, SzUnit);
     }
 
-    public OverlayEntryElement(float value, string unit)
+    public OverlayEntryElement(float? value, string unit)
     {
         Value = FormatValue(value, unit, true);
         SzUnit = unit;
@@ -416,26 +421,25 @@ public struct OverlayEntryElement
         SzUnit = unit;
     }
 
-    public static string FormatValue(float value, string unit, bool? padLeft = null)
+    public static string FormatValue(float? value, string unit, bool? padLeft = null)
     {
         string format = unit switch
         {
             "GB" => "0.0", // One decimal
-            "W" => "00",   // Two digits forced, no decimal
+            "W" => "F1",   // Two digits forced, no decimal
             "%" => "00",   // Two digits forced, no decimal
-            "°C" or "°" or "C" => "00", // Two digits forced, no decimal
+            "°C" or "°" or "C" => "0.0", // Two digits forced, no decimal
             "h" => "00", // Two digits forced, no decimal
-            "min" => "00", // Two digits forced, no decimal
-            "mins" => "000", // Two digits forced, no decimal
+            "min" or "mins" or "m" => "00", // Two digits forced, no decimal
             "MB" => "0",   // No leading zeros, no decimal
             "MHz" => "000",
             "GHz" => "0.0",
-            "rpm" => "0000",
+            "rpm" => "000",
             _ => "0.##"    // Default format (no leading zeros, up to 2 decimals)
         };
 
-        var input = value.ToString(format, CultureInfo.InvariantCulture);
-        if (padLeft is null) return input;
+        var input = value?.ToString(format, CultureInfo.InvariantCulture) ?? "--";
+        if (padLeft is null || input == "--") return input;
         // Count leading zeros (but stop before decimal point)
         int leadingZeroCount = 0;
         while (leadingZeroCount < input.Length && input[leadingZeroCount] == '0')
@@ -463,6 +467,7 @@ public class OverlayEntry : IDisposable
 
         if (!string.IsNullOrEmpty(colorScheme) && !string.IsNullOrEmpty(name))
             Name = "<C=" + colorScheme + ">" + Name + "<C>";
+        Name = "<S0>" + Name + "<S>";
     }
 
     private static string BuildName(string name, bool indent)
@@ -470,7 +475,7 @@ public class OverlayEntry : IDisposable
         if (string.IsNullOrEmpty(name))
             return string.Empty;
 
-        var formatted = name.PadRight(Math.Abs(7 - name.Length));
+        var formatted = name.PadRight(Math.Max(0, 7 - name.Length));
         return indent ? formatted : name;
     }
 

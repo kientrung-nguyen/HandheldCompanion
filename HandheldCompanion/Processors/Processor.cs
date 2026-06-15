@@ -69,7 +69,10 @@ public class Processor
 
     public virtual void SetTDPLimit(PowerType type, double limit, bool immediate = false, int result = 0)
     {
-        LogManager.LogInformation("User requested {0} TDP limit: {1}W, error code: {2}", type, (uint)limit, result);
+        if (result != 0)
+            LogManager.LogWarning("User requested {0} TDP limit: {1}W, error code: {2}", type, (uint)limit, result);
+        else 
+            LogManager.LogDebug("User requested {0} TDP limit: {1}W, error code: {2}", type, (uint)limit, result);
     }
 
     public virtual void SetGPUClock(double clock, int result = 0)

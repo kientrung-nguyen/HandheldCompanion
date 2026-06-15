@@ -270,7 +270,7 @@ public class MultimediaManager : IManager
     {
         try
         {
-            Display? display = Display.GetDisplays().FirstOrDefault(d => d.DisplayName.Equals(deviceName));
+            Display? display = Display.GetDisplays().FirstOrDefault(d => d.ScreenName.Equals(deviceName));
             return display?.DevicePath ?? string.Empty;
         }
         catch
@@ -295,13 +295,25 @@ public class MultimediaManager : IManager
             AddStatus(ManagerStatus.Busy);
 
             Dictionary<string, DesktopScreen> desktopScreens = [];
-
+            var _allDisplays = Display.GetDisplays();
+            foreach (var display in _allDisplays)
+            {
+                LogManager.LogInformation($"Display {display} {display.ToPathDisplayTarget()}  {display.DevicePath} {display.ScreenName} {display.DisplayScreen.ToPathDisplaySource().DisplayName}");
+            }
+            var _primaryDisplay = _allDisplays.FirstOrDefault(v => v.DisplayScreen.IsPrimary);
+            
             foreach (Screen screen in Screen.AllScreens)
             {
                 if (string.IsNullOrEmpty(screen.DeviceName))
                     continue;
 
-                DesktopScreen desktopScreen = new(screen);
+                LogManager.LogInformation($"Screen {screen}");
+
+                var display = Display
+                    .GetDisplays()
+                    .FirstOrDefault(d => screen.DeviceName.Equals(d.ScreenName, StringComparison.OrdinalIgnoreCase));
+
+                DesktopScreen desktopScreen = new(screen, display);
 
                 // Pull all available resolutions and frequencies
                 if (desktopScreen.screen is null)

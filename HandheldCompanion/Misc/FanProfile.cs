@@ -11,10 +11,19 @@ namespace HandheldCompanion.Misc
         Software = 1,
     }
 
+    public enum FanModePreset
+    {
+        Quiet,
+        Balance,
+        Turbo
+    }
+
     [Serializable]
     public class FanProfile
     {
         public FanMode fanMode = FanMode.Hardware;
+
+        public FanModePreset fanModePreset = FanModePreset.Balance;
 
         // y-axis: fan speed (%) at 0,10,...,100°C
         public double[] fanSpeeds = { 20, 20, 20, 30, 40, 50, 70, 80, 90, 100, 100 };

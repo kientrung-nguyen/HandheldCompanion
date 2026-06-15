@@ -69,8 +69,6 @@
                 Header="{l:Static resx:Resources.ProfilesPage_TDPOverride}"
                 IsEnabled="{Binding SupportsTDP, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
                 <ui:SettingsExpander.HeaderIcon>
-                    <!--&#xe945;
-                        &#xeb3c;-->
                     <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe945;" />
                 </ui:SettingsExpander.HeaderIcon>
 
@@ -225,8 +223,8 @@
             <ui:SettingsExpander
                 Description="{l:Static resx:Resources.ProfilesPage_EPPDesc}"
                 Header="{l:Static resx:Resources.ProfilesPage_EPP}"
-                IsEnabled="False"
-                Visibility="Collapsed">
+                IsEnabled="True"
+                Visibility="Visible">
                 <ui:SettingsExpander.HeaderIcon>
                     <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe9e9;" />
                 </ui:SettingsExpander.HeaderIcon>

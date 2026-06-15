@@ -29,6 +29,8 @@ public static class WinAPI
     public const int WM_WINDOWPOSCHANGING = 0x0046;
     public const int WM_SYSCOMMAND = 0x0112;
     public const int WM_INPUTLANGCHANGE = 0x0051;
+    public const int WM_NCLBUTTONDOWN = 0x00A1;
+    public const int WM_NCLBUTTONDBLCLK = 0x00A3;
     public const int WM_DISPLAYCHANGE = 0x007E;
     public const int WM_NCACTIVATE = 0x0086;
     public const int WM_NCHITTEST = 0x0084;

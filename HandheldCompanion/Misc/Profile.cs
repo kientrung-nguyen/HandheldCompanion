@@ -14,6 +14,7 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Windows;
 using System.Windows.Media;
 using WpfScreenHelper.Enum;
 using static HandheldCompanion.Utils.XInputPlusUtils;
@@ -220,8 +221,8 @@ public partial class Profile : ICloneable, IComparable, INotifyPropertyChanged
     // power & graphics
     public Dictionary<int, Guid> PowerProfiles { get; set; } = new()
     {
-        { 0 /*PowerLineStatus.Offline*/, Guid.Empty },
-        { 1 /*PowerLineStatus.Online*/, Guid.Empty },
+        { (int)PowerLineStatus.Offline /*PowerLineStatus.Offline*/, Guid.Empty },
+        { (int)PowerLineStatus.Online /*PowerLineStatus.Online*/, Guid.Empty },
     };
 
     public bool GPUScaling { get; set; }
