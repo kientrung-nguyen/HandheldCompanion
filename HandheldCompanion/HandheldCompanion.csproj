@@ -12,7 +12,7 @@
     <StartupObject>HandheldCompanion.App</StartupObject>
     <OutputPath>$(SolutionDir)bin\$(Configuration)</OutputPath>
     <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
-    <Version>0.29.3.1</Version>
+    <Version>0.30.1.0</Version>
     <Platforms>x64</Platforms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
@@ -242,15 +242,15 @@
     <PackageReference Include="HelixToolkit.Core.Wpf" Version="2.27.3" />
     <PackageReference Include="IGDB" Version="6.1.0" />
     <PackageReference Include="iNKORE.UI.WPF.Emojis" Version="0.3.6.4" />
-    <PackageReference Include="iNKORE.UI.WPF.Modern" Version="0.10.2.1" />
     <PackageReference Include="Interop.IWshRuntimeLibrary" Version="1.0.1" />
     <PackageReference Include="LiveCharts.Wpf.Core" Version="0.9.8" />
     <PackageReference Include="MathConverter" Version="3.0.0" />
     <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
+    <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
     <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
-    <PackageReference Include="Nefarius.Drivers.HidHide" Version="3.3.0" />
+    <PackageReference Include="Nefarius.Drivers.HidHide" Version="3.4.0" />
     <PackageReference Include="Nefarius.Utilities.Bluetooth" Version="1.8.2" />
     <PackageReference Include="Nefarius.Utilities.DeviceManagement" Version="5.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
@@ -260,21 +260,19 @@
     <PackageReference Include="PrecisionTimer.NET" Version="3.0.0.7" />
     <PackageReference Include="protobuf-net" Version="3.2.56" />
     <PackageReference Include="protobuf-net.Core" Version="3.3.0-g6785ecbb35" />
-    <PackageReference Include="RAMSPDToolkit-NDD" Version="1.5.0" />
     <PackageReference Include="SDL3-CS" Version="3.4.2" />
-    <PackageReference Include="Sentry" Version="6.4.1" />
+    <PackageReference Include="Sentry" Version="6.6.0" />
     <PackageReference Include="SharpDX" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct3D9" Version="4.2.0" />
     <PackageReference Include="SharpDX.DirectInput" Version="4.2.0" />
     <PackageReference Include="SharpDX.XInput" Version="4.2.0" />
-    <PackageReference Include="System.Drawing.Common" Version="10.0.7" />
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.7" />
-    <PackageReference Include="System.Text.Json" Version="10.0.7" />
-    <PackageReference Include="WindowsAPICodePack" Version="8.0.15.1" />
-    <PackageReference Include="WindowsDisplayAPI" Version="1.3.0.13" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.8" />
+    <PackageReference Include="System.Text.Json" Version="10.0.8" />
+    <PackageReference Include="WindowsAPICodePack" Version="8.0.15.2" />
     <PackageReference Include="WindowsInput" Version="6.4.1" />
     <PackageReference Include="WpfScreenHelper" Version="2.1.1" />
-    <PackageReference Include="YamlDotNet" Version="17.0.1" />
+    <PackageReference Include="YamlDotNet" Version="18.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -328,6 +326,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="3DModels\8BitDoLite2\RightStickClick.obj">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="libVIIPER.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Models\AYANEO 2021\LeftStickClick.obj">
@@ -964,15 +965,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Models\AYANEO NEXT\OEM1.obj">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Models\AYANEO NEXT\OEM2.obj">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Models\AYANEO NEXT\X.obj">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Models\AYANEO NEXT\Y.obj">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Models\DS4\A-Symbol.obj">
@@ -2106,7 +2098,7 @@
     <None Update="3DModels\XBOXOne\L1.obj">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="models\XBOXOne\LeftThumb.obj">
+    <None Update="Models\XBOXOne\LeftThumb.obj">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="3DModels\XBOXOne\Special.obj">
@@ -2136,7 +2128,7 @@
     <None Update="3DModels\XBOXOne\R1.obj">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="models\XBOXOne\RightThumb.obj">
+    <None Update="Models\XBOXOne\RightThumb.obj">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="3DModels\XBOXOne\ShareButton.obj">
@@ -2401,12 +2393,6 @@
     <None Update="vcruntime140_1d.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="vJoyInterface.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="vJoyInterfaceWrap.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="WinRing0x64.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -2455,6 +2441,15 @@
     <Reference Include="HidLibrary">
       <HintPath>..\Resources\HidLibrary.dll</HintPath>
     </Reference>
+    <Reference Include="iNKORE.UI.WPF">
+      <HintPath>..\Resources\iNKORE.UI.WPF.dll</HintPath>
+    </Reference>
+    <Reference Include="iNKORE.UI.WPF.Modern">
+      <HintPath>..\Resources\iNKORE.UI.WPF.Modern.dll</HintPath>
+    </Reference>
+    <Reference Include="iNKORE.UI.WPF.Modern.Controls">
+      <HintPath>..\Resources\iNKORE.UI.WPF.Modern.Controls.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Win32.TaskScheduler">
       <HintPath>..\Resources\Microsoft.Win32.TaskScheduler.dll</HintPath>
     </Reference>
@@ -2466,9 +2461,6 @@
     </Reference>
     <Reference Include="RTSSSharedMemoryNET">
       <HintPath>Resources\RTSSSharedMemoryNET.dll</HintPath>
-    </Reference>
-    <Reference Include="vJoyInterfaceWrap">
-      <HintPath>vJoyInterfaceWrap.dll</HintPath>
     </Reference>
     <Reference Include="WindowsDisplayAPI">
       <HintPath>Resources\WindowsDisplayAPI\WindowsDisplayAPI.dll</HintPath>

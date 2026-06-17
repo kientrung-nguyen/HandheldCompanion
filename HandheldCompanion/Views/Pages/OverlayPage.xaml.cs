@@ -1,7 +1,9 @@
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.ViewModels;
 using iNKORE.UI.WPF.Controls;
+using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,8 +17,12 @@ namespace HandheldCompanion.Views.Pages;
 /// </summary>
 public partial class OverlayPage : Page
 {
+    private readonly OverlayPageViewModel ViewModel;
+
     public OverlayPage()
     {
+        ViewModel = new OverlayPageViewModel();
+        DataContext = ViewModel;
         InitializeComponent();
 
         // manage events
@@ -60,11 +66,7 @@ public partial class OverlayPage : Page
         {
             switch (status)
             {
-                case PlatformStatus.Ready:
-                    OnScreenDisplayLevel.IsEnabled = true;
-                    break;
                 case PlatformStatus.Stalled:
-                    OnScreenDisplayLevel.IsEnabled = false;
                     OnScreenDisplayLevel.SelectedIndex = 0;
                     break;
             }
@@ -89,9 +91,6 @@ public partial class OverlayPage : Page
                     break;
                 case "OverlayControllerSize":
                     SliderControllerSize.Value = Convert.ToDouble(value);
-                    break;
-                case "OverlayRenderInterval":
-                    Slider_Framerate.Value = Convert.ToDouble(value);
                     break;
                 case "OverlayRenderAntialiasing":
                     Toggle_RenderAA.IsOn = Convert.ToBoolean(value);
@@ -129,7 +128,6 @@ public partial class OverlayPage : Page
                 case "OnScreenDisplayLevel":
                     var index = Convert.ToInt32(value);
                     OnScreenDisplayLevel.SelectedIndex = index;
-                    StackCustomSettings.Visibility = index == 4 ? Visibility.Visible : Visibility.Collapsed;
                     break;
                 case "OnScreenDisplayTimeLevel":
                     ComboBoxOnScreenDisplayTimeLevel.SelectedIndex = Convert.ToInt32(value);
@@ -240,9 +238,9 @@ public partial class OverlayPage : Page
         ManagerFactory.settingsManager.SetProperty("OverlayTrackpadsOpacity", SliderTrackpadsOpacity.Value);
     }
 
-    private void Expander_Expanded(object sender, RoutedEventArgs e)
+    private void Expander_Expanded(object sender, EventArgs e)
     {
-        ((Expander)sender).BringIntoView();
+        ((SettingsExpander)sender).BringIntoView();
     }
 
     private void Toggle_MotionActivated_Toggled(object sender, RoutedEventArgs e)

@@ -59,6 +59,13 @@ public class ProfileManager : IManager
 
     // match the standard GUID pattern
     private Regex guidRegex = new Regex(@"[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}");
+
+    private static bool HasValidProfileName(Profile profile)
+    {
+        profile.Name = profile.Name?.Trim() ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(profile.Name);
+    }
+
     public override void Start()
     {
         if (Status.HasFlag(ManagerStatus.Initializing) || Status.HasFlag(ManagerStatus.Initialized))
@@ -720,7 +727,7 @@ public class ProfileManager : IManager
         }
 
         // failed to parse
-        if (!profile.Default && (string.IsNullOrEmpty(profile.Name) || string.IsNullOrEmpty(profile.Path)))
+        if (!HasValidProfileName(profile) || (!profile.Default && string.IsNullOrWhiteSpace(profile.Path)))
         {
             LogManager.LogError("Corrupted profile: {0}. Profile has an empty name or an empty path.", fileName);
             return;
@@ -970,6 +977,12 @@ public class ProfileManager : IManager
 
     public void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)
     {
+        if (!HasValidProfileName(profile))
+        {
+            LogManager.LogWarning("Ignored profile update/create with empty name. Guid: {0}, Source: {1}", profile.Guid, source);
+            return;
+        }
+
         bool isCurrent = source switch
         {
             UpdateSource.QuickProfilesCreation => true,

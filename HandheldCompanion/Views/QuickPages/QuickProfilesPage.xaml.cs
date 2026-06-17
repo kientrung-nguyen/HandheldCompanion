@@ -37,12 +37,16 @@ public partial class QuickProfilesPage : Page
             // Use ViewModel to set selected profile instead of direct control access
             MainWindow.profilesPage.viewModel.SelectedMainProfile = ManagerFactory.profileManager.GetParent(viewModel.SelectedProfile);
             MainWindow.profilesPage.viewModel.SelectedProfile = viewModel.SelectedProfile;
+
+            // Suppress the next transition in MainWindow so the B1 press that opened
+            // this navigation is not replayed as a new press once MainWindow gains focus.
+            MainWindow.GetCurrent().SuppressNextGamepadInput();
             MainWindow.NavView_Navigate(MainWindow.profilesPage);
 
             if (MainWindow.GetCurrent().WindowState == WindowState.Minimized)
                 MainWindow.GetCurrent().ToggleState();
 
-            if (ManagerFactory.settingsManager.GetBoolean("QuickToolsAutoHide") && OverlayQuickTools.GetCurrent().Visibility == Visibility.Visible)
+            if (OverlayQuickTools.GetCurrent().Visibility == Visibility.Visible)
                 OverlayQuickTools.GetCurrent().ToggleVisibility();
         };
 
@@ -55,12 +59,16 @@ public partial class QuickProfilesPage : Page
             MainWindow.profilesPage.viewModel.SelectedMainProfile = ManagerFactory.profileManager.GetParent(viewModel.SelectedProfile);
             MainWindow.profilesPage.viewModel.SelectedProfile = viewModel.SelectedProfile;
             MainWindow.profilesPage.ControllerSettingsButton_Click(null, null);
+
+            // Suppress the next transition in MainWindow so the B1 press that opened
+            // this navigation is not replayed as a new press once MainWindow gains focus.
+            MainWindow.GetCurrent().SuppressNextGamepadInput();
             MainWindow.NavView_Navigate(MainWindow.layoutPage);
 
             if (MainWindow.GetCurrent().WindowState == WindowState.Minimized)
                 MainWindow.GetCurrent().ToggleState();
 
-            if (ManagerFactory.settingsManager.GetBoolean("QuickToolsAutoHide") && OverlayQuickTools.GetCurrent().Visibility == Visibility.Visible)
+            if (OverlayQuickTools.GetCurrent().Visibility == Visibility.Visible)
                 OverlayQuickTools.GetCurrent().ToggleVisibility();
         };
 

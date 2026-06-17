@@ -1,5 +1,4 @@
 ﻿using HandheldCompanion.Devices;
-using HandheldCompanion.Devices.Zotac;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
@@ -261,15 +260,7 @@ namespace HandheldCompanion.ViewModels
                 QueryProcessor();
 
             // manufacturer watcher
-            IDevice device = IDevice.GetCurrent();
-            if (device is ClawA1M || device is ClawA2VM)
-                manufacturerWatcher = new ClawCenterWatcher();
-            else if (device is LegionGo)
-                manufacturerWatcher = new LegionSpaceWatcher();
-            else if (device is ROGAlly || device is ROGAllyX)
-                manufacturerWatcher = new RogAllySpaceWatcher();
-            else if (device is GamingZone)
-                manufacturerWatcher = new ZotacLauncherWatcher();
+            manufacturerWatcher = ISpaceWatcher.CreateCurrent();
 
             if (manufacturerWatcher is not null)
             {

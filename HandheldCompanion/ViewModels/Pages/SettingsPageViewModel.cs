@@ -46,8 +46,18 @@ namespace HandheldCompanion.ViewModels
         public Visibility ProgressBarVisibility
         {
             get => _progressBarVisibility;
-            private set { if (_progressBarVisibility != value) { _progressBarVisibility = value; OnPropertyChanged(nameof(ProgressBarVisibility)); } }
+            private set
+            {
+                if (_progressBarVisibility != value)
+                {
+                    _progressBarVisibility = value;
+                    OnPropertyChanged(nameof(ProgressBarVisibility));
+                    OnPropertyChanged(nameof(IsProgressBarActive));
+                }
+            }
         }
+
+        public bool IsProgressBarActive => _progressBarVisibility == Visibility.Visible;
 
         private Visibility _changelogVisibility = Visibility.Collapsed;
         public Visibility ChangelogVisibility
@@ -109,6 +119,17 @@ namespace HandheldCompanion.ViewModels
 
         #endregion
 
+        #region VIIPER status
+
+        private string _viiperStatusText = "Stopped";
+        public string VIIPERStatusText
+        {
+            get => _viiperStatusText;
+            private set { if (_viiperStatusText != value) { _viiperStatusText = value; OnPropertyChanged(nameof(VIIPERStatusText)); } }
+        }
+
+        #endregion
+
         #region Constructor
 
         public SettingsPageViewModel()
@@ -128,9 +149,16 @@ namespace HandheldCompanion.ViewModels
             DSUServer.Failed += DSUServer_Failed;
             DSUServer.ClientsChanged += DSUServer_ClientsChanged;
 
+            ViiperServerManager.Started += ViiperServerManager_Started;
+            ViiperServerManager.Stopped += ViiperServerManager_Stopped;
+            ViiperServerManager.Failed += ViiperServerManager_Failed;
+
             // replay current DSU state
             if (DSUServer.IsInitialized)
                 DSUServer_Started();
+
+            if (ViiperServerManager.IsRunning)
+                ViiperServerManager_Started();
         }
 
         #endregion
@@ -200,6 +228,20 @@ namespace HandheldCompanion.ViewModels
                     }
                     break;
 
+                case UpdateStatus.ControllerDbReady:
+                    if (updateFile is not null && FindVm(updateFile) is null)
+                    {
+                        UpdateSymbolVisibility = Visibility.Visible;
+                        lock (_collectionLock)
+                        {
+                            var fileVm = new GithubUpdateViewModel(updateFile);
+                            fileVm.OnInstallFailed += OnInstallFailed;
+                            fileVm.OnInstalled += OnInstalled;
+                            UpdateFiles.Add(fileVm);
+                        }
+                    }
+                    break;
+
                 case UpdateStatus.Download:
                     vm?.OnDownloadStarted();
                     break;
@@ -237,6 +279,14 @@ namespace HandheldCompanion.ViewModels
             }.ShowAsync();
         }
 
+        private void OnInstalled(GithubUpdateViewModel vm)
+        {
+            lock (_collectionLock)
+            {
+                UpdateFiles.Remove(vm);
+            }
+        }
+
         #endregion
 
         #region DSUServer events
@@ -269,6 +319,25 @@ namespace HandheldCompanion.ViewModels
 
         #endregion
 
+        #region ViiperServerManager events
+
+        private void ViiperServerManager_Started()
+        {
+            VIIPERStatusText = $"Listening on {ViiperServerManager.Host}:{ViiperServerManager.Port}";
+        }
+
+        private void ViiperServerManager_Stopped()
+        {
+            VIIPERStatusText = "Stopped";
+        }
+
+        private void ViiperServerManager_Failed(string reason)
+        {
+            VIIPERStatusText = reason;
+        }
+
+        #endregion
+
         #region Dispose
 
         public override void Dispose()
@@ -285,6 +354,9 @@ namespace HandheldCompanion.ViewModels
                 DSUServer.Stopped -= DSUServer_Stopped;
                 DSUServer.Failed -= DSUServer_Failed;
                 DSUServer.ClientsChanged -= DSUServer_ClientsChanged;
+                ViiperServerManager.Started -= ViiperServerManager_Started;
+                ViiperServerManager.Stopped -= ViiperServerManager_Stopped;
+                ViiperServerManager.Failed -= ViiperServerManager_Failed;
             }
 
             base.Dispose(disposing);

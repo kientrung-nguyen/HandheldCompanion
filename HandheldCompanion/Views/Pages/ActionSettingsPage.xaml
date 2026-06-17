@@ -12,7 +12,7 @@
     Title="Action Settings"
     d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:ButtonMappingViewModel}"
-    d:DesignHeight="2000"
+    d:DesignHeight="3000"
     d:DesignWidth="1000"
     mc:Ignorable="d">
 
@@ -139,6 +139,7 @@
                         Text="{Binding TriggerOutput, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0}}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -174,6 +175,7 @@
                         Text="{Binding Axis2ButtonThreshold, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N0}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -198,6 +200,110 @@
                 </ComboBox>
             </ui:SettingsCard>
 
+            <!--  Button axis output X/Y  -->
+            <ui:SettingsCard Header="Axis output" Visibility="{Binding Button2AxisVisibility, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}">
+                <StackPanel>
+                    <DockPanel>
+                        <TextBlock VerticalAlignment="Center" Text="X" />
+                        <TextBox
+                            Width="72"
+                            Margin="8,0,0,0"
+                            HorizontalContentAlignment="Center"
+                            IsReadOnly="True"
+                            Text="{Binding Button2AxisX, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N0}" />
+                        <Slider
+                            Width="200"
+                            Margin="8,0,0,0"
+                            IsMoveToPointEnabled="True"
+                            IsSnapToTickEnabled="True"
+                            Maximum="32767"
+                            Minimum="-32768"
+                            TickFrequency="2048"
+                            TickPlacement="BottomRight"
+                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                            Value="{Binding Button2AxisX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </DockPanel>
+                    <DockPanel Margin="0,8,0,0">
+                        <TextBlock VerticalAlignment="Center" Text="Y" />
+                        <TextBox
+                            Width="72"
+                            Margin="8,0,0,0"
+                            HorizontalContentAlignment="Center"
+                            IsReadOnly="True"
+                            Text="{Binding Button2AxisY, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N0}" />
+                        <Slider
+                            Width="200"
+                            Margin="8,0,0,0"
+                            IsMoveToPointEnabled="True"
+                            IsSnapToTickEnabled="True"
+                            Maximum="32767"
+                            Minimum="-32768"
+                            TickFrequency="2048"
+                            TickPlacement="BottomRight"
+                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                            Value="{Binding Button2AxisY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </DockPanel>
+                </StackPanel>
+            </ui:SettingsCard>
+
+            <!--  Axis visualizer  -->
+            <ui:SettingsCard Header="Axis visualizer" Visibility="{Binding AxisVisualizerVisibility, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}">
+                <Grid
+                    Width="200"
+                    Height="200"
+                    HorizontalAlignment="Center">
+                    <Ellipse
+                        Fill="#22262C"
+                        Stroke="#4A4F57"
+                        StrokeThickness="1" />
+                    <Ellipse
+                        Width="{Binding AxisVisualizerOuterDeadzoneSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        Height="{Binding AxisVisualizerOuterDeadzoneSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Fill="#FF3B4048"
+                        Opacity="0.35" />
+                    <Ellipse
+                        Width="{Binding AxisVisualizerInnerDeadzoneSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        Height="{Binding AxisVisualizerInnerDeadzoneSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Stroke="#80FFFFFF"
+                        StrokeThickness="1" />
+                    <Ellipse
+                        Width="{Binding AxisVisualizerAntiDeadzoneSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        Height="{Binding AxisVisualizerAntiDeadzoneSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Stroke="#80D0D0D0"
+                        StrokeDashArray="2,2"
+                        StrokeThickness="1" />
+                    <Ellipse
+                        Width="6"
+                        Height="6"
+                        Fill="#FFFFFFFF"
+                        Stroke="#FF9AA0AA"
+                        StrokeThickness="1">
+                        <Ellipse.RenderTransform>
+                            <TranslateTransform>
+                                <TranslateTransform.X>
+                                    <Binding
+                                        Mode="OneWay"
+                                        Path="AxisVisualizerDotTranslateX"
+                                        UpdateSourceTrigger="PropertyChanged" />
+                                </TranslateTransform.X>
+                                <TranslateTransform.Y>
+                                    <Binding
+                                        Mode="OneWay"
+                                        Path="AxisVisualizerDotTranslateY"
+                                        UpdateSourceTrigger="PropertyChanged" />
+                                </TranslateTransform.Y>
+                            </TranslateTransform>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                </Grid>
+            </ui:SettingsCard>
+
             <!--  Invert horizontal  -->
             <ui:SettingsCard ContentAlignment="Left" Visibility="{Binding AxisInvertVisibility, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}">
                 <CheckBox Content="Invert horizontal axis" IsChecked="{Binding Axis2AxisInvertHorizontal, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -217,6 +323,7 @@
                         Text="{Binding Axis2AxisInnerDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -238,6 +345,7 @@
                         Text="{Binding Axis2AxisOuterDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -259,6 +367,7 @@
                         Text="{Binding Axis2AxisAntiDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -280,6 +389,7 @@
                         Text="{Binding Trigger2TriggerInnerDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -301,6 +411,7 @@
                         Text="{Binding Trigger2TriggerOuterDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -322,6 +433,7 @@
                         Text="{Binding Trigger2TriggerAntiDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -343,6 +455,7 @@
                         Text="{Binding Axis2MousePointerSpeed, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -364,6 +477,7 @@
                         Text="{Binding Axis2MouseAcceleration, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2} %}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         AutoToolTipPrecision="2"
                         IsMoveToPointEnabled="True"
@@ -391,6 +505,7 @@
                         Text="{Binding Axis2MouseFilterCutoff, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N3}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         AutoToolTipPrecision="3"
                         IsMoveToPointEnabled="True"
@@ -413,6 +528,7 @@
                         Text="{Binding Axis2MouseDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N0}%}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         IsMoveToPointEnabled="True"
                         IsSnapToTickEnabled="True"
@@ -445,6 +561,7 @@
                         Text="{Binding TurboDelay, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} ms}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         VerticalAlignment="Center"
                         IsMoveToPointEnabled="True"
@@ -467,6 +584,7 @@
                         Text="{Binding StartDelay, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} ms}" />
 
                     <Slider
+                        Width="200"
                         Margin="3,0,0,0"
                         VerticalAlignment="Center"
                         IsMoveToPointEnabled="True"
@@ -514,22 +632,23 @@
                 Description="{x:Static resx:Resources.LayoutPage_InputShiftDesc}"
                 Header="{x:Static resx:Resources.LayoutPage_InputShift}"
                 Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1|2|3|4|5|6|7|8|9|10}">
-                <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Vertical">
                     <ComboBox MinWidth="140" SelectedIndex="{Binding ShiftModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <ComboBoxItem Content="Disabled on shift" />
                         <ComboBoxItem Content="Always enabled" />
                         <ComboBoxItem Content="Enabled on shift (strict)" />
                         <ComboBoxItem Content="Enabled on shift (any)" />
                     </ComboBox>
-                    <WrapPanel
-                        Margin="8,0,0,0"
-                        Orientation="Horizontal"
-                        Visibility="{Binding ShowShiftSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <CheckBox Content="A" IsChecked="{Binding ShiftA, Mode=TwoWay}" />
-                        <CheckBox Content="B" IsChecked="{Binding ShiftB, Mode=TwoWay}" />
-                        <CheckBox Content="C" IsChecked="{Binding ShiftC, Mode=TwoWay}" />
-                        <CheckBox Content="D" IsChecked="{Binding ShiftD, Mode=TwoWay}" />
-                    </WrapPanel>
+                    <ikw:SimpleStackPanel Visibility="{Binding ShowShiftSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <WrapPanel>
+                            <CheckBox Content="A" IsChecked="{Binding ShiftA, Mode=TwoWay}" />
+                            <CheckBox Content="B" IsChecked="{Binding ShiftB, Mode=TwoWay}" />
+                        </WrapPanel>
+                        <WrapPanel>
+                            <CheckBox Content="C" IsChecked="{Binding ShiftC, Mode=TwoWay}" />
+                            <CheckBox Content="D" IsChecked="{Binding ShiftD, Mode=TwoWay}" />
+                        </WrapPanel>
+                    </ikw:SimpleStackPanel>
                 </StackPanel>
             </ui:SettingsCard>
 

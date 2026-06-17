@@ -33,7 +33,8 @@
                 <Grid>
                     <ui:ProgressRing
                         Panel.ZIndex="1"
-                        IsIndeterminate="True"
+                        IsActive="{Binding IsLibraryBusy, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsIndeterminate="{Binding IsLibraryBusy, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                         Visibility="{Binding IsLibraryBusy, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                     <ikw:SimpleStackPanel
@@ -280,26 +281,17 @@
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="2*" MinWidth="70" />
-                                    <ColumnDefinition Width="5*" MinWidth="200" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition />
                                 </Grid.ColumnDefinitions>
 
                                 <DockPanel>
                                     <ui:FontIcon
                                         Name="ProfileIcon"
-                                        HorizontalAlignment="Center"
+                                        HorizontalAlignment="Left"
                                         FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                         Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                         Glyph="&#xE7EE;" />
-
-                                    <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_ProfileSelection}" />
-                                        <TextBlock
-                                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                            Text="{l:Static resx:Resources.ProfilesPage_ProfileSelectionDesc}"
-                                            TextWrapping="Wrap" />
-                                    </ikw:SimpleStackPanel>
                                 </DockPanel>
 
                                 <Grid Grid.Column="1" Margin="12,0,0,0">
@@ -380,6 +372,7 @@
                         MaxHeight="320"
                         HorizontalAlignment="Stretch"
                         ClipToBounds="True"
+                        RenderOptions.BitmapScalingMode="HighQuality"
                         Visibility="{Binding Artwork, Converter={StaticResource HasArtworkConverter}}">
                         <Rectangle>
                             <Rectangle.Fill>
@@ -411,6 +404,7 @@
                             Margin="32,0,0,32"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Bottom"
+                            RenderOptions.BitmapScalingMode="HighQuality"
                             Source="{Binding Logo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, NotifyOnTargetUpdated=True}"
                             Stretch="Uniform">
                             <Image.Triggers>
@@ -431,10 +425,7 @@
                     </Grid>
 
                     <!--  Profile details  -->
-                    <Expander
-                        Name="ProfileDetailsExpander"
-                        d:IsExpanded="True"
-                        IsEnabled="{Binding IsProfileDetailsExpanderEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                    <Expander Name="ProfileDetailsExpander" d:IsExpanded="True">
                         <Expander.Header>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -555,7 +546,8 @@
                                     <ToggleButton
                                         Name="ToggleFavoriteButton"
                                         VerticalAlignment="Stretch"
-                                        IsChecked="{Binding IsLiked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        IsChecked="{Binding IsLiked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        IsEnabled="{Binding IsProfileDetailsExpanderEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
                                         <ui:FontIcon>
                                             <ui:FontIcon.Style>
                                                 <Style TargetType="ui:FontIcon">
@@ -572,7 +564,7 @@
                                 </ikw:SimpleStackPanel>
                             </Grid>
                         </Expander.Header>
-                        <ikw:SimpleStackPanel Spacing="3">
+                        <ikw:SimpleStackPanel IsEnabled="{Binding IsProfileDetailsExpanderEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Spacing="3">
                             <!--  Path  -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -815,15 +807,13 @@
                         <ui:SettingsCard
                             Name="SettingsCardEnableProfile"
                             Description="{l:Static resx:Resources.ProfilesPage_EnableProfileDesc}"
-                            Header="{l:Static resx:Resources.ProfilesPage_EnableProfile}">
+                            Header="{l:Static resx:Resources.ProfilesPage_EnableProfile}"
+                            IsEnabled="{Binding IsProfileEnabledToggleEnabled}">
                             <ui:SettingsCard.HeaderIcon>
                                 <ui:FontIcon Glyph="&#xE7EE;" />
                             </ui:SettingsCard.HeaderIcon>
 
-                            <ui:ToggleSwitch
-                                x:Name="EnableProfileToggle"
-                                IsEnabled="{Binding IsProfileEnabledToggleEnabled}"
-                                IsOn="{Binding ProfileEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <ui:ToggleSwitch x:Name="EnableProfileToggle" IsOn="{Binding ProfileEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </ui:SettingsCard>
 
                         <ui:SettingsCard
@@ -863,10 +853,12 @@
                             </ui:SettingsCard.HeaderIcon>
 
                             <ComboBox x:Name="EmulatedControllerComboBox" SelectedIndex="{Binding HIDModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                                <ComboBoxItem Name="EmulatedControllerDefaultItem" Content="{l:Static resx:Resources.ProfilesPage_EmulatedControllerDefault}" />
-                                <ComboBoxItem Name="EmulatedControllerXboxItem" Content="{l:Static resx:Resources.ProfilesPage_EmulatedControllerXbox}" />
-                                <ComboBoxItem Name="EmulatedControllerDS4Item" Content="{l:Static resx:Resources.ProfilesPage_EmulatedControllerDS4}" />
-                                <ComboBoxItem Name="EmulatedControllerDInputItem" Content="{l:Static resx:Resources.ProfilesPage_EmulatedControllervJoy}" />
+                                <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_EmulatedControllerDefault}" />
+                                <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_Xbox360Controller}" />
+                                <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_DualShock4Controller}" />
+                                <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_DualSenseController}" />
+                                <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_SteamDeckController}" />
+                                <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_SteamController}" />
                             </ComboBox>
                         </ui:SettingsCard>
 

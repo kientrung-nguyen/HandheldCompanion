@@ -113,21 +113,7 @@ namespace HandheldCompanion.Commands.Functions.HC
             }
         }
 
-        public override bool IsToggled
-        {
-            get
-            {
-                LayoutModes LayoutMode = (LayoutModes)ManagerFactory.settingsManager.GetInt(SettingsName);
-                switch (LayoutMode)
-                {
-                    case LayoutModes.Gamepad:
-                    case LayoutModes.Desktop:
-                        return true;
-                    default:
-                        return false;
-                }
-            }
-        }
+        public override bool HasDoubleExecute => true;
 
         public override object Clone()
         {

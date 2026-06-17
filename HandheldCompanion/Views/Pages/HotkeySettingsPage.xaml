@@ -38,9 +38,7 @@
                     FontSize="18"
                     Style="{StaticResource BaseTextBlockStyle}"
                     Text="{Binding Name, Mode=OneWay}" />
-                <TextBlock
-                    Style="{StaticResource CaptionTextBlockStyle}"
-                    Text="{Binding Description, Mode=OneWay}" />
+                <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{Binding Description, Mode=OneWay}" />
                 <Separator
                     BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                     BorderThickness="0,1,0,0"

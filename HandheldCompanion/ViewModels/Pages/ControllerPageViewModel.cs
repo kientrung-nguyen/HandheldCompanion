@@ -1,7 +1,6 @@
 ﻿using HandheldCompanion.Controllers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Shared;
-using HandheldCompanion.Targets;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.ObjectModel;
@@ -37,6 +36,62 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        private bool _isMasterIntervalInfoBarOpen;
+        public bool IsMasterIntervalInfoBarOpen
+        {
+            get => _isMasterIntervalInfoBarOpen;
+            private set
+            {
+                if (_isMasterIntervalInfoBarOpen != value)
+                {
+                    _isMasterIntervalInfoBarOpen = value;
+                    OnPropertyChanged(nameof(IsMasterIntervalInfoBarOpen));
+                }
+            }
+        }
+
+        private bool _isMasterIntervalSettingEnabled = true;
+        public bool IsMasterIntervalSettingEnabled
+        {
+            get => _isMasterIntervalSettingEnabled;
+            private set
+            {
+                if (_isMasterIntervalSettingEnabled != value)
+                {
+                    _isMasterIntervalSettingEnabled = value;
+                    OnPropertyChanged(nameof(IsMasterIntervalSettingEnabled));
+                }
+            }
+        }
+
+        private string _masterIntervalInfoBarTitle = "Update rate bypassed";
+        public string MasterIntervalInfoBarTitle
+        {
+            get => _masterIntervalInfoBarTitle;
+            private set
+            {
+                if (_masterIntervalInfoBarTitle != value)
+                {
+                    _masterIntervalInfoBarTitle = value;
+                    OnPropertyChanged(nameof(MasterIntervalInfoBarTitle));
+                }
+            }
+        }
+
+        private string _masterIntervalInfoBarMessage = string.Empty;
+        public string MasterIntervalInfoBarMessage
+        {
+            get => _masterIntervalInfoBarMessage;
+            private set
+            {
+                if (_masterIntervalInfoBarMessage != value)
+                {
+                    _masterIntervalInfoBarMessage = value;
+                    OnPropertyChanged(nameof(MasterIntervalInfoBarMessage));
+                }
+            }
+        }
+
         public BitmapImage Artwork
         {
             get
@@ -45,8 +100,12 @@ namespace HandheldCompanion.ViewModels
                 {
                     default:
                     case HIDmode.Xbox360Controller:
+                    case HIDmode.SteamDeckController:
+                    case HIDmode.SwitchProController:
+                    case HIDmode.SteamController:
                         return LibraryResources.Xbox360Big;
                     case HIDmode.DualShock4Controller:
+                    case HIDmode.DualSenseController:
                         return LibraryResources.DualShock4Big;
                 }
             }
@@ -68,9 +127,12 @@ namespace HandheldCompanion.ViewModels
                 {
                     _ScanHardwareVisibility = value;
                     OnPropertyChanged(nameof(ScanHardwareVisibility));
+                    OnPropertyChanged(nameof(IsScanningHardware));
                 }
             }
         }
+
+        public bool IsScanningHardware => _ScanHardwareVisibility == Visibility.Visible;
 
         private Visibility _PhysicalDevicesVisibility = Visibility.Collapsed;
         public Visibility PhysicalDevicesVisibility
@@ -276,6 +338,7 @@ namespace HandheldCompanion.ViewModels
             ControllerManager.StatusChanged += ControllerManager_StatusChanged;
             ControllerManager.SlotIssueChanged += ControllerManager_SlotIssueChanged;
             VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+            VirtualManager.MasterIntervalOverrideChanged += VirtualManager_MasterIntervalOverrideChanged;
             VirtualManager.StatusChanged += VirtualManager_StatusChanged;
 
             // initialize slot issue state
@@ -369,6 +432,12 @@ namespace HandheldCompanion.ViewModels
         private void VirtualManager_ControllerSelected(HIDmode mode)
         {
             OnPropertyChanged(nameof(Artwork));
+            UpdateMasterIntervalOverrideInfo();
+        }
+
+        private void VirtualManager_MasterIntervalOverrideChanged(int? overrideHz)
+        {
+            UpdateMasterIntervalOverrideInfo();
         }
 
         private void VirtualManager_StatusChanged(VirtualManagerStatus status, int attempt, int maxAttempts)
@@ -408,6 +477,7 @@ namespace HandheldCompanion.ViewModels
             SettingsManager_SettingValueChanged("HIDstatus", ManagerFactory.settingsManager.GetString("HIDstatus"), false);
             SettingsManager_SettingValueChanged("SteamControllerMode", ManagerFactory.settingsManager.GetString("SteamControllerMode"), false);
             SettingsManager_SettingValueChanged("ControllerSlotManagementMode", ManagerFactory.settingsManager.GetString("ControllerSlotManagementMode"), false);
+            UpdateMasterIntervalOverrideInfo();
         }
 
         private void LayoutManager_Initialized()
@@ -560,6 +630,26 @@ namespace HandheldCompanion.ViewModels
                 : Visibility.Collapsed;
         }
 
+        public void UpdateMasterIntervalOverrideInfo()
+        {
+            int? overrideHz = VirtualManager.GetMasterIntervalOverrideHz();
+            if (!overrideHz.HasValue)
+            {
+                IsMasterIntervalInfoBarOpen = false;
+                IsMasterIntervalSettingEnabled = true;
+                MasterIntervalInfoBarMessage = string.Empty;
+                return;
+            }
+
+            string controllerName = VirtualManager.vTarget?.ToString();
+            if (string.IsNullOrWhiteSpace(controllerName))
+                controllerName = "selected";
+
+            MasterIntervalInfoBarMessage = $"The update rate setting is currently bypassed by the {controllerName} virtual controller and forced to {overrideHz.Value} Hz.";
+            IsMasterIntervalInfoBarOpen = true;
+            IsMasterIntervalSettingEnabled = false;
+        }
+
         public override void Dispose()
         {
             base.Dispose();
@@ -579,6 +669,7 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.profileManager.Initialized -= ProfileManager_Initialized;
                 ManagerFactory.profileManager.Applied -= ProfileManager_Applied;
                 VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
+                VirtualManager.MasterIntervalOverrideChanged -= VirtualManager_MasterIntervalOverrideChanged;
                 VirtualManager.StatusChanged -= VirtualManager_StatusChanged;
                 ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
                 ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;

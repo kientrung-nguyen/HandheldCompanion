@@ -21,6 +21,8 @@
     d:DataContext="{d:DesignInstance Type=viewmodels:MainWindowViewModel}"
     d:Visibility="Visible"
     ui:ThemeManager.IsThemeAware="True"
+    ui:TitleBar.ExtendViewIntoTitleBar="True"
+    ui:TitleBar.Height="48"
     ui:WindowHelper.SystemBackdropType="Mica"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closed="Window_Closed"
@@ -46,7 +48,27 @@
         ItemInvoked="navView_ItemInvoked"
         Loaded="navView_Loaded"
         PaneDisplayMode="Top"
-        SelectionFollowsFocus="Enabled">
+        SelectionFollowsFocus="Enabled"
+        TopNavItemsAlignment="Stretch">
+
+        <controls:AdaptiveNavigationView.Resources>
+            <StaticResource x:Key="TopNavigationViewItemBackgroundPointerOver" ResourceKey="NavigationViewItemBackgroundPointerOver" />
+            <StaticResource x:Key="TopNavigationViewItemBackgroundPressed" ResourceKey="NavigationViewItemBackgroundPressed" />
+            <StaticResource x:Key="TopNavigationViewItemBackgroundSelected" ResourceKey="NavigationViewItemBackgroundSelected" />
+            <StaticResource x:Key="TopNavigationViewItemBackgroundSelectedPointerOver" ResourceKey="NavigationViewItemBackgroundSelectedPointerOver" />
+            <StaticResource x:Key="TopNavigationViewItemBackgroundSelectedPressed" ResourceKey="NavigationViewItemBackgroundSelectedPressed" />
+            <StaticResource x:Key="TopNavigationViewItemForegroundPointerOver" ResourceKey="NavigationViewSelectionIndicatorForeground" />
+            <StaticResource x:Key="TopNavigationViewItemForegroundPressed" ResourceKey="NavigationViewSelectionIndicatorForeground" />
+            <StaticResource x:Key="TopNavigationViewItemForegroundSelectedPointerOver" ResourceKey="NavigationViewSelectionIndicatorForeground" />
+        </controls:AdaptiveNavigationView.Resources>
+
+        <controls:AdaptiveNavigationView.MenuItemContainerStyle>
+            <Style TargetType="ui:NavigationViewItem">
+                <Setter Property="Background" Value="{DynamicResource NavigationViewItemBackground}" />
+                <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}" />
+                <Setter Property="IsTabStop" Value="True" />
+            </Style>
+        </controls:AdaptiveNavigationView.MenuItemContainerStyle>
 
         <ui:NavigationView.HeaderTemplate>
             <DataTemplate>
@@ -54,18 +76,12 @@
             </DataTemplate>
         </ui:NavigationView.HeaderTemplate>
 
-        <FrameworkElement.Resources>
-            <SolidColorBrush x:Key="{x:Static ui:ThemeKeys.NavigationViewContentBackgroundKey}" Color="Transparent" />
-            <SolidColorBrush x:Key="{x:Static ui:ThemeKeys.ExpanderHeaderBorderBrushKey}" Color="Transparent" />
-            <Thickness x:Key="NavigationViewContentGridBorderThickness">0,0,0,0</Thickness>
-        </FrameworkElement.Resources>
-
         <ui:NavigationView.MenuItems>
             <ui:NavigationViewItem IsEnabled="False">
                 <ui:NavigationViewItem.Icon>
                     <ui:FontIcon
                         Name="GamepadUILB"
-                        Margin="-6,0,0,0"
+                        Margin="-6,0,-29,0"
                         FontFamily="PromptFont"
                         FontSize="22"
                         Glyph="&#x2198;" />
@@ -336,7 +352,7 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Panel.ZIndex="1000"
-                                IsActive="True"
+                                IsActive="{Binding IsInitializing}"
                                 Visibility="{Binding IsInitializing, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         </Grid>
                     </ui:ScrollViewerEx>

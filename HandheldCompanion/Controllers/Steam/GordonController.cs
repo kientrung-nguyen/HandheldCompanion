@@ -7,7 +7,6 @@ using SharpDX.XInput;
 using steam_hidapi.net;
 using steam_hidapi.net.Hid;
 using System;
-using System.Threading.Tasks;
 using System.Windows.Media;
 
 namespace HandheldCompanion.Controllers.Steam
@@ -19,6 +18,11 @@ namespace HandheldCompanion.Controllers.Steam
 
         private const short TrackPadInner = short.MaxValue / 2;
         public const ushort MaxRumbleIntensity = 2048;
+
+        public override bool IsWireless()
+        {
+            return GetProductID() != 0x1102;
+        }
 
         public GordonController()
         { }
@@ -45,10 +49,11 @@ namespace HandheldCompanion.Controllers.Steam
             SourceAxis.Add(AxisLayoutFlags.RightPad);
             SourceAxis.Add(AxisLayoutFlags.Gyroscope);
 
+            TargetButtons.Add(ButtonFlags.L4);
+            TargetButtons.Add(ButtonFlags.R4);
+
             TargetButtons.Add(ButtonFlags.LeftPadClick);
             TargetButtons.Add(ButtonFlags.RightPadClick);
-            TargetButtons.Add(ButtonFlags.LeftPadTouch);
-            TargetButtons.Add(ButtonFlags.RightPadTouch);
 
             TargetAxis.Add(AxisLayoutFlags.LeftPad);
             TargetAxis.Add(AxisLayoutFlags.RightPad);
@@ -67,14 +72,19 @@ namespace HandheldCompanion.Controllers.Steam
         {
             base.AttachDetails(details);
 
+            // wired controllers should appear as slot 0 while wireless controllers are indexed from 1 to 4 (minus 1 for 0-based index)
+            UserIndex = (byte)(IsWireless() ? (details.GetMI() - 1) : 0);
+
+            // don't go further
+            if (IsVirtual())
+                return;
+
             // (un)plug controller if needed
             bool WasPlugged = IsConnected();
             if (WasPlugged) Close();
 
-            UserIndex = (byte)details.GetMI();
-
             // try known buffer lengths to support different firmware versions (65 current, 64 legacy)
-            foreach (ushort bufLen in (ushort[])[64, 65])
+            foreach (ushort bufLen in (ushort[])[65, 64])
             {
                 Controller = new(details.VendorID, details.ProductID, bufLen, details.GetMI());
                 Open();
@@ -99,7 +109,7 @@ namespace HandheldCompanion.Controllers.Steam
 
         public override void Tick(long ticks, float delta, bool commit)
         {
-            if (input is null || IsBusy || !IsPlugged || IsDisposing || IsDisposed)
+            if (input is null || IsBusy || !IsPlugged || _disposing || _disposed)
                 return;
 
             ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);
@@ -287,10 +297,9 @@ namespace HandheldCompanion.Controllers.Steam
             base.Unplug();
         }
 
-        private Task HandleControllerInput(GordonControllerInputEventArgs input)
+        private void HandleControllerInput(GordonControllerInputEventArgs input)
         {
             this.input = input;
-            return Task.CompletedTask;
         }
 
         public ushort GetHapticIntensity(byte input, ushort maxIntensity)

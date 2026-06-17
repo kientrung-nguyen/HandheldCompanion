@@ -297,6 +297,18 @@ namespace HandheldCompanion.Controls
             double aspectRatio = Math.Max(0.01, ItemAspectRatio);
             double targetWidth = targetHeight * aspectRatio;
 
+            double? referenceScale = null;
+            if (hasFiniteWidth)
+            {
+                double naturalCount = Math.Floor((availableWidth + HorizontalSpacing) / (targetWidth + HorizontalSpacing));
+                if (naturalCount >= 1.0)
+                {
+                    int n = (int)naturalCount;
+                    double availableItemWidth = Math.Max(1.0, availableWidth - (n - 1) * HorizontalSpacing);
+                    referenceScale = Math.Max(0.01, availableItemWidth / (n * targetWidth));
+                }
+            }
+
             List<RowLayout> rows = new();
             ItemLayout?[] itemLayouts = new ItemLayout[itemCount];
             List<PendingRowLayout> pendingRows = new();
@@ -336,7 +348,7 @@ namespace HandheldCompanion.Controls
             for (int rowIndex = 0; rowIndex < pendingRows.Count; rowIndex++)
             {
                 PendingRowLayout pendingRow = pendingRows[rowIndex];
-                RowLayout row = CreateRowLayout(pendingRow.Items, availableWidth, targetWidth, targetHeight, pendingRow.Justify, y, previousRow);
+                RowLayout row = CreateRowLayout(pendingRow.Items, availableWidth, targetWidth, targetHeight, pendingRow.Justify, y, previousRow, referenceScale);
                 rows.Add(row);
 
                 foreach (ItemLayout itemLayout in row.Items)
@@ -353,7 +365,7 @@ namespace HandheldCompanion.Controls
             return new LayoutInfo(desiredWidth, Math.Max(0.0, y), rows, itemLayouts, itemCount);
         }
 
-        private RowLayout CreateRowLayout(IReadOnlyList<PendingItemLayout> pendingItems, double availableWidth, double targetWidth, double targetHeight, bool justify, double y, RowLayout? previousRow)
+        private RowLayout CreateRowLayout(IReadOnlyList<PendingItemLayout> pendingItems, double availableWidth, double targetWidth, double targetHeight, bool justify, double y, RowLayout? previousRow, double? referenceScale = null)
         {
             int totalSpan = 0;
             foreach (PendingItemLayout item in pendingItems)
@@ -376,6 +388,10 @@ namespace HandheldCompanion.Controls
             {
                 double previousRowScale = previousRow.Height / Math.Max(1.0, targetHeight);
                 scale = Math.Min(scale, previousRowScale);
+            }
+            else if (!justify && previousRow is null && referenceScale.HasValue)
+            {
+                scale = Math.Min(scale, referenceScale.Value);
             }
 
             double rowHeight = Math.Max(1.0, targetHeight * scale);
@@ -455,7 +471,8 @@ namespace HandheldCompanion.Controls
 
                 if (currentSpan >= rowSpanCapacity)
                 {
-                    rows.Add(new PendingRowLayout(new List<PendingItemLayout>(rowItems), justify: true));
+                    bool isLastRow = index == items.Count - 1;
+                    rows.Add(new PendingRowLayout(new List<PendingItemLayout>(rowItems), justify: !isLastRow));
                     rowItems.Clear();
                     currentSpan = 0;
                 }

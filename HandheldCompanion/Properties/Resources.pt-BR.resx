@@ -1098,9 +1098,6 @@ Entrada de movimento alternada: Pressione o(s) botão(ões) selecionado(s) para 
   <data name="Hotkey_LayoutMode" xml:space="preserve">
     <value>Controller mode</value>
   </data>
-  <data name="Hotkey_LayoutModeDesc" xml:space="preserve">
-    <value>Change controller mode: Auto, Gamepad or Desktop</value>
-  </data>
   <data name="Hotkey_ControlCenter" xml:space="preserve">
     <value>Exibir a Central de Ações</value>
   </data>
@@ -1743,9 +1740,6 @@ Entrada de movimento alternada: Pressione o(s) botão(ões) selecionado(s) para 
   <data name="Enum_XInputController_ButtonFlags_R1" xml:space="preserve">
     <value>RB</value>
   </data>
-  <data name="Enum_XInputController_ButtonFlags_Special" xml:space="preserve">
-    <value>Guia</value>
-  </data>
   <data name="Enum_XInputController_ButtonFlags_Start" xml:space="preserve">
     <value>Menu</value>
   </data>
@@ -1760,12 +1754,6 @@ Entrada de movimento alternada: Pressione o(s) botão(ões) selecionado(s) para 
   </data>
   <data name="Enum_InputsHotkeyType_Handheld" xml:space="preserve">
     <value>Handheld Companion</value>
-  </data>
-  <data name="Enum_SteamDeck_ButtonFlags_OEM1" xml:space="preserve">
-    <value>Opções</value>
-  </data>
-  <data name="Enum_NeptuneController_ButtonFlags_Special" xml:space="preserve">
-    <value>STEAM</value>
   </data>
   <data name="Enum_ROGAlly_ButtonFlags_OEM1" xml:space="preserve">
     <value>Centro de comando</value>
@@ -2808,9 +2796,6 @@ Entrada de movimento alternada: Pressione o(s) botão(ões) selecionado(s) para 
   <data name="Enum_XInputController_AxisLayoutFlags_Gyroscope" xml:space="preserve">
     <value>Giroscópico</value>
   </data>
-  <data name="Enum_XInputController_ButtonFlags_Special2" xml:space="preserve">
-    <value>Especial 2</value>
-  </data>
   <data name="DevicePage_BatteryChargeLimit" xml:space="preserve">
     <value>Limite de Carga da Bateria</value>
   </data>
@@ -3513,9 +3498,6 @@ Obrigado por utilizar o Handheld Companion e nos ajudá-lo a torná-lo melhor.</
   <data name="Enum_DualShock4Controller_ButtonFlags_Back" xml:space="preserve">
     <value>Share</value>
   </data>
-  <data name="Enum_DualShock4Controller_ButtonFlags_Special" xml:space="preserve">
-    <value>Sony</value>
-  </data>
   <data name="Enum_DualShock4Controller_ButtonFlags_Start" xml:space="preserve">
     <value>Options</value>
   </data>
@@ -3563,12 +3545,6 @@ Obrigado por utilizar o Handheld Companion e nos ajudá-lo a torná-lo melhor.</
   </data>
   <data name="Enum_NintendoSwitchProController_ButtonFlags_R1" xml:space="preserve">
     <value>R</value>
-  </data>
-  <data name="Enum_NintendoSwitchProController_ButtonFlags_Special" xml:space="preserve">
-    <value>Home</value>
-  </data>
-  <data name="Enum_NintendoSwitchProController_ButtonFlags_Special2" xml:space="preserve">
-    <value>Captura</value>
   </data>
   <data name="Enum_NintendoSwitchProController_ButtonFlags_Start" xml:space="preserve">
     <value>Mais</value>
@@ -3731,12 +3707,6 @@ Obrigado por utilizar o Handheld Companion e nos ajudá-lo a torná-lo melhor.</
   </data>
   <data name="Enum_Xbox360Controller_ButtonFlags_RightThumbUp" xml:space="preserve">
     <value>Analógico Direito Cima</value>
-  </data>
-  <data name="Enum_Xbox360Controller_ButtonFlags_Special" xml:space="preserve">
-    <value>Guia</value>
-  </data>
-  <data name="Enum_Xbox360Controller_ButtonFlags_Special2" xml:space="preserve">
-    <value>Especial 2</value>
   </data>
   <data name="Enum_Xbox360Controller_ButtonFlags_Start" xml:space="preserve">
     <value>Menu</value>

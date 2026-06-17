@@ -86,9 +86,6 @@ public partial class OverlayModel : OverlayWindow
 
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
-        float samplePeriod = TimerManager.GetPeriod() / 1000f;
-        madgwickAHRS = new(samplePeriod, 0.1f);
-
         // initialize timers
         UpdateTimer = new Timer(33)
         {
@@ -241,7 +238,6 @@ public partial class OverlayModel : OverlayWindow
         ShoulderTriggerAngleLeftPrev = 0;
         ShoulderTriggerAngleRightPrev = 0;
 
-        madgwickAHRS.Reset();
         gamepadMotion.Reset();
     }
 
@@ -357,8 +353,6 @@ public partial class OverlayModel : OverlayWindow
 
     #region ModelVisual3D
 
-    private MadgwickAHRS madgwickAHRS;
-
     public void UpdateReport(ControllerState Inputs, GamepadMotion gamepadMotion, float deltaSeconds)
     {
         // Update only if 3D overlay is visible
@@ -375,39 +369,20 @@ public partial class OverlayModel : OverlayWindow
         if (AreResetButtonsPressed(Inputs))
             ResetModelPose(gamepadMotion);
 
-        // Rotate for different coordinate system of 3D model and motion algorithm
-        // Motion algorithm uses DS4 coordinate system
-        // 3D model, has Z+ up, X+ to the right, Y+ towards the screen
+        // Get the Madgwick-filter orientation quaternion from GamepadMotion.
+        // Coordinate remapping, beta gain, and the no-accel dirty fix are all applied inside.
+        NumQuaternion quaternion = gamepadMotion.GetQuaternion();
 
-        /*
-        gamepadMotion.GetOrientation(out float oW, out float oX, out float oY, out float oZ);
-        DevicePose = new Quaternion(-oX, -oY, oZ, oW);
-        */
-
-        gamepadMotion.GetCalibratedGyro(out float gyroX, out float gyroY, out float gyroZ);
-        gamepadMotion.GetGravity(out float accelX, out float accelY, out float accelZ);
-
-        // Update Madgwick orientation filter with IMU sensor data for 3D overlay
-        madgwickAHRS.UpdateReport(
-            -InputUtils.deg2rad(gyroX),
-            InputUtils.deg2rad(gyroY),
-            -InputUtils.deg2rad(gyroZ),
-            -accelX,
-            accelY,
-            -accelZ,
-            deltaSeconds
-            );
-
-        // System.Numerics to Media.3D, library really requires System.Numerics
-        NumQuaternion quaternion = madgwickAHRS.GetQuaternion();
-        DevicePose = new Quaternion(quaternion.W, quaternion.X, quaternion.Y, quaternion.Z);
-
-        // Dirty fix for devices without Accelerometer (MSI Claw 8)
-        if (gamepadMotion.accelX == 0 && gamepadMotion.accelY == 0 && gamepadMotion.accelZ == 0)
+        // Dirty fix for devices without Accelerometer (MSI Claw 8):
+        // accel fields stay 0,0,0 — flip X and Z to keep the model upright.
+        gamepadMotion.GetRawAcceleration(out float accelX, out float accelY, out float accelZ);
+        if (accelX == 0 && accelY == 0 && accelZ == 0)
         {
-            DevicePose.X = DevicePose.X * -1.0f;
-            DevicePose.Z = DevicePose.Z * -1.0f;
+            quaternion.X = -quaternion.X;
+            quaternion.Z = -quaternion.Z;
         }
+
+        DevicePose = new Quaternion(quaternion.W, quaternion.X, quaternion.Y, quaternion.Z);
 
         // Also make euler equivalent availible of quaternions
         NumVector3 euler = InputUtils.ToEulerAngles(DevicePose);
@@ -588,7 +563,7 @@ public partial class OverlayModel : OverlayWindow
                 model.DefaultMaterials,
                 model.HighlightMaterials,
                 _rightJoystickTransform);
-        }, DispatcherPriority.Render);
+        }, DispatcherPriority.Normal);
     }
 
     private void ResetCachedVisualState()

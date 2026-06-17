@@ -40,7 +40,7 @@ internal sealed class Amd17Cpu : AmdCpu
         // Add all numa nodes.
         int coreId = 0;
         int lastCoreId = -1; // Invalid id.
-        
+
         // Ryzen 3000's skip some core ids.
         // So start at 1 and count upwards when the read core changes.
         foreach (CpuId[] cpu in cpuId.OrderBy(x => x[0].ExtData[0x1e, 1] & 0xFF))

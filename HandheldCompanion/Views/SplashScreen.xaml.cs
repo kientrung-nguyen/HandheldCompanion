@@ -14,6 +14,12 @@ namespace HandheldCompanion.Views
         {
             InitializeComponent();
         }
+
+        public void SetStatus(string status)
+        {
+            if (FindName("StatusTextBlock") is System.Windows.Controls.TextBlock statusTextBlock)
+                statusTextBlock.Text = status;
+        }
     }
 
     public sealed class SplashScreenHost : IDisposable
@@ -44,6 +50,23 @@ namespace HandheldCompanion.Views
             }
 
             _windowReady.Wait();
+        }
+
+        public void SetStatus(string status)
+        {
+            Dispatcher? dispatcher;
+            SplashScreen? window;
+
+            lock (_syncRoot)
+            {
+                dispatcher = _dispatcher;
+                window = _window;
+            }
+
+            if (string.IsNullOrWhiteSpace(status) || window is null || dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+                return;
+
+            dispatcher.BeginInvoke(() => window.SetStatus(status), DispatcherPriority.Normal);
         }
 
         public void Close()

@@ -13,201 +13,245 @@
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="About"
     Title="{l:Static resx:Resources.MainWindow_navLibrary}"
+    Margin="20"
     d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:LibraryPageViewModel}"
     d:DesignHeight="1000"
     d:DesignWidth="1000"
     KeepAlive="True"
+    Loaded="Page_Loaded"
+    Unloaded="Page_Unloaded"
     mc:Ignorable="d">
 
-    <Grid Margin="20">
-        <ikw:SimpleStackPanel Spacing="12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="7*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+    <ikw:SimpleStackPanel Spacing="12">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="7*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-                <ui:AutoSuggestBox
-                    HorizontalAlignment="Stretch"
+            <ui:AutoSuggestBox
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                PlaceholderText="Search library..."
+                Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                <ui:AutoSuggestBox.QueryIcon>
+                    <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.Search}" />
+                </ui:AutoSuggestBox.QueryIcon>
+            </ui:AutoSuggestBox>
+
+            <ikw:SimpleStackPanel
+                Grid.Column="1"
+                Margin="6,0,0,0"
+                Orientation="Horizontal"
+                Spacing="3">
+                <ComboBox
+                    HorizontalAlignment="Right"
                     VerticalAlignment="Stretch"
-                    PlaceholderText="Search library..."
-                    Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <ui:AutoSuggestBox.QueryIcon>
-                        <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.Search}" />
-                    </ui:AutoSuggestBox.QueryIcon>
-                </ui:AutoSuggestBox>
+                    SelectedIndex="{Binding SortTarget}">
+                    <ComboBoxItem Content="Alphabetic" />
+                    <ComboBoxItem Content="Platform" />
+                    <ComboBoxItem Content="Recently added" />
+                    <ComboBoxItem Content="Recently played" />
+                </ComboBox>
 
-                <ikw:SimpleStackPanel
-                    Grid.Column="1"
-                    Margin="6,0,0,0"
-                    Orientation="Horizontal"
-                    Spacing="3">
-                    <ComboBox
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Stretch"
-                        SelectedIndex="{Binding SortTarget}">
-                        <ComboBoxItem Content="Alphabetic" />
-                        <ComboBoxItem Content="Platform" />
-                        <ComboBoxItem Content="Recently added" />
-                        <ComboBoxItem Content="Recently played" />
-                    </ComboBox>
+                <Button Height="31" Command="{Binding ToggleSortCommand}">
+                    <Button.Style>
+                        <Style BasedOn="{StaticResource AccentButtonStyle}" TargetType="Button">
+                            <Setter Property="Content">
+                                <Setter.Value>
+                                    <ui:FontIcon
+                                        Height="28"
+                                        VerticalAlignment="Center"
+                                        Icon="{x:Static ui:FluentSystemIcons.ArrowSortDownLines_24_Regular}" />
+                                </Setter.Value>
+                            </Setter>
 
-                    <Button Height="31" Command="{Binding ToggleSortCommand}">
-                        <Button.Style>
-                            <Style BasedOn="{StaticResource AccentButtonStyle}" TargetType="Button">
-                                <Setter Property="Content">
-                                    <Setter.Value>
-                                        <ui:FontIcon
-                                            Height="28"
-                                            VerticalAlignment="Center"
-                                            Icon="{x:Static ui:FluentSystemIcons.ArrowSortDownLines_24_Regular}" />
-                                    </Setter.Value>
-                                </Setter>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SortAscending}" Value="False">
+                                    <Setter Property="Content">
+                                        <Setter.Value>
+                                            <ui:FontIcon
+                                                Height="28"
+                                                VerticalAlignment="Center"
+                                                Icon="{x:Static ui:FluentSystemIcons.ArrowSortUpLines_24_Regular}" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
 
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SortAscending}" Value="False">
-                                        <Setter Property="Content">
-                                            <Setter.Value>
-                                                <ui:FontIcon
-                                                    Height="28"
-                                                    VerticalAlignment="Center"
-                                                    Icon="{x:Static ui:FluentSystemIcons.ArrowSortUpLines_24_Regular}" />
-                                            </Setter.Value>
-                                        </Setter>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                <Button Height="31" Command="{Binding ToggleViewModeCommand}">
+                    <Button.Style>
+                        <Style BasedOn="{StaticResource AccentButtonStyle}" TargetType="Button">
+                            <Setter Property="Content">
+                                <Setter.Value>
+                                    <ui:FontIcon
+                                        Height="28"
+                                        VerticalAlignment="Center"
+                                        Icon="{x:Static ui:FluentSystemIcons.AppsListDetail_24_Filled}" />
+                                </Setter.Value>
+                            </Setter>
 
-                    <Button Height="31" Command="{Binding ToggleViewModeCommand}">
-                        <Button.Style>
-                            <Style BasedOn="{StaticResource AccentButtonStyle}" TargetType="Button">
-                                <Setter Property="Content">
-                                    <Setter.Value>
-                                        <ui:FontIcon
-                                            Height="28"
-                                            VerticalAlignment="Center"
-                                            Icon="{x:Static ui:FluentSystemIcons.AppsListDetail_24_Filled}" />
-                                    </Setter.Value>
-                                </Setter>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ViewMode}" Value="1">
+                                    <Setter Property="Content">
+                                        <Setter.Value>
+                                            <ui:FontIcon
+                                                Height="28"
+                                                VerticalAlignment="Center"
+                                                Icon="{x:Static ui:FluentSystemIcons.Grid_20_Filled}" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ViewMode}" Value="2">
+                                    <Setter Property="Content">
+                                        <Setter.Value>
+                                            <ui:FontIcon
+                                                Height="28"
+                                                VerticalAlignment="Center"
+                                                Icon="{x:Static ui:FluentSystemIcons.GridKanban_20_Filled}" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
 
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ViewMode}" Value="1">
-                                        <Setter Property="Content">
-                                            <Setter.Value>
-                                                <ui:FontIcon
-                                                    Height="28"
-                                                    VerticalAlignment="Center"
-                                                    Icon="{x:Static ui:FluentSystemIcons.Grid_20_Filled}" />
-                                            </Setter.Value>
-                                        </Setter>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding ViewMode}" Value="2">
-                                        <Setter Property="Content">
-                                            <Setter.Value>
-                                                <ui:FontIcon
-                                                    Height="28"
-                                                    VerticalAlignment="Center"
-                                                    Icon="{x:Static ui:FluentSystemIcons.GridKanban_20_Filled}" />
-                                            </Setter.Value>
-                                        </Setter>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                <ui:DropDownButton HorizontalAlignment="Left" VerticalAlignment="Stretch">
+                    <ui:DropDownButton.Content>
+                        <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe712;" />
+                    </ui:DropDownButton.Content>
 
-                    <ui:DropDownButton HorizontalAlignment="Left" VerticalAlignment="Stretch">
-                        <ui:DropDownButton.Content>
-                            <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe712;" />
-                        </ui:DropDownButton.Content>
-
-                        <ui:DropDownButton.Flyout>
-                            <ui:MenuFlyout Placement="Bottom">
+                    <ui:DropDownButton.Flyout>
+                        <ui:MenuFlyout Placement="Bottom">
+                            <MenuItem
+                                Command="{Binding RefreshMetadataCommand}"
+                                Header="Download metadata and artworks"
+                                IsEnabled="{Binding IsLibraryConnected, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Separator />
+                            <MenuItem Header="Update game library">
                                 <MenuItem
-                                    Command="{Binding RefreshMetadataCommand}"
-                                    Header="Download metadata and artworks"
-                                    IsEnabled="{Binding IsLibraryConnected, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                <Separator />
-                                <MenuItem Header="Update game library">
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="All"
-                                        Header="All" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="BattleNet"
-                                        Header="Battle.net" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="Epic"
-                                        Header="Epic" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="GOG"
-                                        Header="GOG GALAXY" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="Origin"
-                                        Header="Origin" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="EA Desktop"
-                                        Header="EA Desktop" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="Riot"
-                                        Header="Riot Games" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="Rockstar"
-                                        Header="Rockstar" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="Steam"
-                                        Header="Steam" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="Microsoft Store"
-                                        Header="Microsoft Store" />
-                                    <MenuItem
-                                        Command="{Binding ScanLibraryCommand}"
-                                        CommandParameter="Ubisoft"
-                                        Header="Ubisoft Connect" />
-                                </MenuItem>
-                            </ui:MenuFlyout>
-                        </ui:DropDownButton.Flyout>
-                    </ui:DropDownButton>
-                </ikw:SimpleStackPanel>
-            </Grid>
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="All"
+                                    Header="All" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="BattleNet"
+                                    Header="Battle.net" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="Epic"
+                                    Header="Epic" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="GOG"
+                                    Header="GOG GALAXY" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="Origin"
+                                    Header="Origin" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="EA Desktop"
+                                    Header="EA Desktop" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="Riot"
+                                    Header="Riot Games" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="Rockstar"
+                                    Header="Rockstar" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="Steam"
+                                    Header="Steam" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="Microsoft Store"
+                                    Header="Microsoft Store" />
+                                <MenuItem
+                                    Command="{Binding ScanLibraryCommand}"
+                                    CommandParameter="Ubisoft"
+                                    Header="Ubisoft Connect" />
+                            </MenuItem>
+                        </ui:MenuFlyout>
+                    </ui:DropDownButton.Flyout>
+                </ui:DropDownButton>
+            </ikw:SimpleStackPanel>
+        </Grid>
 
-            <!--  Unified Library (Favorites shown with wide template, others with grid/list template)  -->
-            <!--  Content is always visible so cards render incrementally as they arrive.  -->
-            <!--  The spinner overlays the content via Panel.ZIndex inside the Grid wrapper.  -->
-            <Grid>
+        <controls:AdaptiveNavigationView
+            x:Name="navView"
+            IsBackButtonVisible="Collapsed"
+            IsBackEnabled="False"
+            IsPaneToggleButtonVisible="False"
+            IsSettingsVisible="False"
+            IsTabStop="False"
+            ItemInvoked="navView_ItemInvoked"
+            Loaded="navView_Loaded"
+            MenuItemsSource="{Binding NavigationItems}"
+            OpenPaneLength="220"
+            PaneDisplayMode="Top"
+            SelectedItem="{Binding NavigationViewSelectedItem, Mode=TwoWay}"
+            SelectionFollowsFocus="Enabled"
+            ShoulderNavigationEnabled="WhenSelectionFollowsFocus"
+            TopNavItemsAlignment="Center">
+
+            <controls:AdaptiveNavigationView.Resources>
+                <StaticResource x:Key="TopNavigationViewItemBackgroundPointerOver" ResourceKey="NavigationViewItemBackgroundPointerOver" />
+                <StaticResource x:Key="TopNavigationViewItemBackgroundPressed" ResourceKey="NavigationViewItemBackgroundPressed" />
+                <StaticResource x:Key="TopNavigationViewItemBackgroundSelected" ResourceKey="NavigationViewItemBackgroundSelected" />
+                <StaticResource x:Key="TopNavigationViewItemBackgroundSelectedPointerOver" ResourceKey="NavigationViewItemBackgroundSelectedPointerOver" />
+                <StaticResource x:Key="TopNavigationViewItemBackgroundSelectedPressed" ResourceKey="NavigationViewItemBackgroundSelectedPressed" />
+                <StaticResource x:Key="TopNavigationViewItemForegroundPointerOver" ResourceKey="NavigationViewSelectionIndicatorForeground" />
+                <StaticResource x:Key="TopNavigationViewItemForegroundPressed" ResourceKey="NavigationViewSelectionIndicatorForeground" />
+                <StaticResource x:Key="TopNavigationViewItemForegroundSelectedPointerOver" ResourceKey="NavigationViewSelectionIndicatorForeground" />
+                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
+            </controls:AdaptiveNavigationView.Resources>
+
+            <controls:AdaptiveNavigationView.MenuItemContainerStyle>
+                <Style TargetType="ui:NavigationViewItem">
+                    <Setter Property="Background" Value="{DynamicResource NavigationViewItemBackground}" />
+                    <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}" />
+                    <Setter Property="Content" Value="{Binding Title}" />
+                    <Setter Property="Tag" Value="{Binding Key}" />
+                    <Setter Property="IsTabStop" Value="True" />
+                    <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                    <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Setter Property="Icon" Value="{Binding Icon}" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasIcon}" Value="False">
+                            <Setter Property="Icon" Value="{x:Null}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </controls:AdaptiveNavigationView.MenuItemContainerStyle>
+
+            <Grid x:Name="ContentGrid" ClipToBounds="True">
+                <Grid.RenderTransform>
+                    <TranslateTransform X="0" />
+                </Grid.RenderTransform>
                 <ikw:SimpleStackPanel Spacing="8">
-                    <!-- <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Library" /> -->
-
                     <ui:ProgressBar
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Top"
-                        IsIndeterminate="True"
+                        IsIndeterminate="{Binding IsInitializing}"
                         Visibility="{Binding IsInitializing, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                     <ItemsControl
                         x:Name="profilesRepeater"
                         HorizontalAlignment="Stretch"
-                        ItemsSource="{Binding ProfilesView}"
+                        ItemsPanel="{Binding ProfilesCardsItemsPanel}"
+                        ItemsSource="{Binding ProfilesCardsItemsSource}"
                         VirtualizingPanel.IsVirtualizing="True"
                         VirtualizingPanel.VirtualizationMode="Recycling"
-                        Visibility="{Binding IsListView, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <controls:JustifiedWrapPanel HorizontalSpacing="6" VerticalSpacing="6" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                        Visibility="{Binding ShowProfilesCards, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <ItemsControl.ItemContainerStyle>
                             <Style TargetType="ContentPresenter">
                                 <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -234,7 +278,6 @@
                                     <ContentControl.Style>
                                         <Style TargetType="ContentControl">
                                             <Style.Triggers>
-                                                <!--  Wide template for favorites (same height, double width)  -->
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
                                                         <Condition Binding="{Binding IsLiked}" Value="True" />
@@ -242,7 +285,6 @@
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="ContentTemplate" Value="{StaticResource LibraryTemplateWide}" />
                                                 </MultiDataTrigger>
-                                                <!--  Grid template for non-favorites (when in grid view)  -->
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
                                                         <Condition Binding="{Binding IsLiked}" Value="False" />
@@ -250,12 +292,10 @@
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="ContentTemplate" Value="{StaticResource LibraryTemplate}" />
                                                 </MultiDataTrigger>
-                                                <!--  List template for non-favorites (when in list view)  -->
                                                 <DataTrigger Binding="{Binding DataContext.IsListView, ElementName=About}" Value="True">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource LibraryTemplateList}" />
                                                     <Setter Property="Height" Value="64" />
                                                 </DataTrigger>
-                                                <!--  Wide view: all items use wide template regardless of IsLiked  -->
                                                 <DataTrigger Binding="{Binding DataContext.IsWideView, ElementName=About}" Value="True">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource LibraryTemplateWide}" />
                                                 </DataTrigger>
@@ -267,8 +307,24 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <!--  Collection groups (list view only)  -->
-                    <ItemsControl ItemsSource="{Binding CollectionGroups}" Visibility="{Binding IsListView, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ItemsControl ItemsSource="{Binding ProfilesView}" Visibility="{Binding ShowProfilesList, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                <Setter Property="Margin" Value="0,0,0,6" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ContentControl
+                                    HorizontalAlignment="Stretch"
+                                    Content="{Binding}"
+                                    ContentTemplate="{StaticResource LibraryTemplateList}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding CollectionGroups}" Visibility="{Binding ShowGroupedProfilesList, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <ikw:SimpleStackPanel Spacing="4">
@@ -310,8 +366,19 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding CollectionGroups}" Visibility="{Binding ShowCollectionsOverview, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel ItemHeight="220" ItemWidth="260" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <StaticResource ResourceKey="LibraryCollectionOverviewTemplate" />
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </ikw:SimpleStackPanel>
             </Grid>
-        </ikw:SimpleStackPanel>
-    </Grid>
+        </controls:AdaptiveNavigationView>
+    </ikw:SimpleStackPanel>
 </Page>

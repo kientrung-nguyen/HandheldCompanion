@@ -236,7 +236,8 @@
                                                     HorizontalAlignment="Stretch"
                                                     VerticalAlignment="Stretch"
                                                     Command="{Binding DefineButtonCommand}"
-                                                    IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                    IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    Tag="Hotkey">
 
                                                     <ToggleButton.Resources>
                                                         <Style BasedOn="{StaticResource {x:Type ToggleButton}}" TargetType="ToggleButton">

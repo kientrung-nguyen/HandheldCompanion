@@ -8,6 +8,7 @@ namespace steam_hidapi.net.Hid
         WIRED = 0x1102,
         WIRELESS = 0x1142,
         STEAMDECK = 0x1205,
+        STEAMOSHANDHELD = 0x12f0,
     }
 
     internal enum SCEventType : byte

@@ -1111,7 +1111,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Controller mode</value>
   </data>
   <data name="Hotkey_LayoutModeDesc" xml:space="preserve">
-    <value>Change controller mode: Auto, Gamepad or Desktop</value>
+    <value>Press to toggle between Gamepad and Desktop mode. Double-press to set Auto mode</value>
   </data>
   <data name="Hotkey_ControlCenter" xml:space="preserve">
     <value>Display Action center</value>
@@ -1785,11 +1785,8 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="Enum_InputsHotkeyType_Handheld" xml:space="preserve">
     <value>Handheld Companion</value>
   </data>
-  <data name="Enum_SteamDeck_ButtonFlags_OEM1" xml:space="preserve">
-    <value>Options</value>
-  </data>
   <data name="Enum_NeptuneController_ButtonFlags_Special" xml:space="preserve">
-    <value>STEAM</value>
+    <value>Steam</value>
   </data>
   <data name="Enum_ROGAlly_ButtonFlags_OEM1" xml:space="preserve">
     <value>Command center</value>
@@ -3510,6 +3507,24 @@ Thank you for using HC and helping us make it better.</value>
   <data name="DevicePage_ManufacturerApplicationDesc" xml:space="preserve">
     <value>Enable or disable manufacturer-installed applications on your gaming device.</value>
   </data>
+  <data name="DevicePage_DisplayOptions" xml:space="preserve">
+    <value>Display options</value>
+  </data>
+  <data name="DevicePage_DockedDisplayBehavior" xml:space="preserve">
+    <value>When an external display is connected</value>
+  </data>
+  <data name="DevicePage_DockedDisplayBehaviorDesc" xml:space="preserve">
+    <value>Define whether the main screen should switch to the external display when docking</value>
+  </data>
+  <data name="DevicePage_DockedDisplayBehavior_DoNothing" xml:space="preserve">
+    <value>Do nothing</value>
+  </data>
+  <data name="DevicePage_DockedDisplayBehavior_SwitchToExternal" xml:space="preserve">
+    <value>Switch to external display</value>
+  </data>
+  <data name="DevicePage_DockedDisplayBehavior_SwitchToExternalWhenCharging" xml:space="preserve">
+    <value>Switch to external display when plugged in</value>
+  </data>
   <data name="MainWindow_CloseNavigation" xml:space="preserve">
     <value>Close navigation</value>
   </data>
@@ -4039,10 +4054,19 @@ Thank you for using HC and helping us make it better.</value>
     <value>Restore controller visibility when disconnected</value>
   </data>
   <data name="ControllerPage_ConnectWhenPlugged" xml:space="preserve">
-    <value>Connect when plugged</value>
+    <value>When an external controller is plugged in</value>
   </data>
   <data name="ControllerPage_ConnectWhenPluggedDesc" xml:space="preserve">
-    <value>Automatically connect the last plugged controller</value>
+    <value>Define the behavior when an external controller is detected</value>
+  </data>
+  <data name="ControllerPage_PlugBehavior_AutoConnect" xml:space="preserve">
+    <value>Automatically connect</value>
+  </data>
+  <data name="ControllerPage_PlugBehavior_AlwaysAsk" xml:space="preserve">
+    <value>Always ask</value>
+  </data>
+  <data name="ControllerPage_PlugBehavior_DoNothing" xml:space="preserve">
+    <value>Do nothing</value>
   </data>
   <data name="ControllerPage_ScanForHardwareChanges" xml:space="preserve">
     <value>Scan for hardware changes</value>
@@ -4188,12 +4212,6 @@ Thank you for using HC and helping us make it better.</value>
   <data name="SettingsPage_ThemesOptions" xml:space="preserve">
     <value>Themes options</value>
   </data>
-  <data name="ProfilesPage_EmulatedControllervJoy" xml:space="preserve">
-    <value>Emulated DInput controller</value>
-  </data>
-  <data name="Enum_HIDmode_vJoyController" xml:space="preserve">
-    <value>Emulated DInput controller</value>
-  </data>
   <data name="MainWindow_Close" xml:space="preserve">
     <value>Close</value>
   </data>
@@ -4226,5 +4244,20 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="OverlayPage_OverlayDisplayDirection_Column" xml:space="preserve">
     <value>Column</value>
+  </data>
+  <data name="Enum_HIDmode_DualSenseController" xml:space="preserve">
+    <value>Emulated DualSense controller</value>
+  </data>
+  <data name="Enum_HIDmode_SteamDeckController" xml:space="preserve">
+    <value>Emulated Steam Deck controller (Neptune)</value>
+  </data>
+  <data name="Enum_HIDmode_SwitchProController" xml:space="preserve">
+    <value>Emulated Switch Pro controller</value>
+  </data>
+  <data name="Enum_HIDmode_SteamController" xml:space="preserve">
+    <value>Emulated Steam controller (Gordon)</value>
+  </data>
+  <data name="Enum_NeptuneController_ButtonFlags_Special2" xml:space="preserve">
+    <value>Options</value>
   </data>
 </root>

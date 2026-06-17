@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Managers;
 using System.Windows.Media.Imaging;
-using static HandheldCompanion.Libraries.LibraryEntry;
 using static HandheldCompanion.Managers.LibraryManager;
 
 namespace HandheldCompanion.ViewModels.Misc

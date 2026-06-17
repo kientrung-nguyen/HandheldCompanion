@@ -20,6 +20,10 @@ public static class SystemManager
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseDesktop(IntPtr hDesktop);
+
     #endregion
 
     #region Events
@@ -36,10 +40,14 @@ public static class SystemManager
     public static event InitializedEventHandler? Initialized;
     public delegate void InitializedEventHandler();
 
+    public static event SessionLockChangedEventHandler? SessionLockChanged;
+    public delegate void SessionLockChangedEventHandler(bool isLocked);
+
     #endregion
 
     public const uint ES_CONTINUOUS = 0x80000000;
     public const uint ES_SYSTEM_REQUIRED = 0x00000001;
+    private const uint DESKTOP_SWITCHDESKTOP = 0x0100;
 
     public enum SystemStatus
     {
@@ -48,7 +56,8 @@ public static class SystemManager
         SystemReady = 2
     }
 
-    private static bool IsPowerSuspended;
+    private static bool isPowerSuspended;
+    public static bool IsPowerSuspended => isPowerSuspended;
     public static bool IsSessionLocked = true;
 
     private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
@@ -130,6 +139,22 @@ public static class SystemManager
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
     }
 
+    public static bool IsSessionInteractive()
+    {
+        IntPtr inputDesktop = OpenInputDesktop(0, false, DESKTOP_SWITCHDESKTOP);
+        if (inputDesktop == IntPtr.Zero)
+            return false;
+
+        try
+        {
+            return true;
+        }
+        finally
+        {
+            CloseDesktop(inputDesktop);
+        }
+    }
+
     public static void Start()
     {
         if (IsInitialized)
@@ -139,7 +164,7 @@ public static class SystemManager
         SubscribeToSystemEvents();
 
         // Check if current session is locked
-        IsSessionLocked = OpenInputDesktop(0, false, 0) == IntPtr.Zero;
+        IsSessionLocked = !IsSessionInteractive();
 
         PerformSystemRoutine();
 
@@ -169,12 +194,12 @@ public static class SystemManager
         switch (e.Mode)
         {
             case PowerModes.Resume:
-                IsPowerSuspended = false;
+                isPowerSuspended = false;
                 PerformPowerCheck();
                 break;
 
             case PowerModes.Suspend:
-                IsPowerSuspended = true;
+                isPowerSuspended = true;
                 break;
 
             default:
@@ -217,13 +242,13 @@ public static class SystemManager
 
         LogManager.LogDebug("Session switched to {0}", e.Reason);
 
-        PerformSystemRoutine();
+        SessionLockChanged?.Invoke(IsSessionLocked);
     }
 
     private static void PerformSystemRoutine()
     {
         // update status
-        currentSystemStatus = IsPowerSuspended || IsSessionLocked ? SystemStatus.SystemPending : SystemStatus.SystemReady;
+        currentSystemStatus = isPowerSuspended ? SystemStatus.SystemPending : SystemStatus.SystemReady;
 
         // only raise event is system status has changed
         if (previousSystemStatus == currentSystemStatus)

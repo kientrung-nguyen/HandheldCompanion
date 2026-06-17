@@ -78,6 +78,11 @@ namespace HandheldCompanion.Actions
         {
             if (IsAxisType(MouseType)) return (false, false);
 
+            // Turbo intentionally alternates MouseDown/MouseUp, so the physical button state
+            // cannot be used to persist shared toggle state without clearing it between pulses.
+            // Fall back to the local toggle state in this mode.
+            if (HasTurbo) return (false, false);
+
             bool state = MouseSimulator.GetToggleState(MouseType);
 
             if (risingEdge)

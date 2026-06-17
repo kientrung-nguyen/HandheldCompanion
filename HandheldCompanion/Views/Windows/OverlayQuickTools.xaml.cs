@@ -651,7 +651,7 @@ public partial class OverlayQuickTools : GamepadWindow
             NavView_Navigate(_page);
     }
 
-    public void NavigateToPage(string navItemTag)
+    public override void NavigateToPage(string navItemTag)
     {
         if (prevNavItemTag == navItemTag)
             return;
@@ -700,6 +700,11 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             // Update previous navigation item
             prevNavItemTag = ContentFrame.CurrentSourcePageType.Name;
+
+            // Sync the NavigationView selected item to the current page (handles back navigation)
+            navView.SelectedItem = navView.MenuItems
+                .OfType<NavigationViewItem>()
+                .FirstOrDefault(item => item.Tag?.ToString() == prevNavItemTag);
         }
     }
 

@@ -38,6 +38,12 @@ namespace HandheldCompanion.Actions
         /// </summary>
         protected override (bool useShared, bool toggleState) GetSharedToggleState(bool risingEdge)
         {
+            // Turbo intentionally alternates KeyDown/KeyUp, so the physical key state cannot
+            // be used to persist shared toggle state without clearing it between pulses.
+            // Fall back to the local toggle state in this mode.
+            if (HasTurbo)
+                return (false, false);
+
             bool state = KeyboardSimulator.GetToggleState(Key);
 
             if (risingEdge)

@@ -76,11 +76,13 @@ public enum ButtonFlags : byte
     [Description("Left Thumb Touch")] LeftStickTouch = 50,
     [Description("Left Thumb Touch")] RightStickTouch = 51,
 
+    // UI only
     [Description("Up")] LeftPadClickUp = 52,
     [Description("Down")] LeftPadClickDown = 53,
     [Description("Left")] LeftPadClickLeft = 54,
     [Description("Right")] LeftPadClickRight = 55,
 
+    // UI only
     [Description("Up")] RightPadClickUp = 56,
     [Description("Down")] RightPadClickDown = 57,
     [Description("Left")] RightPadClickLeft = 58,

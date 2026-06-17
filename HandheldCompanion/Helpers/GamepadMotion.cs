@@ -1,5 +1,7 @@
 using HandheldCompanion.Sensors;
+using HandheldCompanion.Utils;
 using System;
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace HandheldCompanion.Helpers
@@ -42,6 +44,10 @@ namespace HandheldCompanion.Helpers
 
         public string deviceInstanceId;
 
+        // Madgwick AHRS filter for overlay orientation — owned here so the filter state
+        // persists across frames and Reset() can clear both motion and orientation at once.
+        private readonly MadgwickAHRS _madgwick = new(1f / 125f, 0.1f);
+
         private const string DllName = "GamepadMotion.dll";
 
         public GamepadMotion(string deviceInstanceId, CalibrationMode calibrationMode = CalibrationMode.Manual /* | CalibrationMode.SensorFusion | CalibrationMode.Stillness */)
@@ -73,6 +79,7 @@ namespace HandheldCompanion.Helpers
         public void Reset()
         {
             ResetGamepadMotion(handle);
+            _madgwick.Reset();
         }
 
         public IMUCalibration GetCalibration()
@@ -111,6 +118,19 @@ namespace HandheldCompanion.Helpers
             }
 
             ProcessMotion(handle, this.gyroX, this.gyroY, this.gyroZ, this.accelX, this.accelY, this.accelZ, this.deltaTime);
+
+            // Update the Madgwick overlay filter with calibrated gyro and gravity.
+            // Coordinate remapping: DS4 -> 3D-model space (Z+ up, X+ right, Y+ toward screen).
+            GetCalibratedGyro(handle, out float calGX, out float calGY, out float calGZ);
+            GetGravity(handle, out float gravX, out float gravY, out float gravZ);
+            _madgwick.UpdateReport(
+                -InputUtils.deg2rad(calGX),
+                 InputUtils.deg2rad(calGY),
+                -InputUtils.deg2rad(calGZ),
+                -gravX,
+                 gravY,
+                -gravZ,
+                this.deltaTime);
         }
 
         public void GetRawGyro(out float x, out float y, out float z)
@@ -118,6 +138,14 @@ namespace HandheldCompanion.Helpers
             x = gyroX;
             y = gyroY;
             z = gyroZ;
+        }
+
+        /// <summary>
+        /// Returns the current Madgwick-filter orientation quaternion
+        /// </summary>
+        public Quaternion GetQuaternion()
+        {
+            return _madgwick.GetQuaternion();
         }
 
         public void GetRawAcceleration(out float x, out float y, out float z)

@@ -73,7 +73,7 @@
                         Visibility="{Binding UpdateDateVisibility}" />
                     <ui:ProgressBar
                         Margin="0,0,10,0"
-                        IsIndeterminate="True"
+                        IsIndeterminate="{Binding IsProgressBarActive, Mode=OneWay}"
                         Visibility="{Binding ProgressBarVisibility}" />
                 </ikw:SimpleStackPanel>
 
@@ -274,19 +274,6 @@
             <!--  Advanced options  -->
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Advanced options" />
             <ikw:SimpleStackPanel Spacing="3">
-                <!--  Master Timer  -->
-                <ui:SettingsCard Description="Controller update rate. A higher rate improves responsiveness but increases CPU usage" Header="Update rate">
-                    <ui:SettingsCard.HeaderIcon>
-                        <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.Stopwatch}" />
-                    </ui:SettingsCard.HeaderIcon>
-                    <ComboBox Name="cB_MasterInterval" SelectionChanged="cB_MasterInterval_SelectionChanged">
-                        <ComboBoxItem Content="125 Hz" />
-                        <ComboBoxItem Content="250 Hz" />
-                        <ComboBoxItem Content="500 Hz" />
-                        <ComboBoxItem Content="1000 Hz" />
-                    </ComboBox>
-                </ui:SettingsCard>
-
                 <!--  Process Priority  -->
                 <ui:SettingsCard Description="{l:Static resx:Resources.SettingsPage_PriorityDesc}" Header="{l:Static resx:Resources.SettingsPage_Priority}">
                     <ui:SettingsCard.HeaderIcon>
@@ -324,6 +311,32 @@
                         </ui:SettingsCard>
                         <ui:SettingsCard Header="Connected clients" Visibility="{Binding DSUClientCountVisibility}">
                             <TextBlock VerticalAlignment="Center" Text="{Binding DSUClientCountText}" />
+                        </ui:SettingsCard>
+                    </ui:SettingsExpander.Items>
+                </ui:SettingsExpander>
+
+                <ui:SettingsExpander
+                    Name="Expander_VIIPER"
+                    d:IsExpanded="True"
+                    Description="Manage the bundled VIIPER server used for Xbox 360 and DualShock 4 controller emulation"
+                    Header="VIIPER controller server">
+                    <ui:SettingsExpander.HeaderIcon>
+                        <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xE7F5;" />
+                    </ui:SettingsExpander.HeaderIcon>
+                    <ui:ToggleSwitch Name="Toggle_VIIPEREnabled" Toggled="Toggle_VIIPEREnabled_Toggled" />
+                    <ui:SettingsExpander.Items>
+                        <ui:SettingsCard Description="Port the local VIIPER server listens on (default: 3242). Changes restart the server immediately." Header="TCP port">
+                            <ui:NumberBox
+                                Name="nB_VIIPERPort"
+                                MinWidth="120"
+                                Maximum="65535"
+                                Minimum="1024"
+                                SmallChange="1"
+                                SpinButtonPlacementMode="Compact"
+                                ValueChanged="nB_VIIPERPort_ValueChanged" />
+                        </ui:SettingsCard>
+                        <ui:SettingsCard Header="Server status">
+                            <TextBlock VerticalAlignment="Center" Text="{Binding VIIPERStatusText}" />
                         </ui:SettingsCard>
                     </ui:SettingsExpander.Items>
                 </ui:SettingsExpander>

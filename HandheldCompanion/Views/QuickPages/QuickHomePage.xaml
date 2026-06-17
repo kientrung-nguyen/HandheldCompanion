@@ -56,33 +56,56 @@
 
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <ikw:SimpleStackPanel Spacing="0">
-                                <ToggleButton
-                                    Height="40"
-                                    Margin="3"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Stretch"
-                                    Command="{Binding ExecuteCommand}"
-                                    IsChecked="{Binding IsToggled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                    IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                    Tag="Hotkey">
-                                    <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical">
-                                        <ui:FontIcon
-                                            Width="24"
-                                            Height="24"
-                                            HorizontalAlignment="Center"
-                                            FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                            FontSize="{Binding FontSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                            Glyph="{Binding LiveGlyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </StackPanel>
-                                </ToggleButton>
+                            <Grid>
+                                <!--  Double-execute indicator: shown only when the command supports a double-tap action  -->
+                                <!--
+                                <ui:FontIcon
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Foreground="{DynamicResource AccentAAFillColorDefaultBrush}"
+                                    Icon="{x:Static ui:SegoeFluentIcons.Click}"
+                                    ToolTip="This hotkey supports a double-tap action">
+                                    <ui:FontIcon.Style>
+                                        <Style TargetType="ui:FontIcon">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasDoubleExecute}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:FontIcon.Style>
+                                </ui:FontIcon>
+                                -->
 
-                                <TextBlock
-                                    FontSize="12"
-                                    Text="{Binding LiveName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                    TextAlignment="Center"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
+                                <ikw:SimpleStackPanel Spacing="3">
+                                    <ToggleButton
+                                        Height="36"
+                                        Margin="3"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        Command="{Binding ExecuteCommand}"
+                                        IsChecked="{Binding IsToggled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                        IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Tag="Hotkey">
+                                        <Grid>
+                                            <ui:FontIcon
+                                                Width="24"
+                                                Height="24"
+                                                HorizontalAlignment="Center"
+                                                FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                FontSize="{Binding FontSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Glyph="{Binding LiveGlyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        </Grid>
+                                    </ToggleButton>
+
+                                    <TextBlock
+                                        FontSize="12"
+                                        Text="{Binding LiveName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                        TextAlignment="Center"
+                                        TextWrapping="Wrap" />
+                                </ikw:SimpleStackPanel>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

@@ -167,7 +167,7 @@
                     <Button Command="{Binding ScanHardwareCommand}" Style="{DynamicResource AccentButtonStyle}">Scan</Button>
                 </ui:SettingsCard>
 
-                <ui:ProgressBar IsIndeterminate="True" Visibility="{Binding ScanHardwareVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                <ui:ProgressBar IsIndeterminate="{Binding IsScanningHardware, Mode=OneWay}" Visibility="{Binding ScanHardwareVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
             </ikw:SimpleStackPanel>
 
             <!--  Controller settings  -->
@@ -195,9 +195,12 @@
                         Name="cB_HidMode"
                         IsEnabled="{Binding HidModeEnabled}"
                         SelectionChanged="cB_HidMode_SelectionChanged">
-                        <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_Xbox360Controller}" />
-                        <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_DualShock4Controller}" />
-                        <ComboBoxItem Name="cB_HidModeDInputItem" Content="{l:Static resx:Resources.Enum_HIDmode_vJoyController}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_Xbox360Controller}" Tag="0" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_DualShock4Controller}" Tag="1" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_DualSenseController}" Tag="2" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_SteamDeckController}" Tag="3" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_SwitchProController}" Tag="4" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.Enum_HIDmode_SteamController}" Tag="6" />
                     </ComboBox>
                 </ui:SettingsCard>
 
@@ -249,6 +252,29 @@
                         </ComboBox>
                     </StackPanel>
                 </ui:SettingsCard>
+
+                <ui:SettingsCard
+                    Description="Controller update rate. A higher rate improves responsiveness but increases CPU usage"
+                    Header="Update rate"
+                    IsEnabled="{Binding IsMasterIntervalSettingEnabled}">
+                    <ui:SettingsCard.HeaderIcon>
+                        <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.Stopwatch}" />
+                    </ui:SettingsCard.HeaderIcon>
+
+                    <ComboBox Name="cB_MasterInterval" SelectionChanged="cB_MasterInterval_SelectionChanged">
+                        <ComboBoxItem Content="125 Hz" />
+                        <ComboBoxItem Content="250 Hz" />
+                        <ComboBoxItem Content="500 Hz" />
+                        <ComboBoxItem Content="1000 Hz" />
+                    </ComboBox>
+                </ui:SettingsCard>
+
+                <ui:InfoBar
+                    Title="{Binding MasterIntervalInfoBarTitle}"
+                    IsClosable="False"
+                    IsOpen="{Binding IsMasterIntervalInfoBarOpen}"
+                    Message="{Binding MasterIntervalInfoBarMessage}"
+                    Severity="Informational" />
             </ikw:SimpleStackPanel>
 
             <!--  Physical controller settings  -->
@@ -313,7 +339,11 @@
                         <ui:FontIcon Glyph="&#xE95F;" />
                     </ui:SettingsCard.HeaderIcon>
 
-                    <ui:ToggleSwitch Name="Toggle_ConnectOnPlug" Toggled="Toggle_ConnectOnPlug_Toggled" />
+                    <ComboBox Name="cB_ControllerPlugBehavior" SelectionChanged="cB_ControllerPlugBehavior_SelectionChanged">
+                        <ComboBoxItem Content="{l:Static resx:Resources.ControllerPage_PlugBehavior_DoNothing}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.ControllerPage_PlugBehavior_AlwaysAsk}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.ControllerPage_PlugBehavior_AutoConnect}" />
+                    </ComboBox>
                 </ui:SettingsCard>
 
                 <!--  Vibrate on connect  -->

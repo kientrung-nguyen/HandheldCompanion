@@ -61,6 +61,12 @@ namespace HandheldCompanion.ViewModels.Misc
         public DelegateCommand DownloadCommand { get; }
         public DelegateCommand InstallCommand { get; }
 
+        public delegate void InstallFailedEventHandler(GithubUpdateViewModel vm);
+        public event InstallFailedEventHandler? OnInstallFailed;
+
+        public delegate void InstalledEventHandler(GithubUpdateViewModel vm);
+        public event InstalledEventHandler? OnInstalled;
+
         public GithubUpdateViewModel(UpdateFile updateFile)
         {
             UpdateFile = updateFile;
@@ -69,11 +75,10 @@ namespace HandheldCompanion.ViewModels.Misc
             {
                 if (!UpdateManager.InstallUpdate(UpdateFile))
                     OnInstallFailed?.Invoke(this);
+                else if (UpdateFile.isGameControllerDb)
+                    OnInstalled?.Invoke(this);
             });
         }
-
-        public delegate void InstallFailedEventHandler(GithubUpdateViewModel vm);
-        public event InstallFailedEventHandler? OnInstallFailed;
 
         public void OnDownloadStarted()
         {

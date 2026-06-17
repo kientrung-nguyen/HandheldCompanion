@@ -2,6 +2,7 @@
 using HandheldCompanion.Actions;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Properties;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using System;
@@ -17,6 +18,7 @@ namespace HandheldCompanion.ViewModels
     {
         public object? Tag { get; set; }
         public string Content { get; set; } = string.Empty;
+        public bool IsSupported { get; set; } = true;
 
         public override string ToString()
         {
@@ -45,6 +47,16 @@ namespace HandheldCompanion.ViewModels
         }
 
         public string ActionTypeName => ((ActionType)ActionTypeIndex).ToString();
+
+        public string ActionTypeDisplayName => GetActionTypeDisplayName();
+
+        public string TargetDisplayName => SelectedTarget?.Content ?? string.Empty;
+
+        public string TurboDisplayName => GetStateDisplayName(HasTurbo);
+
+        public string ToggleDisplayName => GetStateDisplayName(HasToggle);
+
+        public string InputShiftDisplayName => GetInputShiftDisplayName();
 
         public bool HasTurbo
         {
@@ -123,6 +135,7 @@ namespace HandheldCompanion.ViewModels
                 if (value != SelectedTarget)
                 {
                     _selectedTarget = value;
+                    IsSupported = value?.IsSupported ?? true;
                     TargetTypeChanged();
                     OnPropertyChanged(nameof(SelectedTarget));
                 }
@@ -142,7 +155,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private bool _isSupported;
+        private bool _isSupported = true;
         public bool IsSupported
         {
             get => _isSupported;
@@ -276,9 +289,20 @@ namespace HandheldCompanion.ViewModels
         public virtual int Axis2AxisInnerDeadzone { get => 0; set { } }
         public virtual int Axis2AxisOuterDeadzone { get => 0; set { } }
         public virtual int Axis2AxisAntiDeadzone { get => 0; set { } }
+        public virtual int Button2AxisX { get => 0; set { } }
+        public virtual int Button2AxisY { get => 0; set { } }
 
         // Visibility for Axis invert properties - only Axis mappings
         public virtual Visibility AxisInvertVisibility => Visibility.Collapsed;
+        public virtual Visibility Button2AxisVisibility => Visibility.Collapsed;
+        public virtual Visibility AxisVisualizerVisibility => Visibility.Collapsed;
+        public virtual double AxisVisualizerDotX => 0.0d;
+        public virtual double AxisVisualizerDotY => 0.0d;
+        public virtual double AxisVisualizerDotTranslateX => 0.0d;
+        public virtual double AxisVisualizerDotTranslateY => 0.0d;
+        public virtual double AxisVisualizerInnerDeadzoneSize => 0.0d;
+        public virtual double AxisVisualizerOuterDeadzoneSize => 0.0d;
+        public virtual double AxisVisualizerAntiDeadzoneSize => 0.0d;
 
         // Trigger to Trigger/Axis deadzone properties - default to 0
         // Should only be visible for Trigger -> Trigger/Axis mappings
@@ -464,12 +488,90 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        protected string GetActionTypeDisplayName()
+        {
+            ActionType actionType = (ActionType)ActionTypeIndex;
+            string resourceKey = $"LayoutPage_ActionType_{actionType}";
+            return Resources.ResourceManager.GetString(resourceKey) ?? actionType.ToString();
+        }
+
+        protected static string GetStateDisplayName(bool isEnabled)
+        {
+            return isEnabled ? "Enabled" : "Disabled";
+        }
+
+        protected string GetInputShiftDisplayName()
+        {
+            if (Action is null)
+                return EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.Any);
+
+            return ShiftModeIndex switch
+            {
+                0 => EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.None),
+                1 => EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.Any),
+                2 => $"Shift: {GetSelectedShiftSlotsDisplayName()} (Strict)",
+                3 => $"Shift: {GetSelectedShiftSlotsDisplayName()} (Any)",
+                _ => EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.Any),
+            };
+        }
+
+        protected string GetSelectedShiftSlotsDisplayName()
+        {
+            List<string> selectedShiftSlots = new List<string>();
+
+            if (ShiftA)
+                selectedShiftSlots.Add(EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.ShiftA));
+
+            if (ShiftB)
+                selectedShiftSlots.Add(EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.ShiftB));
+
+            if (ShiftC)
+                selectedShiftSlots.Add(EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.ShiftC));
+
+            if (ShiftD)
+                selectedShiftSlots.Add(EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.ShiftD));
+
+            return selectedShiftSlots.Count != 0
+                ? string.Join(", ", selectedShiftSlots)
+                : EnumUtils.GetDescriptionFromEnumValue(ShiftSlot.None);
+        }
+
         // Purely UI related properties, they should NOT update the Layout
         // Avoid unnecessary save/update calls
         protected HashSet<string> ExcludedUpdateProperties =
         [
             nameof(IsSupported),
+            nameof(ActionTypeDisplayName),
+            nameof(TargetDisplayName),
+            nameof(TurboDisplayName),
+            nameof(ToggleDisplayName),
+            nameof(InputShiftDisplayName),
         ];
+
+        public override void OnPropertyChanged(string? propertyName)
+        {
+            switch (propertyName)
+            {
+                case "":
+                case nameof(SelectedTarget):
+                case nameof(ActionTypeIndex):
+                case nameof(HasTurbo):
+                case nameof(HasToggle):
+                case nameof(ShiftModeIndex):
+                case nameof(ShiftA):
+                case nameof(ShiftB):
+                case nameof(ShiftC):
+                case nameof(ShiftD):
+                    base.OnPropertyChanged(nameof(ActionTypeDisplayName));
+                    base.OnPropertyChanged(nameof(TargetDisplayName));
+                    base.OnPropertyChanged(nameof(TurboDisplayName));
+                    base.OnPropertyChanged(nameof(ToggleDisplayName));
+                    base.OnPropertyChanged(nameof(InputShiftDisplayName));
+                    break;
+            }
+
+            base.OnPropertyChanged(propertyName);
+        }
 
         // Property to block off updating to model in certain cases
         protected bool _updateToModel = true;
@@ -531,6 +633,36 @@ namespace HandheldCompanion.ViewModels
         protected abstract void Update();
         protected abstract void Delete();
         protected abstract void UpdateMapping(Layout layout);
+
+        protected MappingTargetViewModel CreateTarget(object? tag, string content, bool isSupported = true)
+        {
+            return new MappingTargetViewModel
+            {
+                Tag = tag,
+                Content = content,
+                IsSupported = isSupported
+            };
+        }
+
+        protected MappingTargetViewModel CreateUnsupportedTarget(object? tag, string content)
+        {
+            return CreateTarget(tag, $"{content} (Unavailable on current controller)", false);
+        }
+
+        protected void ReplaceTargets(List<MappingTargetViewModel> targets, MappingTargetViewModel? selectedTarget = null)
+        {
+            MappingTargetViewModel? resolvedTarget = selectedTarget ?? (targets.Count > 0 ? targets[0] : null);
+
+            lock (_collectionLock)
+            {
+                Targets.Clear();
+                foreach (var target in targets)
+                    Targets.Add(target);
+            }
+
+            IsSupported = resolvedTarget?.IsSupported ?? true;
+            SelectedTarget = resolvedTarget;
+        }
 
         public virtual void SetAction(IActions newAction, bool updateToModel = true)
         {

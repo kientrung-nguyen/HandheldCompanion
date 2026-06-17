@@ -4,9 +4,7 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.ViewModels;
-
 using iNKORE.UI.WPF.Modern.Controls;
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,7 +13,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
-
 using Page = System.Windows.Controls.Page;
 
 namespace HandheldCompanion.Views.Pages;
@@ -43,6 +40,7 @@ public partial class LayoutPage : Page
 
     private NavigationView? parentNavView;
     private string preNavItemTag = string.Empty;
+    private string _prevNavItemTag = string.Empty;
 
     public LayoutPage()
     {
@@ -366,6 +364,7 @@ public partial class LayoutPage : Page
             return;
 
         NavigationViewItem navItem = (NavigationViewItem)args.InvokedItemContainer;
+        _prevNavItemTag = preNavItemTag;
         preNavItemTag = (string)navItem.Tag;
         NavView_Navigate(preNavItemTag);
     }
@@ -396,8 +395,6 @@ public partial class LayoutPage : Page
 
         if (ContentFrame.Content is not null)
         {
-            navView.IsBackEnabled = ContentFrame.CanGoBack;
-
             if (ContentFrame.SourcePageType is not null)
             {
                 string currentPageName = ContentFrame.CurrentSourcePageType.Name;
@@ -405,8 +402,6 @@ public partial class LayoutPage : Page
                 if (currentNavViewItem is not null)
                     navView.SelectedItem = currentNavViewItem;
             }
-
-            parentNavView?.IsBackEnabled = MainWindow.GetCurrent()?.ContentFrame.CanGoBack == true;
 
             return;
         }
@@ -419,12 +414,13 @@ public partial class LayoutPage : Page
         // here to load the home page.
         preNavItemTag = "ButtonsPage";
         NavView_Navigate(preNavItemTag);
-
-        parentNavView?.IsBackEnabled = MainWindow.GetCurrent()?.ContentFrame.CanGoBack == true;
     }
 
     public bool TryGoBack()
     {
+        if (!navView.IsBackEnabled)
+            return false;
+
         if (!ContentFrame.CanGoBack)
             return false;
 
@@ -434,10 +430,6 @@ public partial class LayoutPage : Page
 
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
-        navView.IsBackEnabled = ContentFrame.CanGoBack;
-
-        parentNavView?.IsBackEnabled = ContentFrame.CanGoBack || MainWindow.GetCurrent()?.ContentFrame.CanGoBack == true;
-
         if (ContentFrame.SourcePageType is not null)
         {
             var preNavPageType = ContentFrame.CurrentSourcePageType;

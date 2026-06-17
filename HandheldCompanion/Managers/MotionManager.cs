@@ -17,6 +17,7 @@ namespace HandheldCompanion.Managers
     {
         private static GyroActions gyroAction = new();
         private static Inclination inclination = new();
+        private static SensorFamily sensorSelection;
 
         // Accumulates displacement across frames for velocity mode
         // Allows fast movements to spread across multiple frames without losing precision
@@ -39,6 +40,17 @@ namespace HandheldCompanion.Managers
 
         public static void Start()
         {
+            switch (ManagerFactory.settingsManager.Status)
+            {
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QuerySettings();
+                    break;
+            }
+
             IsInitialized = true;
             Initialized?.Invoke();
         }
@@ -46,6 +58,23 @@ namespace HandheldCompanion.Managers
         public static void Stop()
         {
             IsInitialized = false;
+        }
+
+        private static void SettingsManager_Initialized()
+        {
+            QuerySettings();
+        }
+
+        private static void QuerySettings()
+        {
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            sensorSelection = (SensorFamily)ManagerFactory.settingsManager.GetInt("SensorSelection");
+        }
+
+        private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        {
+            if (name == "SensorSelection")
+                sensorSelection = (SensorFamily)Convert.ToInt32(value);
         }
 
         public static void UpdateReport(ControllerState controllerState, GamepadMotion gamepadMotion, float delta = 0.016f)
@@ -112,7 +141,6 @@ namespace HandheldCompanion.Managers
             SteeringAxis steeringAxis = current.SteeringAxis;
             if (steeringAxis == SteeringAxis.Auto)
             {
-                SensorFamily sensorSelection = (SensorFamily)ManagerFactory.settingsManager.GetInt("SensorSelection");
                 if (sensorSelection == SensorFamily.Windows || sensorSelection == SensorFamily.SerialUSBIMU)
                 {
                     return SteeringAxis.Yaw;
@@ -161,6 +189,8 @@ namespace HandheldCompanion.Managers
             Layout? currentLayout = ManagerFactory.layoutManager.GetCurrent();
             if (currentLayout is null)
                 return;
+
+            Profile currentProfile = ManagerFactory.profileManager.GetCurrent();
 
             ButtonState buttonState = controllerState.ButtonState;
             GyroState gyroState = controllerState.GyroState;
@@ -229,7 +259,6 @@ namespace HandheldCompanion.Managers
                 return;
             }
 
-            Profile currentProfile = ManagerFactory.profileManager.GetCurrent();
             Vector2 output = Vector2.Zero;
             switch (motionInput)
             {

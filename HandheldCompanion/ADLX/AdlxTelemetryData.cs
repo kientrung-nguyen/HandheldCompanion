@@ -45,6 +45,22 @@ namespace HandheldCompanion.ADLX
         public bool gpuTotalBoardPowerSupported;
         public double gpuTotalBoardPowerValue;
 
+        // GPU Intake Temperature
+        public bool gpuIntakeTemperatureSupported;
+        public double gpuIntakeTemperatureValue;
+
+        // GPU Memory Temperature
+        public bool gpuMemoryTemperatureSupported;
+        public double gpuMemoryTemperatureValue;
+
+        // NPU Frequency
+        public bool npuFrequencySupported;
+        public double npuFrequencyValue;
+
+        // NPU Activity
+        public bool npuActivitySupported;
+        public double npuActivityValue;
+
         // Fan Duty
         public bool gpuFanDutySupported;
         public double gpuFanDutyValue;

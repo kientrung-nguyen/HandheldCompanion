@@ -74,6 +74,45 @@ begin
 end;
 
 
+function IsUSBipInstalled(): boolean;
+var
+  uninstallString: string;
+begin
+  Result := False;
+
+  if not regUninstallKeyExists('{199505b0-b93d-4521-a8c7-897818e0205a}_is1') then
+  begin
+    Log('USBip uninstall key not found.');
+    Exit;
+  end;
+
+  uninstallString := regGetUninstallValue('{199505b0-b93d-4521-a8c7-897818e0205a}_is1', 'UninstallString');
+  if uninstallString = '' then
+  begin
+    Log('USBip UninstallString is empty or missing.');
+    Exit;
+  end;
+
+  Log('USBip uninstall key found.');
+  Result := True;
+end;
+
+
+function GetInstalledUSBipVersion(): string;
+begin
+  Result := '';
+  if not regUninstallKeyExists('{199505b0-b93d-4521-a8c7-897818e0205a}_is1') then
+  begin
+    Log('USBip uninstall key not found (version unavailable).');
+    Exit;
+  end;
+
+  Result := regGetUninstallValue('{199505b0-b93d-4521-a8c7-897818e0205a}_is1', 'DisplayVersion');
+  if Result = '' then
+    Log('USBip DisplayVersion is empty or missing.');
+end;
+
+
 function isHidHideInstalled():boolean;
 begin
   result:= false;
@@ -101,17 +140,6 @@ begin
 end;
 
 
-function isViGemInstalled():boolean;
-begin
-  result:= false;
-  if(FileExists(ExpandConstant('{commonpf}') + '\Nefarius Software Solutions\ViGEm Bus Driver\vigembus.cat')) then
-  begin
-    log('ViGem is already installed.');
-    result:= true;                       
-  end;
-end;        
-
-
 function splitString(Text: String; Separator: String): TArrayOfString;
 var
   i, p: Integer;
@@ -134,55 +162,48 @@ begin
 end;
 
 
-function uninstallHidHide():boolean;
+function UninstallMsiByDisplayName(const DisplayName: String): Boolean;
 var
-  uninstallCommand:string;
-  splittedCommand:TArrayOfString;
-  resultCode:integer;
+  uninstallCommand: String;
+  splittedCommand: TArrayOfString;
+  resultCode: Integer;
 begin
-  result:= false;
-  uninstallCommand:= regGetAppUninstallStringByDisplayName('HidHide');
-  splittedCommand:= splitString(uninstallCommand, ' ');
+  Result := False;
+  uninstallCommand := regGetAppUninstallStringByDisplayName(DisplayName);
+  if uninstallCommand = '' then
+  begin
+    Log('No uninstall command found for ' + DisplayName);
+    Exit;
+  end;
 
-  if((getArrayLength(splittedCommand) > 1) and not(splittedCommand[1] = '')) then
+  splittedCommand := splitString(uninstallCommand, ' ');
+
+  if (GetArrayLength(splittedCommand) > 1) and not (splittedCommand[1] = '') then
   begin 
-    if(ShellExec('', 'msiexec.exe', splittedCommand[1] + ' /qn /norestart' , '', SW_SHOW, ewWaitUntilTerminated, resultCode)) then  
+    if ShellExec('', 'msiexec.exe', splittedCommand[1] + ' /qn /norestart', '', SW_SHOW, ewWaitUntilTerminated, resultCode) then
     begin
-      log('Successfully executed Hidhide uninstaller');
-      if(resultCode = 0) then
+      Log('Successfully executed uninstaller for ' + DisplayName);
+      if resultCode = 0 then
       begin
-        log('Hidhide uninstaller finished successfully');
-        result:= true;
+        Log('Uninstaller finished successfully for ' + DisplayName);
+        Result := True;
       end
       else
-        log('Hidhide uninstaller failed with exit code ' +intToStr(resultCode));
-    end 
-  end;  
+        Log('Uninstaller failed for ' + DisplayName + ' with exit code ' + IntToStr(resultCode));
+    end
+  end
+  else
+    Log('Unable to parse uninstall command for ' + DisplayName + ': ' + uninstallCommand);
+end;
+
+
+function uninstallHidHide():boolean;
+begin
+  Result := UninstallMsiByDisplayName('HidHide');
 end;
 
 
 function uninstallViGem():boolean;
-var
-  uninstallCommand:string;
-  splittedCommand:TArrayOfString;
-  resultCode:integer;
 begin
-  result:= false;
-  uninstallCommand:= regGetAppUninstallStringByDisplayName('ViGEm Bus Driver');
-  splittedCommand:= splitString(uninstallCommand, ' ');
-
-  if((getArrayLength(splittedCommand) > 1) and not(splittedCommand[1] = '')) then
-  begin 
-    if(ShellExec('', 'msiexec.exe', splittedCommand[1] + ' /qn /norestart' , '', SW_SHOW, ewWaitUntilTerminated, resultCode)) then  
-    begin
-      log('Successfully executed ViGem uninstaller');
-      if(resultCode = 0) then
-      begin
-        log('ViGem uninstaller finished successfully');
-        result:= true;
-      end
-      else
-        log('ViGem uninstaller failed with exit code ' +intToStr(resultCode));
-    end 
-  end;  
+  Result := UninstallMsiByDisplayName('ViGEm Bus Driver');
 end;

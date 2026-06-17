@@ -105,7 +105,11 @@ namespace HandheldCompanion.ViewModels
                 if (!IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.FanControl))
                     return false;
 
-                if (IDevice.GetCurrent() is HandheldCompanion.Devices.LegionGo)
+                // Legion Go 2 has EC fan control override
+                if (IDevice.GetCurrent() is Devices.Lenovo.LegionGoTablet2)
+                    return true;
+
+                if (IDevice.GetCurrent() is Devices.Lenovo.LegionGo)
                     return SelectedPreset.OEMPowerMode == 0xFF;
 
                 return true;
@@ -790,6 +794,7 @@ namespace HandheldCompanion.ViewModels
         private ContentDialog? _modifyDialog;
 
         private bool _updatingFanCurveUI;
+        private bool _fanCurveDirty;
 
         /// <summary>
         /// Raised when the fan curve data needs to be pushed to the chart UI.
@@ -1406,8 +1411,39 @@ namespace HandheldCompanion.ViewModels
         {
             if (_updatingFanCurveUI || _fanGraphLineSeries is null) return;
 
+            if (_isDragging)
+            {
+                _fanCurveDirty = true;
+                return;
+            }
+
             for (int idx = 0; idx < _fanGraphLineSeries.ActualValues.Count; idx++)
                 SelectedPreset.FanProfile.fanSpeeds[idx] = Convert.ToDouble(_fanGraphLineSeries.ActualValues[idx] ?? 0.0d);
+        }
+
+        private void CommitFanCurveFromChart(bool submitPreset)
+        {
+            if (_fanGraphLineSeries is null || SelectedPreset is null)
+                return;
+
+            double[] fanSpeeds = SelectedPreset.FanProfile.fanSpeeds;
+            int count = Math.Min(_fanGraphLineSeries.ActualValues.Count, fanSpeeds.Length);
+            bool changed = false;
+
+            for (int idx = 0; idx < count; idx++)
+            {
+                double value = Convert.ToDouble(_fanGraphLineSeries.ActualValues[idx] ?? 0.0d);
+                if (Math.Abs(fanSpeeds[idx] - value) < Epsilon)
+                    continue;
+
+                fanSpeeds[idx] = value;
+                changed = true;
+            }
+
+            _fanCurveDirty = false;
+
+            if (changed && submitPreset)
+                SubmitSelectedPreset();
         }
 
         private void ChartMovePoint(Point p)
@@ -1484,10 +1520,11 @@ namespace HandheldCompanion.ViewModels
             _isDragging = false;
             _dragIndex = -1;
 
+            if (_fanCurveDirty)
+                CommitFanCurveFromChart(submitPreset: true);
+
             if (Mouse.Captured == _fanGraph)
                 _fanGraph.ReleaseMouseCapture();
-
-            OnPropertyChanged("FanGraph");
         }
 
         private void ChartOnDataClick(object sender, ChartPoint chartPoint)

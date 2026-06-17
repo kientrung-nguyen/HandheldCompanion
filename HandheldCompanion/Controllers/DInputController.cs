@@ -24,11 +24,6 @@ public class DInputController : IController
         AttachDetails(details);
     }
 
-    ~DInputController()
-    {
-        Dispose(false);
-    }
-
     public override void Dispose()
     {
         base.Dispose();
@@ -38,6 +33,7 @@ public class DInputController : IController
     {
         if (disposing)
         {
+            StopRumble();
             Unplug();
 
             joystick?.Dispose();

@@ -7,13 +7,16 @@ namespace HandheldCompanion.Managers;
 
 public static class TimerManager
 {
+    private const int DefaultMasterInterval = 8; //ms => 125Hz
+
     public static event InitializedEventHandler? Initialized;
     public delegate void InitializedEventHandler();
 
     public static event TickEventHandler? Tick;
     public delegate void TickEventHandler(long ticks, float delta);
 
-    private static int MasterInterval = 8; // 125Hz
+    private static int MasterInterval = DefaultMasterInterval;
+    private static int ConfiguredMasterInterval = DefaultMasterInterval;
     private static PrecisionTimer? MasterTimer;
     public static Stopwatch Stopwatch;
 
@@ -60,9 +63,11 @@ public static class TimerManager
     {
         // manage events
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        VirtualManager.MasterIntervalOverrideChanged += VirtualManager_MasterIntervalOverrideChanged;
 
         // raise events
         SettingsManager_SettingValueChanged("MasterInterval", ManagerFactory.settingsManager.GetString("MasterInterval"), false);
+        ApplyEffectiveMasterInterval();
     }
 
     private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
@@ -75,27 +80,56 @@ public static class TimerManager
                 {
                     default:
                     case 0: // 125 Hz
-                        MasterInterval = 8;
+                        ConfiguredMasterInterval = 8;
                         break;
                     case 1: // 250 Hz
-                        MasterInterval = 4;
+                        ConfiguredMasterInterval = 4;
                         break;
                     case 2: // 500 Hz
-                        MasterInterval = 2;
+                        ConfiguredMasterInterval = 2;
                         break;
                     case 3: // 1000 Hz
-                        MasterInterval = 1;
+                        ConfiguredMasterInterval = 1;
                         break;
                 }
 
-                ConfigureMasterTimer();
+                ApplyEffectiveMasterInterval();
                 break;
         }
     }
 
+    private static void VirtualManager_MasterIntervalOverrideChanged(int? overrideHz)
+    {
+        ApplyEffectiveMasterInterval();
+    }
+
+    private static void ApplyEffectiveMasterInterval()
+    {
+        MasterInterval = VirtualManager.GetMasterIntervalOverrideHz() switch
+        {
+            125 => 8,
+            250 => 4,
+            500 => 2,
+            1000 => 1,
+            _ => ConfiguredMasterInterval,
+        };
+
+        ConfigureMasterTimer();
+    }
+
     private static void ConfigureMasterTimer()
     {
-        MasterTimer?.SetInterval(new Action(DoWork), MasterInterval, false, GetTimerResolution(), TimerMode.Periodic, true);
+        if (MasterTimer is null)
+            return;
+
+        bool wasRunning = MasterTimer.IsRunning();
+        if (wasRunning)
+            MasterTimer.Stop();
+
+        MasterTimer.SetInterval(new Action(DoWork), MasterInterval, false, GetTimerResolution(), TimerMode.Periodic, true);
+
+        if (wasRunning)
+            MasterTimer.Start();
     }
 
     private static int GetTimerResolution()
@@ -118,6 +152,7 @@ public static class TimerManager
         // manage events
         ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
         ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+        VirtualManager.MasterIntervalOverrideChanged -= VirtualManager_MasterIntervalOverrideChanged;
 
         MasterTimer?.Stop();
         MasterTimer?.Dispose();

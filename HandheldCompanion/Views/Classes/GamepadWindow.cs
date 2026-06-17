@@ -1,19 +1,15 @@
 ﻿using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
-using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Interop;
-using System.Windows.Media;
 using System.Windows.Threading;
 using WpfScreenHelper;
 using static HandheldCompanion.WinAPI;
@@ -54,6 +50,13 @@ namespace HandheldCompanion.Views.Classes
 
         protected UIGamepad gamepadFocusManager = null!;
 
+        /// <summary>
+        /// Suppresses the next button-state change on this window's focus manager.
+        /// Call this on the destination window just before it gains focus mid-press,
+        /// so that buttons still held during the transition are not replayed as new presses.
+        /// </summary>
+        public void SuppressNextGamepadInput() => gamepadFocusManager?.SuppressNextInput();
+
         public HwndSource hwndSource = null!;
 
         public bool HasForeground() => this is OverlayQuickTools || (WinAPI.GetForegroundWindow() == this.hwndSource.Handle);
@@ -63,24 +66,14 @@ namespace HandheldCompanion.Views.Classes
         private AdornerLayer? _adornerLayer;
         private HighlightAdorner? _highlightAdorner;
 
-        // hack variables
-        private Timer WMPaintTimer = new(100) { AutoReset = false };
-        private bool WMPaintPending = false;
-        private DateTime prevDraw = DateTime.MinValue;
-
         protected readonly DispatcherTimer _navDebounceTimer;
         protected string _pendingNavTag = string.Empty;
-
-        [DllImport("dwmapi.dll")]
-        private static extern int DwmFlush();
 
         public GamepadWindow()
         {
             LayoutUpdated += OnLayoutUpdated;
             StateChanged += Window_StateChanged;
             IsVisibleChanged += Window_VisibleChanged;
-
-            WMPaintTimer.Elapsed += WMPaintTimer_Elapsed;
 
             _navDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _navDebounceTimer.Tick += NavDebounceTimer_Tick;
@@ -94,22 +87,14 @@ namespace HandheldCompanion.Views.Classes
 
         protected virtual void ApplyPendingNavigation(string navItemTag) { }
 
+        public virtual void NavigateToPage(string navItemTag) { }
+
         protected virtual void Window_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
-            if (IsLoaded)
-            {
-                WMPaintTimer.Stop();
-                WMPaintTimer.Start();
-            }
         }
 
         protected virtual void Window_StateChanged(object? sender, EventArgs e)
         {
-            if (IsLoaded)
-            {
-                WMPaintTimer.Stop();
-                WMPaintTimer.Start();
-            }
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -123,55 +108,7 @@ namespace HandheldCompanion.Views.Classes
 
         protected virtual IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            switch (msg)
-            {
-                case WM_PAINT:
-                    DateTime drawTime = DateTime.Now;
-
-                    double drawDiff = Math.Abs((prevDraw - drawTime).TotalMilliseconds);
-                    if (drawDiff < 200)
-                        WMPaint_Trigger();
-
-                    // update previous drawing time
-                    prevDraw = drawTime;
-                    break;
-            }
-
             return IntPtr.Zero;
-        }
-
-        public void WMPaint_Trigger()
-        {
-            if (!WMPaintPending)
-            {
-                // disable GPU acceleration
-                RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
-
-                // set flag
-                WMPaintPending = true;
-
-                LogManager.LogWarning("ProcessRenderMode set to {0}", RenderOptions.ProcessRenderMode);
-            }
-
-            if (WMPaintPending)
-            {
-                WMPaintTimer.Stop();
-                WMPaintTimer.Start();
-            }
-        }
-
-        private void WMPaintTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
-        {
-            if (WMPaintPending)
-            {
-                // enable GPU acceleration
-                RenderOptions.ProcessRenderMode = RenderMode.Default;
-
-                // reset flag
-                WMPaintPending = false;
-
-                LogManager.LogWarning("ProcessRenderMode set to {0}", RenderOptions.ProcessRenderMode);
-            }
         }
 
         public void SetFocusedElement(Control focusedControl)
@@ -184,9 +121,13 @@ namespace HandheldCompanion.Views.Classes
             {
                 if (_highlightAdorner != null)
                 {
-                    _adornerLayer.Remove(_highlightAdorner);
+                    _adornerLayer?.Remove(_highlightAdorner);
                     _highlightAdorner = null;
                 }
+
+                // skip navigation view items, they have their own focus visual logic
+                if (focusedControl is NavigationViewItem)
+                    return;
 
                 _adornerLayer = AdornerLayer.GetAdornerLayer(focusedControl);
                 if (_adornerLayer != null)

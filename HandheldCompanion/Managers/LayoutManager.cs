@@ -25,6 +25,7 @@ public class LayoutManager : IManager
         LayoutTemplate.DesktopLayout,
         LayoutTemplate.NintendoLayout,
         LayoutTemplate.KeyboardLayout,
+        LayoutTemplate.SteamControllerLayout,
         LayoutTemplate.GamepadMouseLayout,
         LayoutTemplate.GamepadJoystickLayout
     ];
@@ -57,7 +58,10 @@ public class LayoutManager : IManager
     private ButtonFlags[] _plannedButtons = Array.Empty<ButtonFlags>();
     private AxisLayoutFlags[] _plannedAxes = Array.Empty<AxisLayoutFlags>();
     private AxisLayoutFlags[] _plannedGyroAxes = Array.Empty<AxisLayoutFlags>();
-
+    // Subset of _plannedButtons / _plannedAxes that contain at least one ShiftActions — used
+    // in ComputeShiftSlot to skip the is-cast loop entirely for buttons with no shift action.
+    private ButtonFlags[] _shiftButtons = Array.Empty<ButtonFlags>();
+    private AxisLayoutFlags[] _shiftAxes = Array.Empty<AxisLayoutFlags>();
     //  Construction ─
 
     public LayoutManager()
@@ -210,6 +214,8 @@ public class LayoutManager : IManager
         bool desktopLayoutOnStart = ManagerFactory.settingsManager.GetBoolean("DesktopLayoutOnStart");
         if (desktopLayoutOnStart)
             ManagerFactory.settingsManager.SetProperty("LayoutMode", (int)LayoutModes.Desktop);
+        else if ((LayoutModes)ManagerFactory.settingsManager.GetInt("LayoutMode") == LayoutModes.Desktop)
+            ManagerFactory.settingsManager.SetProperty("LayoutMode", (int)LayoutModes.Auto);
     }
 
     private void SettingsManager_SettingValueChanged(string? name, object? value, bool temporary)
@@ -281,11 +287,51 @@ public class LayoutManager : IManager
 
             currentLayout = clonedLayout;
 
-            UpdateInherit();
             BuildPlans();
+            BuildMouseKeyboardInputSets(currentLayout);
             LayoutChanged?.Invoke(currentLayout);
         }
     }
+
+    // Buttons / axes whose active-layout binding includes at least one Keyboard or Mouse action.
+    // Rebuilt once per layout switch; queried O(1) in the InputsUpdated hot path.
+    private HashSet<ButtonFlags> _mouseKeyboardButtons = [];
+    private HashSet<AxisLayoutFlags> _mouseKeyboardAxes = [];
+
+    private void BuildMouseKeyboardInputSets(Layout layout)
+    {
+        var buttons = new HashSet<ButtonFlags>();
+        var axes = new HashSet<AxisLayoutFlags>();
+
+        foreach (var kv in layout.ButtonLayout)
+            foreach (var action in kv.Value)
+                if (action.actionType == ActionType.Keyboard || action.actionType == ActionType.Mouse)
+                { buttons.Add(kv.Key); break; }
+
+        foreach (var kv in layout.AxisLayout)
+            foreach (var action in kv.Value)
+                if (action.actionType == ActionType.Keyboard || action.actionType == ActionType.Mouse)
+                { axes.Add(kv.Key); break; }
+
+        // Atomic swap so callers never see a partially-built set
+        _mouseKeyboardButtons = buttons;
+        _mouseKeyboardAxes = axes;
+    }
+
+    /// <summary>
+    /// Returns true when the currently active layout maps <paramref name="button"/> to a
+    /// keyboard or mouse action — meaning the same input will be injected into the OS and
+    /// UIGamepad must not also process it as gamepad UI navigation.
+    /// </summary>
+    public bool IsButtonMappedToMouseKeyboard(ButtonFlags button)
+        => _mouseKeyboardButtons.Contains(button);
+
+    /// <summary>
+    /// Returns true when the currently active layout maps <paramref name="axis"/> to a
+    /// keyboard or mouse action.
+    /// </summary>
+    public bool IsAxisMappedToMouseKeyboard(AxisLayoutFlags axis)
+        => _mouseKeyboardAxes.Contains(axis);
 
     //  File I/O
     // Called from a non-UI thread by FileSystemWatcher — marshal to UI thread
@@ -375,29 +421,13 @@ public class LayoutManager : IManager
     //  Inheritance resolution
     private void UpdateInherit()
     {
+        // Inheritance is now resolved inside BuildPlans() from read-only snapshots.
+        // This method is kept as an entry point so external callers (DefaultLayout_Updated)
+        // still trigger a plan rebuild without mutating currentLayout.
         lock (updateLock)
         {
-            IEnumerable<ButtonFlags> allButtons = ButtonState.AllButtons.Union(IDevice.GetCurrent().OEMButtons);
-
-            // Buttons: append default-layout actions where the current layout inherits
-            foreach (ButtonFlags flag in allButtons)
-            {
-                if (!currentLayout.ButtonLayout.TryGetValue(flag, out var actions)) continue;
-                if (!actions.Any(a => a is InheritActions)) continue;
-
-                if (defaultLayout!.ButtonLayout.TryGetValue(flag, out var defaults))
-                    actions.AddRange(defaults);
-            }
-
-            // Axes: replace the entire list with the default when inheriting
-            foreach (AxisLayoutFlags flag in AxisState.AllAxisLayoutFlags)
-            {
-                if (!currentLayout.AxisLayout.TryGetValue(flag, out var actions)) continue;
-                if (!actions.Any(a => a is InheritActions)) continue;
-
-                if (defaultLayout!.AxisLayout.TryGetValue(flag, out var defaults))
-                    currentLayout.AxisLayout[flag] = defaults;
-            }
+            BuildPlans();
+            BuildMouseKeyboardInputSets(currentLayout);
         }
     }
 
@@ -408,11 +438,59 @@ public class LayoutManager : IManager
         _axisPlan.Clear();
         _gyroPlan.Clear();
 
+        // Buttons: merge InheritActions sentinels with defaultLayout at plan-build time.
+        // currentLayout is never mutated — the sentinel remains there as the canonical
+        // marker so future rebuilds (e.g. after defaultLayout changes) still work correctly.
         foreach (var kv in currentLayout.ButtonLayout)
-            _buttonPlan[kv.Key] = kv.Value.ToArray();
+        {
+            var actions = kv.Value;
+            bool hasInherit = false;
+            foreach (var a in actions)
+                if (a is InheritActions) { hasInherit = true; break; }
 
+            if (hasInherit)
+            {
+                // Build a merged list: non-sentinel actions from currentLayout + all actions
+                // from defaultLayout (if any), omitting the InheritActions placeholder itself.
+                var merged = new List<IActions>(actions.Count + 4);
+                foreach (var a in actions)
+                    if (a is not InheritActions) merged.Add(a);
+
+                if (defaultLayout?.ButtonLayout.TryGetValue(kv.Key, out var defaults) == true)
+                    merged.AddRange(defaults);
+
+                _buttonPlan[kv.Key] = merged.ToArray();
+            }
+            else
+            {
+                _buttonPlan[kv.Key] = actions.ToArray();
+            }
+        }
+
+        // Axes: same pattern — merge at plan-build time, never mutate currentLayout.
         foreach (var kv in currentLayout.AxisLayout)
-            _axisPlan[kv.Key] = kv.Value.ToArray();
+        {
+            var actions = kv.Value;
+            bool hasInherit = false;
+            foreach (var a in actions)
+                if (a is InheritActions) { hasInherit = true; break; }
+
+            if (hasInherit)
+            {
+                var merged = new List<IActions>(actions.Count + 4);
+                foreach (var a in actions)
+                    if (a is not InheritActions) merged.Add(a);
+
+                if (defaultLayout?.AxisLayout.TryGetValue(kv.Key, out var defaults) == true)
+                    merged.AddRange(defaults);
+
+                _axisPlan[kv.Key] = merged.ToArray();
+            }
+            else
+            {
+                _axisPlan[kv.Key] = actions.ToArray();
+            }
+        }
 
         foreach (var kv in currentLayout.GyroLayout)
             _gyroPlan[kv.Key] = kv.Value;
@@ -420,6 +498,10 @@ public class LayoutManager : IManager
         _plannedButtons = _buttonPlan.Keys.ToArray();
         _plannedAxes = _axisPlan.Keys.ToArray();
         _plannedGyroAxes = _gyroPlan.Keys.ToArray();
+
+        // Populate shift-only subsets for ComputeShiftSlot
+        _shiftButtons = _buttonPlan.Where(kv => kv.Value.Any(a => a.actionType == ActionType.Shift)).Select(kv => kv.Key).ToArray();
+        _shiftAxes = _axisPlan.Where(kv => kv.Value.Any(a => a.actionType == ActionType.Shift)).Select(kv => kv.Key).ToArray();
 
         // Cache X/Y AxisFlags for all flags we will touch during mapping
         _axisXY.Clear();
@@ -436,7 +518,10 @@ public class LayoutManager : IManager
 
         foreach (var actions in _buttonPlan.Values)
             foreach (var action in actions)
+            {
+                if (action is AxisActions aa) EnsureAxisXY(aa.Axis);
                 if (action is TriggerActions ta) EnsureAxisXY(ta.Axis);
+            }
     }
 
     private void EnsureAxisXY(AxisLayoutFlags flag)
@@ -479,10 +564,15 @@ public class LayoutManager : IManager
     {
         ShiftSlot shiftSlot = ShiftSlot.None;
 
-        // Button shifts
-        foreach (ButtonFlags button in ButtonState.AllButtons)
+        // Early exit: no shift actions are configured in this layout
+        if (_shiftButtons.Length == 0 && _shiftAxes.Length == 0)
+            return shiftSlot;
+
+        // Button shifts — only iterate buttons that have at least one ShiftActions
+        for (int i = 0; i < _shiftButtons.Length; i++)
         {
-            if (!_buttonPlan.TryGetValue(button, out var actions)) continue;
+            ButtonFlags button = _shiftButtons[i];
+            var actions = _buttonPlan[button];
 
             bool pressed = state.ButtonState[button];
             foreach (var action in actions)
@@ -493,10 +583,10 @@ public class LayoutManager : IManager
             }
         }
 
-        // Axis shifts (e.g. trigger-based shift)
-        for (int i = 0; i < _plannedAxes.Length; i++)
+        // Axis shifts — only iterate axes that have at least one ShiftActions
+        for (int i = 0; i < _shiftAxes.Length; i++)
         {
-            AxisLayoutFlags flag = _plannedAxes[i];
+            AxisLayoutFlags flag = _shiftAxes[i];
             var actions = _axisPlan[flag];
             var xyIn = _axisXY[flag];
             var layout = AxisLayout.Layouts[flag];
@@ -517,19 +607,14 @@ public class LayoutManager : IManager
 
     /// <summary>
     /// Second pass: process all non-Shift button actions and write to outputState.
-    /// Unmapped buttons are passed through transparently.
     /// </summary>
     private void ProcessButtonActions(ControllerState state, ShiftSlot shiftSlot, float deltaMs)
     {
-        foreach (ButtonFlags button in ButtonState.AllButtons)
+        for (int b = 0; b < _plannedButtons.Length; b++)
         {
+            ButtonFlags button = _plannedButtons[b];
+            var actions = _buttonPlan[button];
             bool pressed = state.ButtonState[button];
-
-            if (!_buttonPlan.TryGetValue(button, out var actions))
-            {
-                outputState.ButtonState[button] = pressed; // passthrough
-                continue;
-            }
 
             for (int i = 0; i < actions.Length; i++)
             {
@@ -538,31 +623,37 @@ public class LayoutManager : IManager
                 switch (action.actionType)
                 {
                     case ActionType.Button:
-                        if (action is ButtonActions bA)
                         {
+                            var bA = (ButtonActions)action;
                             bA.Execute(button, pressed, shiftSlot, deltaMs);
                             outputState.ButtonState[bA.Button] |= bA.GetValue();
+                            break;
                         }
-                        break;
-
                     case ActionType.Keyboard:
-                        if (action is KeyboardActions kA)
-                            kA.Execute(button, pressed, shiftSlot, deltaMs);
+                        ((KeyboardActions)action).Execute(button, pressed, shiftSlot, deltaMs);
                         break;
 
                     case ActionType.Mouse:
-                        if (action is MouseActions mA)
-                            mA.Execute(button, pressed, shiftSlot, deltaMs);
+                        ((MouseActions)action).Execute(button, pressed, shiftSlot, deltaMs);
                         break;
 
                     case ActionType.Trigger:
-                        if (action is TriggerActions tA)
                         {
+                            var tA = (TriggerActions)action;
                             tA.Execute(button, pressed, shiftSlot, deltaMs);
                             var xyOut = _axisXY[tA.Axis];
                             outputState.AxisState[xyOut.Y] = ClampByte(outputState.AxisState[xyOut.Y] + tA.GetValue());
+                            break;
                         }
-                        break;
+                    case ActionType.Joystick:
+                        {
+                            var aX = (AxisActions)action;
+                            aX.Execute(button, pressed, shiftSlot, deltaMs);
+                            var xyOut = _axisXY[aX.Axis];
+                            outputState.AxisState[xyOut.X] = ClampShort(outputState.AxisState[xyOut.X] + (short)Math.Clamp(aX.XOuput, short.MinValue, short.MaxValue));
+                            outputState.AxisState[xyOut.Y] = ClampShort(outputState.AxisState[xyOut.Y] + (short)Math.Clamp(aX.YOuput, short.MinValue, short.MaxValue));
+                            break;
+                        }
                 }
 
                 ApplyActionStateSideEffects(actions, i);
@@ -596,40 +687,35 @@ public class LayoutManager : IManager
                 switch (action.actionType)
                 {
                     case ActionType.Button:
-                        if (action is ButtonActions bA)
                         {
+                            var bA = (ButtonActions)action;
                             bA.Execute(layout, shiftSlot, deltaMs);
                             outputState.ButtonState[bA.Button] |= bA.GetValue();
+                            break;
                         }
-                        break;
-
                     case ActionType.Keyboard:
-                        if (action is KeyboardActions kA)
-                            kA.Execute(layout, shiftSlot, deltaMs);
+                        ((KeyboardActions)action).Execute(layout, shiftSlot, deltaMs);
                         break;
 
                     case ActionType.Joystick:
-                        if (action is AxisActions aX)
                         {
+                            var aX = (AxisActions)action;
                             aX.Execute(layout, shiftSlot, deltaMs);
                             var xyOut = _axisXY[aX.Axis];
                             outputState.AxisState[xyOut.X] = ClampShort(outputState.AxisState[xyOut.X] + (short)Math.Clamp(aX.XOuput, short.MinValue, short.MaxValue));
                             outputState.AxisState[xyOut.Y] = ClampShort(outputState.AxisState[xyOut.Y] + (short)Math.Clamp(aX.YOuput, short.MinValue, short.MaxValue));
+                            break;
                         }
-                        break;
-
                     case ActionType.Trigger:
-                        if (action is TriggerActions tA)
                         {
+                            var tA = (TriggerActions)action;
                             tA.Execute(xyIn.Y, layout.vector.Y, shiftSlot, deltaMs); // Y axis drives the trigger
                             var xyOut = _axisXY[tA.Axis];
                             outputState.AxisState[xyOut.Y] = ClampByte(outputState.AxisState[xyOut.Y] + tA.GetValue());
+                            break;
                         }
-                        break;
-
                     case ActionType.Mouse:
-                        if (action is MouseActions mA)
-                            mA.Execute(layout, touched, shiftSlot, deltaMs);
+                        ((MouseActions)action).Execute(layout, touched, shiftSlot, deltaMs);
                         break;
                 }
 
@@ -698,9 +784,17 @@ public class LayoutManager : IManager
     /// </summary>
     private static void ApplyActionStateSideEffects(IActions[] actions, int currentIndex)
     {
+        // No siblings — nothing to propagate (common case: one action per button)
+        if (actions.Length == 1) return;
+
         var current = actions[currentIndex];
-        ShiftSlot slot = current.ShiftSlot;
         ActionState state = current.actionState;
+
+        // These states never affect siblings
+        if (state == ActionState.Succeed || state == ActionState.Suspended || state == ActionState.Forced)
+            return;
+
+        ShiftSlot slot = current.ShiftSlot;
 
         if (state == ActionState.Running)
         {

@@ -256,9 +256,6 @@ public partial class SettingsPage : Page
                 case "QuickToolsApplyNoise":
                     QuickToolsNoiseToggle.IsOn = Convert.ToBoolean(value);
                     break;
-                case "MasterInterval":
-                    cB_MasterInterval.SelectedIndex = Convert.ToInt32(value);
-                    break;
                 case "ShowSplashScreen":
                     Toggle_SplashScreen.IsOn = Convert.ToBoolean(value);
                     break;
@@ -267,6 +264,12 @@ public partial class SettingsPage : Page
                     break;
                 case "DSUport":
                     nB_DSUport.Value = Convert.ToInt32(value);
+                    break;
+                case "VIIPEREnabled":
+                    Toggle_VIIPEREnabled.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "VIIPERPort":
+                    nB_VIIPERPort.Value = Convert.ToInt32(value);
                     break;
             }
         });
@@ -585,14 +588,6 @@ public partial class SettingsPage : Page
         ManagerFactory.settingsManager.SetProperty("QuickToolsApplyNoise", QuickToolsNoiseToggle.IsOn);
     }
 
-    private void cB_MasterInterval_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded)
-            return;
-
-        ManagerFactory.settingsManager.SetProperty("MasterInterval", cB_MasterInterval.SelectedIndex);
-    }
-
     private void Toggle_SplashScreen_Toggled(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
@@ -617,4 +612,20 @@ public partial class SettingsPage : Page
         ManagerFactory.settingsManager.SetProperty("DSUport", (int)e.NewValue);
     }
 
+    private void Toggle_VIIPEREnabled_Toggled(object? sender, RoutedEventArgs? e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.SetProperty("VIIPEREnabled", Toggle_VIIPEREnabled.IsOn);
     }
+
+    private void nB_VIIPERPort_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
+    {
+        if (!IsLoaded || double.IsNaN(e.NewValue))
+            return;
+
+        ManagerFactory.settingsManager.SetProperty("VIIPERPort", (int)e.NewValue);
+    }
+
+}

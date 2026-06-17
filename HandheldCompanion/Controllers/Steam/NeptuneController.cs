@@ -8,7 +8,6 @@ using steam_hidapi.net;
 using steam_hidapi.net.Hid;
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace HandheldCompanion.Controllers.Steam;
 
@@ -41,7 +40,7 @@ public class NeptuneController : SteamController
     protected override void InitializeInputOutput()
     {
         // Additional controller specific source buttons/axes
-        SourceButtons.AddRange([ButtonFlags.L4, ButtonFlags.R4, ButtonFlags.L5, ButtonFlags.R5]);
+        SourceButtons.AddRange([ButtonFlags.L4, ButtonFlags.R4, ButtonFlags.L5, ButtonFlags.R5, ButtonFlags.Special2]);
         SourceButtons.AddRange([ButtonFlags.LeftStickTouch, ButtonFlags.RightStickTouch]);
         SourceButtons.AddRange([ButtonFlags.LeftPadClick, ButtonFlags.LeftPadTouch, ButtonFlags.LeftPadClickUp, ButtonFlags.LeftPadClickDown, ButtonFlags.LeftPadClickLeft, ButtonFlags.LeftPadClickRight]);
         SourceButtons.AddRange([ButtonFlags.RightPadClick, ButtonFlags.RightPadTouch, ButtonFlags.RightPadClickUp, ButtonFlags.RightPadClickDown, ButtonFlags.RightPadClickLeft, ButtonFlags.RightPadClickRight]);
@@ -50,10 +49,14 @@ public class NeptuneController : SteamController
         SourceAxis.Add(AxisLayoutFlags.RightPad);
         SourceAxis.Add(AxisLayoutFlags.Gyroscope);
 
+        TargetButtons.Add(ButtonFlags.L4);
+        TargetButtons.Add(ButtonFlags.R4);
+        TargetButtons.Add(ButtonFlags.L5);
+        TargetButtons.Add(ButtonFlags.R5);
+        TargetButtons.Add(ButtonFlags.Special2);
+
         TargetButtons.Add(ButtonFlags.LeftPadClick);
         TargetButtons.Add(ButtonFlags.RightPadClick);
-        TargetButtons.Add(ButtonFlags.LeftPadTouch);
-        TargetButtons.Add(ButtonFlags.RightPadTouch);
 
         TargetAxis.Add(AxisLayoutFlags.LeftPad);
         TargetAxis.Add(AxisLayoutFlags.RightPad);
@@ -63,14 +66,18 @@ public class NeptuneController : SteamController
     {
         base.AttachDetails(details);
 
+        UserIndex = 0; // (byte)details.GetMI();
+
+        // don't go further
+        if (IsVirtual())
+            return;
+
         // (un)plug controller if needed
         bool WasPlugged = IsConnected();
         if (WasPlugged) Unplug();
 
-        UserIndex = (byte)details.GetMI();
-
         // try known buffer lengths to support different firmware versions (65 current, 64 legacy)
-        foreach (ushort bufLen in (ushort[])[64, 65])
+        foreach (ushort bufLen in (ushort[])[65, 64])
         {
             Controller = new(details.VendorID, details.ProductID, bufLen, details.GetMI());
             Open();
@@ -95,7 +102,7 @@ public class NeptuneController : SteamController
 
     public override void Tick(long ticks, float delta, bool commit)
     {
-        if (Inputs is null || input is null || IsBusy || !IsPlugged || IsDisposing || IsDisposed)
+        if (Inputs is null || input is null || IsBusy || !IsPlugged || _disposing || _disposed)
             return;
 
         ButtonState.Overwrite(InjectedButtons, Inputs.ButtonState);
@@ -114,7 +121,7 @@ public class NeptuneController : SteamController
         Inputs.ButtonState[ButtonFlags.Back] |= input.State.ButtonState[NeptuneControllerButton.BtnMenu];
 
         Inputs.ButtonState[ButtonFlags.Special] |= input.State.ButtonState[NeptuneControllerButton.BtnSteam];
-        Inputs.ButtonState[ButtonFlags.OEM1] |= input.State.ButtonState[NeptuneControllerButton.BtnQuickAccess];
+        Inputs.ButtonState[ButtonFlags.Special2] |= input.State.ButtonState[NeptuneControllerButton.BtnQuickAccess];
 
         var L2 = input.State.AxesState[NeptuneControllerAxis.L2] * byte.MaxValue / short.MaxValue;
         var R2 = input.State.AxesState[NeptuneControllerAxis.R2] * byte.MaxValue / short.MaxValue;
@@ -242,10 +249,9 @@ public class NeptuneController : SteamController
         base.Tick(ticks, delta);
     }
 
-    private Task HandleControllerInput(NeptuneControllerInputEventArgs input)
+    private void HandleControllerInput(NeptuneControllerInputEventArgs input)
     {
         this.input = input;
-        return Task.CompletedTask;
     }
 
     private void Open()
@@ -326,6 +332,10 @@ public class NeptuneController : SteamController
 
     public override void Plug()
     {
+        // don't go further
+        if (IsVirtual())
+            return;
+
         try
         {
             // open controller

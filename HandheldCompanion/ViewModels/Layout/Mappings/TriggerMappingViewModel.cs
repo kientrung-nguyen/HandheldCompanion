@@ -89,107 +89,6 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        // Shift mode: 0 = Disabled on shift, 1 = Always enabled, 2 = Enabled on shift (strict), 3 = Enabled on shift (any)
-        public override int ShiftModeIndex
-        {
-            get
-            {
-                if (Action is null) return 1; // Default to always enabled
-                if ((Action.ShiftSlot & ShiftSlot.Any) != 0) return 1; // Always enabled
-                if (Action.ShiftSlot == ShiftSlot.None) return 0; // Disabled on shift
-
-                // Check if it's OR mode or strict mode
-                if (Action.ShiftMatchAny) return 3; // Enabled on shift (any)
-                return 2; // Enabled on shift (strict)
-            }
-            set
-            {
-                if (Action is null || value == ShiftModeIndex) return;
-
-                switch (value)
-                {
-                    case 0: // Disabled on shift
-                        Action.ShiftSlot = ShiftSlot.None;
-                        Action.ShiftMatchAny = false;
-                        break;
-                    case 1: // Always enabled
-                        Action.ShiftSlot = ShiftSlot.Any;
-                        Action.ShiftMatchAny = false;
-                        break;
-                    case 2: // Enabled on shift (strict)
-                        if (Action.ShiftSlot == ShiftSlot.None || Action.ShiftSlot == ShiftSlot.Any)
-                            Action.ShiftSlot = ShiftSlot.ShiftA;
-                        Action.ShiftMatchAny = false;
-                        break;
-                    case 3: // Enabled on shift (any/OR)
-                        if (Action.ShiftSlot == ShiftSlot.None || Action.ShiftSlot == ShiftSlot.Any)
-                            Action.ShiftSlot = ShiftSlot.ShiftA;
-                        Action.ShiftMatchAny = true;
-                        break;
-                }
-                OnPropertyChanged(nameof(ShiftModeIndex));
-                OnPropertyChanged(nameof(ShowShiftSelection));
-                OnPropertyChanged(nameof(ShiftA));
-                OnPropertyChanged(nameof(ShiftB));
-                OnPropertyChanged(nameof(ShiftC));
-                OnPropertyChanged(nameof(ShiftD));
-            }
-        }
-
-        public override bool ShowShiftSelection => ShiftModeIndex == 2 || ShiftModeIndex == 3;
-
-        public override bool ShiftA
-        {
-            get => Action is not null && (Action.ShiftSlot & ShiftSlot.ShiftA) != 0;
-            set
-            {
-                if (Action is null || value == ShiftA) return;
-                Action.ShiftSlot = value
-                    ? Action.ShiftSlot | ShiftSlot.ShiftA
-                    : Action.ShiftSlot & ~ShiftSlot.ShiftA;
-                OnPropertyChanged(nameof(ShiftA));
-            }
-        }
-
-        public override bool ShiftB
-        {
-            get => Action is not null && (Action.ShiftSlot & ShiftSlot.ShiftB) != 0;
-            set
-            {
-                if (Action is null || value == ShiftB) return;
-                Action.ShiftSlot = value
-                    ? Action.ShiftSlot | ShiftSlot.ShiftB
-                    : Action.ShiftSlot & ~ShiftSlot.ShiftB;
-                OnPropertyChanged(nameof(ShiftB));
-            }
-        }
-
-        public override bool ShiftC
-        {
-            get => Action is not null && (Action.ShiftSlot & ShiftSlot.ShiftC) != 0;
-            set
-            {
-                if (Action is null || value == ShiftC) return;
-                Action.ShiftSlot = value
-                    ? Action.ShiftSlot | ShiftSlot.ShiftC
-                    : Action.ShiftSlot & ~ShiftSlot.ShiftC;
-                OnPropertyChanged(nameof(ShiftC));
-            }
-        }
-
-        public override bool ShiftD
-        {
-            get => Action is not null && (Action.ShiftSlot & ShiftSlot.ShiftD) != 0;
-            set
-            {
-                if (Action is null || value == ShiftD) return;
-                Action.ShiftSlot = value
-                    ? Action.ShiftSlot | ShiftSlot.ShiftD
-                    : Action.ShiftSlot & ~ShiftSlot.ShiftD;
-                OnPropertyChanged(nameof(ShiftD));
-            }
-        }
-
         private TriggerStackViewModel _parentStack;
         public TriggerStackViewModel ParentStack => _parentStack;
 
@@ -222,6 +121,7 @@ namespace HandheldCompanion.ViewModels
             var actionType = newActionType ?? (ActionType)ActionTypeIndex;
             if (actionType == ActionType.Disabled)
             {
+                IsSupported = true;
                 if (Action is not null) Delete();
                 SelectedTarget = null;
                 OnPropertyChanged(string.Empty);
@@ -236,30 +136,28 @@ namespace HandheldCompanion.ViewModels
 
             if (actionType == ActionType.Button)
             {
-                if (Action is null || Action is not ButtonActions)
+                bool preserveMissingTarget = Action is ButtonActions;
+                if (!preserveMissingTarget)
                     Action = new ButtonActions() { motionThreshold = Gamepad.TriggerThreshold, motionDirection = DeflectionDirection.Up };
 
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var button in controller.GetTargetButtons())
                 {
-                    var mappingTargetVm = new MappingTargetViewModel
-                    {
-                        Tag = button,
-                        Content = controller.GetButtonName(button)
-                    };
+                    var mappingTargetVm = CreateTarget(button, controller.GetButtonName(button));
                     targets.Add(mappingTargetVm);
 
                     if (button == ((ButtonActions)Action).Button)
                         matchingTargetVm = mappingTargetVm;
                 }
 
-                lock (_collectionLock)
+                if (matchingTargetVm is null && preserveMissingTarget)
                 {
-                    Targets.Clear();
-                    foreach (var t in targets)
-                        Targets.Add(t);
+                    matchingTargetVm = CreateUnsupportedTarget(((ButtonActions)Action).Button,
+                        controller.GetButtonName(((ButtonActions)Action).Button));
+                    targets.Add(matchingTargetVm);
                 }
-                SelectedTarget = matchingTargetVm ?? Targets.First();
+
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Keyboard)
             {
@@ -275,13 +173,8 @@ namespace HandheldCompanion.ViewModels
                     };
                 }
 
-                lock (_collectionLock)
-                {
-                    Targets.Clear();
-                    foreach (var t in _keyboardKeysTargets)
-                        Targets.Add(t);
-                }
-                SelectedTarget = _keyboardKeysTargets.FirstOrDefault(e => Equals(e.Tag, ((KeyboardActions)Action).Key)) ?? _keyboardKeysTargets.First();
+                targets.AddRange(_keyboardKeysTargets);
+                ReplaceTargets(targets, _keyboardKeysTargets.FirstOrDefault(e => Equals(e.Tag, ((KeyboardActions)Action).Key)));
             }
             else if (actionType == ActionType.Mouse)
             {
@@ -300,29 +193,19 @@ namespace HandheldCompanion.ViewModels
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var mouseType in Enum.GetValues<MouseActionsType>().Except(_unsupportedMouseActionTypes))
                 {
-                    var mappingTargetVm = new MappingTargetViewModel
-                    {
-                        Tag = mouseType,
-                        Content = EnumUtils.GetDescriptionFromEnumValue(mouseType)
-                    };
+                    var mappingTargetVm = CreateTarget(mouseType, EnumUtils.GetDescriptionFromEnumValue(mouseType));
                     targets.Add(mappingTargetVm);
 
                     if (mouseType == ((MouseActions)Action).MouseType)
                         matchingTargetVm = mappingTargetVm;
                 }
 
-                // Update list and selected target
-                lock (_collectionLock)
-                {
-                    Targets.Clear();
-                    foreach (var t in targets)
-                        Targets.Add(t);
-                }
-                SelectedTarget = matchingTargetVm ?? Targets.First();
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Trigger)
             {
-                if (Action is null || Action is not TriggerActions)
+                bool preserveMissingTarget = Action is TriggerActions;
+                if (!preserveMissingTarget)
                 {
                     Action = new TriggerActions()
                     {
@@ -334,24 +217,21 @@ namespace HandheldCompanion.ViewModels
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var axis in controller.GetTargetTriggers())
                 {
-                    var mappingTargetVm = new MappingTargetViewModel
-                    {
-                        Tag = axis,
-                        Content = controller.GetAxisName(axis)
-                    };
+                    var mappingTargetVm = CreateTarget(axis, controller.GetAxisName(axis));
                     targets.Add(mappingTargetVm);
 
                     if (axis == ((TriggerActions)Action).Axis)
                         matchingTargetVm = mappingTargetVm;
                 }
 
-                lock (_collectionLock)
+                if (matchingTargetVm is null && preserveMissingTarget)
                 {
-                    Targets.Clear();
-                    foreach (var t in targets)
-                        Targets.Add(t);
+                    matchingTargetVm = CreateUnsupportedTarget(((TriggerActions)Action).Axis,
+                        controller.GetAxisName(((TriggerActions)Action).Axis));
+                    targets.Add(matchingTargetVm);
                 }
-                SelectedTarget = matchingTargetVm ?? Targets.First();
+
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Shift)
             {
@@ -362,32 +242,21 @@ namespace HandheldCompanion.ViewModels
                 // Only show individual shift slots (A, B, C, D), not None or combined values
                 foreach (ShiftSlot shiftSlot in new[] { ShiftSlot.ShiftA, ShiftSlot.ShiftB, ShiftSlot.ShiftC, ShiftSlot.ShiftD })
                 {
-                    var mappingTargetVm = new MappingTargetViewModel
-                    {
-                        Tag = shiftSlot,
-                        Content = EnumUtils.GetDescriptionFromEnumValue(shiftSlot)
-                    };
+                    var mappingTargetVm = CreateTarget(shiftSlot, EnumUtils.GetDescriptionFromEnumValue(shiftSlot));
                     targets.Add(mappingTargetVm);
 
                     if (shiftSlot == ((ShiftActions)Action).ActivationSlot)
                         matchingTargetVm = mappingTargetVm;
                 }
 
-                lock (_collectionLock)
-                {
-                    Targets.Clear();
-                    foreach (var t in targets)
-                        Targets.Add(t);
-                }
-                SelectedTarget = matchingTargetVm ?? Targets.First();
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Inherit)
             {
                 if (Action is null || Action is not InheritActions)
                     Action = new InheritActions();
 
-                // Update list and selected target
-                Targets.Clear();
+                ReplaceTargets(targets);
             }
 
             // Refresh mapping

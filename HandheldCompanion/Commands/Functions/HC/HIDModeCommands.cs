@@ -37,9 +37,12 @@ namespace HandheldCompanion.Commands.Functions.HC
                     LiveGlyph = "\uE001";
                     break;
                 case HIDmode.DualShock4Controller:
+                case HIDmode.DualSenseController:
                     LiveGlyph = "\uE000";
                     break;
-                case HIDmode.DInputController:
+                case HIDmode.SteamDeckController:
+                case HIDmode.SteamController:
+                case HIDmode.SwitchProController:
                     LiveGlyph = "\u243C";
                     break;
             }
@@ -58,9 +61,18 @@ namespace HandheldCompanion.Commands.Functions.HC
                         ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.DualShock4Controller);
                         break;
                     case HIDmode.DualShock4Controller:
-                        ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.DInputController);
+                        ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.DualSenseController);
                         break;
-                    case HIDmode.DInputController:
+                    case HIDmode.DualSenseController:
+                        ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.SteamDeckController);
+                        break;
+                    case HIDmode.SteamDeckController:
+                        ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.SteamController);
+                        break;
+                    case HIDmode.SteamController:
+                        ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.SwitchProController);
+                        break;
+                    case HIDmode.SwitchProController:
                         ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.Xbox360Controller);
                         break;
                     default:

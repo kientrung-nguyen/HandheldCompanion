@@ -2,6 +2,7 @@
 using steam_hidapi.net.Hid;
 using steam_hidapi.net.Util;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace steam_hidapi.net
@@ -11,18 +12,16 @@ namespace steam_hidapi.net
         // TODO: why task not thread? HID read loop is a thread, rumble is a thread
         protected Task _configureTask;
         protected bool _active = false;
+        private readonly AutoResetEvent _configureSignal = new AutoResetEvent(false);
+        private volatile bool _lizardDirty;
 
-        public Func<NeptuneControllerInputEventArgs, Task> OnControllerInputReceived;
+        public Action<NeptuneControllerInputEventArgs> OnControllerInputReceived;
 
         public NeptuneController(ushort vid, ushort pid, ushort inputBufferLen, short index) : base(vid, pid, inputBufferLen, index)
         {
             _hidDevice = new HidDevice(_vid, _pid, inputBufferLen, index)
             {
-                OnInputReceived = input =>
-                {
-                    OnInputReceived(input);
-                    return Task.CompletedTask;
-                }
+                OnInputReceived = OnInputReceived
             };
         }
 
@@ -60,6 +59,8 @@ namespace steam_hidapi.net
 
             // neptune needs hearbeat loop
             _active = true;
+            _lizardDirty = true;
+            _configureSignal.Set();
             _configureTask = Task.Run(ConfigureLoop);
         }
 
@@ -67,6 +68,7 @@ namespace steam_hidapi.net
         {
             // stop the loop
             _active = false;
+            _configureSignal.Set();
             _configureTask.Wait();
 
             // make sure lizard is as requested, loop might've not done the last request
@@ -75,18 +77,31 @@ namespace steam_hidapi.net
             base.Close();
         }
 
-        internal async void ConfigureLoop()
+        internal void ConfigureLoop()
         {
             while (_active)
             {
+                _configureSignal.WaitOne(1000);
+
+                if (!_active)
+                    break;
+
+                if (!_lizardDirty)
+                    continue;
+
                 SetLizardMode(_lizard);
-                await Task.Delay(1000).ConfigureAwait(false);
+                _lizardDirty = false;
             }
         }
 
         public void RequestLizardMode(bool lizard)
         {
+            if (_lizard == lizard && !_lizardDirty)
+                return;
+
             _lizard = lizard;
+            _lizardDirty = true;
+            _configureSignal.Set();
         }
 
         public byte[] SetHaptic2(SCHapticMotor position, NCHapticStyle style, sbyte intensity)

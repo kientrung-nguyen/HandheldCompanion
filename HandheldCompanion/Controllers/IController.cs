@@ -10,6 +10,7 @@ using SharpDX.XInput;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
 
@@ -87,12 +88,15 @@ namespace HandheldCompanion.Controllers
         protected float gX = 0.0f, gZ = 0.0f, gY = 0.0f;
 
         protected double VibrationStrength = 1.0d;
+        private readonly object rumbleLock = new();
         private Task? rumbleTask;
+        private CancellationTokenSource? rumbleCancellationTokenSource;
+        private int disposeState;
 
         protected object hidLock = new();
 
-        public volatile bool IsDisposed = false; // Prevent multiple disposals
-        public volatile bool IsDisposing = false;
+        public volatile bool _disposed = false; // Prevent multiple disposals
+        public volatile bool _disposing = false;
 
         public virtual bool IsReady => true;
         public bool IsPlugged => ControllerManager.IsTargetController(GetInstanceId());
@@ -165,11 +169,6 @@ namespace HandheldCompanion.Controllers
             QuerySettings();
         }
 
-        ~IController()
-        {
-            Dispose(false);
-        }
-
         protected virtual void InitializeInputOutput()
         { }
 
@@ -188,7 +187,7 @@ namespace HandheldCompanion.Controllers
 
         public virtual void Tick(long ticks, float delta, bool commit = false)
         {
-            if (IsBusy)
+            if (IsBusy || _disposing || _disposed || Inputs is null)
                 return;
 
             Inputs.ButtonState[ButtonFlags.LeftStickLeft] = Inputs.AxisState[AxisFlags.LeftStickX] < -Gamepad.LeftThumbDeadZone;
@@ -360,6 +359,9 @@ namespace HandheldCompanion.Controllers
 
         public virtual void SetVibrationStrength(uint value, bool rumble = false)
         {
+            if (_disposing || _disposed)
+                return;
+
             VibrationStrength = value / 100.0d;
             if (rumble) Rumble();
         }
@@ -413,17 +415,83 @@ namespace HandheldCompanion.Controllers
 
         public virtual void Rumble(int delay = 125, byte LargeMotor = byte.MaxValue, byte SmallMotor = byte.MaxValue)
         {
-            // If the current task is not null and not completed
-            if (rumbleTask != null && !rumbleTask.IsCompleted)
+            if (_disposing || _disposed)
                 return;
 
-            // Create a new task that executes the following code
-            rumbleTask = Task.Run(async () =>
+            CancellationTokenSource cancellationTokenSource;
+
+            lock (rumbleLock)
             {
-                SetVibration(LargeMotor, SmallMotor);
-                await Task.Delay(delay).ConfigureAwait(false); // Avoid blocking the synchronization context
+                if (_disposing || _disposed)
+                    return;
+
+                if (rumbleTask != null && !rumbleTask.IsCompleted)
+                    return;
+
+                rumbleCancellationTokenSource?.Dispose();
+                rumbleCancellationTokenSource = new CancellationTokenSource();
+                cancellationTokenSource = rumbleCancellationTokenSource;
+
+                rumbleTask = Task.Run(async () =>
+                {
+                    try
+                    {
+                        SetVibration(LargeMotor, SmallMotor);
+                        await Task.Delay(delay, cancellationTokenSource.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    { }
+                    catch (ObjectDisposedException)
+                    { }
+                    finally
+                    {
+                        try
+                        {
+                            SetVibration(0, 0);
+                        }
+                        catch { }
+                    }
+                }, cancellationTokenSource.Token);
+            }
+        }
+
+        public void StopRumble(bool waitForCompletion = true)
+        {
+            Task? taskToWait;
+            CancellationTokenSource? cancellationTokenSource;
+
+            lock (rumbleLock)
+            {
+                taskToWait = rumbleTask;
+                cancellationTokenSource = rumbleCancellationTokenSource;
+                rumbleTask = null;
+                rumbleCancellationTokenSource = null;
+            }
+
+            try
+            {
+                cancellationTokenSource?.Cancel();
+            }
+            catch { }
+
+            try
+            {
                 SetVibration(0, 0);
-            });
+            }
+            catch { }
+
+            if (waitForCompletion && taskToWait is not null)
+            {
+                try
+                {
+                    taskToWait.GetAwaiter().GetResult();
+                }
+                catch (OperationCanceledException)
+                { }
+                catch { }
+            }
+
+            cancellationTokenSource?.Dispose();
         }
 
         public virtual void Plug()
@@ -473,9 +541,7 @@ namespace HandheldCompanion.Controllers
             if (Details is null)
                 return false;
 
-            // wait until any rumble task is complete
-            while (rumbleTask != null && !rumbleTask.IsCompleted)
-                Task.Delay(100).Wait();
+            StopRumble();
 
             // set flag
             bool success = false;
@@ -865,20 +931,28 @@ namespace HandheldCompanion.Controllers
 
         protected virtual void Dispose(bool disposing)
         {
-            if (IsDisposed) return;
+            if (Interlocked.Exchange(ref disposeState, 1) != 0)
+                return;
 
-            // manage events
-            ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
-            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+            _disposing = true;
 
-            if (disposing)
+            try
             {
-                // Free managed resources
-                IsDisposing = true;
+                if (!disposing)
+                    return;
+
+                StopRumble();
+
+                // manage events
+                ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+                ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
 
                 // Dispose Inputs
-                Inputs.Dispose();
+                Inputs?.Dispose();
                 Inputs = null!;
+
+                InjectedButtons?.Dispose();
+                InjectedButtons = null!;
 
                 // Dispose gamepad motions
                 foreach (var gamepadMotion in gamepadMotions.Values)
@@ -889,15 +963,12 @@ namespace HandheldCompanion.Controllers
                 UserIndexChanged = null;
                 StateChanged = null;
                 VisibilityChanged = null;
-
-                // Dispose rumble task properly
-                if (rumbleTask is { Status: TaskStatus.Running })
-                    rumbleTask.Wait(); // Ensure task completes
-                rumbleTask = null;
             }
-
-            IsDisposing = false;
-            IsDisposed = true;
+            finally
+            {
+                _disposed = true;
+                _disposing = false;
+            }
         }
     }
 }

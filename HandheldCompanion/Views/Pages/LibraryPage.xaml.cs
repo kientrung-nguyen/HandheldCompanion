@@ -1,30 +1,27 @@
-using HandheldCompanion.Controls;
 using HandheldCompanion.Converters;
 using HandheldCompanion.Managers;
 using HandheldCompanion.ViewModels;
-using System.ComponentModel;
+using iNKORE.UI.WPF.Modern.Controls;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
+using Page = System.Windows.Controls.Page;
+
 namespace HandheldCompanion.Views.Pages;
 
 public partial class LibraryPage : Page
 {
     private readonly AverageColorConverter averageColorConverter = new AverageColorConverter();
-    private LibraryPageViewModel? libraryPageViewModel;
+    private LibraryPageViewModel? ViewModel => DataContext as LibraryPageViewModel;
 
     public LibraryPage()
     {
         Tag = "about";
-        var vm = new LibraryPageViewModel();
-        vm.ItemsSourceRefreshRequested += OnItemsSourceRefreshRequested;
-        DataContext = vm;
+        DataContext = new LibraryPageViewModel();
         InitializeComponent();
-        Loaded += LibraryPage_Loaded;
-        Unloaded += LibraryPage_Unloaded;
     }
 
     public LibraryPage(string Tag) : this()
@@ -44,88 +41,57 @@ public partial class LibraryPage : Page
 
     private void UpdateArtwork(object sender)
     {
-        if (sender is Button button && button.DataContext is ProfileViewModel profile)
+        if (sender is Button button && button.DataContext is ProfileViewModel profile && ViewModel is { } vm)
         {
-            LibraryPageViewModel? libraryVM = DataContext as LibraryPageViewModel;
-            if (libraryVM != null)
-            {
-                libraryVM.HighlightColor = (Color)averageColorConverter.Convert(profile.Cover ?? LibraryResources.MissingCover, typeof(Color), DependencyProperty.UnsetValue, CultureInfo.CurrentCulture);
-                libraryVM.Artwork = profile.Artwork ?? LibraryResources.MissingArtwork;
-            }
+            vm.HighlightColor = (Color)averageColorConverter.Convert(profile.Cover ?? LibraryResources.MissingCover, typeof(Color), DependencyProperty.UnsetValue, CultureInfo.CurrentCulture);
+            vm.Artwork = profile.Artwork ?? LibraryResources.MissingArtwork;
         }
+
+        if (sender is Button collectionButton && collectionButton.DataContext is CollectionGroupViewModel collectionGroup)
+            ViewModel?.RememberCollectionsOverviewItem(collectionGroup);
     }
 
     private void Page_Loaded(object sender, RoutedEventArgs e)
-    { }
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.BackAvailabilityChanged += LibraryPageViewModel_BackAvailabilityChanged;
+        }
+    }
+
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+            vm.BackAvailabilityChanged -= LibraryPageViewModel_BackAvailabilityChanged;
+    }
 
     public void Page_Closed()
     { }
 
-    private void LibraryPage_Loaded(object sender, RoutedEventArgs e)
+    private void LibraryPageViewModel_BackAvailabilityChanged(bool canGoBack)
     {
-        AttachViewModel(DataContext as LibraryPageViewModel);
-        UpdateItemsPanel();
     }
 
-    private void LibraryPage_Unloaded(object sender, RoutedEventArgs e)
+    public bool TryGoBack()
     {
-        DetachViewModel();
+        return ViewModel?.TryGoBack() ?? false;
     }
 
-    private void AttachViewModel(LibraryPageViewModel? viewModel)
+    private void navView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
-        if (ReferenceEquals(libraryPageViewModel, viewModel))
+        if (args.InvokedItemContainer is not NavigationViewItem navItem || navItem.Tag is not string key)
             return;
 
-        DetachViewModel();
-        libraryPageViewModel = viewModel;
-
-        libraryPageViewModel?.PropertyChanged += LibraryPageViewModel_PropertyChanged;
+        ViewModel?.SelectNavigationItemByKey(key);
     }
 
-    private void DetachViewModel()
+    private void navView_Loaded(object sender, RoutedEventArgs e)
     {
-        libraryPageViewModel?.PropertyChanged -= LibraryPageViewModel_PropertyChanged;
-
-        libraryPageViewModel = null;
-    }
-
-    private void OnItemsSourceRefreshRequested()
-    {
-        // Workaround for iNKORE ItemsRepeater not observing ICollectionView changes
-        Dispatcher.Invoke(() =>
+        if (ViewModel is { } vm)
         {
-            try
-            {
-                if (profilesRepeater is not null)
-                {
-                    var source = profilesRepeater.ItemsSource;
-                    profilesRepeater.ItemsSource = null;
-                    profilesRepeater.ItemsSource = source;
-                }
-            }
-            catch { }
-        });
-    }
-
-    private void LibraryPageViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName is nameof(LibraryPageViewModel.ViewMode)
-            or nameof(LibraryPageViewModel.IsGridView)
-            or nameof(LibraryPageViewModel.IsWideView))
-        {
-            Dispatcher.Invoke(UpdateItemsPanel);
+            // The NavigationView may auto-select the first (disabled L2) item on load.
+            // Restore the correct selection from the ViewModel.
+            navView.SelectedItem = vm.NavigationViewSelectedItem;
         }
-    }
-
-    private void UpdateItemsPanel()
-    {
-        var factory = new FrameworkElementFactory(typeof(JustifiedWrapPanel));
-        factory.SetValue(JustifiedWrapPanel.HorizontalSpacingProperty, 6.0);
-        factory.SetValue(JustifiedWrapPanel.VerticalSpacingProperty, 6.0);
-        factory.SetValue(JustifiedWrapPanel.TargetRowHeightProperty, 300.0d);
-        factory.SetValue(JustifiedWrapPanel.ItemAspectRatioProperty, 475.0 / 900.0);
-
-        profilesRepeater.ItemsPanel = new ItemsPanelTemplate(factory);
     }
 }

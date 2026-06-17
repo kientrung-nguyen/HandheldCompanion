@@ -1,4 +1,6 @@
-﻿using HandheldCompanion.Shared;
+﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Notifications;
+using HandheldCompanion.Shared;
 using System;
 using System.IO;
 using System.Linq;
@@ -71,6 +73,19 @@ namespace HandheldCompanion.Processors.AMD
     /// </summary>
     public class RyzenSmuService : IDisposable
     {
+        public readonly record struct SystemPowerLimit(uint PowerLimit, uint TemperatureLimit);
+
+        public enum CpuSubsystem
+        {
+            Cpu,
+            Gpu,
+            Soc,
+            Fclk,
+            Vcn,
+            Lclk,
+        }
+
+        private static readonly PawnIONotInstalledNotification PawnIONotInstalledNotification = new();
         private readonly PawnIOWrapper _pawnIO;
         private bool _disposed;
         private bool _initialized;
@@ -123,11 +138,12 @@ namespace HandheldCompanion.Processors.AMD
 
             try
             {
-                LogManager.LogInformation("Initializing RyzenSMU service via PawnIO...");
-
                 // Connect to PawnIO driver
                 if (!_pawnIO.Connect())
                 {
+                    if (!_pawnIO.IsInstalled() && !ManagerFactory.notificationManager.Notifications.Any(n => n is PawnIONotInstalledNotification))
+                        ManagerFactory.notificationManager.Add(PawnIONotInstalledNotification);
+
                     LogManager.LogError("Failed to connect to PawnIO driver. Is PawnIO installed?");
                     return false;
                 }
@@ -156,7 +172,6 @@ namespace HandheldCompanion.Processors.AMD
                 // Try embedded resource first (like ZenStates-Core)
                 if (!moduleLoaded)
                 {
-                    LogManager.LogInformation("Attempting to load RyzenSMU module from embedded resource...");
                     const string embeddedResourceName = "HandheldCompanion.Resources.PawnIO.RyzenSMU.bin";
                     if (_pawnIO.LoadModuleFromResource(Assembly.GetExecutingAssembly(), embeddedResourceName))
                     {
@@ -178,8 +193,7 @@ namespace HandheldCompanion.Processors.AMD
                         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PawnIO", "Modules", "RyzenSMU.bin"),
                     };
 
-                    LogManager.LogInformation("Searching for RyzenSMU module in {0} file locations...", searchPaths.Length);
-                    foreach (var path in searchPaths)
+                    foreach (string path in searchPaths)
                     {
                         if (File.Exists(path))
                         {
@@ -227,7 +241,7 @@ namespace HandheldCompanion.Processors.AMD
                 }
                 else if (_mailboxType.HasValue)
                 {
-                    LogManager.LogInformation("Using {0} mailbox. CMD={1}, RSP={2}, ARGS={3}", _mailboxType.Value, $"0x{MP1_ADDR_CMD:X}", $"0x{MP1_ADDR_RSP:X}", $"0x{MP1_ADDR_ARGS:X}");
+                    LogManager.LogDebug("Using {0} mailbox. CMD={1}, RSP={2}, ARGS={3}", _mailboxType.Value, $"0x{MP1_ADDR_CMD:X}", $"0x{MP1_ADDR_RSP:X}", $"0x{MP1_ADDR_ARGS:X}");
                 }
 
                 // Get SMU version
@@ -237,7 +251,7 @@ namespace HandheldCompanion.Processors.AMD
                 }
                 else
                 {
-                    LogManager.LogInformation("SMU version: {0}", $"0x{_smuVersion:X8}");
+                    LogManager.LogDebug("SMU version: {0}", $"0x{_smuVersion:X8}");
                 }
 
                 _initialized = true;
@@ -327,7 +341,6 @@ namespace HandheldCompanion.Processors.AMD
                     return SmuStatus.OK;
                 }
 
-                LogManager.LogError("Failed to execute SMU command {0}", $"0x{command:X2}");
                 return SmuStatus.Failed;
             }
             catch (Exception ex)
@@ -353,6 +366,12 @@ namespace HandheldCompanion.Processors.AMD
 
             switch (codeName)
             {
+                case CpuCodeName.ShimadaPeak:
+                    cmd = 0x03B10924;
+                    rsp = 0x03B10970;
+                    args = 0x03B10A40;
+                    break;
+
                 // RyzenAdj PSMU set 2 (DragonRange  FireRange)
                 case CpuCodeName.DragonRange:
                     // case CpuCodeName.FireRange:
@@ -409,41 +428,45 @@ namespace HandheldCompanion.Processors.AMD
         /// </summary>
         private bool TryMailbox(uint cmd, uint rsp, uint argsBase)
         {
+            if (!ValidateMailbox(cmd, rsp, argsBase))
+                return false;
+
+            if (!PciBusMutex.Wait(5000))
+                return false;
+
             try
             {
+                if (!WaitForMailboxReadyNoLock(rsp))
+                    return false;
+
                 // Clear response
-                if (!WriteSmuRegister(rsp, 0))
+                if (!WriteSmuRegisterNoLock(rsp, 0))
                     return false;
 
                 // Write a known marker in arg0 and verify basic R/W works.
                 // RyzenAdj uses 0x47.
-                if (!WriteSmuRegister(argsBase, 0x47))
+                if (!WriteSmuRegisterNoLock(argsBase, 0x47))
                     return false;
 
-                if (!ReadSmuRegister(argsBase, out var echo) || echo != 0x47)
+                if (!ReadSmuRegisterNoLock(argsBase, out var echo) || echo != 0x47)
                     return false;
 
                 // Send SMU_TEST_MSG
-                if (!WriteSmuRegister(cmd, 0x1))
+                if (!WriteSmuRegisterNoLock(cmd, 0x1))
                     return false;
 
-                // Wait for response to become non-zero and indicate OK.
-                for (int i = 0; i < SMU_RETRIES_MAX; i++)
-                {
-                    if (!ReadSmuRegister(rsp, out var r))
-                        return false;
+                if (!WaitForMailboxReadyNoLock(rsp))
+                    return false;
 
-                    if (r == 0)
-                        continue;
-
-                    return r == (uint)SmuStatus.OK;
-                }
-
-                return false;
+                return ReadSmuRegisterNoLock(rsp, out var status) && status == (uint)SmuStatus.OK;
             }
             catch
             {
                 return false;
+            }
+            finally
+            {
+                PciBusMutex.Release();
             }
         }
 
@@ -479,6 +502,7 @@ namespace HandheldCompanion.Processors.AMD
                 case CpuCodeName.KrackanPoint2:
                 case CpuCodeName.StrixPoint:
                 case CpuCodeName.StrixHalo:
+                case CpuCodeName.ShimadaPeak:
                     cmd = 0x03B10928;
                     rsp = 0x03B10978;
                     args = 0x03B10998;
@@ -521,6 +545,18 @@ namespace HandheldCompanion.Processors.AMD
                 return SmuStatus.Failed;
             }
 
+            if (!ValidateMailbox(MP1_ADDR_CMD, MP1_ADDR_RSP, MP1_ADDR_ARGS))
+            {
+                LogManager.LogError("Invalid SMU mailbox configuration");
+                return SmuStatus.Failed;
+            }
+
+            if (!PciBusMutex.Wait(5000))
+            {
+                LogManager.LogError("Failed to acquire global PCI mutex (Global\\Access_PCI)");
+                return SmuStatus.Failed;
+            }
+
             try
             {
                 LogManager.LogDebug("Sending SMU command {0} via mailbox ({1}) (CMD={2}, RSP={3}) with arg: {4}",
@@ -530,30 +566,28 @@ namespace HandheldCompanion.Processors.AMD
                     $"0x{MP1_ADDR_RSP:X}",
                     string.Join(',', args));
 
-                // Step 1: Check if RSP register is non-zero (SMU ready)
-                // Some CPUs start with RSP=0, so we don't fail if it's 0 initially
-                uint rspValue = 0;
-                if (ReadSmuRegister(MP1_ADDR_RSP, out rspValue))
+                if (!WaitForMailboxReadyNoLock(MP1_ADDR_RSP))
                 {
-                    LogManager.LogDebug("Initial MP1 RSP value: {0}", $"0x{rspValue:X8}");
-                }
-                else
-                {
-                    LogManager.LogWarning("Failed to read initial MP1 RSP register, continuing anyway...");
+                    LogManager.LogError("SMU mailbox did not become ready before command write");
+                    return SmuStatus.Failed;
                 }
 
                 // Step 2: Write zero to the RSP register
-                if (!WriteSmuRegister(MP1_ADDR_RSP, 0))
+                if (!WriteSmuRegisterNoLock(MP1_ADDR_RSP, 0))
                 {
                     LogManager.LogError("Failed to clear MP1 RSP register");
                     return SmuStatus.Failed;
                 }
 
                 // Step 3: Write the arguments into the argument registers
+                uint maxValidArgAddress = uint.MaxValue - (uint)(response.Length * 4);
                 for (int i = 0; i < 6; i++)
                 {
+                    if (MP1_ADDR_ARGS > maxValidArgAddress)
+                        continue;
+
                     uint argValue = (args != null && i < args.Length) ? args[i] : 0;
-                    if (!WriteSmuRegister(MP1_ADDR_ARGS + (uint)(i * 4), argValue))
+                    if (!WriteSmuRegisterNoLock(MP1_ADDR_ARGS + (uint)(i * 4), argValue))
                     {
                         LogManager.LogError("Failed to write MP1 arg[{0}]", i);
                         return SmuStatus.Failed;
@@ -561,25 +595,14 @@ namespace HandheldCompanion.Processors.AMD
                 }
 
                 // Step 4: Write the command to the CMD register
-                if (!WriteSmuRegister(MP1_ADDR_CMD, command))
+                if (!WriteSmuRegisterNoLock(MP1_ADDR_CMD, command))
                 {
                     LogManager.LogError("Failed to write MP1 CMD register");
                     return SmuStatus.Failed;
                 }
 
                 // Step 5: Wait until the RSP register is non-zero
-                rspValue = 0;
-                for (int i = 0; i < SMU_RETRIES_MAX; i++)
-                {
-                    if (!ReadSmuRegister(MP1_ADDR_RSP, out rspValue))
-                    {
-                        LogManager.LogError("Failed to read MP1 RSP register (waiting for response)");
-                        return SmuStatus.Failed;
-                    }
-                    if (rspValue != 0)
-                        break;
-                }
-                if (rspValue == 0)
+                if (!WaitForMailboxReadyNoLock(MP1_ADDR_RSP) || !ReadSmuRegisterNoLock(MP1_ADDR_RSP, out uint rspValue))
                 {
                     LogManager.LogError("MP1 SMU timeout (RSP stayed 0 after command)");
                     return SmuStatus.Failed;
@@ -595,7 +618,10 @@ namespace HandheldCompanion.Processors.AMD
                 // Step 7: Read back the argument registers
                 for (int i = 0; i < 6; i++)
                 {
-                    if (!ReadSmuRegister(MP1_ADDR_ARGS + (uint)(i * 4), out response[i]))
+                    if (MP1_ADDR_ARGS > maxValidArgAddress)
+                        continue;
+
+                    if (!ReadSmuRegisterNoLock(MP1_ADDR_ARGS + (uint)(i * 4), out response[i]))
                     {
                         LogManager.LogError("Failed to read MP1 response arg[{0}]", i);
                         return SmuStatus.Failed;
@@ -610,6 +636,10 @@ namespace HandheldCompanion.Processors.AMD
             {
                 LogManager.LogError("Exception sending SMU MP1 command: {0}", ex.Message);
                 return SmuStatus.Failed;
+            }
+            finally
+            {
+                PciBusMutex.Release();
             }
         }
 
@@ -665,16 +695,7 @@ namespace HandheldCompanion.Processors.AMD
 
             try
             {
-                ulong[] input = new ulong[] { address };
-                ulong[] output = new ulong[1];
-
-                if (_pawnIO.ExecuteFunction("ioctl_read_smu_register", input, output))
-                {
-                    value = (uint)output[0];
-                    return true;
-                }
-
-                return false;
+                return ReadSmuRegisterNoLock(address, out value);
             }
             finally
             {
@@ -692,13 +713,52 @@ namespace HandheldCompanion.Processors.AMD
 
             try
             {
-                ulong[] input = new ulong[] { address, value };
-                return _pawnIO.ExecuteFunction("ioctl_write_smu_register", input, null);
+                return WriteSmuRegisterNoLock(address, value);
             }
             finally
             {
                 PciBusMutex.Release();
             }
+        }
+
+        private bool ReadSmuRegisterNoLock(uint address, out uint value)
+        {
+            value = 0;
+
+            ulong[] input = new ulong[] { address };
+            ulong[] output = new ulong[1];
+
+            if (_pawnIO.ExecuteFunction("ioctl_read_smu_register", input, output))
+            {
+                value = (uint)output[0];
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool WriteSmuRegisterNoLock(uint address, uint value)
+        {
+            ulong[] input = new ulong[] { address, value };
+            return _pawnIO.ExecuteFunction("ioctl_write_smu_register", input, null);
+        }
+
+        private static bool ValidateMailbox(uint cmd, uint rsp, uint argsBase)
+        {
+            return cmd != 0 && rsp != 0 && argsBase != 0;
+        }
+
+        private bool WaitForMailboxReadyNoLock(uint responseAddress)
+        {
+            uint response = 0;
+            int timeout = SMU_RETRIES_MAX;
+            bool readSucceeded;
+
+            do
+                readSucceeded = ReadSmuRegisterNoLock(responseAddress, out response);
+            while ((!readSucceeded || response == 0) && --timeout > 0);
+
+            return timeout != 0 && response > 0;
         }
 
         public bool SetStapmLimit(uint limitW)
@@ -815,6 +875,84 @@ namespace HandheldCompanion.Processors.AMD
             return SendIotclCommand(cmdId, new[] { EncodeCurveOffset(value) }, out _) == SmuStatus.OK;
         }
 
+        public bool SetPboScalar(uint scalar)
+        {
+            uint cmdId = GetSetPboScalarCommand();
+            if (cmdId == 0)
+                return false;
+
+            uint pboEnableCommand = GetSetPboEnableCommand();
+            if (pboEnableCommand != 0 && _mailboxType == SmuMailboxType.MP1)
+            {
+                SendMp1Command(pboEnableCommand, Array.Empty<uint>(), out _);
+            }
+
+            uint scalarValue = scalar * 100;
+            return SendCommand(cmdId, new[] { scalarValue }, out _) == SmuStatus.OK;
+        }
+
+        public bool TryGetGpuPsmMargin(out uint margin)
+        {
+            margin = 0;
+
+            uint cmdId = GetGpuPsmMarginCommand();
+            if (cmdId == 0)
+                return false;
+
+            var status = SendCommand(cmdId, Array.Empty<uint>(), out uint[] response);
+            if (status != SmuStatus.OK || response.Length == 0)
+                return false;
+
+            margin = response[0];
+            return true;
+        }
+
+        public static uint EncodePsmMargin(int margin)
+        {
+            int offset = margin < 0 ? 0x100000 : 0;
+            return (uint)(offset + margin) & 0xFFFF;
+        }
+
+        public bool SetGpuPsmMargin(int margin)
+        {
+            uint cmdId = GetSetGpuPsmMarginCommand();
+            if (cmdId == 0)
+                return false;
+
+            return SendCommand(cmdId, new[] { EncodePsmMargin(margin) }, out _) == SmuStatus.OK;
+        }
+
+        public bool TryGetSystemPowerLimit(out SystemPowerLimit systemPowerLimit)
+        {
+            systemPowerLimit = default;
+
+            uint cmdId = GetSystemConfiguredPowerLimitCommand();
+            if (cmdId == 0)
+                return false;
+
+            if (SendCommand(cmdId, Array.Empty<uint>(), out uint[] response) != SmuStatus.OK || response.Length == 0)
+                return false;
+
+            uint packed = response[0];
+            uint powerLimit = (packed & 0x00FF0000) >> 16;
+            uint temperatureLimit = packed & 0xFF;
+
+            if (powerLimit == 0)
+                return false;
+
+            systemPowerLimit = new SystemPowerLimit(powerLimit, temperatureLimit);
+            return true;
+        }
+
+        public bool SetCpuSubsystemFrequencyLimit(CpuSubsystem subsystem, uint frequency, bool maximum = true)
+        {
+            uint cmdId = GetCpuSubsystemFrequencyCommand(subsystem, maximum);
+            if (cmdId == 0)
+                return false;
+
+            return SendCommand(cmdId, new[] { frequency }, out _) == SmuStatus.OK;
+        }
+
         public bool SetCoPer(int value)
         {
             uint cmdId = GetSetCoPerCommand();
@@ -860,6 +998,8 @@ namespace HandheldCompanion.Processors.AMD
         public bool CanSetCoAll() => GetSetCoAllCommand() != 0;
         public bool CanSetCoPer() => GetSetCoPerCommand() != 0;
         public bool CanSetCoGfx() => GetSetCoGfxCommand() != 0;
+        public bool CanSetPboScalar() => GetSetPboScalarCommand() != 0;
+        public bool CanSetCpuSubsystemFrequency(CpuSubsystem subsystem, bool maximum = true) => GetCpuSubsystemFrequencyCommand(subsystem, maximum) != 0;
 
         private uint GetSetStapmCommand()
         {
@@ -890,6 +1030,210 @@ namespace HandheldCompanion.Processors.AMD
                 case CpuCodeName.Raphael:
                 case CpuCodeName.GraniteRidge:
                     return 0x4F;
+            }
+
+            return 0;
+        }
+
+        private uint GetSetPboScalarCommand()
+        {
+            switch (_cpuCodeName)
+            {
+                case CpuCodeName.Picasso:
+                case CpuCodeName.Dali:
+                    return 0x7C;
+
+                case CpuCodeName.RavenRidge:
+                case CpuCodeName.RavenRidge2:
+                    return 0;
+
+                case CpuCodeName.Matisse:
+                case CpuCodeName.CastlePeak:
+                    return 0x2F;
+
+                case CpuCodeName.Vermeer:
+                case CpuCodeName.Chagall:
+                case CpuCodeName.Milan:
+                    return 0x2F;
+
+                case CpuCodeName.Renoir:
+                case CpuCodeName.Lucienne:
+                case CpuCodeName.Cezanne:
+                    return 0x49;
+
+                case CpuCodeName.Vangogh:
+                    return 0;
+
+                case CpuCodeName.Rembrandt:
+                case CpuCodeName.Mendocino:
+                    return 0x63;
+
+                case CpuCodeName.Phoenix:
+                case CpuCodeName.Phoenix2:
+                case CpuCodeName.HawkPoint:
+                    return 0x63;
+
+                case CpuCodeName.KrackanPoint:
+                case CpuCodeName.KrackanPoint2:
+                case CpuCodeName.StrixPoint:
+                case CpuCodeName.StrixHalo:
+                    return 0x63;
+
+                case CpuCodeName.DragonRange:
+                case CpuCodeName.Raphael:
+                case CpuCodeName.GraniteRidge:
+                    return 0x2F;
+
+                case CpuCodeName.ShimadaPeak:
+                    return 0x5B;
+            }
+
+            return 0;
+        }
+
+        private uint GetSetPboEnableCommand()
+        {
+            switch (_cpuCodeName)
+            {
+                case CpuCodeName.Matisse:
+                case CpuCodeName.CastlePeak:
+                case CpuCodeName.Vermeer:
+                case CpuCodeName.Chagall:
+                case CpuCodeName.Milan:
+                    return 0x33;
+            }
+
+            return 0;
+        }
+
+        private uint GetGpuPsmMarginCommand()
+        {
+            switch (_cpuCodeName)
+            {
+                case CpuCodeName.Rembrandt:
+                case CpuCodeName.Mendocino:
+                    return 0x30;
+
+                case CpuCodeName.Phoenix:
+                case CpuCodeName.Phoenix2:
+                case CpuCodeName.HawkPoint:
+                    return 0x20;
+
+                case CpuCodeName.KrackanPoint:
+                case CpuCodeName.KrackanPoint2:
+                case CpuCodeName.StrixPoint:
+                case CpuCodeName.StrixHalo:
+                case CpuCodeName.DragonRange:
+                case CpuCodeName.Raphael:
+                case CpuCodeName.GraniteRidge:
+                case CpuCodeName.ShimadaPeak:
+                    return 0xD7;
+            }
+
+            return 0;
+        }
+
+        private uint GetSetGpuPsmMarginCommand()
+        {
+            switch (_cpuCodeName)
+            {
+                case CpuCodeName.RavenRidge:
+                case CpuCodeName.RavenRidge2:
+                case CpuCodeName.Picasso:
+                case CpuCodeName.Dali:
+                    return 0x59;
+
+                case CpuCodeName.Renoir:
+                case CpuCodeName.Lucienne:
+                case CpuCodeName.Cezanne:
+                    return 0x53;
+
+                case CpuCodeName.Vangogh:
+                    return 0;
+
+                case CpuCodeName.Rembrandt:
+                case CpuCodeName.Mendocino:
+                    return 0xB7;
+
+                case CpuCodeName.Phoenix:
+                case CpuCodeName.Phoenix2:
+                case CpuCodeName.HawkPoint:
+                    return 0x1F;
+
+                case CpuCodeName.KrackanPoint:
+                case CpuCodeName.KrackanPoint2:
+                case CpuCodeName.StrixPoint:
+                case CpuCodeName.StrixHalo:
+                    return 0x1F;
+
+                case CpuCodeName.DragonRange:
+                case CpuCodeName.Raphael:
+                case CpuCodeName.GraniteRidge:
+                    return 0xA7;
+
+                case CpuCodeName.ShimadaPeak:
+                    return 0;
+            }
+
+            return 0;
+        }
+
+        private uint GetSystemConfiguredPowerLimitCommand()
+        {
+            switch (_cpuCodeName)
+            {
+                case CpuCodeName.Vangogh:
+                    return 0x54;
+
+                case CpuCodeName.DragonRange:
+                case CpuCodeName.Raphael:
+                case CpuCodeName.GraniteRidge:
+                case CpuCodeName.ShimadaPeak:
+                    return 0x23;
+            }
+
+            return 0;
+        }
+
+        private uint GetCpuSubsystemFrequencyCommand(CpuSubsystem subsystem, bool maximum)
+        {
+            switch (_cpuCodeName)
+            {
+                case CpuCodeName.Renoir:
+                case CpuCodeName.Lucienne:
+                case CpuCodeName.Cezanne:
+                    return subsystem switch
+                    {
+                        CpuSubsystem.Cpu => maximum ? 0x66u : 0x67u,
+                        CpuSubsystem.Gpu => maximum ? 0x68u : 0x69u,
+                        CpuSubsystem.Soc => maximum ? 0x6Au : 0x6Bu,
+                        CpuSubsystem.Fclk => maximum ? 0x6Cu : 0x6Du,
+                        CpuSubsystem.Vcn => maximum ? 0x6Eu : 0x6Fu,
+                        CpuSubsystem.Lclk => maximum ? 0x70u : 0x71u,
+                        _ => 0u,
+                    };
+
+                case CpuCodeName.Rembrandt:
+                case CpuCodeName.Mendocino:
+                case CpuCodeName.Phoenix:
+                case CpuCodeName.Phoenix2:
+                case CpuCodeName.HawkPoint:
+                case CpuCodeName.KrackanPoint:
+                case CpuCodeName.KrackanPoint2:
+                case CpuCodeName.StrixPoint:
+                case CpuCodeName.StrixHalo:
+                    return 0;
+
+                case CpuCodeName.Vangogh:
+                    return subsystem switch
+                    {
+                        CpuSubsystem.Gpu => maximum ? 0x30u : 0x31u,
+                        CpuSubsystem.Soc => maximum ? 0x32u : 0x21u,
+                        CpuSubsystem.Fclk => maximum ? 0x33u : 0x12u,
+                        CpuSubsystem.Vcn => maximum ? 0x34u : 0x28u,
+                        CpuSubsystem.Lclk => maximum ? 0x14u : 0x23u,
+                        _ => 0u,
+                    };
             }
 
             return 0;

@@ -40,6 +40,7 @@ public class OneXPlayerX1Mini : OneXPlayerX1
         {
             { PID_LED, new HidFilter(unchecked((short)0xFF00), unchecked(0x0001)) },
         };
+        VendorHidInitProfile = OxpHidInitProfile.X1Mini;
     }
 
     public override bool IsReady()
