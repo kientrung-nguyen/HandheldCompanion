@@ -78,9 +78,9 @@
                                 </ui:FontIcon>
                                 -->
 
-                                <ikw:SimpleStackPanel Spacing="3">
+                                <ikw:SimpleStackPanel Spacing="0">
                                     <ToggleButton
-                                        Height="36"
+                                        Height="72"
                                         Margin="3"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Stretch"
@@ -88,22 +88,27 @@
                                         IsChecked="{Binding IsToggled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                                         IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                                         Tag="Hotkey">
-                                        <Grid>
-                                            <ui:FontIcon
-                                                Width="24"
-                                                Height="24"
-                                                HorizontalAlignment="Center"
-                                                FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                                FontSize="{Binding FontSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                                Glyph="{Binding LiveGlyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        </Grid>
+                                        <StackPanel Orientation="Vertical">
+                                            <Grid>
+                                                <ui:FontIcon
+                                                    Width="24"
+                                                    Height="24"
+                                                    HorizontalAlignment="Center"
+                                                    FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    FontSize="{Binding FontSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    Glyph="{Binding LiveGlyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                            </Grid>
+                                            <TextBlock
+                                                Margin="-3,0,-3,0"
+                                                FontSize="12"
+                                                Text="{Binding LiveName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                TextAlignment="Center"
+                                                HorizontalAlignment="Stretch"
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
                                     </ToggleButton>
 
-                                    <TextBlock
-                                        FontSize="12"
-                                        Text="{Binding LiveName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                        TextAlignment="Center"
-                                        TextWrapping="Wrap" />
+                                    
                                 </ikw:SimpleStackPanel>
                             </Grid>
                         </DataTemplate>
