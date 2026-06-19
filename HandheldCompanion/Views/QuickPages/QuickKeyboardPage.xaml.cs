@@ -323,7 +323,8 @@ namespace HandheldCompanion.Views.QuickPages
             foreach (Timeline tl in sb.Children)
                 Storyboard.SetTarget(tl, el);
 
-            // start the full shrink->grow on this key
+            // remove the clock when done so the TimeManager stops ticking for it
+            sb.Completed += (_, __) => sb.Remove(el);
             sb.Begin(el, true);
         }
     }

@@ -96,6 +96,13 @@ namespace HandheldCompanion.Commands
 
         [JsonIgnore] public virtual bool IsToggled => false;
 
+        /// <summary>
+        /// When true, this command supports a distinct double-tap/double-click action
+        /// in addition to the normal single execute. Visual indicators are shown in
+        /// HotkeysPage and QuickHomePage to communicate this to the user.
+        /// </summary>
+        [JsonIgnore] public virtual bool HasDoubleExecute => false;
+
         [JsonIgnore] public bool IsEnabled = true;
         [JsonIgnore] public bool CanCustom = true;
         [JsonIgnore] public bool CanUnpin = true;

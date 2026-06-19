@@ -1,6 +1,5 @@
 ﻿using hidapi;
 using System;
-using System.Threading.Tasks;
 
 namespace controller_hidapi.net
 {
@@ -26,11 +25,7 @@ namespace controller_hidapi.net
 
             _hidDevice = new HidDevice(_vid, _pid, inputBufferLen, index)
             {
-                OnInputReceived = input =>
-                {
-                    OnInputReceived(input);
-                    return Task.CompletedTask;
-                }
+                OnInputReceived = OnInputReceived
             };
         }
 

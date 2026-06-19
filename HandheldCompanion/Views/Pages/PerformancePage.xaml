@@ -39,8 +39,8 @@
                     CornerRadius="{DynamicResource ControlCornerRadius}">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*" MinWidth="70" />
-                            <ColumnDefinition Width="5*" MinWidth="200" />
+                            <ColumnDefinition Width="20" />
+                            <ColumnDefinition />
                         </Grid.ColumnDefinitions>
 
                         <DockPanel>
@@ -48,15 +48,6 @@
                                 FontFamily="{DynamicResource SymbolThemeFontFamily}"
                                 Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                 Glyph="&#xE7EE;" />
-
-                            <ikw:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.PowerProfilesPage_PresetSelection}" />
-                                <TextBlock
-                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{l:Static resx:Resources.PowerProfilesPage_PresetSelectionDesc}"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
                         </DockPanel>
 
                         <Grid Grid.Column="1" Margin="12,0,0,0">

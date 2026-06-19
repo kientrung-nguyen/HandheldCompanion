@@ -335,11 +335,12 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <ToggleButton
-                                                    Height="41"
+                                                    Height="40"
                                                     HorizontalAlignment="Stretch"
                                                     VerticalAlignment="Stretch"
                                                     Command="{Binding DefineButtonCommand}"
-                                                    IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                    IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    Tag="Hotkey">
 
                                                     <ToggleButton.Resources>
                                                         <Style BasedOn="{StaticResource {x:Type ToggleButton}}" TargetType="ToggleButton">
@@ -350,6 +351,7 @@
                                                                             <Storyboard>
                                                                                 <DoubleAnimation
                                                                                     AutoReverse="True"
+                                                                                    FillBehavior="Stop"
                                                                                     RepeatBehavior="1x"
                                                                                     Storyboard.TargetProperty="Opacity"
                                                                                     From="1.0"
@@ -706,8 +708,8 @@
                                     <StackPanel d:Visibility="Visible" Visibility="{Binding ElementName=GPUScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="6*" />
-                                                <ColumnDefinition Width="4*" />
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -747,8 +749,8 @@
                                     Visibility="{Binding IsAMDGPU, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="6*" />
-                                            <ColumnDefinition Width="4*" />
+                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="5*" />
                                         </Grid.ColumnDefinitions>
 
                                         <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -798,7 +800,7 @@
                                             TickFrequency="5"
                                             TickPlacement="BottomRight"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                            Value="{Binding RSRValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,-7,0" />
+                                            Value="{Binding RSRValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </DockPanel>
                                 </ikw:SimpleStackPanel>
 
@@ -818,8 +820,8 @@
                                     Visibility="{Binding IsAMDGPU, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="6*" />
-                                            <ColumnDefinition Width="4*" />
+                                            <ColumnDefinition Width="5*" />
+                                            <ColumnDefinition Width="5*" />
                                         </Grid.ColumnDefinitions>
 
                                         <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -851,8 +853,8 @@
 
                                         <Grid IsEnabled="{Binding AFMFEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="6*" />
-                                                <ColumnDefinition Width="4*" />
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -879,8 +881,8 @@
 
                                         <Grid IsEnabled="{Binding AFMFEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="6*" />
-                                                <ColumnDefinition Width="4*" />
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -952,8 +954,8 @@
                                         Visibility="{Binding ElementName=IntegerScalingToggle, Path=IsOn, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="6*" />
-                                                <ColumnDefinition Width="4*" />
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -1008,8 +1010,8 @@
                                             MinHeight="40"
                                             d:Background="Blue">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="6*" />
-                                                <ColumnDefinition Width="4*" />
+                                                <ColumnDefinition Width="5*" />
+                                                <ColumnDefinition Width="5*" />
                                             </Grid.ColumnDefinitions>
 
                                             <ikw:SimpleStackPanel VerticalAlignment="Center">
@@ -1095,7 +1097,7 @@
                                             TickFrequency="5"
                                             TickPlacement="BottomRight"
                                             ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                            Value="{Binding RISValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,0,0" />
+                                            Value="{Binding RISValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </DockPanel>
                                 </ikw:SimpleStackPanel>
                             </ikw:SimpleStackPanel>
@@ -1103,6 +1105,7 @@
                                 Name="GraphicsSettingsRing"
                                 Width="100"
                                 Height="100"
+                                IsActive="False"
                                 Visibility="Collapsed" />
                         </Grid>
                     </Expander.Content>

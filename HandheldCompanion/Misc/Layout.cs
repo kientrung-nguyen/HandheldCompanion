@@ -1,9 +1,6 @@
 ﻿using HandheldCompanion.Actions;
-using HandheldCompanion.Controllers;
-using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -33,16 +30,14 @@ public partial class Layout : ICloneable, IDisposable
 
     public void FillInherit()
     {
-        // Get the current controller
-        IController controller = ControllerManager.GetDefaultXBOX();
-
-        // Generic button mapping
+        // Generic and device button mapping
         foreach (ButtonFlags button in ButtonState.AllButtons)
-            ButtonLayout[button] = [new InheritActions()];
+        {
+            if (ButtonState.UIButtons.Contains(button))
+                continue;
 
-        // Device button mapping
-        foreach (ButtonFlags button in IDevice.GetCurrent().OEMButtons)
             ButtonLayout[button] = [new InheritActions()];
+        }
 
         // Generic axis mapping
         foreach (AxisLayoutFlags axis in AxisState.AllAxisLayoutFlags)
@@ -61,37 +56,31 @@ public partial class Layout : ICloneable, IDisposable
 
     public void FillDefault()
     {
-        // Get the current controller
-        IController controller = ControllerManager.GetDefaultXBOX();
-
         // Generic button mapping
-        foreach (ButtonFlags button in controller.GetTargetButtons())
+        foreach (ButtonFlags button in ButtonState.AllButtons)
+        {
+            if (ButtonState.UIButtons.Contains(button) || ButtonState.OEMButtons.Contains(button))
+                continue;
+
             ButtonLayout[button] = new List<IActions> { new ButtonActions { Button = button } };
+        }
 
         // Generic axis mappings
-        foreach (AxisLayoutFlags axis in controller.GetTargetAxis())
-            AxisLayout[axis] = new List<IActions> { new AxisActions { Axis = axis } };
-
-        // Trigger axis mappings
-        foreach (AxisLayoutFlags axis in controller.GetTargetTriggers())
-            AxisLayout[axis] = new List<IActions> { new TriggerActions { Axis = axis } };
-
-        // Special button mappings
-        Dictionary<ButtonFlags, ButtonFlags> specialButtonMappings = new Dictionary<ButtonFlags, ButtonFlags>
+        foreach (AxisLayoutFlags axis in AxisState.AllAxisLayoutFlags)
         {
-            { ButtonFlags.LeftPadClickUp, ButtonFlags.DPadUp },
-            { ButtonFlags.LeftPadClickDown, ButtonFlags.DPadDown },
-            { ButtonFlags.LeftPadClickLeft, ButtonFlags.DPadLeft },
-            { ButtonFlags.LeftPadClickRight, ButtonFlags.DPadRight },
-            { ButtonFlags.RightPadClick, ButtonFlags.RightStickClick },
-        };
-
-        foreach (KeyValuePair<ButtonFlags, ButtonFlags> mapping in specialButtonMappings)
-            ButtonLayout[mapping.Key] = new List<IActions> { new ButtonActions { Button = mapping.Value } };
-
-        // Add specific axis mappings
-        // AxisLayout[AxisLayoutFlags.LeftPad] = new List<IActions> { new AxisActions { Axis = AxisLayoutFlags.LeftStick } };
-        AxisLayout[AxisLayoutFlags.RightPad] = new List<IActions> { new AxisActions { Axis = AxisLayoutFlags.RightStick } };
+            switch (axis)
+            {
+                default:
+                    AxisLayout[axis] = new List<IActions> { new AxisActions { Axis = axis } };
+                    break;
+                case AxisLayoutFlags.Gyroscope:
+                    break;
+                case AxisLayoutFlags.L2:
+                case AxisLayoutFlags.R2:
+                    AxisLayout[axis] = new List<IActions> { new TriggerActions { Axis = axis } };
+                    break;
+            }
+        }
     }
 
     public object Clone()

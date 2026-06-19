@@ -260,6 +260,41 @@ public static class WinAPI
         return pid;
     }
 
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+
+    /// <summary>
+    /// Returns the top-level window belonging to <paramref name="processId"/> whose title exactly matches
+    /// <paramref name="windowTitle"/>, or IntPtr.Zero if none found.
+    /// Unlike Process.MainWindowHandle or FindWindow-by-title, this works even when the window is hidden
+    /// (tray mode) because it enumerates all top-level windows regardless of visibility.
+    /// </summary>
+    public static IntPtr FindWindowByProcessId(int processId, string windowTitle)
+    {
+        IntPtr found = IntPtr.Zero;
+        var sb = new System.Text.StringBuilder(256);
+        EnumWindows((hWnd, _) =>
+        {
+            if (GetWindowProcessId(hWnd) != processId)
+                return true;
+
+            sb.Clear();
+            GetWindowText(hWnd, sb, sb.Capacity);
+            if (sb.ToString() == windowTitle)
+            {
+                found = hWnd;
+                return false; // stop enumeration
+            }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+
     public static HANDLE GetforegroundWindow()
     {
         return GetForegroundWindow();

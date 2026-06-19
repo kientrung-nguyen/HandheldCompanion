@@ -9,10 +9,10 @@ namespace HandheldCompanion.Actions
     public enum ShiftSlot
     {
         [Description("Disabled on shift")] None = 0,
-        [Description("Shift A")] ShiftA = 1 << 0,
-        [Description("Shift B")] ShiftB = 1 << 1,
-        [Description("Shift C")] ShiftC = 1 << 2,
-        [Description("Shift D")] ShiftD = 1 << 3,
+        [Description("A")] ShiftA = 1 << 0,
+        [Description("B")] ShiftB = 1 << 1,
+        [Description("C")] ShiftC = 1 << 2,
+        [Description("D")] ShiftD = 1 << 3,
         [Description("Always enabled")] Any = 1 << 7,
     }
 

@@ -8,10 +8,10 @@ using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.ViewModels;
-using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -313,6 +313,9 @@ namespace HandheldCompanion.Views.Pages
                         break;
                     case "GoBackToSleep":
                         Toggle_GoBackToSleep.IsOn = Convert.ToBoolean(value);
+                        break;
+                    case "DockedDisplayBehavior":
+                        cB_DockedDisplayBehavior.SelectedIndex = Convert.ToInt32(value);
                         break;
                 }
             });
@@ -651,6 +654,16 @@ namespace HandheldCompanion.Views.Pages
             ManagerFactory.settingsManager.SetProperty("GoBackToSleep", Toggle_GoBackToSleep.IsOn);
         }
 
+        #region Display
+        private void cB_DockedDisplayBehavior_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.SetProperty("DockedDisplayBehavior", cB_DockedDisplayBehavior.SelectedIndex);
+        }
+        #endregion
+
         #region Sensor
         private void cB_SensorSelection_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
         {
@@ -660,9 +673,13 @@ namespace HandheldCompanion.Views.Pages
             // update dependencies
             SensorFamily sensorFamily = (SensorFamily)cB_SensorSelection.SelectedIndex;
 
-            Toggle_SensorPlacementUpsideDown.IsEnabled = sensorFamily == SensorFamily.SerialUSBIMU;
-            Grid_SensorPlacementVisualisation.IsEnabled = sensorFamily == SensorFamily.SerialUSBIMU;
+            bool isExternal = sensorFamily == SensorFamily.SerialUSBIMU;
+
             ui_button_calibrate.IsEnabled = sensorFamily != SensorFamily.None;
+            SensorPlacementUpsideDown.IsEnabled = isExternal;
+            SensorPlacementVisualisation.IsEnabled = isExternal;
+            Toggle_SensorPlacementUpsideDown.IsEnabled = isExternal;
+            Grid_SensorPlacementVisualisation.IsEnabled = isExternal;
 
             if (IsLoaded)
                 ManagerFactory.settingsManager.SetProperty("SensorSelection", cB_SensorSelection.SelectedIndex);
@@ -699,12 +716,11 @@ namespace HandheldCompanion.Views.Pages
 
         private void UpdateUI_SensorPlacement(int? SensorPlacement)
         {
-            foreach (SimpleStackPanel panel in Grid_SensorPlacementVisualisation.Children)
-                foreach (Button button in panel.Children)
-                    if (int.Parse((string)button.Tag) == SensorPlacement)
-                        button.SetResourceReference(BackgroundProperty, "SystemControlForegroundAccentBrush");
-                    else
-                        button.SetResourceReference(BackgroundProperty, "SystemControlHighlightAltBaseLowBrush");
+            foreach (Button button in Grid_SensorPlacementVisualisation.Children.OfType<Button>())
+                if (int.Parse((string)button.Tag) == SensorPlacement)
+                    button.SetResourceReference(BackgroundProperty, "SystemControlForegroundAccentBrush");
+                else
+                    button.SetResourceReference(BackgroundProperty, "SystemControlHighlightAltBaseLowBrush");
         }
 
         private void Toggle_SensorPlacementUpsideDown_Toggled(object? sender, RoutedEventArgs? e)

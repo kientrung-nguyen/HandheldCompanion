@@ -56,13 +56,13 @@ public class PnPDetails
         string low = SymLink.ToLower();
         int index = low.IndexOf("mi_");
         if (index == -1)
-            return -1;
+            return 0;
         string mi = low.Substring(index + 3, 2);
 
         if (short.TryParse(mi, out short number))
             return number;
 
-        return -1;
+        return 0;
     }
 
     public DateTimeOffset GetLastArrivalDate()

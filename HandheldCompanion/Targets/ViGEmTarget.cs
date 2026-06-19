@@ -37,6 +37,7 @@ namespace HandheldCompanion.Targets
 
         public bool IsConnected = false;
 
+        public virtual int? MasterIntervalOverrideHz => null;
         private bool _disposed = false;
 
         ~ViGEmTarget()

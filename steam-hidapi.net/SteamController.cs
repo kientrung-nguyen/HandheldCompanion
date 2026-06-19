@@ -103,6 +103,9 @@ namespace steam_hidapi.net
             {
                 byte[] request = new byte[] { (byte)SCPacketType.GET_SERIAL, 0x15, 0x01 };
                 byte[] response = _hidDevice.RequestFeatureReport(request);
+                if (response is null || response.Length <= 5)
+                    return Encoding.ASCII.GetString(serial).TrimEnd((Char)0);
+
                 serial = new byte[response.Length - 5];
                 Array.Copy(response, 4, serial, 0, serial.Length);
             }

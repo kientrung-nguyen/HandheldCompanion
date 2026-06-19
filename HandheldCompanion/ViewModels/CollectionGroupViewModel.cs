@@ -4,13 +4,18 @@ using HandheldCompanion.Properties;
 using HandheldCompanion.Views;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace HandheldCompanion.ViewModels
 {
     public class CollectionGroupViewModel : BaseViewModel, IComparable<CollectionGroupViewModel>, IComparable
     {
+        private readonly Action<CollectionGroupViewModel>? _openAction;
+
         public GameCollection? Collection { get; }
         private readonly string _builtInName;
 
@@ -20,20 +25,53 @@ namespace HandheldCompanion.ViewModels
         public bool CanDelete => !IsBuiltIn;
 
         public ObservableCollection<ProfileViewModel> Profiles { get; } = [];
+        public ObservableCollection<BitmapImage> PreviewArtworks { get; } = [];
+        public ObservableCollection<BitmapImage> PreviewCovers { get; } = [];
+        public ICommand? OpenCommand { get; }
+
+        public bool HasPreviewArtworks => PreviewArtworks.Count > 0;
+        public bool HasPreviewCovers => PreviewCovers.Count > 0;
+        public int ProfileCount => Profiles.Count;
+        public int PreviewArtworkCount => PreviewArtworks.Count;
+        public int PreviewCoverCount => PreviewCovers.Count;
+        public bool ShowInCollectionsOverview => Collection is not null || Name == "Favorites";
+        public BitmapImage? PreviewArtwork1 => GetPreviewArtworkAt(0);
+        public BitmapImage? PreviewArtwork2 => GetPreviewArtworkAt(1);
+        public BitmapImage? PreviewArtwork3 => GetPreviewArtworkAt(2);
+        public BitmapImage? PreviewArtwork4 => GetPreviewArtworkAt(3);
+        public BitmapImage? PreviewCover1 => GetPreviewCoverAt(0);
+        public BitmapImage? PreviewCover2 => GetPreviewCoverAt(1);
+        public BitmapImage? PreviewCover3 => GetPreviewCoverAt(2);
+        public BitmapImage? PreviewCover4 => GetPreviewCoverAt(3);
+        public BitmapImage? PreviewHorizontal1 => GetHorizontalPreviewAt(0);
+        public BitmapImage? PreviewHorizontal2 => GetHorizontalPreviewAt(1);
+        public BitmapImage? PreviewHorizontal3 => GetHorizontalPreviewAt(2);
+        public BitmapImage? PreviewHorizontal4 => GetHorizontalPreviewAt(3);
+        public BitmapImage? PreviewVertical1 => GetVerticalPreviewAt(0);
+        public BitmapImage? PreviewVertical2 => GetVerticalPreviewAt(1);
+        public BitmapImage? PreviewVertical3 => GetVerticalPreviewAt(2);
+        public BitmapImage? PreviewVertical4 => GetVerticalPreviewAt(3);
 
         public ICommand? DeleteCommand { get; }
 
         // For built-in groups (Favorites, Other)
-        public CollectionGroupViewModel(string builtInName)
+        public CollectionGroupViewModel(string builtInName, Action<CollectionGroupViewModel>? openAction = null)
         {
             _builtInName = builtInName;
+            _openAction = openAction;
+
+            OpenCommand = new DelegateCommand(() =>
+            {
+                _openAction?.Invoke(this);
+            });
         }
 
         // For user-created collections
-        public CollectionGroupViewModel(GameCollection collection)
+        public CollectionGroupViewModel(GameCollection collection, Action<CollectionGroupViewModel>? openAction = null)
         {
             Collection = collection;
             _builtInName = string.Empty;
+            _openAction = openAction;
 
             DeleteCommand = new DelegateCommand(async () =>
             {
@@ -56,6 +94,136 @@ namespace HandheldCompanion.ViewModels
                         break;
                 }
             });
+
+            OpenCommand = new DelegateCommand(() =>
+            {
+                _openAction?.Invoke(this);
+            });
+        }
+
+        public void SetPreviewProfiles(IEnumerable<ProfileViewModel> profiles)
+        {
+            PreviewArtworks.Clear();
+            PreviewCovers.Clear();
+
+            List<BitmapImage> artworks = profiles
+                .Select(GetPreviewArtwork)
+                .Take(4)
+                .Cast<BitmapImage>()
+                .ToList();
+
+            List<BitmapImage> covers = profiles
+                .Select(GetPreviewCover)
+                .Take(4)
+                .Cast<BitmapImage>()
+                .ToList();
+
+            foreach (BitmapImage artwork in artworks)
+            {
+                PreviewArtworks.Add(artwork);
+            }
+
+            foreach (BitmapImage cover in covers)
+            {
+                PreviewCovers.Add(cover);
+            }
+
+            OnPropertyChanged(nameof(HasPreviewArtworks));
+            OnPropertyChanged(nameof(HasPreviewCovers));
+            OnPropertyChanged(nameof(ProfileCount));
+            OnPropertyChanged(nameof(PreviewArtworkCount));
+            OnPropertyChanged(nameof(PreviewCoverCount));
+            OnPropertyChanged(nameof(PreviewArtwork1));
+            OnPropertyChanged(nameof(PreviewArtwork2));
+            OnPropertyChanged(nameof(PreviewArtwork3));
+            OnPropertyChanged(nameof(PreviewArtwork4));
+            OnPropertyChanged(nameof(PreviewCover1));
+            OnPropertyChanged(nameof(PreviewCover2));
+            OnPropertyChanged(nameof(PreviewCover3));
+            OnPropertyChanged(nameof(PreviewCover4));
+            OnPropertyChanged(nameof(PreviewHorizontal1));
+            OnPropertyChanged(nameof(PreviewHorizontal2));
+            OnPropertyChanged(nameof(PreviewHorizontal3));
+            OnPropertyChanged(nameof(PreviewHorizontal4));
+            OnPropertyChanged(nameof(PreviewVertical1));
+            OnPropertyChanged(nameof(PreviewVertical2));
+            OnPropertyChanged(nameof(PreviewVertical3));
+            OnPropertyChanged(nameof(PreviewVertical4));
+            OnPropertyChanged(nameof(ShowInCollectionsOverview));
+        }
+
+        private static BitmapImage GetPreviewArtwork(ProfileViewModel profile)
+        {
+            if (profile.Profile.LibraryEntry is not null)
+            {
+                BitmapImage? artwork = ManagerFactory.libraryManager.GetGameArt(
+                    profile.Profile.LibraryEntry.Id,
+                    LibraryManager.LibraryType.artwork | LibraryManager.LibraryType.thumbnails,
+                    profile.Profile.LibraryEntry.GetArtworkId(),
+                    profile.Profile.LibraryEntry.GetArtworkExtension(true));
+
+                if (artwork is not null && artwork != LibraryResources.MissingArtwork)
+                    return artwork;
+            }
+
+            return profile.Artwork ?? LibraryResources.MissingArtwork;
+        }
+
+        private static BitmapImage GetPreviewCover(ProfileViewModel profile)
+        {
+            if (profile.Profile.LibraryEntry is not null)
+            {
+                BitmapImage? cover = ManagerFactory.libraryManager.GetGameArt(
+                    profile.Profile.LibraryEntry.Id,
+                    LibraryManager.LibraryType.cover | LibraryManager.LibraryType.thumbnails,
+                    profile.Profile.LibraryEntry.GetCoverId(),
+                    profile.Profile.LibraryEntry.GetCoverExtension(true));
+
+                if (cover is not null && cover != LibraryResources.MissingCover)
+                    return cover;
+            }
+
+            return profile.Cover ?? LibraryResources.MissingCover;
+        }
+
+        private static bool IsValidArtwork(BitmapImage? artwork)
+        {
+            return artwork is not null && artwork != LibraryResources.MissingArtwork;
+        }
+
+        private static bool IsValidCover(BitmapImage? cover)
+        {
+            return cover is not null && cover != LibraryResources.MissingCover;
+        }
+
+        private BitmapImage? GetPreviewArtworkAt(int index)
+        {
+            return index >= 0 && index < PreviewArtworks.Count ? PreviewArtworks[index] : null;
+        }
+
+        private BitmapImage? GetPreviewCoverAt(int index)
+        {
+            return index >= 0 && index < PreviewCovers.Count ? PreviewCovers[index] : null;
+        }
+
+        private BitmapImage? GetHorizontalPreviewAt(int index)
+        {
+            BitmapImage? artwork = GetPreviewArtworkAt(index);
+            if (IsValidArtwork(artwork))
+                return artwork;
+
+            BitmapImage? cover = GetPreviewCoverAt(index);
+            return IsValidCover(cover) ? cover : artwork ?? cover;
+        }
+
+        private BitmapImage? GetVerticalPreviewAt(int index)
+        {
+            BitmapImage? cover = GetPreviewCoverAt(index);
+            if (IsValidCover(cover))
+                return cover;
+
+            BitmapImage? artwork = GetPreviewArtworkAt(index);
+            return IsValidArtwork(artwork) ? artwork : cover ?? artwork;
         }
 
         public void RefreshName()

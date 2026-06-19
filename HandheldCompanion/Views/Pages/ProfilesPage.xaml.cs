@@ -3,7 +3,6 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
-using HandheldCompanion.Targets;
 using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Pages.Profiles;
@@ -40,8 +39,6 @@ public partial class ProfilesPage : Page
         viewModel = new ProfilesPageViewModel(this);
         DataContext = viewModel;
         InitializeComponent();
-
-        EmulatedControllerDInputItem.Visibility = VJoyTarget.IsInstalled() ? Visibility.Visible : Visibility.Collapsed;
 
         // Subscribe to control changes for Profile properties that are bound directly
         Loaded += ProfilesPage_Loaded;
@@ -133,8 +130,8 @@ public partial class ProfilesPage : Page
 
             Profile profile = new Profile(path);
             profile.Arguments = arguments;
-            if (!string.IsNullOrEmpty(arguments))
-                profile.Name = name;
+            if (!string.IsNullOrEmpty(arguments) && !string.IsNullOrWhiteSpace(name))
+                profile.Name = name.Trim();
 
             bool exists = false;
             Profile parentProfile = ManagerFactory.profileManager.GetProfileFromPath(path, true, true);
@@ -297,7 +294,14 @@ public partial class ProfilesPage : Page
         if (viewModel.SelectedProfile is null)
             return;
 
-        viewModel.SelectedProfile.Name = SubProfileNameTextBox.Text;
+        string name = SubProfileNameTextBox.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            args.Cancel = true;
+            return;
+        }
+
+        viewModel.SelectedProfile.Name = name;
         viewModel.SubmitProfile();
     }
 
@@ -316,7 +320,14 @@ public partial class ProfilesPage : Page
         if (viewModel.SelectedMainProfile is null)
             return;
 
-        viewModel.SelectedMainProfile.Name = ProfileNameTextBox.Text;
+        string name = ProfileNameTextBox.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            args.Cancel = true;
+            return;
+        }
+
+        viewModel.SelectedMainProfile.Name = name;
         viewModel.SubmitProfile();
     }
 

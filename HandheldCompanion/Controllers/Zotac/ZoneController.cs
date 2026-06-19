@@ -62,7 +62,7 @@ namespace HandheldCompanion.Controllers.Zotac
         public override void Tick(long ticks, float delta, bool commit)
         {
             // skip if controller isn't connected
-            if (!IsConnected() || IsBusy || !IsPlugged || IsDisposing || IsDisposed)
+            if (!IsConnected() || IsBusy || !IsPlugged || _disposing || _disposed)
                 return;
 
             base.Tick(ticks, delta, false);

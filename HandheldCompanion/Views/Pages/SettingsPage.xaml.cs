@@ -256,9 +256,6 @@ public partial class SettingsPage : Page
                 case "QuickToolsApplyNoise":
                     QuickToolsNoiseToggle.IsOn = Convert.ToBoolean(value);
                     break;
-                case "MasterInterval":
-                    cB_MasterInterval.SelectedIndex = Convert.ToInt32(value);
-                    break;
                 case "ShowSplashScreen":
                     Toggle_SplashScreen.IsOn = Convert.ToBoolean(value);
                     break;
@@ -583,14 +580,6 @@ public partial class SettingsPage : Page
             return;
 
         ManagerFactory.settingsManager.SetProperty("QuickToolsApplyNoise", QuickToolsNoiseToggle.IsOn);
-    }
-
-    private void cB_MasterInterval_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded)
-            return;
-
-        ManagerFactory.settingsManager.SetProperty("MasterInterval", cB_MasterInterval.SelectedIndex);
     }
 
     private void Toggle_SplashScreen_Toggled(object sender, RoutedEventArgs e)

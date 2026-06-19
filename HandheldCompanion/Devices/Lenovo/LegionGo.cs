@@ -1,6 +1,5 @@
 using HandheldCompanion.Commands.Functions.HC;
 using HandheldCompanion.Controllers;
-using HandheldCompanion.Devices.Lenovo;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
@@ -12,7 +11,7 @@ using System.Linq;
 using static HandheldCompanion.Devices.Lenovo.SapientiaUsb;
 using static HandheldCompanion.Utils.DeviceUtils;
 
-namespace HandheldCompanion.Devices;
+namespace HandheldCompanion.Devices.Lenovo;
 
 public class LegionGo : IDevice
 {

@@ -26,6 +26,7 @@ namespace HandheldCompanion.Managers
             Checking,
             Changelog,
             Ready,
+            ControllerDbReady,
             Download,
             Downloading,
             Downloaded,
@@ -164,14 +165,62 @@ namespace HandheldCompanion.Managers
             ManagerFactory.settingsManager.SetProperty("UpdateLastChecked", lastCheck);
         }
 
-        public static async Task StartProcess(bool background)
-        {
-            if (!background)
-            {
-                updateStatus = UpdateStatus.Checking;
-                Updated?.Invoke(updateStatus, null, null);
-            }
+        private const string GameControllerDbUrl = "https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/refs/heads/master/gamecontrollerdb.txt";
+        private static UpdateFile? controllerDbFile;
 
+        private static uint ComputeCrc32(string filePath)
+        {
+            const uint poly = 0xEDB88320u;
+            uint crc = 0xFFFFFFFFu;
+            foreach (byte b in File.ReadAllBytes(filePath))
+            {
+                crc ^= b;
+                for (int i = 0; i < 8; i++)
+                    crc = (crc & 1) != 0 ? (crc >> 1) ^ poly : crc >> 1;
+            }
+            return crc ^ 0xFFFFFFFFu;
+        }
+
+        private static async Task CheckGameControllerDb(bool background)
+        {
+            try
+            {
+                // Download the remote file to the cache
+                var cachedPath = Path.Combine(InstallPath, "gamecontrollerdb.txt");
+                byte[] data = await httpClient.GetByteArrayAsync(GameControllerDbUrl).ConfigureAwait(false);
+                await File.WriteAllBytesAsync(cachedPath, data).ConfigureAwait(false);
+
+                // Compare CRC32 against the installed copy — any difference means the remote was updated
+                if (File.Exists(App.GameControllerDbPath) && ComputeCrc32(cachedPath) == ComputeCrc32(App.GameControllerDbPath))
+                {
+                    LogManager.LogInformation("gamecontrollerdb.txt is already up to date");
+                    return;
+                }
+
+                controllerDbFile = new UpdateFile
+                {
+                    filename = "gamecontrollerdb.txt",
+                    uri = new Uri(GameControllerDbUrl),
+                    filesize = data.Length,
+                    isGameControllerDb = true
+                };
+
+                ControllerDbAvailable.Message = "A newer SDL Game Controller database is available";
+                ManagerFactory.notificationManager.Add(ControllerDbAvailable);
+                ToastManager.SendToast(ControllerDbAvailable.Action, ControllerDbAvailable.Message);
+
+                // File is already in the cache — surface it as Downloaded so the UI shows "Install Now"
+                Updated?.Invoke(UpdateStatus.ControllerDbReady, controllerDbFile, null);
+                Updated?.Invoke(UpdateStatus.Downloaded, controllerDbFile, null);
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogWarning("Failed to check gamecontrollerdb.txt: {0}", ex.Message);
+            }
+        }
+
+        private static async Task CheckGithubUpdate(bool background)
+        {
             try
             {
                 var resp = await httpClient.GetAsync($"{updateUrl}/releases/latest");
@@ -189,6 +238,20 @@ namespace HandheldCompanion.Managers
                 updateStatus = UpdateStatus.Failed;
                 Updated?.Invoke(updateStatus, null, null);
             }
+        }
+
+        public static async Task StartProcess(bool background)
+        {
+            if (!background)
+            {
+                updateStatus = UpdateStatus.Checking;
+                Updated?.Invoke(updateStatus, null, null);
+            }
+
+            await Task.WhenAll(
+                CheckGameControllerDb(background),
+                CheckGithubUpdate(background)
+            );
         }
 
         public static async Task DownloadUpdateFile(UpdateFile update)
@@ -238,6 +301,7 @@ namespace HandheldCompanion.Managers
         }
 
         private static Notification UpdateAvailable = new("Update Manager", "An update is ready for download") { IsInternal = true, IsIndeterminate = true };
+        private static Notification ControllerDbAvailable = new("Update Manager", "A newer SDL Game Controller database is available") { IsInternal = true, IsIndeterminate = true };
         private static void ParseLatest(string contentsJson)
         {
             try
@@ -307,6 +371,27 @@ namespace HandheldCompanion.Managers
 
         public static bool InstallUpdate(UpdateFile updateFile)
         {
+            if (updateFile.isGameControllerDb)
+            {
+                var cached = Path.Combine(InstallPath, updateFile.filename);
+                if (!File.Exists(cached))
+                    return false;
+
+                try
+                {
+                    File.Copy(cached, App.GameControllerDbPath, overwrite: true);
+
+                    LogManager.LogInformation("gamecontrollerdb.txt installed successfully");
+                    ControllerManager.LoadGamepadMappings();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    LogManager.LogWarning("Failed to install gamecontrollerdb.txt: {0}", ex.Message);
+                    return false;
+                }
+            }
+
             var filename = Path.Combine(InstallPath, updateFile.filename);
 
             if (!File.Exists(filename))

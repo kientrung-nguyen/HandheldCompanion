@@ -66,6 +66,9 @@ namespace HandheldCompanion.Managers
         public static event ConnectStatusChangedEventHandler? StatusChanged;
         public delegate void ConnectStatusChangedEventHandler(VirtualManagerStatus status, int attempt, int maxAttempts);
 
+        public static event MasterIntervalOverrideChangedEventHandler? MasterIntervalOverrideChanged;
+        public delegate void MasterIntervalOverrideChangedEventHandler(int? overrideHz);
+
         static VirtualManager()
         {
             // verifying ViGEm is installed
@@ -83,6 +86,16 @@ namespace HandheldCompanion.Managers
 
             // prepare vJoy SDL mapping
             VJoyTarget.WriteSDLGameControllerMapping();
+        }
+		
+        public static int? GetMasterIntervalOverrideHz()
+        {
+            return vTarget?.MasterIntervalOverrideHz;
+        }
+
+        private static void NotifyMasterIntervalOverrideChanged()
+        {
+            MasterIntervalOverrideChanged?.Invoke(GetMasterIntervalOverrideHz());
         }
 
         public static async void Start()
@@ -408,6 +421,7 @@ namespace HandheldCompanion.Managers
                     vTarget.Disconnect();
                     vTarget.Dispose();
                     vTarget = null;
+                	NotifyMasterIntervalOverrideChanged();
                 }
 
                 // Sanity-check: if the ViGEm client isn't available, abort
@@ -440,6 +454,7 @@ namespace HandheldCompanion.Managers
                 {
                     if (mode != HIDmode.NoController)
                         LogManager.LogError("Failed to initialise virtual controller with HIDmode: {0}", mode);
+                	NotifyMasterIntervalOverrideChanged();
                     return;
                 }
 
@@ -454,6 +469,7 @@ namespace HandheldCompanion.Managers
 
                 // Notify subscribers about the controller change
                 ControllerSelected?.Invoke(mode);
+            	NotifyMasterIntervalOverrideChanged();
             }
             catch { }
             finally

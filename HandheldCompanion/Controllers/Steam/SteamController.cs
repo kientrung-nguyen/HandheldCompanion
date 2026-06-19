@@ -60,7 +60,7 @@ namespace HandheldCompanion.Controllers.Steam
                     return "\u2279";
                 case ButtonFlags.Special:
                     return "\u21E4";
-                case ButtonFlags.OEM1:
+                case ButtonFlags.Special2:
                     return "\u21E5";
                 case ButtonFlags.LeftStickTouch:
                     return "\u21DA";

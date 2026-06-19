@@ -243,6 +243,9 @@
                     x:Name="EnhancedSleepCard"
                     Description="{l:Static resx:Resources.DevicePage_EnhancedSleepDesc}"
                     Header="{l:Static resx:Resources.DevicePage_EnhancedSleep}">
+                    <ui:SettingsCard.HeaderIcon>
+                        <ui:FontIcon Glyph="&#xE708;" />
+                    </ui:SettingsCard.HeaderIcon>
                     <ui:ToggleSwitch x:Name="Toggle_EnhancedSleep" Toggled="Toggle_EnhancedSleep_Toggled" />
                 </ui:SettingsCard>
 
@@ -251,6 +254,9 @@
                     x:Name="GoBackToSleepCard"
                     Description="{l:Static resx:Resources.DevicePage_GoBackToSleepDesc}"
                     Header="{l:Static resx:Resources.DevicePage_GoBackToSleep}">
+                    <ui:SettingsCard.HeaderIcon>
+                        <ui:FontIcon Glyph="&#xE72E;" />
+                    </ui:SettingsCard.HeaderIcon>
                     <ui:ToggleSwitch x:Name="Toggle_GoBackToSleep" Toggled="Toggle_GoBackToSleep_Toggled" />
                 </ui:SettingsCard>
             </ikw:SimpleStackPanel>
@@ -294,7 +300,25 @@
                     </ToggleButton>
                 </ui:SettingsCard>
 
-                <ui:ProgressBar IsIndeterminate="True" Visibility="{Binding ManufacturerAppBusy, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=False}" />
+                <ui:ProgressBar IsIndeterminate="{Binding ManufacturerAppBusy, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Visibility="{Binding ManufacturerAppBusy, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=False}" />
+            </ikw:SimpleStackPanel>
+
+            <!--  Display options  -->
+            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_DisplayOptions}" />
+            <ikw:SimpleStackPanel Name="DisplayOptionsStack" Spacing="3">
+
+                <!--  Docked display behavior  -->
+                <ui:SettingsCard Description="{l:Static resx:Resources.DevicePage_DockedDisplayBehaviorDesc}" Header="{l:Static resx:Resources.DevicePage_DockedDisplayBehavior}">
+                    <ui:SettingsCard.HeaderIcon>
+                        <ui:FontIcon Glyph="&#xE7F4;" />
+                    </ui:SettingsCard.HeaderIcon>
+                    <ComboBox Name="cB_DockedDisplayBehavior" SelectionChanged="cB_DockedDisplayBehavior_SelectionChanged">
+                        <ComboBoxItem Content="{l:Static resx:Resources.DevicePage_DockedDisplayBehavior_DoNothing}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.DevicePage_DockedDisplayBehavior_SwitchToExternal}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.DevicePage_DockedDisplayBehavior_SwitchToExternalWhenCharging}" />
+                    </ComboBox>
+                </ui:SettingsCard>
+
             </ikw:SimpleStackPanel>
 
             <!--  Battery options  -->
@@ -625,13 +649,14 @@
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.SettingsPage_SensorOptions}" />
             <ikw:SimpleStackPanel Name="SensorOptionsStack" Spacing="3">
                 <!--  Sensor Selection  -->
-                <ui:SettingsCard
-                    Name="SensorSelectionCard"
+                <ui:SettingsExpander
+                    Name="SensorSelectionExpander"
+                    d:IsExpanded="True"
                     Description="{l:Static resx:Resources.SettingsPage_SensorSelectionDesc}"
                     Header="{l:Static resx:Resources.SettingsPage_SensorSelection}">
-                    <ui:SettingsCard.HeaderIcon>
+                    <ui:SettingsExpander.HeaderIcon>
                         <ui:FontIcon Glyph="&#xE950;" />
-                    </ui:SettingsCard.HeaderIcon>
+                    </ui:SettingsExpander.HeaderIcon>
                     <ComboBox Name="cB_SensorSelection" SelectionChanged="cB_SensorSelection_SelectionChanged">
                         <ComboBoxItem
                             Name="SensorNone"
@@ -650,102 +675,82 @@
                             Content="{l:Static resx:Resources.MainWindow_navController}"
                             IsEnabled="False" />
                     </ComboBox>
-                </ui:SettingsCard>
 
-                <!--  Sensor Calibration  -->
-                <ui:SettingsCard Description="{l:Static resx:Resources.SettingsPage_SensorCalibrationDesc}" Header="{l:Static resx:Resources.SettingsPage_SensorCalibration}">
-                    <ui:SettingsCard.HeaderIcon>
-                        <ui:FontIcon Glyph="&#xE950;" />
-                    </ui:SettingsCard.HeaderIcon>
-                    <Button
-                        Name="ui_button_calibrate"
-                        Click="ui_button_calibrate_Click"
-                        Content="{l:Static resx:Resources.DevicePage_SensorCalibration_Button}"
-                        FontSize="14"
-                        Style="{DynamicResource AccentButtonStyle}" />
-                </ui:SettingsCard>
+                    <ui:SettingsExpander.Items>
+                        <!--  Sensor Calibration  -->
+                        <ui:SettingsCard Description="{l:Static resx:Resources.SettingsPage_SensorCalibrationDesc}" Header="{l:Static resx:Resources.SettingsPage_SensorCalibration}">
+                            <Button
+                                Name="ui_button_calibrate"
+                                Click="ui_button_calibrate_Click"
+                                Content="{l:Static resx:Resources.DevicePage_SensorCalibration_Button}"
+                                FontSize="14"
+                                Style="{DynamicResource AccentButtonStyle}" />
+                        </ui:SettingsCard>
 
-                <!--  Sensor Placement Direction  -->
-                <ui:SettingsCard
-                    Name="SensorPlacementVisualisation"
-                    Description="{l:Static resx:Resources.SettingsPage_SensorPlacementDirectionDesc}"
-                    Header="{l:Static resx:Resources.SettingsPage_SensorPlacementDirection}"
-                    Visibility="{Binding Source={x:Reference cB_SensorSelection}, Path=SelectedIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
-                    <ui:SettingsCard.HeaderIcon>
-                        <ui:FontIcon Glyph="&#xE80A;" />
-                    </ui:SettingsCard.HeaderIcon>
-                    <ikw:SimpleStackPanel
-                        Name="Grid_SensorPlacementVisualisation"
-                        HorizontalAlignment="Right"
-                        IsEnabled="False"
-                        Spacing="3">
-                        <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3">
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Tag="99"
-                                Visibility="Hidden" />
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Click="SensorPlacement_Click"
-                                Tag="0" />
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Tag="99"
-                                Visibility="Hidden" />
-                        </ikw:SimpleStackPanel>
-                        <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3">
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Click="SensorPlacement_Click"
-                                Tag="1" />
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Tag="99"
-                                Visibility="Hidden" />
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Click="SensorPlacement_Click"
-                                Tag="2" />
-                        </ikw:SimpleStackPanel>
-                        <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3">
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Tag="99"
-                                Visibility="Hidden" />
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Click="SensorPlacement_Click"
-                                Tag="3" />
-                            <Button
-                                Width="50"
-                                Height="50"
-                                Tag="99"
-                                Visibility="Hidden" />
-                        </ikw:SimpleStackPanel>
-                    </ikw:SimpleStackPanel>
-                </ui:SettingsCard>
-                <!--  Sensor Placement Mirror  -->
-                <ui:SettingsCard
-                    Name="SensorPlacementUpsideDown"
-                    Description="{l:Static resx:Resources.SettingsPage_SensorPlacementUpsideDownDesc}"
-                    Header="{l:Static resx:Resources.SettingsPage_SensorPlacementUpsideDown}">
-                    <!--  Visibility="{Binding Source={x:Reference cB_SensorSelection}, Path=SelectedIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}"  -->
-                    <ui:SettingsCard.HeaderIcon>
-                        <ui:FontIcon Glyph="&#xE1CA;" />
-                    </ui:SettingsCard.HeaderIcon>
-                    <ui:ToggleSwitch
-                        Name="Toggle_SensorPlacementUpsideDown"
-                        IsEnabled="False"
-                        Toggled="Toggle_SensorPlacementUpsideDown_Toggled" />
-                </ui:SettingsCard>
+                        <!--  Sensor Placement Mirror  -->
+                        <ui:SettingsCard
+                            Name="SensorPlacementUpsideDown"
+                            Description="{l:Static resx:Resources.SettingsPage_SensorPlacementUpsideDownDesc}"
+                            Header="{l:Static resx:Resources.SettingsPage_SensorPlacementUpsideDown}">
+                            <ui:ToggleSwitch Name="Toggle_SensorPlacementUpsideDown" Toggled="Toggle_SensorPlacementUpsideDown_Toggled" />
+                        </ui:SettingsCard>
+
+                        <!--  Sensor Placement Direction  -->
+                        <ui:SettingsCard
+                            Name="SensorPlacementVisualisation"
+                            Description="{l:Static resx:Resources.SettingsPage_SensorPlacementDirectionDesc}"
+                            Header="{l:Static resx:Resources.SettingsPage_SensorPlacementDirection}">
+                            <Grid Name="Grid_SensorPlacementVisualisation" IsEnabled="False">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="50" />
+                                    <RowDefinition Height="3" />
+                                    <RowDefinition Height="50" />
+                                    <RowDefinition Height="3" />
+                                    <RowDefinition Height="50" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="50" />
+                                    <ColumnDefinition Width="3" />
+                                    <ColumnDefinition Width="50" />
+                                    <ColumnDefinition Width="3" />
+                                    <ColumnDefinition Width="50" />
+                                </Grid.ColumnDefinitions>
+                                <!--  Top  -->
+                                <Button
+                                    Grid.Row="0"
+                                    Grid.Column="2"
+                                    Width="50"
+                                    Height="50"
+                                    Click="SensorPlacement_Click"
+                                    Tag="0" />
+                                <!--  Left  -->
+                                <Button
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Width="50"
+                                    Height="50"
+                                    Click="SensorPlacement_Click"
+                                    Tag="1" />
+                                <!--  Right  -->
+                                <Button
+                                    Grid.Row="2"
+                                    Grid.Column="4"
+                                    Width="50"
+                                    Height="50"
+                                    Click="SensorPlacement_Click"
+                                    Tag="2" />
+                                <!--  Bottom  -->
+                                <Button
+                                    Grid.Row="4"
+                                    Grid.Column="2"
+                                    Width="50"
+                                    Height="50"
+                                    Click="SensorPlacement_Click"
+                                    Tag="3" />
+                            </Grid>
+                        </ui:SettingsCard>
+                    </ui:SettingsExpander.Items>
+                </ui:SettingsExpander>
             </ikw:SimpleStackPanel>
 
             <ikw:SimpleStackPanel Spacing="8">

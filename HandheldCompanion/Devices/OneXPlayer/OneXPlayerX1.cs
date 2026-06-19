@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Commands.Functions.HC;
+using HandheldCompanion.Commands.Functions.Windows;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc.Threading.Tasks;
@@ -22,6 +23,8 @@ namespace HandheldCompanion.Devices;
 public class OneXPlayerX1 : OneXAOKZOE
 {
     private SerialPort? _serialPort; // COM3 SerialPort for Device control of OneXPlayer
+    private OneXPlayerOxpHidMonitor? _vendorHidMonitor;
+    protected OxpHidInitProfile VendorHidInitProfile = OxpHidInitProfile.X1;
 
     // Enable COM Port for LED Control
     public bool EnableSerialPort = true;
@@ -123,10 +126,17 @@ public class OneXPlayerX1 : OneXAOKZOE
             false, ButtonFlags.OEM1
             ));
 
+        OEMChords.Add(new KeyboardChord("Keyboard",
+            [KeyCode.RControlKey, KeyCode.LWin, KeyCode.O],
+            [KeyCode.O, KeyCode.LWin, KeyCode.RControlKey],
+            false, ButtonFlags.OEM2
+            ));
+
         // prepare hotkeys
         DeviceHotkeys[typeof(MainWindowCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = true;
         DeviceHotkeys[typeof(MainWindowCommands)].InputsChordType = InputsChordType.Long;
         DeviceHotkeys[typeof(QuickToolsCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = true;
+        DeviceHotkeys[typeof(OnScreenKeyboardCommands)].inputsChord.ButtonState[ButtonFlags.OEM2] = true;
     }
 
     public override string GetGlyph(ButtonFlags button)
@@ -135,6 +145,8 @@ public class OneXPlayerX1 : OneXAOKZOE
         {
             case ButtonFlags.OEM1:
                 return "\u2211";
+            case ButtonFlags.OEM2:
+                return "\u2210";
         }
 
         return defaultGlyph;
@@ -189,6 +201,16 @@ public class OneXPlayerX1 : OneXAOKZOE
         return success;
     }
 
+    public override void OpenEvents()
+    {
+        base.OpenEvents();
+
+        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
+        ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
+
+        Device_Inserted();
+    }
+
     protected override void QuerySettings()
     {
         // raise events
@@ -210,6 +232,11 @@ public class OneXPlayerX1 : OneXAOKZOE
 
     public override void Close()
     {
+        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
+        ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
+
+        StopVendorHidListener();
+
         if (_serialPort is not null)
         {
             try
@@ -435,6 +462,84 @@ public class OneXPlayerX1 : OneXAOKZOE
                 Task.Delay(TaskDelay).Wait();
             });
         }
+    }
+
+    private void ControllerManager_ControllerPlugged(Controllers.IController controller, bool isPowerCycling)
+    {
+        if (controller.GetVendorID() == vendorId && productIds.Contains(controller.GetProductID()))
+            Device_Inserted(true);
+    }
+
+    private void ControllerManager_ControllerUnplugged(Controllers.IController controller, bool wasPowerCycling, bool wasTarget)
+    {
+        if (controller.GetVendorID() == vendorId && productIds.Contains(controller.GetProductID()))
+            Device_Removed();
+    }
+
+    private void Device_Removed()
+    {
+        StopVendorHidListener();
+    }
+
+    private async void Device_Inserted(bool reScan = false)
+    {
+        if (reScan)
+            await WaitUntilReady();
+
+        StopVendorHidListener();
+        StartVendorHidListener();
+    }
+
+    protected virtual void StartVendorHidListener()
+    {
+        if (_vendorHidMonitor is not null)
+            return;
+
+        _vendorHidMonitor = new OneXPlayerOxpHidMonitor();
+        _vendorHidMonitor.ButtonChanged += VendorHidMonitor_ButtonChanged;
+        if (!_vendorHidMonitor.Open(VendorHidInitProfile))
+        {
+            _vendorHidMonitor.ButtonChanged -= VendorHidMonitor_ButtonChanged;
+            _vendorHidMonitor.Dispose();
+            _vendorHidMonitor = null;
+            return;
+        }
+
+        LogManager.LogInformation("Started OneXPlayer vendor HID listener");
+    }
+
+    protected virtual void StopVendorHidListener()
+    {
+        if (_vendorHidMonitor is null)
+            return;
+
+        _vendorHidMonitor.ButtonChanged -= VendorHidMonitor_ButtonChanged;
+        _vendorHidMonitor.Dispose();
+        _vendorHidMonitor = null;
+    }
+
+    private void VendorHidMonitor_ButtonChanged(byte buttonId, bool pressed)
+    {
+        ButtonFlags button = MapVendorButton(buttonId);
+        if (button == ButtonFlags.None)
+            return;
+
+        if (pressed)
+            KeyPress(button);
+        else
+            KeyRelease(button);
+    }
+
+    protected virtual ButtonFlags MapVendorButton(byte buttonId)
+    {
+        return buttonId switch
+        {
+            0x21 => ButtonFlags.Special,
+            0x22 => ButtonFlags.R4,
+            0x23 => ButtonFlags.L4,
+            0x24 => ButtonFlags.OEM2,
+            _ => ButtonFlags.None,
+        };
     }
 
     private bool CheckIsBatteryProtectionSupported()

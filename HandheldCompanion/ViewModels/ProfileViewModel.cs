@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Views;
 using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern.Controls;
@@ -95,6 +96,14 @@ namespace HandheldCompanion.ViewModels
             Artwork = LibraryResources.MissingArtwork;
             Logo = null;
             visualsLoaded = false;
+        }
+
+        private static bool HasDisplayCover(BitmapImage? image)
+        {
+            if (image is null || image == LibraryResources.MissingCover)
+                return false;
+
+            return image.PixelWidth > 0 && image.PixelHeight > 0;
         }
 
         private static bool HasDisplayArtwork(BitmapImage? image)
@@ -242,6 +251,8 @@ namespace HandheldCompanion.ViewModels
                 Artwork = artwork;
                 Logo = logo;
                 visualsLoaded = true;
+
+                LogManager.LogTrace("{0} loaded artworks.", this.Name);
             }
             catch (OperationCanceledException)
             {
@@ -299,17 +310,17 @@ namespace HandheldCompanion.ViewModels
 
             bool isAnyVisualVisible = visualVisibilitySources.Count > 0;
 
-            if (!isAnyVisualVisible && immediate)
-            {
-                areVisualsVisible = false;
-                ReleaseVisuals();
-                return;
-            }
-
             if (wasVisible == isAnyVisualVisible)
                 return;
 
             areVisualsVisible = isAnyVisualVisible;
+
+            if (!isAnyVisualVisible && immediate)
+            {
+                LogManager.LogTrace("{0} unloaded artworks.", this.Name);
+                ReleaseVisuals();
+                return;
+            }
 
             if (!isAnyVisualVisible)
             {

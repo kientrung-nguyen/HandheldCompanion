@@ -1,4 +1,5 @@
 using HandheldCompanion.Devices;
+using HandheldCompanion.Devices.Lenovo;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;

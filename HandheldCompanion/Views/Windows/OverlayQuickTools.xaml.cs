@@ -259,7 +259,7 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             // Common settings across cases 0 and 1
             MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfBounds.Width);
-            Width = 500; // (int)Math.Max(MinWidth, ManagerFactory.settingsManager.GetDouble("QuickToolsWidth"));
+            Width = 550; // (int)Math.Max(MinWidth, ManagerFactory.settingsManager.GetDouble("QuickToolsWidth"));
             MaxHeight = Math.Min(targetScreen.WpfBounds.Height - (Margin.Top + Margin.Bottom), _MaxHeight);
             Height = MinHeight = MaxHeight;
             WindowStyle = WindowStyle.ToolWindow; // default style
@@ -651,7 +651,7 @@ public partial class OverlayQuickTools : GamepadWindow
             NavView_Navigate(_page);
     }
 
-    public void NavigateToPage(string navItemTag)
+    public override void NavigateToPage(string navItemTag)
     {
         if (prevNavItemTag == navItemTag)
             return;
@@ -700,6 +700,11 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             // Update previous navigation item
             prevNavItemTag = ContentFrame.CurrentSourcePageType.Name;
+
+            // Sync the NavigationView selected item to the current page (handles back navigation)
+            navView.SelectedItem = navView.MenuItems
+                .OfType<NavigationViewItem>()
+                .FirstOrDefault(item => item.Tag?.ToString() == prevNavItemTag);
         }
     }
 

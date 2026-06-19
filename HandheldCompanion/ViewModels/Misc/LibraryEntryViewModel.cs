@@ -49,12 +49,12 @@ namespace HandheldCompanion.ViewModels
             if (LibEntry is ManualEntry manualEntry)
             {
                 // Full-res extension comes from the cached source file; thumbnail is always a resized PNG.
-                string coverExt   = Path.GetExtension(manualEntry.ManualCoverPath);
+                string coverExt = Path.GetExtension(manualEntry.ManualCoverPath);
                 string artworkExt = Path.GetExtension(manualEntry.ManualArtworkPath);
-                string logoExt    = Path.GetExtension(manualEntry.ManualLogoPath);
-                LibraryCovers.Add(new(this,   ManualEntry.ManualCoverId,   coverExt,   ".png"));
+                string logoExt = Path.GetExtension(manualEntry.ManualLogoPath);
+                LibraryCovers.Add(new(this, ManualEntry.ManualCoverId, coverExt, ".png"));
                 LibraryArtworks.Add(new(this, ManualEntry.ManualArtworkId, artworkExt, ".png"));
-                LibraryLogos.Add(new(this,    ManualEntry.ManualLogoId,    logoExt,    ".png"));
+                LibraryLogos.Add(new(this, ManualEntry.ManualLogoId, logoExt, ".png"));
             }
             else if (LibEntry is SteamGridEntry steamEntry)
             {

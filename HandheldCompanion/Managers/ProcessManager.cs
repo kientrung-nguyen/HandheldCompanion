@@ -639,6 +639,8 @@ public class ProcessManager : IManager
             case "startmenuexperiencehost.exe":
             case "textinputhost.exe":
             case "shellhost.exe":
+            case "pickerhost.exe":
+            case "gamingservicesui.exe":
                 return ProcessFilter.Restricted;
 
             // Desktop

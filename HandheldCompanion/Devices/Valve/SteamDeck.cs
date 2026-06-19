@@ -95,17 +95,6 @@ public class SteamDeck : IDevice
         DeviceHotkeys[typeof(QuickToolsCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = true;
     }
 
-    public override string GetGlyph(ButtonFlags button)
-    {
-        switch (button)
-        {
-            case ButtonFlags.OEM1:
-                return "\u21E5";
-        }
-
-        return defaultGlyph;
-    }
-
     public override bool Open()
     {
         if (IsOpen)

@@ -19,6 +19,9 @@ namespace HandheldCompanion.Actions
     {
         public AxisLayoutFlags Axis;
 
+        public short ButtonX = 0;
+        public short ButtonY = 0;
+
         // Deadzone / anti-deadzone settings (percent, 0..100)
         public int AxisAntiDeadZone = 0;
         public int AxisDeadZoneInner = 0;
@@ -41,11 +44,30 @@ namespace HandheldCompanion.Actions
         public float XOuput { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => outVector.X; }
         public float YOuput { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => outVector.Y; }
 
+        public override void Execute(ButtonFlags button, bool value, ShiftSlot shiftSlot, float delta)
+        {
+            base.Execute(button, value, shiftSlot, delta);
+
+            if (!outBool)
+            {
+                outVector = Vector2.Zero;
+                return;
+            }
+
+            outVector = new Vector2(ButtonX, ButtonY);
+            ApplyAxisModifiers();
+        }
+
         public override void Execute(AxisLayout layout, ShiftSlot shiftSlot, float delta)
         {
             outVector = layout.vector;
             base.Execute(layout, shiftSlot, delta);
 
+            ApplyAxisModifiers();
+        }
+
+        private void ApplyAxisModifiers()
+        {
             if (outVector == Vector2.Zero) return;
 
             // Apply radial deadzones

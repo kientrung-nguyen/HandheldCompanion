@@ -1076,9 +1076,6 @@
   <data name="Hotkey_LayoutMode" xml:space="preserve">
     <value>控制器模式</value>
   </data>
-  <data name="Hotkey_LayoutModeDesc" xml:space="preserve">
-    <value>更改控制器模式：自动，游戏手柄，桌面</value>
-  </data>
   <data name="Hotkey_ControlCenter" xml:space="preserve">
     <value>操作中心</value>
   </data>
@@ -1721,9 +1718,6 @@
   <data name="Enum_XInputController_ButtonFlags_R1" xml:space="preserve">
     <value>RB</value>
   </data>
-  <data name="Enum_XInputController_ButtonFlags_Special" xml:space="preserve">
-    <value>导航键</value>
-  </data>
   <data name="Enum_XInputController_ButtonFlags_Start" xml:space="preserve">
     <value>Menu</value>
   </data>
@@ -1738,12 +1732,6 @@
   </data>
   <data name="Enum_InputsHotkeyType_Handheld" xml:space="preserve">
     <value>掌机</value>
-  </data>
-  <data name="Enum_SteamDeck_ButtonFlags_OEM1" xml:space="preserve">
-    <value>Options</value>
-  </data>
-  <data name="Enum_NeptuneController_ButtonFlags_Special" xml:space="preserve">
-    <value>STEAM</value>
   </data>
   <data name="Enum_ROGAlly_ButtonFlags_OEM1" xml:space="preserve">
     <value>Command center</value>
@@ -3416,9 +3404,6 @@
   <data name="Enum_DualShock4Controller_ButtonFlags_Back" xml:space="preserve">
     <value>Share</value>
   </data>
-  <data name="Enum_DualShock4Controller_ButtonFlags_Special" xml:space="preserve">
-    <value>Sony</value>
-  </data>
   <data name="Enum_DualShock4Controller_ButtonFlags_Start" xml:space="preserve">
     <value>Options</value>
   </data>
@@ -3466,12 +3451,6 @@
   </data>
   <data name="Enum_NintendoSwitchProController_ButtonFlags_R1" xml:space="preserve">
     <value>R</value>
-  </data>
-  <data name="Enum_NintendoSwitchProController_ButtonFlags_Special" xml:space="preserve">
-    <value>Home</value>
-  </data>
-  <data name="Enum_NintendoSwitchProController_ButtonFlags_Special2" xml:space="preserve">
-    <value>Capture</value>
   </data>
   <data name="Enum_NintendoSwitchProController_ButtonFlags_Start" xml:space="preserve">
     <value>Plus</value>
@@ -3607,9 +3586,6 @@
   </data>
   <data name="Enum_Xbox360Controller_ButtonFlags_RightThumbUp" xml:space="preserve">
     <value>左摇杆上推</value>
-  </data>
-  <data name="Enum_Xbox360Controller_ButtonFlags_Special" xml:space="preserve">
-    <value>导航键</value>
   </data>
   <data name="Enum_Xbox360Controller_ButtonFlags_Start" xml:space="preserve">
     <value>Menu</value>

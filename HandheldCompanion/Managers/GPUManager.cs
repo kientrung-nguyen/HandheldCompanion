@@ -194,24 +194,7 @@ namespace HandheldCompanion.Managers
             {
                 case "GPUManagementEnabled":
                     _gpuManagementEnabled = Convert.ToBoolean(value);
-                    if (!_gpuManagementEnabled)
-                    {
-                        // restore GPU defaults when management is disabled
-                        if (currentGPU is null)
-                            break;
-                        try
-                        {
-                            if (currentGPU is AMDGPU amdGPU)
-                            {
-                                if (amdGPU.GetRSR()) amdGPU.SetRSR(false);
-                                if (amdGPU.GetAFMF()) amdGPU.SetAFMF(false);
-                            }
-                            if (currentGPU.GetIntegerScaling()) currentGPU.SetIntegerScaling(false, 0);
-                            if (currentGPU.GetImageSharpening()) currentGPU.SetImageSharpening(false);
-                        }
-                        catch { }
-                    }
-                    else
+                    if (_gpuManagementEnabled)
                     {
                         // re-apply current profile GPU settings when management is re-enabled
                         Profile? profile = ManagerFactory.profileManager.GetCurrent();
@@ -253,7 +236,7 @@ namespace HandheldCompanion.Managers
 
         private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
         {
-            if (!IsReady || currentGPU is null)
+            if (!IsReady || !_gpuManagementEnabled || currentGPU is null)
                 return;
 
             if (currentGPU is IntelGPU intelGPU)
@@ -264,7 +247,7 @@ namespace HandheldCompanion.Managers
 
         private void PowerProfileManager_Discarded(PowerProfile profile, bool swapped)
         {
-            if (!IsReady || currentGPU is null)
+            if (!IsReady || !_gpuManagementEnabled || currentGPU is null)
                 return;
 
             // don't bother discarding settings, new one will be enforce shortly
@@ -488,7 +471,7 @@ namespace HandheldCompanion.Managers
 
         private void CurrentGPU_RSRStateChanged(bool Supported, bool Enabled, int Sharpness)
         {
-            if (!IsReady)
+            if (!IsReady || !_gpuManagementEnabled)
                 return;
 
             // todo: use ProfileManager events
@@ -504,7 +487,7 @@ namespace HandheldCompanion.Managers
 
         private void CurrentGPU_AFMFStateChanged(bool Supported, bool Enabled)
         {
-            if (!IsReady)
+            if (!IsReady || !_gpuManagementEnabled)
                 return;
 
             // todo: use ProfileManager events
@@ -518,7 +501,7 @@ namespace HandheldCompanion.Managers
 
         private void CurrentGPU_AFMF21StateChanged(bool AlgorithmSupported, int Algorithm, int SearchMode, int PerformanceMode, int FastMotionResponse)
         {
-            if (!IsReady)
+            if (!IsReady || !_gpuManagementEnabled)
                 return;
 
             // todo: use ProfileManager events
@@ -538,7 +521,7 @@ namespace HandheldCompanion.Managers
 
         private void CurrentGPU_IntegerScalingChanged(bool Supported, bool Enabled)
         {
-            if (!IsReady)
+            if (!IsReady || !_gpuManagementEnabled)
                 return;
 
             // todo: use ProfileManager events
@@ -552,7 +535,7 @@ namespace HandheldCompanion.Managers
 
         private void CurrentGPU_GPUScalingChanged(bool Supported, bool Enabled, int Mode)
         {
-            if (!IsReady)
+            if (!IsReady || !_gpuManagementEnabled)
                 return;
 
             // todo: use ProfileManager events
@@ -568,7 +551,7 @@ namespace HandheldCompanion.Managers
 
         private void IntelGPU_EnduranceGamingState(bool Supported, ctl_3d_endurance_gaming_control_t Control, ctl_3d_endurance_gaming_mode_t Mode)
         {
-            if (!IsReady)
+            if (!IsReady || !_gpuManagementEnabled)
                 return;
 
             // todo: use PowerProfileManager events
@@ -583,7 +566,7 @@ namespace HandheldCompanion.Managers
 
         private void CurrentGPU_ImageSharpeningChanged(bool Enabled, int Sharpness)
         {
-            if (!IsReady)
+            if (!IsReady || !_gpuManagementEnabled)
                 return;
 
             // todo: use ProfileManager events

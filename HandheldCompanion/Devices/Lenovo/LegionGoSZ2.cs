@@ -1,4 +1,4 @@
-﻿namespace HandheldCompanion.Devices
+﻿namespace HandheldCompanion.Devices.Lenovo
 {
     public class LegionGoSZ2 : LegionGoSZ1
     {

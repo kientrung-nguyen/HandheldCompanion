@@ -135,6 +135,7 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(LiveName));
             OnPropertyChanged(nameof(IsEnabled));
             OnPropertyChanged(nameof(IsToggled));
+            OnPropertyChanged(nameof(HasDoubleExecute));
         }
 
         public override void Dispose()
@@ -149,6 +150,7 @@ namespace HandheldCompanion.ViewModels
         public string LiveName => CanCustom ? CustomName : Hotkey.command.LiveName;
         public string FontFamily => Hotkey.command.FontFamily;
         public int FontSize => Hotkey.command.FontSize;
+        public bool HasDoubleExecute => Hotkey.command.HasDoubleExecute;
 
         public string CustomName
         {

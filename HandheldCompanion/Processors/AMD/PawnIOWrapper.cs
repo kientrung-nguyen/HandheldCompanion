@@ -162,6 +162,11 @@ namespace HandheldCompanion.Processors.AMD
             return new Version();
         }
 
+        public bool IsInstalled()
+        {
+            return TryGetInstalledPawnIOVersion(out _);
+        }
+
         private static bool TryGetInstalledPawnIOVersion(out string? versionString)
         {
             versionString = null;
@@ -242,7 +247,7 @@ namespace HandheldCompanion.Processors.AMD
                         LogManager.LogError("Embedded resource not found: {0}", resourceName);
                         // List available resources for debugging
                         var available = assembly.GetManifestResourceNames();
-                        LogManager.LogInformation("Available resources ({0}): {1}", available.Length, string.Join(", ", available));
+                        LogManager.LogTrace("Available resources ({0}): {1}", available.Length, string.Join(", ", available));
                         return false;
                     }
 
@@ -250,7 +255,7 @@ namespace HandheldCompanion.Processors.AMD
                     {
                         stream.CopyTo(memoryStream);
                         byte[] moduleData = memoryStream.ToArray();
-                        LogManager.LogInformation("Loaded embedded resource {0} ({1} bytes)", resourceName, moduleData.Length);
+                        LogManager.LogTrace("Loaded embedded resource {0} ({1} bytes)", resourceName, moduleData.Length);
                         return LoadModuleFromBytes(moduleData, $"embedded:{resourceName}");
                     }
                 }
@@ -309,7 +314,7 @@ namespace HandheldCompanion.Processors.AMD
 
             try
             {
-                LogManager.LogInformation("Loading PawnIO module from {0} ({1} bytes)", sourceName, moduleData.Length);
+                LogManager.LogTrace("Loading PawnIO module from {0} ({1} bytes)", sourceName, moduleData.Length);
 
                 // Use IntPtr handle for loading (like ZenStates-Core)
                 bool result = DeviceIoControl(
@@ -328,7 +333,7 @@ namespace HandheldCompanion.Processors.AMD
                     _safeHandle = new SafeFileHandle(_rawHandle, true);
                     _rawHandle = IntPtr.Zero; // SafeFileHandle now owns this
                     _moduleLoaded = true;
-                    LogManager.LogInformation("Module loaded successfully");
+                    LogManager.LogTrace("Module loaded successfully");
                     return true;
                 }
                 else
@@ -380,7 +385,7 @@ namespace HandheldCompanion.Processors.AMD
                     Buffer.BlockCopy(inBuffer, 0, totalInput, FN_NAME_LENGTH, inSize * 8);
                 }
 
-                byte[] outBuffer = outSize > 0 ? new byte[outSize * 8] : null!;
+                byte[] outBuffer = outSize > 0 ? new byte[outSize * 8] : Array.Empty<byte>();
 
                 // Use SafeFileHandle for execute calls
                 bool result = DeviceIoControl(
@@ -395,7 +400,7 @@ namespace HandheldCompanion.Processors.AMD
 
                 if (result)
                 {
-                    if (outputArgs != null && outBuffer != null && bytesReturned > 0)
+                    if (outputArgs != null && bytesReturned > 0)
                     {
                         int elementsReturned = (int)Math.Min(bytesReturned / 8, (uint)outSize);
                         Buffer.BlockCopy(outBuffer, 0, outputArgs, 0, elementsReturned * 8);

@@ -37,6 +37,7 @@ namespace HandheldCompanion.Controllers
         });
 
         public const uint ERROR_SUCCESS = 0;
+        public const uint ERROR_UNAVAILABLE = 1;
         public const uint ERROR_INSUFFICIENT_BUFFER = 122;
         public const uint ERROR_DEVICE_NOT_CONNECTED = 1167;
 
@@ -104,7 +105,8 @@ namespace HandheldCompanion.Controllers
         {
             userIndex = byte.MaxValue;
             if (!IsAvailable)
-                return uint.MaxValue;
+                return ERROR_UNAVAILABLE;
+
             return OpenXInputGetUserIndex(devicePath, out userIndex);
         }
 
@@ -129,7 +131,8 @@ namespace HandheldCompanion.Controllers
         public static uint SetUserIndex(string devicePath, byte userIndex, bool powerDownOnChange)
         {
             if (!IsAvailable)
-                return uint.MaxValue;
+                return ERROR_UNAVAILABLE;
+
             return OpenXInputSetUserIndex(devicePath, userIndex, powerDownOnChange);
         }
 

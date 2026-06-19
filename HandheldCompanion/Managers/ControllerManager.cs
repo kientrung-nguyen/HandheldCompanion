@@ -85,6 +85,13 @@ public static class ControllerManager
         Automatic = 1
     }
 
+    public enum ControllerPlugBehavior
+    {
+        AutoConnect = 0,
+        AlwaysAsk = 1,
+        DoNothing = 2
+    }
+
     private static ControllerSlotManagementMode slotManagementMode = ControllerSlotManagementMode.Manual;
 
     // Manual prompting (debounce / ignore)
@@ -143,30 +150,33 @@ public static class ControllerManager
         if (IsInitialized)
             return;
 
-        // disable XInput from SDL
+        // Hints must be set before SDL_Init() — SDL reads them during subsystem initialization.
+        // Disable XInput so SDL does not enumerate XInput devices as SDL gamepads; those are
+        // handled separately through the XUsbDevice pipeline.
         SDL.SetHint(SDL.Hints.XInputEnabled, "0");
+        // Prevent SDL from exposing the Steam virtual controller and Steam Deck built-in
+        // controller through the HID API, avoiding double-enumeration with our own paths.
         SDL.SetHint(SDL.Hints.JoystickHIDAPISteam, "0");
         SDL.SetHint(SDL.Hints.JoystickHIDAPISteamdeck, "0");
 
-        // load SDL game controller database
-        // https://github.com/mdqinc/SDL_GameControllerDB
-        int loaded = SDL.AddGamepadMappingsFromFile("gamecontrollerdb.txt");
-
-        // Initialize SDL Gamepad
+        // Initialize the SDL Gamepad subsystem
         if (!SDL.Init(SDL.InitFlags.Gamepad))
             LogManager.LogError("SDL_Init Error: {0}", SDL.GetError());
         else
-            LogManager.LogInformation("SDL was successfully initialized with {0} gamepad supported", loaded);
+        {
+            LogManager.LogInformation("SDL was successfully initialized");
 
-        SDL.SetJoystickEventsEnabled(true);
-        SDL.SetGamepadEventsEnabled(true);
+            // Populate SDL's internal gamepad mapping table from the community database
+            LoadGamepadMappings();
 
-        foreach (SDL.EventType eventType in Enum.GetValues<SDL.EventType>())
-            SDL.SetEventEnabled((uint)eventType, false);
+            // Suppress all SDL event types by default to keep the event queue clean.
+            foreach (SDL.EventType eventType in Enum.GetValues<SDL.EventType>())
+                SDL.SetEventEnabled((uint)eventType, false);
 
-        // gamepad pipeline used by SDLController.PumpEvent()
-        SDL.SetEventEnabled((uint)SDL.EventType.GamepadAdded, true);
-        SDL.SetEventEnabled((uint)SDL.EventType.GamepadRemoved, true);
+            // Only GamepadAdded / GamepadRemoved are processed by the pump thread loop.
+            SDL.SetEventEnabled((uint)SDL.EventType.GamepadAdded, true);
+            SDL.SetEventEnabled((uint)SDL.EventType.GamepadRemoved, true);
+        }
 
         // manage pump thread
         pumpThreadRunning = true;
@@ -303,7 +313,7 @@ public static class ControllerManager
             return;
 
         // raise event, before layout mapping
-        EventHelper.RaiseInputsUpdatedAsync(InputsUpdated, controllerState, false);
+        InputsUpdated?.Invoke(controllerState, false);
 
         // get main motion safely
         byte gamepadIndex = tc.gamepadIndex;
@@ -333,7 +343,14 @@ public static class ControllerManager
 
         // compute layout (null-safe mapping)
         ControllerState mapped = ManagerFactory.layoutManager?.MapController(controllerState, delta) ?? controllerState;
-        EventHelper.RaiseInputsUpdatedAsync(InputsUpdated, mapped, true);
+        InputsUpdatedEventHandler? inputsUpdated = InputsUpdated;
+        if (inputsUpdated is not null)
+        {
+            if (ReferenceEquals(mapped, controllerState))
+                inputsUpdated(mapped, true);
+            else
+                EventHelper.RaiseInputsUpdatedAsync(inputsUpdated, mapped, true);
+        }
 
         // controller is muted
         if (ControllerMuted)
@@ -342,6 +359,10 @@ public static class ControllerManager
             mutedState.ButtonState[ButtonFlags.Special] = mapped.ButtonState[ButtonFlags.Special];
             mapped = mutedState;
         }
+
+        // Auto-raise pad touch flags when pad axes are non-zero, so downstream consumers don't require an explicit touch button mapping from the user.
+        mapped.ButtonState[ButtonFlags.LeftPadTouch] |= mapped.AxisState[AxisFlags.LeftPadX] != 0 || mapped.AxisState[AxisFlags.LeftPadY] != 0;
+        mapped.ButtonState[ButtonFlags.RightPadTouch] |= mapped.AxisState[AxisFlags.RightPadX] != 0 || mapped.AxisState[AxisFlags.RightPadY] != 0;
 
         DS4Touch.UpdateInputs(mapped);
         VirtualManager.UpdateInputs(mapped, gamepadMotion);
@@ -354,7 +375,7 @@ public static class ControllerManager
         while (pumpThreadRunning)
         {
             // check controller events every 1000ms; this is used by SDLController to detect disconnections and hotplug events
-            if (SDL.WaitEventTimeout(out SDL.Event e, 1000))
+            if (SDL.WaitEvent(out SDL.Event e))
             {
                 switch ((SDL.EventType)e.Type)
                 {
@@ -376,10 +397,8 @@ public static class ControllerManager
         if (controller.IsVirtual())
             return;
 
-        // don't show toast if this is the only controller 
         var physicalControllers = GetPhysicalControllers<IController>();
-        if (physicalControllers.Count() == 1)
-            return;
+        bool showActions = physicalControllers.Count() > 1 && PlugBehavior == ControllerPlugBehavior.AlwaysAsk;
 
         Color winColor = MainWindow.uiSettings.GetColorValue(UIColorType.Foreground);
 
@@ -389,7 +408,7 @@ public static class ControllerManager
             foreground: MediaColor.FromArgb(winColor.A, winColor.R, winColor.G, winColor.B));
 
         List<ToastAction> actions =
-        [
+            [
             new ToastAction
             {
                 Label = "Connect",
@@ -410,9 +429,9 @@ public static class ControllerManager
 
         ToastManager.SendToast(new ToastRequest
         {
-            Title = controller.ToString(),
-            Content = "detected",
-            Actions = actions,
+            Title = "Controller connected",
+            Content = $"{controller.ToString()} #{controller.GetUserIndex() + 1}",
+            Actions = showActions ? actions : new(),
         });
     }
 
@@ -545,10 +564,14 @@ public static class ControllerManager
                         LogManager.LogInformation("SDL controller {0} plugged", controller.ToString());
                         ControllerPlugged?.Invoke(controller, wasPowerCycling);
 
-                        if (!wasPowerCycling)
-                            ShowDetectedToast(controller, wasPowerCycling);
+                        bool isPhysical = controller.IsPhysical();
+                        if (isPhysical)
+                        {
+                            if (!wasPowerCycling && PlugBehavior == ControllerPlugBehavior.AlwaysAsk)
+                                ShowDetectedToast(controller, wasPowerCycling);
 
-                        PickTargetController();
+                            PickTargetController();
+                        }
                     }
                     finally { }
                 }
@@ -591,12 +614,14 @@ public static class ControllerManager
                             Controllers.TryRemove(path, out _);
                             SDLControllers.TryRemove(deviceIndex, out _);
 
+                            bool isPhysical = controller.IsPhysical();
+
                             controller.Gone();
 
-                            if (controller.IsPhysical() && HIDuncloakondisconnect)
+                            if (isPhysical && HIDuncloakondisconnect)
                                 controller.Unhide(false);
 
-                            if (ClearTargetIfMatch(controller.GetInstanceId()))
+                            if (isPhysical && ClearTargetIfMatch(controller.GetInstanceId()))
                                 PickTargetController();
                             else
                                 controller.Dispose();
@@ -664,13 +689,14 @@ public static class ControllerManager
                                 switch (ProductId)
                                 {
                                     case 0x1102:
-                                        if (details.GetMI() == 2)
+                                        if (details.GetMI() == 2) // Steam Controller has a 3-interface composite HID device, with the Valve feature-report controller surface on interface 2
                                             try { controller = new GordonController(details); } catch { }
                                         break;
                                     case 0x1142:
                                         try { controller = new GordonController(details); } catch { }
                                         break;
-                                    case 0x1205:
+                                    case 0x1205: // Steam Deck Controller (Neptune)
+                                    case 0x12f0: // SteamOS Handheld Controller
                                         try { controller = new NeptuneController(details); } catch { }
                                         break;
                                 }
@@ -735,10 +761,14 @@ public static class ControllerManager
                     LogManager.LogInformation("Generic controller {0} plugged", controller.ToString());
                     ControllerPlugged?.Invoke(controller, wasPowerCycling);
 
-                    if (!wasPowerCycling)
-                        ShowDetectedToast(controller, wasPowerCycling);
+                    bool isPhysical = controller.IsPhysical();
+                    if (isPhysical)
+                    {
+                        if (!wasPowerCycling)
+                            ShowDetectedToast(controller, wasPowerCycling);
 
-                    PickTargetController();
+                        PickTargetController();
+                    }
                 }
                 catch { }
                 finally { }
@@ -791,12 +821,14 @@ public static class ControllerManager
                     {
                         Controllers.TryRemove(details.baseContainerDeviceInstanceId, out _);
 
+                        bool isPhysical = controller.IsPhysical();
+
                         controller.Gone();
 
-                        if (controller.IsPhysical() && HIDuncloakondisconnect)
+                        if (isPhysical && HIDuncloakondisconnect)
                             controller.Unhide(false);
 
-                        if (ClearTargetIfMatch(controller.GetInstanceId()))
+                        if (isPhysical && ClearTargetIfMatch(controller.GetInstanceId()))
                             PickTargetController();
                         else
                             controller.Dispose();
@@ -955,10 +987,14 @@ public static class ControllerManager
                     LogManager.LogInformation("XInput controller {0} plugged", controller.ToString());
                     ControllerPlugged?.Invoke(controller, wasPowerCycling);
 
-                    if (!wasPowerCycling)
-                        ShowDetectedToast(controller, wasPowerCycling);
+                    bool isPhysical = controller.IsPhysical();
+                    if (isPhysical)
+                    {
+                        if (!wasPowerCycling)
+                            ShowDetectedToast(controller, wasPowerCycling);
 
-                    PickTargetController();
+                        PickTargetController();
+                    }
                 }
                 catch { }
                 finally { }
@@ -1013,14 +1049,16 @@ public static class ControllerManager
                         // callbacks triggered by Gone()/Dispose() never see this controller.
                         Controllers.TryRemove(details.baseContainerDeviceInstanceId, out _);
 
+                        bool isPhysical = controller.IsPhysical();
+
                         controller.Gone();
 
-                        if (controller.IsPhysical() && HIDuncloakondisconnect)
+                        if (isPhysical && HIDuncloakondisconnect)
                             controller.Unhide(false);
 
                         // Atomically check-and-clear under targetLock to avoid clearing a
                         // controller that SetTargetController just switched to on another thread.
-                        if (ClearTargetIfMatch(controller.GetInstanceId()))
+                        if (isPhysical && ClearTargetIfMatch(controller.GetInstanceId()))
                             PickTargetController();
                         else
                             controller.Dispose();
@@ -1038,6 +1076,12 @@ public static class ControllerManager
         xusbRemovalInProgress[key] = removeTask;
     }
     #endregion
+
+    public static void LoadGamepadMappings()
+    {
+        int loaded = SDL.AddGamepadMappingsFromFile(App.GameControllerDbPath);
+        LogManager.LogInformation("SDL gamepad mappings loaded: {0} mappings loaded", loaded);
+    }
 
     public static void Stop()
     {
@@ -1527,12 +1571,14 @@ public static class ControllerManager
             PowerCyclers.TryRemove(baseContainerDeviceInstanceId, out _);
             Controllers.TryRemove(baseContainerDeviceInstanceId, out _);
 
+            bool isPhysical = controller.IsPhysical();
+
             controller.Gone();
 
-            if (controller.IsPhysical() && HIDuncloakondisconnect)
+            if (isPhysical && HIDuncloakondisconnect)
                 controller.Unhide(false);
 
-            if (ClearTargetIfMatch(controller.GetInstanceId()))
+            if (isPhysical && ClearTargetIfMatch(controller.GetInstanceId()))
                 PickTargetController();
             else
                 controller.Dispose();
@@ -1846,29 +1892,32 @@ public static class ControllerManager
 
     /// <summary>
     /// Ensures the virtual Xbox 360 controller occupies slot 1.
-    /// Returns false if the run should be aborted (e.g. a busy wireless controller is blocking).
+    /// Returns false if the run should be aborted (e.g. a busy wireless controller is blocking,
+    /// or repeated recovery without any physical XInput controller already failed once).
     /// </summary>
     /// <param name="attempt">1-based attempt index used to decide the temporary-controller strategy.</param>
     private static bool FixVirtualSlot(SlotProbeResult probe, int attempt)
     {
         if (!HasPhysicalController<XInputController>())
         {
-            // No physical XInput controller — just cycle the virtual controller.
-            if (HasVirtualController<XInputController>() &&
-                GetControllerFromSlot<XInputController>(UserIndex.One, false) is null)
+            if (attempt > ControllerManagementMaxAttempts)
+                return false;
+
+            // No physical XInput controller — just cycle the virtual controller
+            if (HasVirtualController<XInputController>() && GetControllerFromSlot<XInputController>(UserIndex.One, false) is null)
             {
                 VirtualManager.Suspend(false);
                 Thread.Sleep(1000);
                 VirtualManager.Resume(false);
 
-                WaitUntil(
-                    () => GetVirtualControllers<XInputController>(VirtualManager.VendorId, VirtualManager.ProductId).Any(),
-                    TimeSpan.FromSeconds(4));
+                // Wait for the virtual controller to actually reconnect before re-probing — otherwise we may end up in a tight loop if it fails to re-enumerate.
+                WaitUntil(() => GetVirtualControllers<XInputController>(VirtualManager.VendorId, VirtualManager.ProductId).Any(), TimeSpan.FromSeconds(4));
             }
+
             return true;
         }
 
-        // Physical XInput controller present — find any physical controller, prioritizing lower slots.
+        // Check if a physical controller is plugged.
         XInputController? pController = null;
         foreach (UserIndex slot in new[] { UserIndex.One, UserIndex.Two, UserIndex.Three, UserIndex.Four, UserIndex.Any })
         {
@@ -1880,25 +1929,17 @@ public static class ControllerManager
         if (pController is null)
             return false;
 
-        // Abort if a wireless controller is currently busy and not already power-cycling.
-        var busyWireless = GetPhysicalControllers<XInputController>().FirstOrDefault(c => c.IsBluetooth() && c.IsBusy);
+        // Abort if a wireless controller is present and power-cycling, that's a human-only operation.
+        XInputController? busyWireless = GetPhysicalControllers<XInputController>().FirstOrDefault(c => c.IsBluetooth() && c.IsBusy);
         if (busyWireless is not null && !PowerCyclers.TryGetValue(busyWireless.GetContainerInstanceId(), out _))
             return false;
 
+        // Suspend the physical controller to force it off the bus, which should free up its slot for the virtual controller to claim.
+        // Wait for the suspended controller to actually vacate its slot before manipulating the virtual controller.
         SuspendController(pController.GetContainerInstanceId());
+        WaitUntil(() => GetControllerFromSlot<XInputController>((UserIndex)pController.UserIndex, true) is null, TimeSpan.FromSeconds(4));
 
-        // Wait for the suspended controller to actually vacate its slot before
-        // manipulating the virtual controller — otherwise it may still occupy the
-        // slot when the virtual controller is recreated.
-        byte suspendedSlot = pController.UserIndex;
-        if (suspendedSlot != byte.MaxValue)
-        {
-            WaitUntil(
-                () => GetControllerFromSlot<XInputController>((UserIndex)suspendedSlot, true) is null,
-                TimeSpan.FromSeconds(4));
-        }
-
-        // Remove virtual controller to free slot 1.
+        // Disconnect the virtual controller and wait for it to fully disappear.
         VirtualManager.SetControllerMode(HIDmode.NoController);
         WaitUntil(() => !GetVirtualControllers<XInputController>().Any(), TimeSpan.FromSeconds(4));
 
@@ -2052,7 +2093,7 @@ public static class ControllerManager
         StatusChanged?.Invoke(status, ControllerManagementAttempts);
     }
 
-    private static bool ConnectOnPlug => ManagerFactory.settingsManager.GetBoolean("ConnectOnPlug");
+    private static ControllerPlugBehavior PlugBehavior => (ControllerPlugBehavior)ManagerFactory.settingsManager.GetInt("ControllerPlugBehavior");
     private static void PickTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
         // Snapshot targetController once to guard against concurrent nulling between null-checks and method calls.
@@ -2072,16 +2113,21 @@ public static class ControllerManager
         // Default: keep current target (reassigned below if a better candidate exists)
         string deviceInstanceId = current?.GetContainerInstanceId() ?? string.Empty;
 
-        // If the user disabled auto-connect and already has a real controller, don't change anything.
-        // (branches below are skipped via else-if chain)
-        if (!ConnectOnPlug && current is not null && !current.IsDummy())
+        // If the user disabled auto-connect, never switch to a newly plugged external controller.
+        // Keep the current real target when there is one, otherwise only fall back to the internal
+        // controller (or keep the dummy/default target if no internal controller exists).
+        if (PlugBehavior != ControllerPlugBehavior.AutoConnect)
         {
-            // deviceInstanceId already holds the current target — nothing to do
+            if (current is not null && !current.IsDummy())
+            {
+                // deviceInstanceId already holds the current target — nothing to do
+            }
+            else if (internalController is not null)
+            {
+                deviceInstanceId = internalController.GetContainerInstanceId();
+            }
         }
         // Auto-connect to the most recently arrived external/wireless controller.
-        // ConnectOnPlug is intentionally not checked here: if we reach this branch,
-        // current is null or a dummy (branch 1 already guards the "keep current" case),
-        // so we must always pick the best available replacement regardless of ConnectOnPlug.
         else if (latestExternalController is not null)
         {
             // If the current target is already an external/wireless controller, keep it —
@@ -2230,8 +2276,13 @@ public static class ControllerManager
                     targetController.Rumble();
                     break;
                 default:
-                    if (ManagerFactory.settingsManager.GetBoolean("HIDvibrateonconnect") && !IsPowerCycling)
-                        targetController.Rumble();
+                    if (ManagerFactory.settingsManager.GetBoolean("HIDvibrateonconnect"))
+                    {
+                        if (!IsPowerCycling)
+                            targetController.Rumble();
+                        else
+                            targetController.StopRumble();
+                    }
                     break;
             }
 
@@ -2324,15 +2375,22 @@ public static class ControllerManager
 
     public static bool ResumeController(string baseContainerDeviceInstanceId)
     {
+        return ResumeController(baseContainerDeviceInstanceId, TimeSpan.FromSeconds(3), false);
+    }
+
+    private static bool ResumeController(string baseContainerDeviceInstanceId, TimeSpan timeout, bool requireStoredDriver)
+    {
         try
         {
             PnPDevice? pnPDevice = null;
 
-            Task timeout = Task.Delay(TimeSpan.FromSeconds(3));
-            while (!timeout.IsCompleted && pnPDevice is null)
+            Task discoveryTimeout = Task.Delay(timeout);
+            while (!discoveryTimeout.IsCompleted && pnPDevice is null)
             {
                 try { pnPDevice = PnPDevice.GetDeviceByInstanceId(baseContainerDeviceInstanceId); } catch { }
-                Task.Delay(1000).Wait();
+
+                if (pnPDevice is null)
+                    Task.Delay(1000).Wait();
             }
 
             if (pnPDevice is null)
@@ -2351,7 +2409,20 @@ public static class ControllerManager
             {
                 case "USB":
                     {
-                        string InfPath = DriverStore.GetDriverFromDriverStore(baseContainerDeviceInstanceId);
+                        string InfPath;
+                        if (requireStoredDriver)
+                        {
+                            if (!DriverStore.TryGetDriverFromDriverStore(baseContainerDeviceInstanceId, out InfPath))
+                            {
+                                LogManager.LogWarning("No stored OEM driver found for {0}", baseContainerDeviceInstanceId);
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            InfPath = DriverStore.GetDriverFromDriverStore(baseContainerDeviceInstanceId);
+                        }
+
                         if (!string.IsNullOrEmpty(InfPath))
                         {
                             if (pnPDriver?.InfPath != InfPath)
@@ -2373,6 +2444,102 @@ public static class ControllerManager
         catch { }
 
         return false;
+    }
+
+    public static bool RestoreAllControllersForUninstall(Action<string>? reportStatus = null)
+    {
+        bool settled = WaitForControllerActivityToSettle(TimeSpan.FromSeconds(10), reportStatus);
+
+        reportStatus?.Invoke("Disabling HidHide cloaking...");
+        HidHide.SetCloaking(false);
+
+        List<string> hiddenDevices = HidHide.GetRegisteredDevices()
+            .Where(instanceId => !string.IsNullOrWhiteSpace(instanceId))
+            .Distinct()
+            .ToList();
+
+        int unhideFailures = 0;
+        if (hiddenDevices.Count != 0)
+        {
+            reportStatus?.Invoke($"Unhiding {hiddenDevices.Count} device(s)...");
+
+            foreach (string instanceId in hiddenDevices)
+            {
+                if (!HidHide.UnhidePath(instanceId))
+                    unhideFailures++;
+            }
+        }
+
+        List<string> driverPaths = DriverStore.GetPaths().ToList();
+        int restored = 0;
+        int restoreFailures = 0;
+
+        if (driverPaths.Count == 0)
+        {
+            reportStatus?.Invoke("No stored OEM drivers to restore.");
+        }
+        else
+        {
+            for (int index = 0; index < driverPaths.Count; index++)
+            {
+                string baseContainerDeviceInstanceId = driverPaths[index];
+                reportStatus?.Invoke($"Restoring controller drivers {index + 1}/{driverPaths.Count}...");
+
+                if (ResumeController(baseContainerDeviceInstanceId, TimeSpan.FromSeconds(10), true))
+                    restored++;
+                else
+                    restoreFailures++;
+            }
+        }
+
+        bool success = settled && unhideFailures == 0 && restoreFailures == 0;
+
+        LogManager.LogInformation(
+            "Uninstall restore completed. Settled: {0}, hidden devices: {1}, unhide failures: {2}, drivers restored: {3}, restore failures: {4}",
+            settled,
+            hiddenDevices.Count,
+            unhideFailures,
+            restored,
+            restoreFailures);
+
+        reportStatus?.Invoke(success ? "Restore complete." : "Restore completed with issues.");
+        return success;
+    }
+
+    private static bool WaitForControllerActivityToSettle(TimeSpan timeout, Action<string>? reportStatus)
+    {
+        DateTime deadline = DateTime.UtcNow.Add(timeout);
+
+        while (DateTime.UtcNow < deadline)
+        {
+            int pendingOperations = GetPendingControllerActivityCount();
+            if (pendingOperations == 0)
+                return true;
+
+            reportStatus?.Invoke($"Waiting for controller activity to settle ({pendingOperations})...");
+            Task.Delay(250).Wait();
+        }
+
+        int remainingOperations = GetPendingControllerActivityCount();
+        if (remainingOperations != 0)
+            LogManager.LogWarning("Controller activity still pending during uninstall restore: {0}", remainingOperations);
+
+        return remainingOperations == 0;
+    }
+
+    private static int GetPendingControllerActivityCount()
+    {
+        int pendingOperations = 0;
+
+        pendingOperations += xusbArrivalInProgress.Values.Count(task => !task.IsCompleted);
+        pendingOperations += xusbRemovalInProgress.Values.Count(task => !task.IsCompleted);
+        pendingOperations += hidArrivalInProgress.Values.Count(task => !task.IsCompleted);
+        pendingOperations += hidRemovalInProgress.Values.Count(task => !task.IsCompleted);
+        pendingOperations += sdlArrivalInProgress.Values.Count(task => !task.IsCompleted);
+        pendingOperations += sdlRemovalInProgress.Values.Count(task => !task.IsCompleted);
+        pendingOperations += PowerCyclers.Values.Count(isCycling => isCycling);
+
+        return pendingOperations;
     }
 
     public static void ResumeControllers()

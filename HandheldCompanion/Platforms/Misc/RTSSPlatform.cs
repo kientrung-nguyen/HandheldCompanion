@@ -1,5 +1,4 @@
 ﻿using HandheldCompanion.Managers;
-using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;

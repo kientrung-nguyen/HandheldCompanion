@@ -209,14 +209,11 @@ namespace HandheldCompanion.Actions
             ProcessToggle(value);
             ProcessTurbo(value, delta);
 
-            // Compose final output from active modifiers
-            outBool = (HasToggle, HasTurbo) switch
-            {
-                (true, true) => IsToggled && IsTurboed,
-                (true, false) => IsToggled,
-                (false, true) => IsTurboed,
-                _ => value,
-            };
+            // Compose final output from active modifiers (avoid ValueTuple allocation)
+            if (HasToggle)
+                outBool = HasTurbo ? IsToggled && IsTurboed : IsToggled;
+            else
+                outBool = HasTurbo ? IsTurboed : value;
 
             prevBool = value;
         }

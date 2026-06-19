@@ -173,6 +173,13 @@ public class MicrosoftStore : IPlatform
         if (File.Exists(exactPath))
             yield return exactPath;
 
+        foreach (string scale in new[] { "scale-100", "scale-125", "scale-150", "scale-200", "scale-400" })
+        {
+            string scaleQualifiedPath = Path.Combine(directoryPath, $"{fileName}.{scale}{extension}");
+            if (File.Exists(scaleQualifiedPath))
+                yield return scaleQualifiedPath;
+        }
+
         if (!Directory.Exists(directoryPath))
             yield break;
 
@@ -207,7 +214,7 @@ public class MicrosoftStore : IPlatform
 
     private static MicrosoftStoreGame? CreateGame(XboxGame game)
     {
-        string installDir = game.Path.ToString();
+        string installDir = NormalizePath(game.Path.ToString());
         if (!Directory.Exists(installDir))
             return null;
 
@@ -272,7 +279,7 @@ public class MicrosoftStore : IPlatform
         {
             foreach (string executable in config.Executables)
             {
-                string fullPath = Path.Combine(installDir, executable);
+                string fullPath = NormalizePath(Path.Combine(installDir, executable));
                 if (File.Exists(fullPath))
                     yield return fullPath;
             }
@@ -290,7 +297,21 @@ public class MicrosoftStore : IPlatform
         }
 
         foreach (string executable in discoveredExecutables.Where(executable => !IsIgnoredExecutable(executable)))
-            yield return executable;
+            yield return NormalizePath(executable);
+    }
+
+    private static string NormalizePath(string path)
+    {
+        string normalizedPath = path.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+
+        try
+        {
+            return Path.GetFullPath(normalizedPath);
+        }
+        catch
+        {
+            return normalizedPath;
+        }
     }
 
     private static bool IsIgnoredGame(string name)

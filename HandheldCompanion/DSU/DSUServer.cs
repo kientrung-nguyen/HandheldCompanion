@@ -7,6 +7,7 @@ using HandheldCompanion.Managers;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net;
@@ -61,6 +62,12 @@ public static class DSUServer
     private static SemaphoreSlim _pool;
     private static byte[][] dataBuffers;
 
+    // Per-slot output buffers reused every tick (avoids new byte[100] allocation per tick)
+    private static readonly byte[][] _slotOutputBuffers = new byte[NUMBER_SLOTS][];
+    // Reusable lists for Tick to avoid per-tick allocation
+    private static readonly List<IPEndPoint> _clientsList = new(8);
+    private static readonly List<IPEndPoint> _clientsToDelete = new(8);
+
     private static readonly Dictionary<IPEndPoint, ClientRequestTimes> clients = [];
     private static readonly DualShockPadMeta[] padMetas = new DualShockPadMeta[NUMBER_SLOTS];
     private static readonly ReaderWriterLockSlim poolLock = new();
@@ -100,6 +107,9 @@ public static class DSUServer
         for (int num = 0; num < ARG_BUFFER_LEN; num++)
             dataBuffers[num] = new byte[100];
 
+        for (int i = 0; i < NUMBER_SLOTS; i++)
+            _slotOutputBuffers[i] = new byte[100];
+
         for (byte padIdx = 0; padIdx < NUMBER_SLOTS; padIdx++)
         {
             byte address = (byte)(0x10 + padIdx);
@@ -137,16 +147,16 @@ public static class DSUServer
         packetBuf[currIdx++] = (byte)'U';
         packetBuf[currIdx++] = (byte)'S';
 
-        Array.Copy(BitConverter.GetBytes(reqProtocolVersion), 0, packetBuf, currIdx, 2);
+        BinaryPrimitives.WriteUInt16LittleEndian(packetBuf.AsSpan(currIdx, 2), reqProtocolVersion);
         currIdx += 2;
 
-        Array.Copy(BitConverter.GetBytes((ushort)packetBuf.Length - 16), 0, packetBuf, currIdx, 2);
+        BinaryPrimitives.WriteUInt16LittleEndian(packetBuf.AsSpan(currIdx, 2), (ushort)(packetBuf.Length - 16));
         currIdx += 2;
 
         Array.Clear(packetBuf, currIdx, 4); //place for crc
         currIdx += 4;
 
-        Array.Copy(BitConverter.GetBytes(serverId), 0, packetBuf, currIdx, 4);
+        BinaryPrimitives.WriteUInt32LittleEndian(packetBuf.AsSpan(currIdx, 4), serverId);
         currIdx += 4;
 
         return currIdx;
@@ -157,7 +167,7 @@ public static class DSUServer
         Array.Clear(packetBuf, 8, 4);
 
         var crcCalc = Crc32Algorithm.Compute(packetBuf);
-        Array.Copy(BitConverter.GetBytes(crcCalc), 0, packetBuf, 8, 4);
+        BinaryPrimitives.WriteUInt32LittleEndian(packetBuf.AsSpan(8, 4), crcCalc);
     }
 
     private static int listInd;
@@ -567,14 +577,14 @@ public static class DSUServer
 
                 outputData[outIdx++] = tpad.IsActive ? (byte)1 : (byte)0;
                 outputData[outIdx++] = (byte)tpad.RawTrackingNum;
-                Array.Copy(BitConverter.GetBytes((ushort)tpad.X), 0, outputData, outIdx, 2);
+                BinaryPrimitives.WriteUInt16LittleEndian(outputData.AsSpan(outIdx, 2), (ushort)tpad.X);
                 outIdx += 2;
-                Array.Copy(BitConverter.GetBytes((ushort)tpad.Y), 0, outputData, outIdx, 2);
+                BinaryPrimitives.WriteUInt16LittleEndian(outputData.AsSpan(outIdx, 2), (ushort)tpad.Y);
                 outIdx += 2;
             }
 
             //motion timestamp
-            Array.Copy(BitConverter.GetBytes((ulong)TimerManager.GetElapsedSeconds()), 0, outputData, outIdx, 8);
+            BinaryPrimitives.WriteUInt64LittleEndian(outputData.AsSpan(outIdx, 8), (ulong)TimerManager.GetElapsedSeconds());
             outIdx += 8;
 
             float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;
@@ -617,19 +627,19 @@ public static class DSUServer
             accelZ = accelZ * -1.0f;
 
             // Accelerometer
-            Array.Copy(BitConverter.GetBytes(accelX), 0, outputData, outIdx, 4);
+            BinaryPrimitives.WriteSingleLittleEndian(outputData.AsSpan(outIdx, 4), accelX);
             outIdx += 4;
-            Array.Copy(BitConverter.GetBytes(accelY), 0, outputData, outIdx, 4);
+            BinaryPrimitives.WriteSingleLittleEndian(outputData.AsSpan(outIdx, 4), accelY);
             outIdx += 4;
-            Array.Copy(BitConverter.GetBytes(accelZ), 0, outputData, outIdx, 4);
+            BinaryPrimitives.WriteSingleLittleEndian(outputData.AsSpan(outIdx, 4), accelZ);
             outIdx += 4;
 
             // Gyroscope
-            Array.Copy(BitConverter.GetBytes(gyroX), 0, outputData, outIdx, 4);
+            BinaryPrimitives.WriteSingleLittleEndian(outputData.AsSpan(outIdx, 4), gyroX);
             outIdx += 4;
-            Array.Copy(BitConverter.GetBytes(-gyroY), 0, outputData, outIdx, 4);
+            BinaryPrimitives.WriteSingleLittleEndian(outputData.AsSpan(outIdx, 4), -gyroY);
             outIdx += 4;
-            Array.Copy(BitConverter.GetBytes(-gyroZ), 0, outputData, outIdx, 4);
+            BinaryPrimitives.WriteSingleLittleEndian(outputData.AsSpan(outIdx, 4), -gyroZ);
             outIdx += 4;
         }
 
@@ -667,11 +677,11 @@ public static class DSUServer
             // update status
             padMeta.IsActive = true; // fixme ?
 
-            List<IPEndPoint>? clientsList = new List<IPEndPoint>();
+            _clientsList.Clear();
+            _clientsToDelete.Clear();
             DateTime now = DateTime.UtcNow;
             lock (clients)
             {
-                List<IPEndPoint>? clientsToDelete = new List<IPEndPoint>();
 
                 foreach (var cl in clients)
                 {
@@ -679,17 +689,17 @@ public static class DSUServer
 
                     if ((now - cl.Value.AllPadsTime).TotalSeconds < TimeoutLimit)
                     {
-                        clientsList.Add(cl.Key);
+                        _clientsList.Add(cl.Key);
                     }
                     else if (padMeta.PadId < cl.Value.PadIdsTime.Length &&
                              (now - cl.Value.PadIdsTime[padMeta.PadId]).TotalSeconds < TimeoutLimit)
                     {
-                        clientsList.Add(cl.Key);
+                        _clientsList.Add(cl.Key);
                     }
                     else if (cl.Value.PadMacsTime.TryGetValue(padMeta.PadMacAddress, out var padTime) &&
                              (now - padTime).TotalSeconds < TimeoutLimit)
                     {
-                        clientsList.Add(cl.Key);
+                        _clientsList.Add(cl.Key);
                     }
                     else //check if this client is totally dead, and remove it if so
                     {
@@ -717,12 +727,12 @@ public static class DSUServer
                             }
 
                             if (!clientOk)
-                                clientsToDelete.Add(cl.Key);
+                                _clientsToDelete.Add(cl.Key);
                         }
                     }
                 }
 
-                foreach (var delCl in clientsToDelete) clients.Remove(delCl);
+                foreach (var delCl in _clientsToDelete) clients.Remove(delCl);
             }
 
             int currentCount = ConnectedClientCount;
@@ -732,14 +742,14 @@ public static class DSUServer
                 ClientsChanged?.Invoke(currentCount);
             }
 
-            if (clientsList.Count == 0)
+            if (_clientsList.Count == 0)
                 continue;
 
             unchecked
             {
-                var outputData = new byte[100];
+                var outputData = _slotOutputBuffers[padIdx];
                 var outIdx = BeginPacket(outputData);
-                Array.Copy(BitConverter.GetBytes((uint)MessageType.DSUS_PadDataRsp), 0, outputData, outIdx, 4);
+                BinaryPrimitives.WriteUInt32LittleEndian(outputData.AsSpan(outIdx, 4), (uint)MessageType.DSUS_PadDataRsp);
                 outIdx += 4;
 
                 outputData[outIdx++] = padMeta.PadId;
@@ -758,14 +768,14 @@ public static class DSUServer
                 outputData[outIdx++] = (byte)padMeta.BatteryStatus;
                 outputData[outIdx++] = padMeta.IsActive ? (byte)1 : (byte)0;
 
-                Array.Copy(BitConverter.GetBytes((uint)udpPacketCount++), 0, outputData, outIdx, 4);
+                BinaryPrimitives.WriteUInt32LittleEndian(outputData.AsSpan(outIdx, 4), (uint)udpPacketCount++);
                 outIdx += 4;
 
                 if (!ReportToBuffer(outputData, ref outIdx, padIdx))
                     continue;
                 FinishPacket(outputData);
 
-                foreach (var cl in clientsList)
+                foreach (var cl in _clientsList)
                     SendDataAsync(cl, outputData);
             }
         }

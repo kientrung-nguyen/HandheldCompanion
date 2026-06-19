@@ -4,7 +4,7 @@ using System.Text;
 
 namespace hidapi.Native
 {
-    internal class HidApiNative
+    public class HidApiNative
     {
         /*
          * Bindings taken from https://github.com/temach/HIDInterface/blob/master/USBInterface/HidApi.cs

@@ -73,7 +73,7 @@
                         Visibility="{Binding UpdateDateVisibility}" />
                     <ui:ProgressBar
                         Margin="0,0,10,0"
-                        IsIndeterminate="True"
+                        IsIndeterminate="{Binding IsProgressBarActive, Mode=OneWay}"
                         Visibility="{Binding ProgressBarVisibility}" />
                 </ikw:SimpleStackPanel>
 
@@ -274,19 +274,6 @@
             <!--  Advanced options  -->
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Advanced options" />
             <ikw:SimpleStackPanel Spacing="3">
-                <!--  Master Timer  -->
-                <ui:SettingsCard Description="Controller update rate. A higher rate improves responsiveness but increases CPU usage" Header="Update rate">
-                    <ui:SettingsCard.HeaderIcon>
-                        <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.Stopwatch}" />
-                    </ui:SettingsCard.HeaderIcon>
-                    <ComboBox Name="cB_MasterInterval" SelectionChanged="cB_MasterInterval_SelectionChanged">
-                        <ComboBoxItem Content="125 Hz" />
-                        <ComboBoxItem Content="250 Hz" />
-                        <ComboBoxItem Content="500 Hz" />
-                        <ComboBoxItem Content="1000 Hz" />
-                    </ComboBox>
-                </ui:SettingsCard>
-
                 <!--  Process Priority  -->
                 <ui:SettingsCard Description="{l:Static resx:Resources.SettingsPage_PriorityDesc}" Header="{l:Static resx:Resources.SettingsPage_Priority}">
                     <ui:SettingsCard.HeaderIcon>

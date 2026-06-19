@@ -28,6 +28,7 @@ namespace HandheldCompanion.ViewModels
                 {
                     _onScreenDisplayLevel = value;
                     OnPropertyChanged(nameof(OnScreenDisplayLevel));
+                    OnPropertyChanged(nameof(IsCustomOnScreenDisplayLevelEnabled));
 
                     ManagerFactory.settingsManager.SetProperty(Settings.OnScreenDisplayLevel, value);
                 }
@@ -49,6 +50,24 @@ namespace HandheldCompanion.ViewModels
                 }
             }
         }
+
+        private double _OverlayRenderInterval;
+        public double OverlayRenderInterval
+        {
+            get => _OverlayRenderInterval;
+            set
+            {
+                if (value != OverlayRenderInterval)
+                {
+                    _OverlayRenderInterval = value;
+                    OnPropertyChanged(nameof(OverlayRenderInterval));
+
+                    ManagerFactory.settingsManager.SetProperty("OverlayRenderInterval", value);
+                }
+            }
+        }
+
+        public bool IsCustomOnScreenDisplayLevelEnabled => OnScreenDisplayLevel == 4;
 
         private int _onScreenDisplayTimeLevel;
         public int OnScreenDisplayTimeLevel
@@ -498,6 +517,7 @@ namespace HandheldCompanion.ViewModels
 
             // raise events
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayRefreshRate, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayRefreshRate), false);
+            SettingsManager_SettingValueChanged("OverlayRenderInterval", ManagerFactory.settingsManager.GetDouble("OverlayRenderInterval"), false);
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayLevel), false);
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayDirection, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayDirection), false);
             SettingsManager_SettingValueChanged(Settings.OnScreenDisplayTimeLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayTimeLevel), false);
@@ -745,8 +765,13 @@ namespace HandheldCompanion.ViewModels
             }
             else if (name == Settings.OnScreenDisplayDirection)
                 _onScreenDisplayDirection = Convert.ToInt32(value);
+            else if (name == "OverlayRenderInterval")
+                _OverlayRenderInterval = Convert.ToDouble(value);
             else if (name == Settings.OnScreenDisplayLevel)
+            {
                 _onScreenDisplayLevel = Convert.ToInt32(value);
+                OnPropertyChanged(nameof(IsCustomOnScreenDisplayLevelEnabled));
+            }
             else if (name == Settings.OnScreenDisplayTimeLevel)
                 _onScreenDisplayTimeLevel = Convert.ToInt32(value);
             else if (name == Settings.OnScreenDisplayFPSLevel)

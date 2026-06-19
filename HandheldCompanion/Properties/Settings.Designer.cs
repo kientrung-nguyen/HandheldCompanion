@@ -1201,7 +1201,7 @@ namespace HandheldCompanion.Properties
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
         public int LayoutMode {
             get {
                 return ((int)(this["LayoutMode"]));
@@ -1308,13 +1308,25 @@ namespace HandheldCompanion.Properties
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool ConnectOnPlug {
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int ControllerPlugBehavior {
             get {
-                return ((bool)(this["ConnectOnPlug"]));
+                return ((int)(this["ControllerPlugBehavior"]));
             }
             set {
-                this["ConnectOnPlug"] = value;
+                this["ControllerPlugBehavior"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int DockedDisplayBehavior {
+            get {
+                return ((int)(this["DockedDisplayBehavior"]));
+            }
+            set {
+                this["DockedDisplayBehavior"] = value;
             }
         }
         
@@ -1579,6 +1591,18 @@ namespace HandheldCompanion.Properties
             }
             set {
                 this["OnScreenDisplayDirection"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public string ConnectOnPlug {
+            get {
+                return ((string)(this["ConnectOnPlug"]));
+            }
+            set {
+                this["ConnectOnPlug"] = value;
             }
         }
     }

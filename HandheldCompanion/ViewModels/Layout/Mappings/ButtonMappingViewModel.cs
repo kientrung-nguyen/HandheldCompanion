@@ -9,6 +9,7 @@ using HandheldCompanion.Views;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Windows;
 using System.Windows.Input;
 
@@ -50,107 +51,6 @@ namespace HandheldCompanion.ViewModels
             {
                 string key = $"LayoutPage_PressTypeTooltip{PressTypeIndex}";
                 return Resources.ResourceManager.GetString(key) ?? string.Empty;
-            }
-        }
-
-        // Shift mode: 0 = Disabled on shift, 1 = Always enabled, 2 = Enabled on specific shifts
-        public override int ShiftModeIndex
-        {
-            get
-            {
-                if (Action is null) return 1; // Default to always enabled
-                if ((Action.ShiftSlot & ShiftSlot.Any) != 0) return 1; // Always enabled
-                if (Action.ShiftSlot == ShiftSlot.None) return 0; // Disabled on shift
-
-                // Check if it's OR mode or strict mode
-                if (Action.ShiftMatchAny) return 3; // Enabled on shift (any)
-                return 2; // Enabled on shift (strict)
-            }
-            set
-            {
-                if (Action is null || value == ShiftModeIndex) return;
-
-                switch (value)
-                {
-                    case 0: // Disabled on shift
-                        Action.ShiftSlot = ShiftSlot.None;
-                        Action.ShiftMatchAny = false;
-                        break;
-                    case 1: // Always enabled
-                        Action.ShiftSlot = ShiftSlot.Any;
-                        Action.ShiftMatchAny = false;
-                        break;
-                    case 2: // Enabled on shift (strict)
-                        if (Action.ShiftSlot == ShiftSlot.None || Action.ShiftSlot == ShiftSlot.Any)
-                            Action.ShiftSlot = ShiftSlot.ShiftA;
-                        Action.ShiftMatchAny = false;
-                        break;
-                    case 3: // Enabled on shift (any/OR)
-                        if (Action.ShiftSlot == ShiftSlot.None || Action.ShiftSlot == ShiftSlot.Any)
-                            Action.ShiftSlot = ShiftSlot.ShiftA;
-                        Action.ShiftMatchAny = true;
-                        break;
-                }
-                OnPropertyChanged(nameof(ShiftModeIndex));
-                OnPropertyChanged(nameof(ShowShiftSelection));
-                OnPropertyChanged(nameof(ShiftA));
-                OnPropertyChanged(nameof(ShiftB));
-                OnPropertyChanged(nameof(ShiftC));
-                OnPropertyChanged(nameof(ShiftD));
-            }
-        }
-
-        public override bool ShowShiftSelection => ShiftModeIndex == 2 || ShiftModeIndex == 3;
-
-        public override bool ShiftA
-        {
-            get => Action is not null && (Action.ShiftSlot & ShiftSlot.ShiftA) != 0;
-            set
-            {
-                if (Action is null || value == ShiftA) return;
-                Action.ShiftSlot = value
-                    ? Action.ShiftSlot | ShiftSlot.ShiftA
-                    : Action.ShiftSlot & ~ShiftSlot.ShiftA;
-                OnPropertyChanged(nameof(ShiftA));
-            }
-        }
-
-        public override bool ShiftB
-        {
-            get => Action is not null && (Action.ShiftSlot & ShiftSlot.ShiftB) != 0;
-            set
-            {
-                if (Action is null || value == ShiftB) return;
-                Action.ShiftSlot = value
-                    ? Action.ShiftSlot | ShiftSlot.ShiftB
-                    : Action.ShiftSlot & ~ShiftSlot.ShiftB;
-                OnPropertyChanged(nameof(ShiftB));
-            }
-        }
-
-        public override bool ShiftC
-        {
-            get => Action is not null && (Action.ShiftSlot & ShiftSlot.ShiftC) != 0;
-            set
-            {
-                if (Action is null || value == ShiftC) return;
-                Action.ShiftSlot = value
-                    ? Action.ShiftSlot | ShiftSlot.ShiftC
-                    : Action.ShiftSlot & ~ShiftSlot.ShiftC;
-                OnPropertyChanged(nameof(ShiftC));
-            }
-        }
-
-        public override bool ShiftD
-        {
-            get => Action is not null && (Action.ShiftSlot & ShiftSlot.ShiftD) != 0;
-            set
-            {
-                if (Action is null || value == ShiftD) return;
-                Action.ShiftSlot = value
-                    ? Action.ShiftSlot | ShiftSlot.ShiftD
-                    : Action.ShiftSlot & ~ShiftSlot.ShiftD;
-                OnPropertyChanged(nameof(ShiftD));
             }
         }
 
@@ -236,6 +136,155 @@ namespace HandheldCompanion.ViewModels
                     OnPropertyChanged(nameof(TriggerOutput));
                 }
             }
+        }
+
+        public override int Axis2AxisInnerDeadzone
+        {
+            get => (Action is AxisActions axisAction) ? axisAction.AxisDeadZoneInner : 0;
+            set
+            {
+                if (Action is AxisActions axisAction && value != Axis2AxisInnerDeadzone)
+                {
+                    axisAction.AxisDeadZoneInner = value;
+                    OnPropertyChanged(nameof(Axis2AxisInnerDeadzone));
+                    OnPropertyChanged(nameof(AxisVisualizerInnerDeadzoneSize));
+                }
+            }
+        }
+
+        public override int Axis2AxisOuterDeadzone
+        {
+            get => (Action is AxisActions axisAction) ? axisAction.AxisDeadZoneOuter : 0;
+            set
+            {
+                if (Action is AxisActions axisAction && value != Axis2AxisOuterDeadzone)
+                {
+                    axisAction.AxisDeadZoneOuter = value;
+                    OnPropertyChanged(nameof(Axis2AxisOuterDeadzone));
+                    OnPropertyChanged(nameof(AxisVisualizerOuterDeadzoneSize));
+                }
+            }
+        }
+
+        public override int Axis2AxisAntiDeadzone
+        {
+            get => (Action is AxisActions axisAction) ? axisAction.AxisAntiDeadZone : 0;
+            set
+            {
+                if (Action is AxisActions axisAction && value != Axis2AxisAntiDeadzone)
+                {
+                    axisAction.AxisAntiDeadZone = value;
+                    OnPropertyChanged(nameof(Axis2AxisAntiDeadzone));
+                    OnPropertyChanged(nameof(AxisVisualizerAntiDeadzoneSize));
+                }
+            }
+        }
+
+        public override int Axis2AxisOutputShapeIndex
+        {
+            get => (Action is AxisActions axisAction) ? (int)axisAction.OutputShape : 0;
+            set
+            {
+                if (Action is AxisActions axisAction && value != Axis2AxisOutputShapeIndex)
+                {
+                    axisAction.OutputShape = (OutputShape)value;
+                    OnPropertyChanged(nameof(Axis2AxisOutputShapeIndex));
+                    OnPropertyChanged(nameof(AxisVisualizerDotX));
+                    OnPropertyChanged(nameof(AxisVisualizerDotY));
+                    OnPropertyChanged(nameof(AxisVisualizerDotTranslateX));
+                    OnPropertyChanged(nameof(AxisVisualizerDotTranslateY));
+                }
+            }
+        }
+
+        public override bool Axis2AxisInvertHorizontal
+        {
+            get => (Action is AxisActions axisAction) && axisAction.InvertHorizontal;
+            set
+            {
+                if (Action is AxisActions axisAction && value != Axis2AxisInvertHorizontal)
+                {
+                    axisAction.InvertHorizontal = value;
+                    OnPropertyChanged(nameof(Axis2AxisInvertHorizontal));
+                }
+            }
+        }
+
+        public override bool Axis2AxisInvertVertical
+        {
+            get => (Action is AxisActions axisAction) && axisAction.InvertVertical;
+            set
+            {
+                if (Action is AxisActions axisAction && value != Axis2AxisInvertVertical)
+                {
+                    axisAction.InvertVertical = value;
+                    OnPropertyChanged(nameof(Axis2AxisInvertVertical));
+                }
+            }
+        }
+
+        public override int Button2AxisX
+        {
+            get => (Action is AxisActions axisAction) ? axisAction.ButtonX : 0;
+            set
+            {
+                if (Action is AxisActions axisAction && value != Button2AxisX)
+                {
+                    axisAction.ButtonX = (short)Math.Clamp(value, short.MinValue, short.MaxValue);
+                    OnPropertyChanged(nameof(Button2AxisX));
+                    OnPropertyChanged(nameof(AxisVisualizerDotX));
+                    OnPropertyChanged(nameof(AxisVisualizerDotTranslateX));
+                }
+            }
+        }
+
+        public override int Button2AxisY
+        {
+            get => (Action is AxisActions axisAction) ? axisAction.ButtonY : 0;
+            set
+            {
+                if (Action is AxisActions axisAction && value != Button2AxisY)
+                {
+                    axisAction.ButtonY = (short)Math.Clamp(value, short.MinValue, short.MaxValue);
+                    OnPropertyChanged(nameof(Button2AxisY));
+                    OnPropertyChanged(nameof(AxisVisualizerDotY));
+                    OnPropertyChanged(nameof(AxisVisualizerDotTranslateY));
+                }
+            }
+        }
+
+        public override Visibility Button2AxisVisibility => ActionTypeIndex == (int)ActionType.Joystick ? Visibility.Visible : Visibility.Collapsed;
+        public override Visibility AxisInvertVisibility => Button2AxisVisibility;
+        public override Visibility AxisVisualizerVisibility => ActionTypeIndex == (int)ActionType.Joystick ? Visibility.Visible : Visibility.Collapsed;
+
+        public override double AxisVisualizerDotX => GetVisualizerDotOffset(GetVisualizerVector().X);
+        public override double AxisVisualizerDotY => GetVisualizerDotOffset(GetVisualizerVector().Y);
+        public override double AxisVisualizerDotTranslateX => AxisVisualizerDotX;
+        public override double AxisVisualizerDotTranslateY => -AxisVisualizerDotY;
+        public override double AxisVisualizerInnerDeadzoneSize => Axis2AxisInnerDeadzone * 2.0d;
+        public override double AxisVisualizerOuterDeadzoneSize => Math.Max(0.0d, 200.0d - Axis2AxisOuterDeadzone * 2.0d);
+        public override double AxisVisualizerAntiDeadzoneSize => Axis2AxisAntiDeadzone * 2.0d;
+
+        private Vector2 GetVisualizerVector()
+        {
+            if (Action is not AxisActions axisAction)
+                return Vector2.Zero;
+
+            Vector2 vector = new(Button2AxisX, Button2AxisY);
+
+            return axisAction.OutputShape switch
+            {
+                OutputShape.Circle => InputUtils.ImproveCircularity(vector),
+                OutputShape.Cross => InputUtils.ImproveCircularity(InputUtils.CrossDeadzoneMapping(vector, axisAction.AxisDeadZoneInner, axisAction.AxisDeadZoneOuter)),
+                OutputShape.Square => InputUtils.ImproveSquare(vector),
+                _ => vector,
+            };
+        }
+
+        private static double GetVisualizerDotOffset(float value)
+        {
+            double normalized = Math.Clamp(value / (double)short.MaxValue, -1.0d, 1.0d);
+            return normalized * 94.0d;
         }
 
         // Trigger output should only be visible for Button -> Trigger mappings
@@ -334,11 +383,22 @@ namespace HandheldCompanion.ViewModels
         {
             switch (propertyName)
             {
-                case "SelectedTarget":
-                case "ActionTypeIndex":
+                case "":
+                case nameof(SelectedTarget):
+                case nameof(ActionTypeIndex):
                     OnPropertyChanged(nameof(HasModifier));
                     OnPropertyChanged(nameof(Button2MouseTo));
                     OnPropertyChanged(nameof(GeneralActionVisibility));
+                    OnPropertyChanged(nameof(Button2AxisVisibility));
+                    OnPropertyChanged(nameof(AxisInvertVisibility));
+                    OnPropertyChanged(nameof(AxisVisualizerVisibility));
+                    OnPropertyChanged(nameof(AxisVisualizerDotX));
+                    OnPropertyChanged(nameof(AxisVisualizerDotY));
+                    OnPropertyChanged(nameof(AxisVisualizerDotTranslateX));
+                    OnPropertyChanged(nameof(AxisVisualizerDotTranslateY));
+                    OnPropertyChanged(nameof(AxisVisualizerInnerDeadzoneSize));
+                    OnPropertyChanged(nameof(AxisVisualizerOuterDeadzoneSize));
+                    OnPropertyChanged(nameof(AxisVisualizerAntiDeadzoneSize));
                     break;
             }
 
@@ -381,6 +441,7 @@ namespace HandheldCompanion.ViewModels
             var actionType = newActionType ?? (ActionType)ActionTypeIndex;
             if (actionType == ActionType.Disabled)
             {
+                IsSupported = true;
                 if (Action is not null) Delete();
                 SelectedTarget = null;
                 OnPropertyChanged(string.Empty);
@@ -397,7 +458,8 @@ namespace HandheldCompanion.ViewModels
 
             if (actionType == ActionType.Button)
             {
-                if (Action is null || Action is not ButtonActions)
+                bool preserveMissingTarget = Action is ButtonActions;
+                if (!preserveMissingTarget)
                 {
                     Action = new ButtonActions()
                     {
@@ -410,24 +472,21 @@ namespace HandheldCompanion.ViewModels
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var button in controller.GetTargetButtons())
                 {
-                    var mappingTargetVm = new MappingTargetViewModel
-                    {
-                        Tag = button,
-                        Content = controller.GetButtonName(button)
-                    };
+                    var mappingTargetVm = CreateTarget(button, controller.GetButtonName(button));
                     targets.Add(mappingTargetVm);
 
                     if (button == ((ButtonActions)Action).Button)
                         matchingTargetVm = mappingTargetVm;
                 }
 
-                lock (_collectionLock)
+                if (matchingTargetVm is null && preserveMissingTarget)
                 {
-                    Targets.Clear();
-                    foreach (var t in targets)
-                        Targets.Add(t);
+                    matchingTargetVm = CreateUnsupportedTarget(((ButtonActions)Action).Button,
+                        controller.GetButtonName(((ButtonActions)Action).Button));
+                    targets.Add(matchingTargetVm);
                 }
-                SelectedTarget = matchingTargetVm ?? Targets.First();
+
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Keyboard)
             {
@@ -442,13 +501,39 @@ namespace HandheldCompanion.ViewModels
                     };
                 }
 
-                lock (_collectionLock)
+                targets.AddRange(_keyboardKeysTargets);
+                ReplaceTargets(targets, _keyboardKeysTargets.FirstOrDefault(e => Equals(e.Tag, ((KeyboardActions)Action).Key)));
+            }
+            else if (actionType == ActionType.Joystick)
+            {
+                bool preserveMissingTarget = Action is AxisActions;
+                if (!preserveMissingTarget)
                 {
-                    Targets.Clear();
-                    foreach (var t in _keyboardKeysTargets)
-                        Targets.Add(t);
+                    Action = new AxisActions()
+                    {
+                        ShiftSlot = ShiftSlot.Any,
+                        ShiftMatchAny = false
+                    };
                 }
-                SelectedTarget = _keyboardKeysTargets.FirstOrDefault(e => Equals(e.Tag, ((KeyboardActions)Action).Key)) ?? _keyboardKeysTargets.First();
+
+                MappingTargetViewModel? matchingTargetVm = null;
+                foreach (var axis in controller.GetTargetAxis())
+                {
+                    var mappingTargetVm = CreateTarget(axis, controller.GetAxisName(axis));
+                    targets.Add(mappingTargetVm);
+
+                    if (axis == ((AxisActions)Action).Axis)
+                        matchingTargetVm = mappingTargetVm;
+                }
+
+                if (matchingTargetVm is null && preserveMissingTarget)
+                {
+                    matchingTargetVm = CreateUnsupportedTarget(((AxisActions)Action).Axis,
+                        controller.GetAxisName(((AxisActions)Action).Axis));
+                    targets.Add(matchingTargetVm);
+                }
+
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Mouse)
             {
@@ -466,29 +551,19 @@ namespace HandheldCompanion.ViewModels
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var mouseType in Enum.GetValues<MouseActionsType>().Except(_unsupportedMouseActionTypes))
                 {
-                    var mappingTargetVm = new MappingTargetViewModel
-                    {
-                        Tag = mouseType,
-                        Content = EnumUtils.GetDescriptionFromEnumValue(mouseType)
-                    };
+                    var mappingTargetVm = CreateTarget(mouseType, EnumUtils.GetDescriptionFromEnumValue(mouseType));
                     targets.Add(mappingTargetVm);
 
                     if (mouseType == ((MouseActions)Action).MouseType)
                         matchingTargetVm = mappingTargetVm;
                 }
 
-                // Update list and selected target
-                lock (_collectionLock)
-                {
-                    Targets.Clear();
-                    foreach (var t in targets)
-                        Targets.Add(t);
-                }
-                SelectedTarget = matchingTargetVm ?? Targets.First();
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Trigger)
             {
-                if (Action is null || Action is not TriggerActions)
+                bool preserveMissingTarget = Action is TriggerActions;
+                if (!preserveMissingTarget)
                 {
                     Action = new TriggerActions()
                     {
@@ -501,24 +576,21 @@ namespace HandheldCompanion.ViewModels
                 MappingTargetViewModel? matchingTargetVm = null;
                 foreach (var axis in controller.GetTargetTriggers())
                 {
-                    var mappingTargetVm = new MappingTargetViewModel
-                    {
-                        Tag = axis,
-                        Content = controller.GetAxisName(axis)
-                    };
+                    var mappingTargetVm = CreateTarget(axis, controller.GetAxisName(axis));
                     targets.Add(mappingTargetVm);
 
                     if (axis == ((TriggerActions)Action).Axis)
                         matchingTargetVm = mappingTargetVm;
                 }
 
-                lock (_collectionLock)
+                if (matchingTargetVm is null && preserveMissingTarget)
                 {
-                    Targets.Clear();
-                    foreach (var t in targets)
-                        Targets.Add(t);
+                    matchingTargetVm = CreateUnsupportedTarget(((TriggerActions)Action).Axis,
+                        controller.GetAxisName(((TriggerActions)Action).Axis));
+                    targets.Add(matchingTargetVm);
                 }
-                SelectedTarget = matchingTargetVm ?? Targets.First();
+
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Shift)
             {
@@ -529,33 +601,21 @@ namespace HandheldCompanion.ViewModels
                 // Only show individual shift slots (A, B, C, D), not None or combined values
                 foreach (ShiftSlot shiftSlot in new[] { ShiftSlot.ShiftA, ShiftSlot.ShiftB, ShiftSlot.ShiftC, ShiftSlot.ShiftD })
                 {
-                    MappingTargetViewModel mappingTargetVm = new MappingTargetViewModel
-                    {
-                        Tag = shiftSlot,
-                        Content = EnumUtils.GetDescriptionFromEnumValue(shiftSlot)
-                    };
+                    MappingTargetViewModel mappingTargetVm = CreateTarget(shiftSlot, EnumUtils.GetDescriptionFromEnumValue(shiftSlot));
                     targets.Add(mappingTargetVm);
 
                     if (shiftSlot == ((ShiftActions)Action).ActivationSlot)
                         matchingTargetVm = mappingTargetVm;
                 }
 
-                // Update list and selected target
-                lock (_collectionLock)
-                {
-                    Targets.Clear();
-                    foreach (var t in targets)
-                        Targets.Add(t);
-                }
-                SelectedTarget = matchingTargetVm ?? Targets.First();
+                ReplaceTargets(targets, matchingTargetVm);
             }
             else if (actionType == ActionType.Inherit)
             {
                 if (Action is null || Action is not InheritActions)
                     Action = new InheritActions();
 
-                // Update list and selected target
-                Targets.Clear();
+                ReplaceTargets(targets);
             }
 
             // Refresh mapping
@@ -579,6 +639,11 @@ namespace HandheldCompanion.ViewModels
                         ((KeyboardActions)Action).Key = virtualKeyCode;
                     break;
 
+                case ActionType.Joystick:
+                    if (SelectedTarget.Tag is AxisLayoutFlags axisLayoutFlags)
+                        ((AxisActions)Action).Axis = axisLayoutFlags;
+                    break;
+
                 case ActionType.Mouse:
                     if (SelectedTarget.Tag is MouseActionsType mouseActionsType)
                         ((MouseActions)Action).MouseType = mouseActionsType;
@@ -590,8 +655,8 @@ namespace HandheldCompanion.ViewModels
                     break;
 
                 case ActionType.Trigger:
-                    if (SelectedTarget.Tag is AxisLayoutFlags axisLayoutFlags)
-                        ((TriggerActions)Action).Axis = axisLayoutFlags;
+                    if (SelectedTarget.Tag is AxisLayoutFlags triggerAxisLayoutFlags)
+                        ((TriggerActions)Action).Axis = triggerAxisLayoutFlags;
                     break;
             }
         }

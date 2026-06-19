@@ -79,6 +79,30 @@ namespace HandheldCompanion.Utils
         public static float Clamp(float value, float min, float max) => MathF.Min(max, MathF.Max(min, value));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int RoundToInt(float value) => (int)MathF.Round(value);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short RoundClampToShort(float value) => (short)Math.Clamp(RoundToInt(value), short.MinValue, short.MaxValue);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort ClampToUShort(int value) => (ushort)Math.Clamp(value, ushort.MinValue, ushort.MaxValue);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort ClampToUShort(int value, int min, int max) => (ushort)Math.Clamp(value, min, max);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte ClampToByte(int value) => (byte)Math.Clamp(value, byte.MinValue, byte.MaxValue);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short NegateClampToShort(short value)
+        {
+            int neg = -value;
+            if (neg > short.MaxValue) return short.MaxValue;
+            if (neg < short.MinValue) return short.MinValue;
+            return (short)neg;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float rangeMap(float value, float minIn, float maxIn, float minOut, float maxOut)
         {
             float inRange = maxIn - minIn;

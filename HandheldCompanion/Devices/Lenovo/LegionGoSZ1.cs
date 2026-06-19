@@ -9,7 +9,7 @@ using System.Windows.Media;
 using static HandheldCompanion.Devices.Lenovo.SapientiaUsb;
 using static HandheldCompanion.Utils.DeviceUtils;
 
-namespace HandheldCompanion.Devices
+namespace HandheldCompanion.Devices.Lenovo
 {
     public class LegionGoSZ1 : LegionGo
     {

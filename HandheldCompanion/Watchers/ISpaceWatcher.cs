@@ -1,4 +1,7 @@
-﻿using HandheldCompanion.Notifications;
+﻿using HandheldCompanion.Devices;
+using HandheldCompanion.Devices.Lenovo;
+using HandheldCompanion.Devices.Zotac;
+using HandheldCompanion.Notifications;
 using HandheldCompanion.Utils;
 using Microsoft.Win32.TaskScheduler;
 using System;
@@ -64,6 +67,23 @@ namespace HandheldCompanion.Watchers
             watchdogTimer?.Dispose();
             watchdogTimer = null;
             GC.SuppressFinalize(this);
+        }
+
+        public static ISpaceWatcher? Create(IDevice device)
+        {
+            return device switch
+            {
+                ClawA1M or ClawA2VM => new ClawCenterWatcher(),
+                LegionGo => new LegionSpaceWatcher(),
+                ROGAlly or ROGAllyX => new RogAllySpaceWatcher(),
+                GamingZone => new ZotacLauncherWatcher(),
+                _ => null
+            };
+        }
+
+        public static ISpaceWatcher? CreateCurrent()
+        {
+            return Create(IDevice.GetCurrent());
         }
 
         #region executables

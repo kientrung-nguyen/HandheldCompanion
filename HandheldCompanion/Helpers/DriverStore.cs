@@ -77,10 +77,26 @@ namespace HandheldCompanion.Helpers
 
         public static string GetDriverFromDriverStore(string path)
         {
+            path = path.ToUpper();
+
             if (Drivers.TryGetValue(path, out string? driver) && !string.IsNullOrEmpty(driver))
                 return driver;
 
             return "xusb22.inf";
+        }
+
+        public static bool TryGetDriverFromDriverStore(string path, out string driverName)
+        {
+            path = path.ToUpper();
+
+            if (Drivers.TryGetValue(path, out string? driver) && !string.IsNullOrEmpty(driver))
+            {
+                driverName = driver;
+                return true;
+            }
+
+            driverName = string.Empty;
+            return false;
         }
 
         public static void AddOrUpdateDriverStore(string path, string driverName)

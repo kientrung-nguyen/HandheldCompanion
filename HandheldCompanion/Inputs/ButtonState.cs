@@ -10,6 +10,18 @@ namespace HandheldCompanion.Inputs;
 public partial class ButtonState : ICloneable, IDisposable
 {
     public static readonly ButtonFlags[] AllButtons = Enum.GetValues<ButtonFlags>();
+
+    public static readonly ButtonFlags[] UIButtons = new[] {
+        ButtonFlags.LeftPadClickDown, ButtonFlags.LeftPadClickLeft, ButtonFlags.LeftPadClickRight, ButtonFlags.LeftPadClickUp,
+        ButtonFlags.RightPadClickDown, ButtonFlags.RightPadClickLeft, ButtonFlags.RightPadClickRight, ButtonFlags.RightPadClickUp,
+        ButtonFlags.L2Soft, ButtonFlags.L2Full,
+        ButtonFlags.R2Soft, ButtonFlags.R2Full,
+        ButtonFlags.LeftStickUp, ButtonFlags.LeftStickDown, ButtonFlags.LeftStickLeft, ButtonFlags.LeftStickRight,
+        ButtonFlags.RightStickUp, ButtonFlags.RightStickDown, ButtonFlags.RightStickLeft, ButtonFlags.RightStickRight,
+    };
+
+    public static readonly ButtonFlags[] OEMButtons = new[] { ButtonFlags.OEM1, ButtonFlags.OEM2, ButtonFlags.OEM3, ButtonFlags.OEM4, ButtonFlags.OEM5, ButtonFlags.OEM6, ButtonFlags.OEM7, ButtonFlags.OEM8, ButtonFlags.OEM9, ButtonFlags.OEM10 };
+
     private const int MaxValue = (int)ButtonFlags.Max;
     private const int MaxButton = (int)ButtonFlags.B15;
 

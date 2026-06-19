@@ -89,6 +89,10 @@ public partial class MainWindow : GamepadWindow
     private DispatcherTimer notifyIconWaitTimer;
     private bool NotifyInTaskbar;
     public string prevNavItemTag = string.Empty;
+    private bool hasDeferredInitialShow;
+    private bool pendingStartupFullscreen;
+    private bool startupWindowReady;
+    private WindowState deferredStartupWindowState = WindowState.Minimized;
 
     // Track tray menu items for liked profiles
     private readonly Dictionary<Guid, ToolStripMenuItem> profileMenuItems = new();
@@ -147,6 +151,8 @@ public partial class MainWindow : GamepadWindow
         if (ShowSplashScreen)
             SplashScreen.Show();
 #endif
+
+        UpdateSplashStatus("Loading interface...");
 
         // update theme
         ElementTheme currentTheme = (ElementTheme)ManagerFactory.settingsManager.GetInt("MainWindowTheme");
@@ -217,6 +223,7 @@ public partial class MainWindow : GamepadWindow
         Task.Run(() => HidHide.RegisterApplication(CurrentExe));
 
         // collect details from MotherboardInfo (reads JSON cache - fast on subsequent starts)
+        UpdateSplashStatus("Loading device information...");
         MotherboardInfo.Collect();
 
         // initialize device singleton synchronously: page constructors call IDevice.GetCurrent()
@@ -232,6 +239,7 @@ public partial class MainWindow : GamepadWindow
         UISounds uiSounds = new UISounds();
 
         // load all pages BEFORE starting managers (architectural requirement)
+        UpdateSplashStatus("Loading pages...");
         overlayquickTools.loadPages();
         loadPages();
 
@@ -247,10 +255,11 @@ public partial class MainWindow : GamepadWindow
         // Now that ALL pages are loaded, start background managers
         // PullSensors, device Initialize, and all manager starts move to background;
         // pages are guaranteed to exist before managers finish starting
-        Task.Run(() => StartNonUIInit(CurrentExe, FirstStart, NewUpdate));
+        Task.Run(() => StartNonUIInit(CurrentExe, FirstStart, NewUpdate, UpdateSplashStatus));
 
         // manage events
         SystemManager.SystemStatusChanged += OnSystemStatusChanged;
+        SystemManager.SessionLockChanged += OnSessionLockChanged;
         ManagerFactory.notificationManager.Added += NotificationManagerUpdated;
         ManagerFactory.notificationManager.Discarded += NotificationManagerUpdated;
         ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
@@ -279,13 +288,15 @@ public partial class MainWindow : GamepadWindow
     /// The device singleton is already constructed before this is called, so Capabilities and
     /// OEMChords (set in device constructors) are available to page constructors on the UI thread.
     /// </summary>
-    private static void StartNonUIInit(string exePath, bool firstStart, bool newUpdate)
+    private static void StartNonUIInit(string exePath, bool firstStart, bool newUpdate, Action<string>? reportStatus = null)
     {
+        reportStatus?.Invoke("Initializing hardware...");
         CurrentDevice.PullSensors();
         CurrentDevice.Initialize(firstStart, newUpdate);
 
         // start non-static managers
         // todo: make them non-static
+        reportStatus?.Invoke("Loading managers...");
         foreach (IManager manager in ManagerFactory.Managers)
             Task.Run(() => manager.Start());
 
@@ -299,6 +310,11 @@ public partial class MainWindow : GamepadWindow
         Task.Run(() => TaskManager.Start(exePath));
         Task.Run(() => PerformanceManager.Start());
         Task.Run(() => UpdateManager.Start());
+    }
+
+    private static void UpdateSplashStatus(string status)
+    {
+        SplashScreen?.SetStatus(status);
     }
 
     private void ProfileManager_Initialized()
@@ -840,7 +856,7 @@ public partial class MainWindow : GamepadWindow
         AddHandler(FocusManager.GotFocusEvent, new RoutedEventHandler(GamepadWindow_PreviewGotFocus));
 
         HwndSource source = (HwndSource)PresentationSource.FromVisual(this);
-        source.AddHook(WndProc); // Hook into the window's message loop
+        source?.AddHook(WndProc); // Hook into the window's message loop
     }
 
     private void HomePage_Loaded()
@@ -848,8 +864,7 @@ public partial class MainWindow : GamepadWindow
         // hide the startup overlay — home page is rendered and ready
         ((MainWindowViewModel)DataContext).IsInitializing = false;
 
-        // home page is ready; only show tray icon when the window is minimized
-        notifyIcon.Visible = WindowState == WindowState.Minimized;
+        startupWindowReady = true;
 
         string TelemetryApproved = ManagerFactory.settingsManager.GetString("TelemetryApproved");
         if (string.IsNullOrEmpty(TelemetryApproved))
@@ -867,11 +882,12 @@ public partial class MainWindow : GamepadWindow
 
         // restore window state
         WindowState windowState = (WindowState)ManagerFactory.settingsManager.GetInt("MainWindowState");
-        SetState(StartMinimized ? WindowState.Minimized : windowState);
+        deferredStartupWindowState = StartMinimized ? WindowState.Minimized : windowState;
 
         // apply fullscreen at startup (unless starting minimized)
-        if (!StartMinimized && StartMaximized)
-            EnterFullscreen();
+        pendingStartupFullscreen = !StartMinimized && StartMaximized;
+
+        ApplyStartupWindowVisibility();
     }
 
     private void NotificationManagerUpdated(Notification notification)
@@ -900,10 +916,6 @@ public partial class MainWindow : GamepadWindow
                     {
                         // when device resumes from sleep
                         resumeTime = DateTime.Now;
-
-                        // resume UI ?
-                        this.WMPaint_Trigger();
-                        overlayquickTools.WMPaint_Trigger();
 
                         // wait a bit more if device went to sleep for at least 30 minutes (arbitrary)
                         TimeSpan sleepDuration = resumeTime - pendingTime;
@@ -982,6 +994,44 @@ public partial class MainWindow : GamepadWindow
         }
     }
 
+    private void OnSessionLockChanged(bool isLocked)
+    {
+        if (isLocked)
+            InputsManager.Stop(false);
+        else
+            InputsManager.Start();
+
+        ApplyStartupWindowVisibility();
+    }
+
+    private void ApplyStartupWindowVisibility()
+    {
+        if (!startupWindowReady || hasDeferredInitialShow)
+            return;
+
+        if (!SystemManager.IsSessionInteractive())
+        {
+            notifyIcon.Visible = true;
+            ShowInTaskbar = false;
+
+            try { Hide(); } catch { }
+
+            return;
+        }
+
+        hasDeferredInitialShow = true;
+
+        if (deferredStartupWindowState == WindowState.Minimized)
+            TryHide();
+        else
+        {
+            SetState(deferredStartupWindowState);
+
+            if (pendingStartupFullscreen)
+                EnterFullscreen();
+        }
+    }
+
     #region UI
 
     private void navView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
@@ -1033,7 +1083,7 @@ public partial class MainWindow : GamepadWindow
             NavView_Navigate(_page);
     }
 
-    public void NavigateToPage(string navItemTag)
+    public override void NavigateToPage(string navItemTag)
     {
         if (prevNavItemTag == navItemTag)
             return;
@@ -1052,6 +1102,7 @@ public partial class MainWindow : GamepadWindow
     {
         TryGoBack();
     }
+
 
     private async void Window_Closed(object sender, EventArgs e)
     {
@@ -1080,6 +1131,7 @@ public partial class MainWindow : GamepadWindow
 
         // manage events
         SystemManager.SystemStatusChanged -= OnSystemStatusChanged;
+        SystemManager.SessionLockChanged -= OnSessionLockChanged;
         ManagerFactory.notificationManager.Added -= NotificationManagerUpdated;
         ManagerFactory.notificationManager.Discarded -= NotificationManagerUpdated;
         ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
@@ -1499,13 +1551,16 @@ public partial class MainWindow : GamepadWindow
         // do something
     }
 
-    private bool TryGoBack()
+    public bool TryGoBack()
     {
         // Don't go back if the nav pane is overlayed.
         if (navView.IsPaneOpen &&
             (navView.DisplayMode == NavigationViewDisplayMode.Compact ||
              navView.DisplayMode == NavigationViewDisplayMode.Minimal))
             return false;
+
+        if (ContentFrame.Content is LibraryPage currentLibraryPage && currentLibraryPage.TryGoBack())
+            return true;
 
         if (ContentFrame.Content is LayoutPage currentLayoutPage && currentLayoutPage.TryGoBack())
             return true;
@@ -1519,58 +1574,31 @@ public partial class MainWindow : GamepadWindow
 
     private void GamepadUIMore_Click(object sender, RoutedEventArgs e)
     {
-        Task.Run(async () =>
-        {
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.B3, true, false);
-            await Task.Delay(40);
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.B3, false, true);
-        });
+        UIHelper.TryInvoke(() => gamepadFocusManager.TryMore());
     }
 
     private void GamepadUILike_Click(object sender, RoutedEventArgs e)
     {
-        Task.Run(async () =>
-        {
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.Back, true, false);
-            await Task.Delay(40);
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.Back, false, true);
-        });
+        UIHelper.TryInvoke(() => gamepadFocusManager.TryLike());
     }
 
     private void GamepadUISelect_Click(object sender, RoutedEventArgs e)
     {
-        Task.Run(async () =>
-        {
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.B1, true, false);
-            await Task.Delay(40);
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.B1, false, true);
-        });
+        UIHelper.TryInvoke(() => gamepadFocusManager.TrySelect());
     }
 
     private void GamepadUIBack_Click(object sender, RoutedEventArgs e)
     {
-        Task.Run(async () =>
-        {
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.B2, true, false);
-            await Task.Delay(40);
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.B2, false, true);
-        });
+        UIHelper.TryInvoke(() => gamepadFocusManager.TryGoBack());
     }
 
     private void GamepadUIToggle_Click(object sender, RoutedEventArgs e)
     {
-        Task.Run(async () =>
-        {
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.B4, true, false);
-            await Task.Delay(40);
-            ControllerManager.GetTarget()?.InjectButton(ButtonFlags.B4, false, true);
-        });
+        UIHelper.TryInvoke(() => gamepadFocusManager.TryToggle());
     }
 
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
-        navView.IsBackEnabled = ContentFrame.CanGoBack;
-
         if (ContentFrame.SourcePageType is not null)
         {
             CurrentPageName = ContentFrame.CurrentSourcePageType.Name;

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Windows.Forms;
 using WindowsDisplayAPI;
 using DisplayDevice = HandheldCompanion.Misc.DisplayDevice;
+using WindowsDisplayAPI.DisplayConfig;
+using WindowsDisplayAPI.Native.DisplayConfig;
 
 namespace HandheldCompanion.Managers.Desktop;
 
@@ -112,7 +114,28 @@ public class DesktopScreen : IDisposable
     public Screen? screen;
     public string DevicePath;
     public string FriendlyName;
+
     public bool IsPrimary => screen?.Primary ?? false;
+    public bool IsSecondary => !IsPrimary;
+
+    public bool IsInternal => !IsExternal;
+    public bool IsExternal
+    {
+        get
+        {
+            try
+            {
+                return PathInfo.GetActivePaths()
+                    .SelectMany(p => p.TargetsInfo)
+                    .FirstOrDefault(t => string.Equals(t.DisplayTarget.DevicePath, DevicePath, StringComparison.OrdinalIgnoreCase))
+                    ?.OutputTechnology != DisplayConfigVideoOutputTechnology.Internal;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
 
     public List<ScreenResolution> screenResolutions = new List<ScreenResolution>();
     public List<ScreenDivider> screenDividers = new List<ScreenDivider>();

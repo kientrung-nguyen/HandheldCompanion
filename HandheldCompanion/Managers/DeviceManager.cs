@@ -373,7 +373,7 @@ public class DeviceManager : IManager
                 EnumeratorName = usbDevice.GetProperty<string>(DevicePropertyKey.Device_EnumeratorName) ?? string.Empty,
                 deviceInstanceId = hidDevice.InstanceId.ToUpper(),
                 baseContainerDeviceInstanceId = usbDevice.InstanceId.ToUpper(),
-                isVirtual = (usbDevice.IsVirtual() || hidDevice.IsVirtual() || IsvJoy(attributes.Value)) && !IsMoonlight(attributes.Value),
+                isVirtual = (usbDevice.IsVirtual() || hidDevice.IsVirtual() || IsvJoy(attributes.Value)), // && !IsMoonlight(attributes.Value),
                 isGaming = IsGaming(attributes.Value, capabilities.Value),
                 ProductID = attributes.Value.ProductID,
                 VendorID = attributes.Value.VendorID,
@@ -524,6 +524,7 @@ public class DeviceManager : IManager
                                                                                      // ((attributes.VendorID == 0x28DE) && (attributes.ProductID == 0x1106)) || // STEAM CONTROLLER BLUETOOTH
             ((attributes.VendorID == 0x28DE) && (attributes.ProductID == 0x1142)) || // STEAM CONTROLLER WIRELESS
             ((attributes.VendorID == 0x28DE) && (attributes.ProductID == 0x1205)) || // STEAM DECK
+            ((attributes.VendorID == 0x28DE) && (attributes.ProductID == 0x12f0)) || // STEAMOS HANDHELD
             (0x05 == capabilities.UsagePage) || (0x01 == capabilities.UsagePage) && ((0x04 == capabilities.Usage) || (0x05 == capabilities.Usage)));
     }
 

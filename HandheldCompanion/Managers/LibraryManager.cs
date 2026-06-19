@@ -343,15 +343,15 @@ namespace HandheldCompanion.Managers
         }
 
         // Maximum thumbnail dimensions per art type (width × height)
-        private static readonly (int W, int H) ThumbSizeCover   = (267, 400);
+        private static readonly (int W, int H) ThumbSizeCover = (267, 400);
         private static readonly (int W, int H) ThumbSizeArtwork = (850, 274);
-        private static readonly (int W, int H) ThumbSizeLogo    = (500, 486);
+        private static readonly (int W, int H) ThumbSizeLogo = (500, 486);
 
         private static (int W, int H) GetThumbSize(LibraryType libraryType)
         {
-            if (libraryType.HasFlag(LibraryType.cover))   return ThumbSizeCover;
+            if (libraryType.HasFlag(LibraryType.cover)) return ThumbSizeCover;
             if (libraryType.HasFlag(LibraryType.artwork)) return ThumbSizeArtwork;
-            if (libraryType.HasFlag(LibraryType.logo))    return ThumbSizeLogo;
+            if (libraryType.HasFlag(LibraryType.logo)) return ThumbSizeLogo;
             return ThumbSizeCover;
         }
 
@@ -450,7 +450,7 @@ namespace HandheldCompanion.Managers
 
         private static void RemoveStaleFiles(string destPath)
         {
-            string stem   = Path.GetFileNameWithoutExtension(destPath);
+            string stem = Path.GetFileNameWithoutExtension(destPath);
             string folder = Path.GetDirectoryName(destPath) ?? string.Empty;
             if (!Directory.Exists(folder))
                 return;

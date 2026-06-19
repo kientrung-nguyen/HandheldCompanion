@@ -2,7 +2,6 @@
 using steam_hidapi.net.Hid;
 using steam_hidapi.net.Util;
 using System;
-using System.Threading.Tasks;
 
 namespace steam_hidapi.net
 {
@@ -14,17 +13,13 @@ namespace steam_hidapi.net
         protected ushort _volt = 0;
         protected byte _battery = 0;
 
-        public Func<GordonControllerInputEventArgs, Task> OnControllerInputReceived;
+        public Action<GordonControllerInputEventArgs> OnControllerInputReceived;
 
         public GordonController(ushort vid, ushort pid, ushort inputBufferLen, short index) : base(vid, pid, inputBufferLen, index)
         {
             _hidDevice = new HidDevice(_vid, _pid, inputBufferLen, index)
             {
-                OnInputReceived = input =>
-                {
-                    OnInputReceived(input);
-                    return Task.CompletedTask;
-                }
+                OnInputReceived = OnInputReceived
             };
         }
 
