@@ -1,9 +1,9 @@
 ﻿using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views;
 using iNKORE.UI.WPF.Modern.Controls;
 using System.Management;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace HandheldCompanion.Watchers
 {
@@ -89,7 +89,7 @@ namespace HandheldCompanion.Watchers
             UpdateStatus(enabled);
         }
 
-        public async void SetSettings(bool enabled)
+        public async void SetSettings(bool enabled, Window? owner = null)
         {
             RegistryUtils.SetValue(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled", enabled ? 1 : 0);
             RegistryUtils.SetValue(@"SYSTEM\CurrentControlSet\Control\CI\Config", "VulnerableDriverBlocklistEnable", enabled ? 1 : 0);
@@ -99,7 +99,11 @@ namespace HandheldCompanion.Watchers
             // Control Flow Guard settings
             ProcessUtils.ExecutePowerShellScript($"Set-ProcessMitigation -System {(enabled ? "-Enable" : "-Disable")} CFG");
 
-            Task<ContentDialogResult> dialogTask = new Dialog(MainWindow.GetCurrent())
+            // Skip the restart dialog when no owner window is available (e.g. welcome flow manages restart itself).
+            if (owner is null)
+                return;
+
+            Task<ContentDialogResult> dialogTask = new Dialog(owner)
             {
                 Title = Properties.Resources.Dialog_ForceRestartTitle,
                 Content = Properties.Resources.Dialog_ForceRestartDesc,

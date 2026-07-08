@@ -27,8 +27,14 @@ namespace HandheldCompanion.Managers
         // GameArt
         public static BitmapImage MissingCover = new BitmapImage(new Uri("pack://application:,,,/Resources/MissingCover.png"));
         public static BitmapImage MissingArtwork = new BitmapImage(new Uri("pack://application:,,,/Resources/MissingArtwork.png"));
-        public static BitmapImage Xbox360Big = new BitmapImage(new Uri("pack://application:,,,/Resources/controller_0_big.png"));
-        public static BitmapImage DualShock4Big = new BitmapImage(new Uri("pack://application:,,,/Resources/controller_1_big.png"));
+
+        // Controllers
+        public static BitmapImage Xbox360Big = new BitmapImage(new Uri("pack://application:,,,/Resources/Controllers/controller_0_big.png"));
+        public static BitmapImage DualShock4Big = new BitmapImage(new Uri("pack://application:,,,/Resources/Controllers/controller_1_big.png"));
+        public static BitmapImage DualSenseBig = new BitmapImage(new Uri("pack://application:,,,/Resources/Controllers/controller_2_big.png"));
+        public static BitmapImage SteamDeckBig = new BitmapImage(new Uri("pack://application:,,,/Resources/Controllers/controller_3_big.png"));
+        public static BitmapImage SwitchProBig = new BitmapImage(new Uri("pack://application:,,,/Resources/Controllers/controller_4_big.png"));
+        public static BitmapImage SteamControllerBig = new BitmapImage(new Uri("pack://application:,,,/Resources/Controllers/controller_6_big.png"));
     }
 
     public class LibraryManager : IManager
@@ -794,7 +800,7 @@ namespace HandheldCompanion.Managers
         {
             await Parallel.ForEachAsync(ManagerFactory.profileManager.GetProfiles(true), new ParallelOptions { MaxDegreeOfParallelism = 4 }, async (profile, cancellationToken) =>
             {
-                await RefreshProfileArtsAsync(profile, UpdateSource.LibraryUpdate, includeFullResAssets: false);
+                await RefreshProfileArtsAsync(profile, UpdateSource.LibraryUpdate, includeFullResAssets: true);
             });
         }
 

@@ -1195,7 +1195,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Security features available on your device that use virtualization-based security. May prevent TDP manipulations..
+        ///   Looks up a localized string similar to Security features available on your device that use virtualization-based security. May prevent TDP manipulations when enabled..
         /// </summary>
         public static string DevicePage_CoreIsolationDesc {
             get {
@@ -1533,6 +1533,42 @@ namespace HandheldCompanion.Properties {
         public static string DevicePage_GoBackToSleepDesc {
             get {
                 return ResourceManager.GetString("DevicePage_GoBackToSleepDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Woken by a charger being connected..
+        /// </summary>
+        public static string DevicePage_GoBackToSleepOnChargerConnectedDesc {
+            get {
+                return ResourceManager.GetString("DevicePage_GoBackToSleepOnChargerConnectedDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Woken by the fingerprint reader..
+        /// </summary>
+        public static string DevicePage_GoBackToSleepOnFingerprintReaderDesc {
+            get {
+                return ResourceManager.GetString("DevicePage_GoBackToSleepOnFingerprintReaderDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Woken by a joystick or controller input..
+        /// </summary>
+        public static string DevicePage_GoBackToSleepOnJoystickDesc {
+            get {
+                return ResourceManager.GetString("DevicePage_GoBackToSleepOnJoystickDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Woken by the power button..
+        /// </summary>
+        public static string DevicePage_GoBackToSleepOnPowerButtonDesc {
+            get {
+                return ResourceManager.GetString("DevicePage_GoBackToSleepOnPowerButtonDesc", resourceCulture);
             }
         }
         
@@ -10170,7 +10206,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Disabled, turn on with button(s).
+        ///   Looks up a localized string similar to Turn on with button(s).
         /// </summary>
         public static string ProfilesPage_UMCMotionOff {
             get {
@@ -10179,7 +10215,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Enabled, turn off with button(s).
+        ///   Looks up a localized string similar to Turn off with button(s).
         /// </summary>
         public static string ProfilesPage_UMCMotionOn {
             get {
@@ -10208,7 +10244,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Toggle between enabled or disabled with button(s).
+        ///   Looks up a localized string similar to Toggle with button(s).
         /// </summary>
         public static string ProfilesPage_UMCMotionToggle {
             get {

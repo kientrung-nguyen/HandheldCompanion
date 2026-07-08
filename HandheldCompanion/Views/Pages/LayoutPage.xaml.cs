@@ -46,12 +46,6 @@ public partial class LayoutPage : Page
     {
         DataContext = new LayoutPageViewModel(this);
         InitializeComponent();
-
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-
-        // raise events
-        if (ControllerManager.HasTargetController)
-            ControllerManager_ControllerSelected(ControllerManager.GetTarget());
     }
 
     public LayoutPage(string Tag, NavigationView parent) : this()
@@ -82,6 +76,12 @@ public partial class LayoutPage : Page
         joysticksPage = new JoysticksPage();
         trackpadsPage = new TrackpadsPage();
         triggersPage = new TriggersPage();
+
+        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+
+        // raise events
+        if (ControllerManager.HasTargetController)
+            ControllerManager_ControllerSelected(ControllerManager.GetTarget());
 
         // create controller related pages
         this.pages = new()

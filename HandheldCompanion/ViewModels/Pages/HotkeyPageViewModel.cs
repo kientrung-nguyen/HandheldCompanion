@@ -32,8 +32,6 @@ namespace HandheldCompanion.ViewModels
             BindingOperations.EnableCollectionSynchronization(HotkeysList, _collectionLock);
 
             // manage events
-            ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
-            ManagerFactory.hotkeysManager.Deleted += HotkeysManager_Deleted;
             InputsManager.StartedListening += InputsManager_StartedListening;
             InputsManager.StoppedListening += InputsManager_StoppedListening;
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
@@ -80,8 +78,11 @@ namespace HandheldCompanion.ViewModels
 
         private void QueryHotkeys()
         {
-            List<Hotkey> hotkeys = ManagerFactory.hotkeysManager.GetHotkeys().ToList();
-            foreach (Hotkey hotkey in hotkeys)
+            // manage events
+            ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
+            ManagerFactory.hotkeysManager.Deleted += HotkeysManager_Deleted;
+
+            foreach (Hotkey hotkey in ManagerFactory.hotkeysManager.GetHotkeys().OrderBy(hotkey => hotkey.ButtonFlags))
                 HotkeysManager_Updated(hotkey);
         }
 

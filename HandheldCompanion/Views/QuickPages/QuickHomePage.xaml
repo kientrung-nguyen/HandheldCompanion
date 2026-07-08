@@ -48,7 +48,7 @@
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel
-                                ItemHeight="100"
+                                ItemHeight="160"
                                 ItemWidth="100"
                                 Orientation="Horizontal" />
                         </ItemsPanelTemplate>
@@ -56,33 +56,134 @@
 
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <ikw:SimpleStackPanel Spacing="0">
-                                <ToggleButton
-                                    Height="40"
-                                    Margin="3"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Stretch"
-                                    Command="{Binding ExecuteCommand}"
-                                    IsChecked="{Binding IsToggled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                    IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                    Tag="Hotkey">
-                                    <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical">
-                                        <ui:FontIcon
-                                            Width="24"
-                                            Height="24"
-                                            HorizontalAlignment="Center"
-                                            FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                            FontSize="{Binding FontSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                            Glyph="{Binding LiveGlyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </StackPanel>
-                                </ToggleButton>
+                            <Grid>
+                                <!--  Double-execute indicator: shown only when the command supports a double-tap action  -->
+                                <!--
+                                <ui:FontIcon
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Foreground="{DynamicResource AccentAAFillColorDefaultBrush}"
+                                    Icon="{x:Static ui:SegoeFluentIcons.Click}"
+                                    ToolTip="This hotkey supports a double-tap action">
+                                    <ui:FontIcon.Style>
+                                        <Style TargetType="ui:FontIcon">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasDoubleExecute}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:FontIcon.Style>
+                                </ui:FontIcon>
+                                -->
 
-                                <TextBlock
-                                    FontSize="12"
-                                    Text="{Binding LiveName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                    TextAlignment="Center"
-                                    TextWrapping="Wrap" />
-                            </ikw:SimpleStackPanel>
+                                <ikw:SimpleStackPanel Spacing="3">
+                                    <ToggleButton
+                                        Height="100"
+                                        Margin="3"
+                                        Padding="0"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        Command="{Binding ExecuteCommand}"
+                                        IsChecked="{Binding IsToggled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                        IsEnabled="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Tag="Hotkey">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="50px" />
+                                                <RowDefinition Height="5px" />
+                                                <RowDefinition Height="30px" />
+                                            </Grid.RowDefinitions>
+
+                                            <ui:FontIcon
+                                                Width="24"
+                                                Height="24"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                FontSize="{Binding FontSize, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Glyph="{Binding LiveGlyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                <ui:FontIcon.Style>
+                                                    <Style TargetType="ui:FontIcon">
+                                                        <Setter Property="Grid.RowSpan" Value="1" />
+                                                        <Setter Property="VerticalAlignment" Value="Center" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasTriggerChord}" Value="False">
+                                                                <Setter Property="Grid.RowSpan" Value="3" />
+                                                                <Setter Property="VerticalAlignment" Value="Center" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:FontIcon.Style>
+                                            </ui:FontIcon>
+
+                                            <Separator
+                                                Grid.Row="1"
+                                                BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                                BorderThickness="0,1,0,0"
+                                                Opacity="0.25">
+                                                <Separator.Style>
+                                                    <Style TargetType="Separator">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasTriggerChord}" Value="False">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Separator.Style>
+                                            </Separator>
+
+                                            <ItemsControl
+                                                Grid.Row="2"
+                                                HorizontalAlignment="Center"
+                                                ItemsSource="{Binding TriggerChordParts, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                <ItemsControl.Style>
+                                                    <Style TargetType="ItemsControl">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasTriggerChord}" Value="False">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ItemsControl.Style>
+
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="1" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border
+                                                            Height="24"
+                                                            MinWidth="24"
+                                                            Background="{DynamicResource NavigationViewContentGridBorderBrush}"
+                                                            CornerRadius="3">
+                                                            <TextBlock
+                                                                VerticalAlignment="Center"
+                                                                FontFamily="{Binding FontFamily}"
+                                                                FontSize="{Binding FontSize}"
+                                                                Text="{Binding Glyph}"
+                                                                TextAlignment="Center"
+                                                                TextWrapping="Wrap" />
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
+                                    </ToggleButton>
+
+                                    <TextBlock
+                                        FontSize="12"
+                                        Text="{Binding LiveName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                        TextAlignment="Center"
+                                        TextWrapping="Wrap" />
+                                </ikw:SimpleStackPanel>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -97,6 +198,89 @@
             VerticalAlignment="Bottom"
             Spacing="6">
 
+
+            <Border Padding="6"
+                Background="{DynamicResource ExpanderHeaderBackground}"
+                CornerRadius="{DynamicResource ControlCornerRadius}">
+                <StackPanel IsEnabled="{Binding SupportsTDP, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                    <DockPanel>
+                        <ui:FontIcon
+                            Width="40"
+                            HorizontalAlignment="Center"
+                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                            Glyph="&#xe945;" />
+                        <TextBlock Margin="12,0,0,0" Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_TDPOverride}" />
+                    </DockPanel>
+                    <ikw:SimpleStackPanel Margin="0,0,12,0" VerticalAlignment="Center" Spacing="4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5*" />
+                                <ColumnDefinition Width="5*" />
+                            </Grid.ColumnDefinitions>
+                            <DockPanel Grid.Column="0" Margin="0,0,12,0" Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ui:SettingsCard}}">
+                                <StackPanel Width="40" HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical">
+                                    <TextBlock Margin="0,0,0,0" FontSize="11" HorizontalAlignment="Center">PL1</TextBlock>
+                                    <DockPanel HorizontalAlignment="Center">
+                                        <TextBlock Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}" Text="{Binding PL1OverrideValue, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+                                        <TextBlock
+                                            Margin="0,0,0,0"
+                                            Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                                            Text="W" />
+                                    </DockPanel>
+                                </StackPanel>
+
+                                <ui:AppBarSeparator />
+                                <Slider
+                                    Margin="4,0,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"
+                                    AutoToolTipPrecision="0"
+                                    IsMoveToPointEnabled="True"
+                                    IsSnapToTickEnabled="True"
+                                    LargeChange="5"
+                                    Maximum="{Binding ConfigurableTDPOverrideUp, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="{Binding ConfigurableTDPOverrideDown, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    SmallChange="1"
+                                    TickFrequency="1"
+                                    TickPlacement="BottomRight"
+                                    ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                    Value="{Binding PL1OverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </DockPanel>
+                            <DockPanel Grid.Column="1" Margin="0,0,0,0" Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ui:SettingsCard}}">
+                                <StackPanel Width="40" HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical">
+                                    <TextBlock Margin="0,0,0,0" FontSize="11" HorizontalAlignment="Center">PL2</TextBlock>
+                                    <DockPanel HorizontalAlignment="Center">
+                                        <TextBlock Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}" Text="{Binding PL2OverrideValue, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+                                        <TextBlock
+                                            Margin="0,0,0,0"
+                                            Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                                            Text="W" />
+                                    </DockPanel>
+                                </StackPanel>
+
+                                <ui:AppBarSeparator />
+                                <Slider
+                                    Margin="4,0,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"
+                                    AutoToolTipPrecision="0"
+                                    IsMoveToPointEnabled="True"
+                                    IsSnapToTickEnabled="True"
+                                    LargeChange="5"
+                                    Maximum="{Binding ConfigurableTDPOverrideUp, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="{Binding ConfigurableTDPOverrideDown, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    SmallChange="1"
+                                    TickFrequency="1"
+                                    TickPlacement="BottomRight"
+                                    ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                    Value="{Binding PL2OverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </DockPanel>
+                        </Grid>
+
+                    </ikw:SimpleStackPanel>
+                </StackPanel>
+            </Border>
+            
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="6*" />
@@ -282,83 +466,126 @@
                 </ikw:SimpleStackPanel>
             </Grid>
 
-            <ui:NavigationViewItemSeparator Margin="-15,0,-6,0" />
-
-            <DockPanel>
-                <StackPanel Width="40" VerticalAlignment="Stretch">
-                    <Grid>
-                        <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xec48;" />
-                        <ui:ProgressRing
-                            d:Value="50"
-                            Maximum="100"
-                            IsIndeterminate="False"
-                            Value="{Binding CPUFanLoad, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Bottom" />
-                    </Grid>
-                    <StackPanel>
-                        <TextBlock
-                            MinWidth="20"
-                            d:Text="50"
-                            TextAlignment="Center"
-                            Text="{Binding CPUFanSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock VerticalAlignment="Top" d:Text="RPM" Text="RPM" HorizontalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}" />
-
-                    </StackPanel>
-                </StackPanel>
-                <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center" Spacing="4">
-                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.PerformancePage_FanMode_Title}" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2.5*" />
-                            <ColumnDefinition Width="2.5*" />
-                            <ColumnDefinition Width="2.5*" />
-                            <ColumnDefinition Width="2.5*" />
-                        </Grid.ColumnDefinitions>
-                        
-                        <ToggleButton
-                            Margin="0,0,4,0"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            IsChecked="{Binding IsFanModeHardware, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                            Command="{Binding FanPresetHardwareCommand}"
-                            Content="{l:Static resx:Resources.PerformancePage_FanMode_Hardware}" />
-                        <ToggleButton
-                            Grid.Column="1"
-                            Margin="0,0,4,0"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            IsChecked="{Binding IsFanModeBalance, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                            Command="{Binding FanPresetSoftwareCommand}"
-                            Content="{l:Static resx:Resources.PerformancePage_FanMode_Preset_Default}" />
-                        <ToggleButton
-                            Grid.Column="2"
-                            Margin="0,0,4,0"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            IsChecked="{Binding IsFanModeQuiet, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                            Command="{Binding FanPresetSilentCommand}"
-                            Content="{l:Static resx:Resources.PerformancePage_FanMode_Preset_Quiet}" />
-                        <ToggleButton
-                            Grid.Column="3"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            IsChecked="{Binding IsFanModeTurbo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                            Command="{Binding FanPresetTurboCommand}"
-                            Content="{l:Static resx:Resources.PerformancePage_FanMode_Preset_Aggressive}" />
-                    </Grid>
-                    <DockPanel>
-
-                        <DockPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="30">
-                            <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}" Text="{Binding FanSpeedOverrideValue, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+            <Border Padding="6"
+                Background="{DynamicResource ExpanderHeaderBackground}"
+                CornerRadius="{DynamicResource ControlCornerRadius}">
+                <DockPanel>
+                    <StackPanel Width="40" VerticalAlignment="Center">
+                        <Grid>
+                            <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xec48;" />
+                            <ui:ProgressRing
+                                d:Value="50"
+                                Maximum="100"
+                                IsIndeterminate="False"
+                                Value="{Binding CPUFanLoad, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Bottom" />
+                        </Grid>
+                        <StackPanel>
                             <TextBlock
-                                HorizontalAlignment="Center"
-                                Margin="0,0,0,0"
-                                Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
-                                Text="%" />
+                                MinWidth="20"
+                                d:Text="50"
+                                TextAlignment="Center"
+                                Text="{Binding CPUFanSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock VerticalAlignment="Top" d:Text="RPM" Text="RPM" HorizontalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}" />
+
+                        </StackPanel>
+                    </StackPanel>
+                    <ui:AppBarSeparator />
+                    <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center" Spacing="4">
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.PerformancePage_FanMode_Title}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2.5*" />
+                                <ColumnDefinition Width="2.5*" />
+                                <ColumnDefinition Width="2.5*" />
+                                <ColumnDefinition Width="2.5*" />
+                            </Grid.ColumnDefinitions>
+
+                            <ToggleButton
+                                Margin="0,0,4,0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                IsChecked="{Binding IsFanModeHardware, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                Command="{Binding FanPresetHardwareCommand}"
+                                Content="{l:Static resx:Resources.PerformancePage_FanMode_Hardware}" />
+                            <ToggleButton
+                                Grid.Column="1"
+                                Margin="0,0,4,0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                IsChecked="{Binding IsFanModeBalance, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                Command="{Binding FanPresetSoftwareCommand}"
+                                Content="{l:Static resx:Resources.PerformancePage_FanMode_Preset_Default}" />
+                            <ToggleButton
+                                Grid.Column="2"
+                                Margin="0,0,4,0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                IsChecked="{Binding IsFanModeQuiet, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                Command="{Binding FanPresetSilentCommand}"
+                                Content="{l:Static resx:Resources.PerformancePage_FanMode_Preset_Quiet}" />
+                            <ToggleButton
+                                Grid.Column="3"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                IsChecked="{Binding IsFanModeTurbo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                Command="{Binding FanPresetTurboCommand}"
+                                Content="{l:Static resx:Resources.PerformancePage_FanMode_Preset_Aggressive}" />
+                        </Grid>
+                        <DockPanel>
+
+                            <DockPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="30">
+                                <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}" Text="{Binding FanSpeedOverrideValue, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    Margin="0,0,0,0"
+                                    Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                                    Text="%" />
+                            </DockPanel>
+                            <ikw:SimpleStackPanel Margin="4,0,12,0" VerticalAlignment="Center" Spacing="4">
+                                <Slider
+                                    x:Name="SliderFan"
+                                    IsEnabled="{Binding SupportsFanMode, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    IsMoveToPointEnabled="True"
+                                    IsSnapToTickEnabled="True"
+                                    LargeChange="10"
+                                    Maximum="100"
+                                    Minimum="0"
+                                    SmallChange="1"
+                                    TickFrequency="1"
+                                    ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                    Value="{Binding FanSpeedOverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
-                        <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center" Spacing="4">
+                    </ikw:SimpleStackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Padding="6"
+                    Background="{DynamicResource ExpanderHeaderBackground}"
+                    CornerRadius="{DynamicResource ControlCornerRadius}">
+                <StackPanel Orientation="Vertical">
+                    <DockPanel>
+                        <Button 
+                            Name="BrightnessButton"
+                            IsEnabled="False"
+                            Click="BrightnessButton_Click"
+                            Height="40" Width="40"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            BorderBrush="{x:Null}"
+                            Background="{x:Null}"
+                            Padding="0,0,0,0">
+                            <ui:FontIcon
+                                Name="LightIcon"
+                                Height="40"
+                                HorizontalAlignment="Center"
+                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                Glyph="&#xE706;" />
+                        </Button>
+                        <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
                             <Slider
-                                x:Name="SliderFan"
-                                IsEnabled="{Binding SupportsFanMode, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                x:Name="SliderBrightness"
+                                IsEnabled="False"
                                 IsMoveToPointEnabled="True"
                                 IsSnapToTickEnabled="True"
                                 LargeChange="10"
@@ -367,195 +594,83 @@
                                 SmallChange="1"
                                 TickFrequency="1"
                                 ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                Value="{Binding FanSpeedOverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                ValueChanged="SliderBrightness_ValueChanged" />
                         </ikw:SimpleStackPanel>
                     </DockPanel>
-                </ikw:SimpleStackPanel>
-            </DockPanel>
-
-            <ui:NavigationViewItemSeparator Margin="-15,0,-6,0" />
-
-            <DockPanel IsEnabled="{Binding SupportsTDP, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                <ui:FontIcon
-                    Width="40"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                    Glyph="&#xe945;" />
-                <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center" Spacing="4">
-                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{l:Static resx:Resources.ProfilesPage_TDPOverride}" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="5*" />
                             <ColumnDefinition Width="5*" />
                         </Grid.ColumnDefinitions>
-                        <DockPanel Grid.Column="0" Margin="-42,0,30,0" Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ui:SettingsCard}}">
-                            <StackPanel Width="40" HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical">
-                                <TextBlock Margin="0,0,0,0" FontSize="11">PL1</TextBlock>
-                                <DockPanel Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=StackPanel}}">
-                                    <TextBlock Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}" Text="{Binding PL1OverrideValue, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
-                                    <TextBlock
-                                        Margin="0,0,0,0"
-                                        Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
-                                        Text="W" />
-                                </DockPanel>
-                            </StackPanel>
-                            <Slider
-                                Margin="4,0,0,0"
-                                HorizontalAlignment="Stretch"
+                        <DockPanel Grid.Column="0">
+                            <Button 
+                                Name="VolumeButton"
+                                IsEnabled="False"
+                                Click="VolumeButton_Click"
+                                Height="40" Width="40"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
-                                AutoToolTipPrecision="0"
-                                IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
-                                LargeChange="5"
-                                Maximum="{Binding ConfigurableTDPOverrideUp, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                Minimum="{Binding ConfigurableTDPOverrideDown, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                SmallChange="1"
-                                TickFrequency="1"
-                                TickPlacement="None"
-                                ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                Value="{Binding PL1OverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                BorderBrush="{x:Null}"
+                                Background="{x:Null}"
+                                Padding="0,0,0,0">
+                                <ui:FontIcon
+                                    Name="VolumeIcon"
+                                    Height="40"
+                                    HorizontalAlignment="Center"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xE767;" />
+                            </Button>
+                            <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
+                                <Slider
+                                    x:Name="SliderVolume"
+                                    IsEnabled="False"
+                                    IsMoveToPointEnabled="True"
+                                    IsSnapToTickEnabled="True"
+                                    LargeChange="10"
+                                    Maximum="100"
+                                    Minimum="0"
+                                    SmallChange="1"
+                                    TickFrequency="1"
+                                    ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                    ValueChanged="SliderVolume_ValueChanged" />
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
-                        <DockPanel Grid.Column="1" Margin="-10,0,0,0" Width="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ui:SettingsCard}}">
-                            <StackPanel Width="40" HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical">
-                                <TextBlock Margin="0,0,0,0" FontSize="11">PL2</TextBlock>
-                                <DockPanel>
-                                    <TextBlock Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}" Text="{Binding PL2OverrideValue, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
-                                    <TextBlock
-                                        Margin="0,0,0,0"
-                                        Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
-                                        Text="W" />
-                                </DockPanel>
-                            </StackPanel>
-                            <Slider
-                                Margin="4,0,0,0"
-                                HorizontalAlignment="Stretch"
+                        <DockPanel Grid.Column="1">
+                            <Button 
+                                Name="MicButton"
+                                IsEnabled="False"
+                                Click="MicButton_Click"
+                                Height="40" Width="40"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
-                                AutoToolTipPrecision="0"
-                                IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
-                                LargeChange="5"
-                                Maximum="{Binding ConfigurableTDPOverrideUp, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                Minimum="{Binding ConfigurableTDPOverrideDown, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                SmallChange="1"
-                                TickFrequency="1"
-                                TickPlacement="None"
-                                ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                Value="{Binding PL2OverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                BorderBrush="{x:Null}"
+                                Background="{x:Null}"
+                                Padding="0,0,0,0">
+                                <ui:FontIcon
+                                    Name="MicIcon"
+                                    Height="40"
+                                    HorizontalAlignment="Center"
+                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                    Glyph="&#xe720;" />
+                            </Button>
+                            <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
+                                <Slider
+                                    x:Name="SliderMic"
+                                    IsEnabled="False"
+                                    IsMoveToPointEnabled="True"
+                                    IsSnapToTickEnabled="True"
+                                    LargeChange="10"
+                                    Maximum="100"
+                                    Minimum="0"
+                                    SmallChange="1"
+                                    TickFrequency="1"
+                                    ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                                    ValueChanged="SliderMic_ValueChanged"/>
+                            </ikw:SimpleStackPanel>
                         </DockPanel>
                     </Grid>
-
-                </ikw:SimpleStackPanel>
-            </DockPanel>
-
-            <ui:NavigationViewItemSeparator Margin="-15,0,-6,0" />
-
-            <DockPanel>
-                <Button 
-                    Name="BrightnessButton"
-                    IsEnabled="False"
-                    Click="BrightnessButton_Click"
-                    Height="40" Width="40"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    BorderBrush="{x:Null}"
-                    Background="{x:Null}"
-                    Padding="0,0,0,0">
-                    <ui:FontIcon
-                        Name="LightIcon"
-                        Height="40"
-                        HorizontalAlignment="Center"
-                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                        Glyph="&#xE706;" />
-                </Button>
-                <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
-                    <Slider
-                        x:Name="SliderBrightness"
-                        IsEnabled="False"
-                        IsMoveToPointEnabled="True"
-                        IsSnapToTickEnabled="True"
-                        LargeChange="10"
-                        Maximum="100"
-                        Minimum="0"
-                        SmallChange="1"
-                        TickFrequency="1"
-                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                        ValueChanged="SliderBrightness_ValueChanged" />
-                </ikw:SimpleStackPanel>
-            </DockPanel>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="5*" />
-                </Grid.ColumnDefinitions>
-                <DockPanel Grid.Column="0">
-                    <Button 
-                        Name="VolumeButton"
-                        IsEnabled="False"
-                        Click="VolumeButton_Click"
-                        Height="40" Width="40"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center"
-                        BorderBrush="{x:Null}"
-                        Background="{x:Null}"
-                        Padding="0,0,0,0">
-                        <ui:FontIcon
-                            Name="VolumeIcon"
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xE767;" />
-                    </Button>
-                    <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
-                        <Slider
-                            x:Name="SliderVolume"
-                            IsEnabled="False"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            LargeChange="10"
-                            Maximum="100"
-                            Minimum="0"
-                            SmallChange="1"
-                            TickFrequency="1"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            ValueChanged="SliderVolume_ValueChanged" />
-                    </ikw:SimpleStackPanel>
-                </DockPanel>
-                <DockPanel Grid.Column="1">
-                    <Button 
-                        Name="MicButton"
-                        IsEnabled="False"
-                        Click="MicButton_Click"
-                        Height="40" Width="40"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center"
-                        BorderBrush="{x:Null}"
-                        Background="{x:Null}"
-                        Padding="0,0,0,0">
-                        <ui:FontIcon
-                            Name="MicIcon"
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xe720;" />
-                    </Button>
-                    <ikw:SimpleStackPanel Margin="12,0,12,0" VerticalAlignment="Center">
-                        <Slider
-                            x:Name="SliderMic"
-                            IsEnabled="False"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            LargeChange="10"
-                            Maximum="100"
-                            Minimum="0"
-                            SmallChange="1"
-                            TickFrequency="1"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            ValueChanged="SliderMic_ValueChanged"/>
-                    </ikw:SimpleStackPanel>
-                </DockPanel>
-            </Grid>
-
+                </StackPanel>
+            </Border>
         </ikw:SimpleStackPanel>
     </Grid>
 </Page>

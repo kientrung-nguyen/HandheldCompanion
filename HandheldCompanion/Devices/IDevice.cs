@@ -568,17 +568,6 @@ public abstract class IDevice
                 }
                 break;
 
-            case "CNCDAN":
-                {
-                    switch (ProductName)
-                    {
-                        case "NucDeckRev1.0":
-                            device = new NUCDeck();
-                            break;
-                    }
-                }
-                break;
-
             case "GPD":
                 {
                     switch (ProductName)

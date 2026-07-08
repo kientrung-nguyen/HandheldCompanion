@@ -18,7 +18,8 @@ namespace HandheldCompanion.Commands.Functions.HC
             base.Glyph = "\uE7C4";
             base.OnKeyUp = true;
 
-            MainWindow.GetCurrent().StateChanged += StateChanged;
+            MainWindow? mainWindow = MainWindow.GetCurrent();
+            mainWindow?.StateChanged += StateChanged;
         }
 
         private void StateChanged(object? sender, EventArgs e)
@@ -65,7 +66,7 @@ namespace HandheldCompanion.Commands.Functions.HC
             base.Execute(IsKeyDown, IsKeyUp, false);
         }
 
-        public override bool IsToggled => MainWindow.GetCurrent().WindowState != WindowState.Minimized;
+        public override bool IsToggled => MainWindow.GetCurrent()?.WindowState != WindowState.Minimized;
 
         public override object Clone()
         {
@@ -84,7 +85,9 @@ namespace HandheldCompanion.Commands.Functions.HC
 
         public override void Dispose()
         {
-            MainWindow.GetCurrent().StateChanged -= StateChanged;
+            MainWindow? mainWindow = MainWindow.GetCurrent();
+            mainWindow?.StateChanged -= StateChanged;
+
             base.Dispose();
         }
     }

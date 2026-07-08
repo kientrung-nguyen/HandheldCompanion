@@ -99,7 +99,7 @@
       <Value Profile="(Default)">0</Value>
     </Setting>
     <Setting Name="MainWindowBackdrop" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">1</Value>
+      <Value Profile="(Default)">2</Value>
     </Setting>
     <Setting Name="UpdateUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">https://api.github.com/repos/Valkirie/HandheldCompanion</Value>
@@ -368,8 +368,17 @@
     <Setting Name="GoBackToSleep" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="ControllerSlotManagementMode" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">0</Value>
+    <Setting Name="GoBackToSleepOnPowerButton" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="GoBackToSleepOnFingerprintReader" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="GoBackToSleepOnJoystick" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="GoBackToSleepOnChargerConnected" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="MasterInterval" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
@@ -396,6 +405,12 @@
       <Value Profile="(Default)">0</Value>
     </Setting>
     <Setting Name="ConnectOnPlug" Type="System.String" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ControllerSlotManagementMode" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="MainWindowApplyNoise" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
   </Settings>

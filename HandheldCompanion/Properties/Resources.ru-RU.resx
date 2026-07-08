@@ -738,15 +738,6 @@
   <data name="ProfilesPage_UMCEnable" xml:space="preserve">
     <value>Включить универсальный контроллер движения</value>
   </data>
-  <data name="ProfilesPage_UMCMotionOff" xml:space="preserve">
-    <value>Выключено, включение по кнопке</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionOn" xml:space="preserve">
-    <value>Включено, отключение по кнопке</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionToggle" xml:space="preserve">
-    <value>Toggle between enabled or disabled with button(s)</value>
-  </data>
   <data name="ProfilesPage_UMCMotionOnOff" xml:space="preserve">
     <value>Активация управления движением</value>
   </data>

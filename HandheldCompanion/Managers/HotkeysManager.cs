@@ -3,7 +3,6 @@ using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -36,7 +35,7 @@ public class HotkeysManager : IManager
 
         base.PrepareStart();
 
-        bool IsFirstStart = MainWindow.LastVersion == Version.Parse("0.0.0.0");
+        bool IsFirstStart = App.LastVersion == Version.Parse("0.0.0.0");
 
         // process existing hotkeys
         string[] fileEntries = Directory.GetFiles(ManagerPath, "*.json", SearchOption.AllDirectories);
@@ -331,7 +330,7 @@ public class HotkeysManager : IManager
         string hotkeyPath = Path.Combine(ManagerPath, $"{hotkey.ButtonFlags}.json");
 
         // update profile version to current build
-        hotkey.Version = MainWindow.CurrentVersion;
+        hotkey.Version = App.CurrentVersion;
 
         string jsonString = JsonConvert.SerializeObject(hotkey, Formatting.Indented, new JsonSerializerSettings
         {

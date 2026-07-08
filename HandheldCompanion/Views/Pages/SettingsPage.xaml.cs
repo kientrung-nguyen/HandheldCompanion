@@ -39,7 +39,6 @@ public partial class SettingsPage : Page
         cB_Language.ItemsSource = cultures;
 
         // manage events
-        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
         ManagerFactory.multimediaManager.ScreenConnected += MultimediaManager_ScreenConnected;
         ManagerFactory.multimediaManager.ScreenDisconnected += MultimediaManager_ScreenDisconnected;
         ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
@@ -55,6 +54,59 @@ public partial class SettingsPage : Page
                 QueryPlatforms();
                 break;
         }
+
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
+        }
+    }
+
+    private void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+    private void QuerySettings()
+    {
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        SettingsManager_SettingValueChanged("MainWindowTheme", ManagerFactory.settingsManager.GetString("MainWindowTheme"), false);
+        SettingsManager_SettingValueChanged("MainWindowBackdrop", ManagerFactory.settingsManager.GetString("MainWindowBackdrop"), false);
+        SettingsManager_SettingValueChanged("MainWindowApplyNoise", ManagerFactory.settingsManager.GetString("MainWindowApplyNoise"), false);
+        SettingsManager_SettingValueChanged("QuicktoolsBackdrop", ManagerFactory.settingsManager.GetString("QuicktoolsBackdrop"), false);
+        SettingsManager_SettingValueChanged("QuickToolsApplyNoise", ManagerFactory.settingsManager.GetString("QuickToolsApplyNoise"), false);
+        SettingsManager_SettingValueChanged("RunAtStartup", ManagerFactory.settingsManager.GetString("RunAtStartup"), false);
+        SettingsManager_SettingValueChanged("StartMinimized", ManagerFactory.settingsManager.GetString("StartMinimized"), false);
+        SettingsManager_SettingValueChanged("StartMaximized", ManagerFactory.settingsManager.GetString("StartMaximized"), false);
+        SettingsManager_SettingValueChanged("CloseMinimises", ManagerFactory.settingsManager.GetString("CloseMinimises"), false);
+        SettingsManager_SettingValueChanged("DesktopLayoutOnStart", ManagerFactory.settingsManager.GetString("DesktopLayoutOnStart"), false);
+        SettingsManager_SettingValueChanged("ToastEnable", ManagerFactory.settingsManager.GetString("ToastEnable"), false);
+        SettingsManager_SettingValueChanged("CurrentCulture", ManagerFactory.settingsManager.GetString("CurrentCulture"), false);
+        SettingsManager_SettingValueChanged("PlatformRTSSEnabled", ManagerFactory.settingsManager.GetString("PlatformRTSSEnabled"), false);
+        SettingsManager_SettingValueChanged("QuickToolsLocation", ManagerFactory.settingsManager.GetString("QuickToolsLocation"), false);
+        SettingsManager_SettingValueChanged("QuickToolsAutoHide", ManagerFactory.settingsManager.GetString("QuickToolsAutoHide"), false);
+        SettingsManager_SettingValueChanged("UISounds", ManagerFactory.settingsManager.GetString("UISounds"), false);
+        SettingsManager_SettingValueChanged("TelemetryEnabled", ManagerFactory.settingsManager.GetString("TelemetryEnabled"), false);
+        SettingsManager_SettingValueChanged("ProcessPriority", ManagerFactory.settingsManager.GetString("ProcessPriority"), false);
+        SettingsManager_SettingValueChanged("QuickKeyboardVisibility", ManagerFactory.settingsManager.GetString("QuickKeyboardVisibility"), false);
+        SettingsManager_SettingValueChanged("QuickTrackpadVisibility", ManagerFactory.settingsManager.GetString("QuickTrackpadVisibility"), false);
+        SettingsManager_SettingValueChanged("QuickToolsSlideAnimation", ManagerFactory.settingsManager.GetString("QuickToolsSlideAnimation"), false);
+        SettingsManager_SettingValueChanged("PerformanceManagerEnabled", ManagerFactory.settingsManager.GetString("PerformanceManagerEnabled"), false);
+        SettingsManager_SettingValueChanged("GPUManagementEnabled", ManagerFactory.settingsManager.GetString("GPUManagementEnabled"), false);
+        SettingsManager_SettingValueChanged("LibraryPageEnabled", ManagerFactory.settingsManager.GetString("LibraryPageEnabled"), false);
+        SettingsManager_SettingValueChanged("ShowSplashScreen", ManagerFactory.settingsManager.GetString("ShowSplashScreen"), false);
+        SettingsManager_SettingValueChanged("DSUEnabled", ManagerFactory.settingsManager.GetString("DSUEnabled"), false);
+        SettingsManager_SettingValueChanged("DSUport", ManagerFactory.settingsManager.GetString("DSUport"), false);
+        SettingsManager_SettingValueChanged("VIIPEREnabled", ManagerFactory.settingsManager.GetString("VIIPEREnabled"), false);
+        SettingsManager_SettingValueChanged("VIIPERPort", ManagerFactory.settingsManager.GetString("VIIPERPort"), false);
     }
 
     private void QueryPlatforms()
@@ -255,6 +307,9 @@ public partial class SettingsPage : Page
                     break;
                 case "QuickToolsApplyNoise":
                     QuickToolsNoiseToggle.IsOn = Convert.ToBoolean(value);
+                    break;
+                case "MainWindowApplyNoise":
+                    MainWindowNoiseToggle.IsOn = Convert.ToBoolean(value);
                     break;
                 case "ShowSplashScreen":
                     Toggle_SplashScreen.IsOn = Convert.ToBoolean(value);
@@ -580,6 +635,14 @@ public partial class SettingsPage : Page
             return;
 
         ManagerFactory.settingsManager.SetProperty("QuickToolsApplyNoise", QuickToolsNoiseToggle.IsOn);
+    }
+
+    private void MainWindowNoiseToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        ManagerFactory.settingsManager.SetProperty("MainWindowApplyNoise", MainWindowNoiseToggle.IsOn);
     }
 
     private void Toggle_SplashScreen_Toggled(object sender, RoutedEventArgs e)

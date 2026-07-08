@@ -88,6 +88,7 @@ public partial class QuickProfilesPage : Page
             }.ShowAsync();
         };
 
+        // todo: move me to MVVM!
         foreach (var mode in Enum.GetValues<MotionOutput>())
         {
             var comboBoxItem = new ComboBoxItem()
@@ -115,6 +116,7 @@ public partial class QuickProfilesPage : Page
             MotionOutputComboBox.Items.Add(comboBoxItem);
         }
 
+        // todo: move me to MVVM!
         foreach (var mode in (MotionInput[])Enum.GetValues(typeof(MotionInput)))
         {
             var comboBoxItem = new ComboBoxItem()

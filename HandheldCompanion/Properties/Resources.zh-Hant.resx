@@ -738,15 +738,6 @@
   <data name="ProfilesPage_UMCEnable" xml:space="preserve">
     <value>啟動通用體感控制</value>
   </data>
-  <data name="ProfilesPage_UMCMotionOff" xml:space="preserve">
-    <value>默認關閉，按住按鍵啟動</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionOn" xml:space="preserve">
-    <value>默認啟動，按住按鍵關閉</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionToggle" xml:space="preserve">
-    <value>以按鍵切換啟用/停用</value>
-  </data>
   <data name="ProfilesPage_UMCMotionOnOff" xml:space="preserve">
     <value>體感啟動</value>
   </data>

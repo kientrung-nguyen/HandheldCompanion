@@ -16,17 +16,17 @@
     d:DesignWidth="1000"
     mc:Ignorable="d">
 
-    <ikw:SimpleStackPanel Spacing="12" Visibility="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+    <ikw:SimpleStackPanel Spacing="28" Visibility="{Binding IsEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
 
         <!--  LEFT JOYSTICK  -->
-        <ikw:SimpleStackPanel Spacing="3" Visibility="{Binding IsLeftThumbEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <ikw:SimpleStackPanel Spacing="8" Visibility="{Binding IsLeftThumbEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.JoystickPage_Joystick_Left}" />
             <ItemsControl ItemTemplate="{StaticResource AxisStackTemplate}" ItemsSource="{Binding LeftThumbAxisMappings}" />
             <ItemsControl ItemTemplate="{StaticResource ButtonStackTemplate}" ItemsSource="{Binding LeftThumbMappings}" />
         </ikw:SimpleStackPanel>
 
         <!--  RIGHT JOYSTICK  -->
-        <ikw:SimpleStackPanel Spacing="3" Visibility="{Binding IsRightThumbEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <ikw:SimpleStackPanel Spacing="8" Visibility="{Binding IsRightThumbEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
             <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.JoystickPage_Joystick_Right}" />
             <ItemsControl ItemTemplate="{StaticResource AxisStackTemplate}" ItemsSource="{Binding RightThumbAxisMappings}" />
             <ItemsControl ItemTemplate="{StaticResource ButtonStackTemplate}" ItemsSource="{Binding RightThumbMappings}" />

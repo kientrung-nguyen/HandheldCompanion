@@ -11,7 +11,7 @@ using System.Configuration;
 
 namespace HandheldCompanion.Properties
 {
-    
+
     [SettingsProvider(typeof(CustomSettingsProvider))]
     internal sealed partial class Settings : ApplicationSettingsBase
     {
@@ -409,7 +409,7 @@ namespace HandheldCompanion.Properties
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
         public int MainWindowBackdrop {
             get {
                 return ((int)(this["MainWindowBackdrop"]));
@@ -1488,13 +1488,49 @@ namespace HandheldCompanion.Properties
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int ControllerSlotManagementMode {
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool GoBackToSleepOnPowerButton {
             get {
-                return ((int)(this["ControllerSlotManagementMode"]));
+                return ((bool)(this["GoBackToSleepOnPowerButton"]));
             }
             set {
-                this["ControllerSlotManagementMode"] = value;
+                this["GoBackToSleepOnPowerButton"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool GoBackToSleepOnFingerprintReader {
+            get {
+                return ((bool)(this["GoBackToSleepOnFingerprintReader"]));
+            }
+            set {
+                this["GoBackToSleepOnFingerprintReader"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool GoBackToSleepOnJoystick {
+            get {
+                return ((bool)(this["GoBackToSleepOnJoystick"]));
+            }
+            set {
+                this["GoBackToSleepOnJoystick"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool GoBackToSleepOnChargerConnected {
+            get {
+                return ((bool)(this["GoBackToSleepOnChargerConnected"]));
+            }
+            set {
+                this["GoBackToSleepOnChargerConnected"] = value;
             }
         }
         
@@ -1603,6 +1639,30 @@ namespace HandheldCompanion.Properties
             }
             set {
                 this["ConnectOnPlug"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ControllerSlotManagementMode {
+            get {
+                return ((int)(this["ControllerSlotManagementMode"]));
+            }
+            set {
+                this["ControllerSlotManagementMode"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool MainWindowApplyNoise {
+            get {
+                return ((bool)(this["MainWindowApplyNoise"]));
+            }
+            set {
+                this["MainWindowApplyNoise"] = value;
             }
         }
     }

@@ -459,8 +459,8 @@ public class ClawA1M : IDevice
         // stop WMI event monitor
         StopWatching();
 
-        // configure controller to Desktop
-        SwitchMode(GamepadMode.Desktop);
+        // configure controller to XInput
+        SwitchMode(GamepadMode.XInput);
 
         // close devices
         foreach (HidDevice hidDevice in hidDevices.Values)
@@ -605,6 +605,21 @@ public class ClawA1M : IDevice
         }
 
         return false;
+    }
+
+    public bool SwitchToXInput()
+    {
+        return SwitchMode(GamepadMode.XInput);
+    }
+
+    public bool SwitchToDirectInput()
+    {
+        return SwitchMode(GamepadMode.DirectInput);
+    }
+
+    public bool SwitchToDesktop()
+    {
+        return SwitchMode(GamepadMode.Desktop);
     }
 
     protected bool SyncToROM()

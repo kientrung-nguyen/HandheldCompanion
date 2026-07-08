@@ -33,6 +33,7 @@
     <converters:TypeToVisibilityConverter x:Key="TypeToVisibilityConverter" />
     <converters:ActionTypeIndexToNameConverter x:Key="ActionTypeIndexToNameConverter" />
     <converters:ActionDisplayConverter x:Key="ActionDisplayConverter" />
+    <converters:ColorToBrushConverter x:Key="ColorToBrushConverter" />
 
     <Style x:Key="LibraryImageFadeStyle" TargetType="Image">
         <Setter Property="Opacity" Value="1" />
@@ -121,32 +122,51 @@
             Command="{Binding OpenSettingsCommand}"
             Description="{Binding Description, Mode=OneWay}"
             Header="{Binding Name, Mode=OneWay}"
-            IsClickEnabled="{Binding CanUnpin, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+            IsClickEnabled="True">
 
             <ui:SettingsCard.HeaderIcon>
-                <ui:FontIcon
-                    Width="16"
-                    FontFamily="{Binding FontFamily, Mode=OneWay}"
-                    Glyph="{Binding Glyph, Mode=OneWay}" />
+                <ui:FontIcon FontFamily="{Binding FontFamily, Mode=OneWay}" Glyph="{Binding Glyph, Mode=OneWay}" />
             </ui:SettingsCard.HeaderIcon>
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="9*" MinWidth="240" />
+                    <ColumnDefinition MinWidth="40" />
+                    <ColumnDefinition />
                     <ColumnDefinition MinWidth="130" />
                 </Grid.ColumnDefinitions>
 
-                <ToggleButton
-                    Height="40"
+                <Border
+                    Padding="6"
                     HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{Binding DefineButtonCommand}"
-                    IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                    Tag="Hotkey">
-
-                    <ToggleButton.Resources>
-                        <Style BasedOn="{StaticResource {x:Type ToggleButton}}" TargetType="ToggleButton">
+                    Background="{DynamicResource ExpanderHeaderBackground}"
+                    CornerRadius="3">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Visible" />
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasTriggerChord}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Text="{Binding InputsChordType, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Border>
+
+                <ItemsControl
+                    Grid.Column="1"
+                    Margin="3,0,0,0"
+                    ItemsSource="{Binding TriggerChordParts}">
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasTriggerChord}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsExecuted}" Value="True">
                                     <DataTrigger.EnterActions>
                                         <BeginStoryboard>
@@ -165,84 +185,53 @@
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </ToggleButton.Resources>
+                    </ItemsControl.Style>
 
-                    <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3">
-                        <ItemsControl ItemsSource="{Binding ButtonGlyphs}">
-                            <ItemsControl.Style>
-                                <Style TargetType="ItemsControl">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ButtonGlyphs.Count}" Value="0">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding ButtonGlyphs.Count}">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ItemsControl.Style>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="1" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
 
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <ui:FontIcon
-                                        FontFamily="{Binding FontFamily, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                        FontSize="24"
-                                        Glyph="{Binding Glyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                                        <ui:FontIcon.Style>
-                                            <Style TargetType="ui:FontIcon">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Value="{x:Null}">
-                                                        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                                <Setter Property="Foreground" Value="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                            </Style>
-                                        </ui:FontIcon.Style>
-                                    </ui:FontIcon>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <TextBlock VerticalAlignment="Center" Text="{Binding KeyboardChord, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding KeyboardChord}" Value="">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding KeyboardChord}">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-
-                        <TextBlock
-                            VerticalAlignment="Center"
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            Text="{Binding InputsChordType, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </ikw:SimpleStackPanel>
-                </ToggleButton>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                MinWidth="40"
+                                HorizontalAlignment="Stretch"
+                                Background="{DynamicResource AccentAAFillColorDefaultBrush}"
+                                CornerRadius="3">
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontFamily="{Binding FontFamily, FallbackValue={StaticResource SymbolThemeFontFamily}, TargetNullValue={StaticResource SymbolThemeFontFamily}}"
+                                    FontSize="{Binding FontSize}"
+                                    Foreground="{Binding Color, Converter={StaticResource ColorToBrushConverter}, FallbackValue={StaticResource SystemControlForegroundAltHighBrush}}"
+                                    Text="{Binding Glyph}"
+                                    TextAlignment="Center"
+                                    TextWrapping="NoWrap" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
                 <ikw:SimpleStackPanel
-                    Grid.Column="1"
-                    Margin="3,0,0,0"
+                    Grid.Column="2"
+                    Height="40"
+                    Margin="12,0,0,0"
                     HorizontalAlignment="Right"
                     Orientation="Horizontal"
                     Spacing="3">
+
+                    <ToggleButton
+                        VerticalAlignment="Stretch"
+                        Command="{Binding DefineButtonCommand}"
+                        IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        Tag="Hotkey">
+                        <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe104;" />
+                    </ToggleButton>
+
                     <Button VerticalAlignment="Stretch" Command="{Binding EraseButtonCommand}">
-                        <ui:FontIcon
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xe75c;" />
+                        <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe75c;" />
                     </Button>
 
                     <ToggleButton
@@ -251,10 +240,7 @@
                         IsChecked="{Binding IsPinned, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                         IsEnabled="{Binding CanUnpin, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                         Tag="Hotkey">
-                        <ui:FontIcon
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}">
+                        <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}">
                             <ui:FontIcon.Style>
                                 <Style TargetType="{x:Type ui:FontIcon}">
                                     <Setter Property="Glyph" Value="&#xe718;" />
@@ -379,7 +365,7 @@
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Bottom"
                                     RenderOptions.BitmapScalingMode="LowQuality"
-                                    Source="{Binding Platform, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource DrawingImageToImageSourceConverter}}"
+                                    Source="{Binding Platform, Mode=OneWay}"
                                     Stretch="Uniform" />
                             </Grid>
 
@@ -543,7 +529,7 @@
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Bottom"
                                     RenderOptions.BitmapScalingMode="LowQuality"
-                                    Source="{Binding Platform, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource DrawingImageToImageSourceConverter}}"
+                                    Source="{Binding Platform, Mode=OneWay}"
                                     Stretch="Uniform" />
                             </Grid>
 
@@ -620,25 +606,29 @@
 
     <DataTemplate x:Key="LibraryTemplateList" DataType="{x:Type viewmodels:ProfileViewModel}">
         <Grid x:Name="CardRoot" behaviors:LibraryItemVisibilityBehavior.TrackVisibility="True">
-            <Button
-                Height="48"
+            <ui:SettingsCard
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Stretch"
-                Background="Transparent"
-                BorderThickness="0"
                 Command="{Binding Navigate}"
                 ContextMenu="{StaticResource LibraryActionContextMenu}"
+                Description="{Binding Description}"
+                Header="{Binding Name}"
+                IsClickEnabled="True"
                 IsEnabled="{Binding IsBusy, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
                 Tag="{Binding}">
-                <Button.Style>
-                    <Style BasedOn="{StaticResource DefaultButtonStyle}" TargetType="Button">
-                        <Style.Triggers>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.20" />
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
+
+                <ui:SettingsCard.HeaderIcon>
+                    <Border
+                        Width="36"
+                        Height="36"
+                        Margin="-8">
+                        <Image
+                            x:Name="MainImage"
+                            RenderOptions.BitmapScalingMode="LowQuality"
+                            Source="{Binding Cover, NotifyOnTargetUpdated=True}"
+                            Stretch="UniformToFill" />
+                    </Border>
+                </ui:SettingsCard.HeaderIcon>
 
                 <Grid HorizontalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
@@ -649,14 +639,6 @@
 
                     <Border ClipToBounds="True" CornerRadius="{DynamicResource ControlCornerRadius}">
                         <Grid>
-                            <ui:PersonPicture
-                                x:Name="MainImage"
-                                Width="32"
-                                Height="32"
-                                Panel.ZIndex="1"
-                                DisplayName="{Binding Name}"
-                                ProfilePicture="{Binding Cover, NotifyOnTargetUpdated=True}"
-                                RenderOptions.BitmapScalingMode="LowQuality" />
                             <ui:ProgressRing
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -664,6 +646,7 @@
                                 IsActive="{Binding IsBusy}"
                                 IsIndeterminate="{Binding IsBusy}"
                                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <!--
                             <ui:InfoBadge
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Bottom"
@@ -673,37 +656,9 @@
                                     <ui:FontIconSource Glyph="&#xe735;" />
                                 </ui:InfoBadge.IconSource>
                             </ui:InfoBadge>
+                            -->
                         </Grid>
                     </Border>
-
-                    <StackPanel
-                        Grid.Column="1"
-                        Margin="6,0,0,0"
-                        VerticalAlignment="Center">
-                        <TextBlock
-                            Style="{StaticResource BaseTextBlockStyle}"
-                            Text="{Binding Name}"
-                            TextTrimming="CharacterEllipsis"
-                            TextWrapping="NoWrap" />
-                        <TextBlock
-                            Text="{Binding Description}"
-                            TextTrimming="CharacterEllipsis"
-                            TextWrapping="NoWrap">
-                            <TextBlock.Style>
-                                <Style BasedOn="{StaticResource BodyTextBlockStyle}" TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Description}" Value="">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding Description}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
 
                     <Image
                         Grid.Column="2"
@@ -712,10 +667,10 @@
                         Margin="0,0,12,0"
                         VerticalAlignment="Center"
                         RenderOptions.BitmapScalingMode="LowQuality"
-                        Source="{Binding Platform, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource DrawingImageToImageSourceConverter}}"
+                        Source="{Binding Platform, Mode=OneWay}"
                         Stretch="Uniform" />
                 </Grid>
-            </Button>
+            </ui:SettingsCard>
         </Grid>
     </DataTemplate>
 
@@ -1286,390 +1241,375 @@
     </DataTemplate>
 
     <DataTemplate x:Key="GyroMappingTemplate" DataType="{x:Type viewmodels:GyroMappingViewModel}">
-        <ui:SettingsExpander>
-            <ui:SettingsExpander.Content>
+        <ikw:SimpleStackPanel Spacing="3">
+            <ui:SettingsCard Header="Action type">
+                <ComboBox Width="120" SelectedIndex="{Binding ActionTypeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Disabled}" IsEnabled="True" />
+                    <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Button}" IsEnabled="False" />
+                    <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Joystick}" IsEnabled="True" />
+                    <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Keyboard}" IsEnabled="False" />
+                    <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Mouse}" IsEnabled="True" />
+                    <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Trigger}" IsEnabled="False" />
+                    <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Shift}" IsEnabled="False" />
+                    <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Inherit}" IsEnabled="False" />
+                </ComboBox>
+            </ui:SettingsCard>
+
+            <ui:SettingsCard Header="Target axis" IsEnabled="{Binding HasTarget, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                <ComboBox
+                    MinWidth="240"
+                    Margin="3,0,0,0"
+                    DisplayMemberPath="Content"
+                    ItemsSource="{Binding Targets, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                    SelectedItem="{Binding SelectedTarget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    SelectedValuePath="Content" />
+            </ui:SettingsCard>
+
+            <!--  Style of input  -->
+            <ui:SettingsCard Header="{l:Static resx:Resources.ProfilesPage_StyleofInput}" IsEnabled="{Binding HasTarget, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                <ComboBox ItemsSource="{Binding MotionInputItems}" SelectedIndex="{Binding MotionInputIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type viewmodels:MotionInputViewModel}">
+                            <ikw:SimpleStackPanel
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal"
+                                Spacing="3">
+                                <ui:FontIcon Glyph="{Binding Glyph}" Visibility="{Binding HasGlyph, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBlock Text="{Binding Description}" />
+                            </ikw:SimpleStackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </ui:SettingsCard>
+
+            <!--  Velocity Mode  -->
+            <ui:SettingsCard
+                Description="Enable velocity-based scaling: faster gyro movements produce more cursor/stick displacement"
+                Header="Velocity mode"
+                IsEnabled="{Binding HasTarget, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                <ComboBox SelectedIndex="{Binding VelocityModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBoxItem Content="Default (Legacy)" />
+                    <ComboBoxItem Content="Velocity-based" />
+                </ComboBox>
+            </ui:SettingsCard>
+
+            <!--  Velocity Scale (only visible when Velocity Mode is enabled)  -->
+            <ui:SettingsCard
+                Description="Adjust how much faster gyro movements are amplified (1.0 = balanced, higher = more sensitive)"
+                Header="Velocity scale"
+                Visibility="{Binding IsVelocityModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <DockPanel>
-                    <ComboBox Width="120" SelectedIndex="{Binding ActionTypeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Disabled}" IsEnabled="True" />
-                        <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Button}" IsEnabled="False" />
-                        <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Joystick}" IsEnabled="True" />
-                        <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Keyboard}" IsEnabled="False" />
-                        <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Mouse}" IsEnabled="True" />
-                        <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Trigger}" IsEnabled="False" />
-                        <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Shift}" IsEnabled="False" />
-                        <ComboBoxItem Content="{x:Static resx:Resources.LayoutPage_ActionType_Inherit}" IsEnabled="False" />
-                    </ComboBox>
-
-                    <ComboBox
-                        MinWidth="240"
+                    <TextBox Text="{Binding VelocityScale, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N1}" TextAlignment="Center" />
+                    <Slider
                         Margin="3,0,0,0"
-                        DisplayMemberPath="Content"
-                        ItemsSource="{Binding Targets, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                        SelectedItem="{Binding SelectedTarget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        SelectedValuePath="Content">
-                        <ComboBox.Style>
-                            <Style BasedOn="{StaticResource {x:Type ComboBox}}" TargetType="{x:Type ComboBox}">
-                                <Setter Property="IsEnabled" Value="True" />
-                                <Style.Triggers>
-                                    <!--  Disable when ActionTypeIndex is 0  -->
-                                    <DataTrigger Binding="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Value="0">
-                                        <Setter Property="IsEnabled" Value="False" />
-                                    </DataTrigger>
-                                    <!--  Disable when ActionTypeIndex is 7  -->
-                                    <DataTrigger Binding="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Value="7">
-                                        <Setter Property="IsEnabled" Value="False" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ComboBox.Style>
-                    </ComboBox>
+                        AutoToolTipPrecision="1"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        Maximum="5.0"
+                        Minimum="0.1"
+                        TickFrequency="0.1"
+                        ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Value="{Binding VelocityScale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </DockPanel>
-            </ui:SettingsExpander.Content>
+            </ui:SettingsCard>
 
-            <ui:SettingsExpander.Items>
-                <ui:SettingsCard Header="{l:Static resx:Resources.ProfilesPage_StyleofInput}">
-                    <ComboBox ItemsSource="{Binding MotionInputItems}" SelectedIndex="{Binding MotionInputIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type viewmodels:MotionInputViewModel}">
-                                <ikw:SimpleStackPanel
-                                    VerticalAlignment="Center"
-                                    Orientation="Horizontal"
-                                    Spacing="3">
-                                    <ui:FontIcon Glyph="{Binding Glyph}" Visibility="{Binding HasGlyph, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                    <TextBlock Text="{Binding Description}" />
-                                </ikw:SimpleStackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
+            <ui:SettingsCard
+                Description="{l:Static resx:Resources.ProfilesPage_UMCMotionOnOffDesc}"
+                Header="{l:Static resx:Resources.ProfilesPage_UMCMotionOnOff}"
+                IsEnabled="{Binding HasTarget, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                <ikw:SimpleStackPanel Spacing="3">
+                    <ComboBox
+                        Name="MotionModeComboBox"
+                        MinWidth="240"
+                        HorizontalAlignment="Stretch"
+                        SelectedIndex="{Binding MotionModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionOff}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionOn}" />
+                        <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionToggle}" />
                     </ComboBox>
-                </ui:SettingsCard>
 
-                <!--  Velocity Mode  -->
-                <ui:SettingsCard Description="Enable velocity-based scaling: faster gyro movements produce more cursor/stick displacement" Header="Gyro velocity mode">
-                    <ComboBox SelectedIndex="{Binding VelocityModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ComboBoxItem Content="Default (Legacy)" />
-                        <ComboBoxItem Content="Velocity-based" />
-                    </ComboBox>
-                </ui:SettingsCard>
+                    <ItemsControl ItemsSource="{Binding HotkeysList}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition MinWidth="90" />
+                                    </Grid.ColumnDefinitions>
 
-                <!--  Velocity Scale (only visible when Velocity Mode is enabled)  -->
-                <ui:SettingsCard
-                    Description="Adjust how much faster gyro movements are amplified (1.0 = balanced, higher = more sensitive)"
-                    Header="Velocity scale"
-                    Visibility="{Binding IsVelocityModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <DockPanel>
-                        <TextBox Text="{Binding VelocityScale, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N1}" TextAlignment="Center" />
-                        <Slider
-                            Margin="3,0,0,0"
-                            AutoToolTipPrecision="1"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            Maximum="5.0"
-                            Minimum="0.1"
-                            TickFrequency="0.1"
-                            ToolTip="{Binding Value, StringFormat=N1, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            Value="{Binding VelocityScale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DockPanel>
-                </ui:SettingsCard>
+                                    <Border
+                                        Padding="6"
+                                        HorizontalAlignment="Stretch"
+                                        Background="{DynamicResource ExpanderHeaderBackground}"
+                                        CornerRadius="3">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasTriggerChord}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Text="{Binding InputsChordType, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Border>
 
-                <ui:SettingsCard Description="{l:Static resx:Resources.ProfilesPage_UMCMotionOnOffDesc}" Header="{l:Static resx:Resources.ProfilesPage_UMCMotionOnOff}">
-                    <ikw:SimpleStackPanel Orientation="Vertical" Spacing="3">
-                        <ComboBox SelectedIndex="{Binding MotionModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                            <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionOff}" />
-                            <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionOn}" />
-                            <ComboBoxItem Content="{l:Static resx:Resources.ProfilesPage_UMCMotionToggle}" />
-                        </ComboBox>
+                                    <ItemsControl
+                                        Grid.Column="1"
+                                        Margin="3,0,0,0"
+                                        ItemsSource="{Binding TriggerChordParts}">
+                                        <ItemsControl.Style>
+                                            <Style TargetType="ItemsControl">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasTriggerChord}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsExecuted}" Value="True">
+                                                        <DataTrigger.EnterActions>
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <DoubleAnimation
+                                                                        AutoReverse="True"
+                                                                        FillBehavior="Stop"
+                                                                        RepeatBehavior="1x"
+                                                                        Storyboard.TargetProperty="Opacity"
+                                                                        From="1.0"
+                                                                        To="0.0"
+                                                                        Duration="0:0:0.125" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.EnterActions>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ItemsControl.Style>
 
-                        <!--  Motion activator  -->
-                        <ItemsControl ItemsSource="{Binding HotkeysList}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="10*" />
-                                            <ColumnDefinition Width="45" />
-                                        </Grid.ColumnDefinitions>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="1" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    MinWidth="40"
+                                                    HorizontalAlignment="Stretch"
+                                                    Background="{DynamicResource AccentAAFillColorDefaultBrush}"
+                                                    CornerRadius="3">
+                                                    <TextBlock
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        FontFamily="{Binding FontFamily, FallbackValue={StaticResource SymbolThemeFontFamily}, TargetNullValue={StaticResource SymbolThemeFontFamily}}"
+                                                        FontSize="{Binding FontSize}"
+                                                        Foreground="{Binding Color, Converter={StaticResource ColorToBrushConverter}, FallbackValue={StaticResource SystemControlForegroundAltHighBrush}}"
+                                                        Text="{Binding Glyph}"
+                                                        TextAlignment="Center"
+                                                        TextWrapping="NoWrap" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <ikw:SimpleStackPanel
+                                        Grid.Column="2"
+                                        Height="40"
+                                        Margin="12,0,0,0"
+                                        HorizontalAlignment="Right"
+                                        Orientation="Horizontal"
+                                        Spacing="3">
 
                                         <ToggleButton
-                                            Height="41"
-                                            HorizontalAlignment="Stretch"
                                             VerticalAlignment="Stretch"
                                             Command="{Binding DefineButtonCommand}"
                                             IsChecked="{Binding IsListening, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                                             Tag="Hotkey">
-
-                                            <ToggleButton.Resources>
-                                                <Style BasedOn="{StaticResource {x:Type ToggleButton}}" TargetType="ToggleButton">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsExecuted}" Value="True">
-                                                            <DataTrigger.EnterActions>
-                                                                <BeginStoryboard>
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation
-                                                                            AutoReverse="True"
-                                                                            FillBehavior="Stop"
-                                                                            RepeatBehavior="1x"
-                                                                            Storyboard.TargetProperty="Opacity"
-                                                                            From="1.0"
-                                                                            To="0.0"
-                                                                            Duration="0:0:0.125" />
-                                                                    </Storyboard>
-                                                                </BeginStoryboard>
-                                                            </DataTrigger.EnterActions>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ToggleButton.Resources>
-
-                                            <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3">
-                                                <ItemsControl ItemsSource="{Binding ButtonGlyphs}">
-                                                    <ItemsControl.Style>
-                                                        <Style TargetType="ItemsControl">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ButtonGlyphs.Count}" Value="0">
-                                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding ButtonGlyphs.Count}">
-                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </ItemsControl.Style>
-
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <ikw:SimpleStackPanel Orientation="Horizontal" Spacing="3" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <ui:FontIcon
-                                                                FontFamily="PromptFont"
-                                                                FontSize="24"
-                                                                Glyph="{Binding Glyph, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                                                                <ui:FontIcon.Style>
-                                                                    <Style TargetType="ui:FontIcon">
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Value="{x:Null}">
-                                                                                <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                        <Setter Property="Foreground" Value="{Binding Foreground, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                                    </Style>
-                                                                </ui:FontIcon.Style>
-                                                            </ui:FontIcon>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-
-                                                <TextBlock VerticalAlignment="Center" Text="{Binding KeyboardChord, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding KeyboardChord}" Value="">
-                                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding KeyboardChord}">
-                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-
-                                                <TextBlock
-                                                    VerticalAlignment="Center"
-                                                    Foreground="{DynamicResource NavigationViewSelectionIndicatorForeground}"
-                                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                                    Text="{Binding InputsChordType, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
-                                            </ikw:SimpleStackPanel>
+                                            <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe104;" />
                                         </ToggleButton>
 
-                                        <Button
-                                            Grid.Column="1"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Stretch"
-                                            Command="{Binding EraseButtonCommand}">
-                                            <ui:FontIcon
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                                Glyph="&#xe75c;" />
+                                        <Button VerticalAlignment="Stretch" Command="{Binding EraseButtonCommand}">
+                                            <ui:FontIcon FontFamily="{DynamicResource SymbolThemeFontFamily}" Glyph="&#xe75c;" />
                                         </Button>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ikw:SimpleStackPanel>
-                </ui:SettingsCard>
+                                    </ikw:SimpleStackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ikw:SimpleStackPanel>
+            </ui:SettingsCard>
 
-                <!--  Joystick  -->
-                <!--  Gyrometer weight  -->
-                <ui:SettingsCard
-                    Description="Modify the gyrometer weight when applied against joystick movements"
-                    Header="Gyrometer weight"
-                    Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
-                    <DockPanel>
-                        <TextBox Text="{Binding GyroWeight, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N1}" TextAlignment="Center" />
-                        <Slider
-                            Margin="3,0,0,0"
-                            AutoToolTipPrecision="1"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            Maximum="2.0"
-                            Minimum="1.0"
-                            TickFrequency="0.1"
-                            TickPlacement="BottomRight"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            Value="{Binding GyroWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DockPanel>
-                </ui:SettingsCard>
+            <!--  Joystick  -->
+            <!--  Gyrometer weight  -->
+            <ui:SettingsCard
+                Description="Modify the gyrometer weight when applied against joystick movements"
+                Header="Gyrometer weight"
+                Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
+                <DockPanel>
+                    <TextBox Text="{Binding GyroWeight, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N1}" TextAlignment="Center" />
+                    <Slider
+                        Margin="3,0,0,0"
+                        AutoToolTipPrecision="1"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        Maximum="2.0"
+                        Minimum="1.0"
+                        TickFrequency="0.1"
+                        TickPlacement="BottomRight"
+                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Value="{Binding GyroWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </ui:SettingsCard>
 
-                <!--  Joystick  -->
-                <!--  Output shape  -->
-                <ui:SettingsCard Header="Output shape" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
-                    <ComboBox SelectedIndex="{Binding Axis2AxisOutputShapeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ComboBoxItem>Default</ComboBoxItem>
-                        <ComboBoxItem>Circle</ComboBoxItem>
-                        <ComboBoxItem>Cross</ComboBoxItem>
-                        <ComboBoxItem>Square</ComboBoxItem>
-                    </ComboBox>
-                </ui:SettingsCard>
+            <!--  Joystick  -->
+            <!--  Output shape  -->
+            <ui:SettingsCard Header="Output shape" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
+                <ComboBox SelectedIndex="{Binding Axis2AxisOutputShapeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBoxItem>Default</ComboBoxItem>
+                    <ComboBoxItem>Circle</ComboBoxItem>
+                    <ComboBoxItem>Cross</ComboBoxItem>
+                    <ComboBoxItem>Square</ComboBoxItem>
+                </ComboBox>
+            </ui:SettingsCard>
 
-                <!--  Joystick  -->
-                <!--  Inner deadzone  -->
-                <ui:SettingsCard Header="Inner deadzone" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
-                    <DockPanel>
-                        <TextBox
-                            HorizontalContentAlignment="Center"
-                            IsReadOnly="True"
-                            Text="{Binding Axis2AxisInnerDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
+            <!--  Joystick  -->
+            <!--  Inner deadzone  -->
+            <ui:SettingsCard Header="Inner deadzone" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
+                <DockPanel>
+                    <TextBox
+                        HorizontalContentAlignment="Center"
+                        IsReadOnly="True"
+                        Text="{Binding Axis2AxisInnerDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
-                        <Slider
-                            Margin="3,0,0,0"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            Maximum="25"
-                            Minimum="0"
-                            TickFrequency="1"
-                            TickPlacement="BottomRight"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            Value="{Binding Axis2AxisInnerDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DockPanel>
-                </ui:SettingsCard>
+                    <Slider
+                        Margin="3,0,0,0"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        Maximum="25"
+                        Minimum="0"
+                        TickFrequency="1"
+                        TickPlacement="BottomRight"
+                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Value="{Binding Axis2AxisInnerDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </ui:SettingsCard>
 
-                <!--  Joystick  -->
-                <!--  Outer deadzone  -->
-                <ui:SettingsCard Header="Outer deadzone" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
-                    <DockPanel>
-                        <TextBox
-                            HorizontalContentAlignment="Center"
-                            IsReadOnly="True"
-                            Text="{Binding Axis2AxisOuterDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
+            <!--  Joystick  -->
+            <!--  Outer deadzone  -->
+            <ui:SettingsCard Header="Outer deadzone" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
+                <DockPanel>
+                    <TextBox
+                        HorizontalContentAlignment="Center"
+                        IsReadOnly="True"
+                        Text="{Binding Axis2AxisOuterDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
-                        <Slider
-                            Margin="3,0,0,0"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            Maximum="25"
-                            Minimum="0"
-                            TickFrequency="5"
-                            TickPlacement="BottomRight"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            Value="{Binding Axis2AxisOuterDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DockPanel>
-                </ui:SettingsCard>
+                    <Slider
+                        Margin="3,0,0,0"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        Maximum="25"
+                        Minimum="0"
+                        TickFrequency="5"
+                        TickPlacement="BottomRight"
+                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Value="{Binding Axis2AxisOuterDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </ui:SettingsCard>
 
-                <!--  Joystick  -->
-                <!--  Anti deadzone  -->
-                <ui:SettingsCard Header="Anti deadzone" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
-                    <DockPanel>
-                        <TextBox
-                            HorizontalContentAlignment="Center"
-                            IsReadOnly="True"
-                            Text="{Binding Axis2AxisAntiDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
+            <!--  Joystick  -->
+            <!--  Anti deadzone  -->
+            <ui:SettingsCard Header="Anti deadzone" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
+                <DockPanel>
+                    <TextBox
+                        HorizontalContentAlignment="Center"
+                        IsReadOnly="True"
+                        Text="{Binding Axis2AxisAntiDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0} %}" />
 
-                        <Slider
-                            Margin="3,0,0,0"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            Maximum="25"
-                            Minimum="0"
-                            TickFrequency="5"
-                            TickPlacement="BottomRight"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            Value="{Binding Axis2AxisAntiDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DockPanel>
-                </ui:SettingsCard>
+                    <Slider
+                        Margin="3,0,0,0"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        Maximum="25"
+                        Minimum="0"
+                        TickFrequency="5"
+                        TickPlacement="BottomRight"
+                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Value="{Binding Axis2AxisAntiDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </ui:SettingsCard>
 
-                <!--  Mouse  -->
-                <!--  Pointer Speed  -->
-                <ui:SettingsCard Header="Sensitivity" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
-                    <DockPanel>
-                        <TextBox
-                            HorizontalContentAlignment="Center"
-                            IsReadOnly="True"
-                            Text="{Binding Axis2MousePointerSpeed, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+            <!--  Mouse  -->
+            <!--  Pointer Speed  -->
+            <ui:SettingsCard Header="Sensitivity" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
+                <DockPanel>
+                    <TextBox
+                        HorizontalContentAlignment="Center"
+                        IsReadOnly="True"
+                        Text="{Binding Axis2MousePointerSpeed, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                        <Slider
-                            Margin="3,0,0,0"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            Maximum="100"
-                            Minimum="5"
-                            TickFrequency="1"
-                            TickPlacement="BottomRight"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            Value="{Binding Axis2MousePointerSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DockPanel>
-                </ui:SettingsCard>
+                    <Slider
+                        Margin="3,0,0,0"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        Maximum="100"
+                        Minimum="5"
+                        TickFrequency="1"
+                        TickPlacement="BottomRight"
+                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Value="{Binding Axis2MousePointerSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </ui:SettingsCard>
 
-                <!--  Mouse  -->
-                <!--  Acceleration  -->
-                <ui:SettingsCard Header="Acceleration" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
-                    <DockPanel>
-                        <TextBox
-                            HorizontalContentAlignment="Center"
-                            IsReadOnly="True"
-                            Text="{Binding Axis2MouseAcceleration, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+            <!--  Mouse  -->
+            <!--  Acceleration  -->
+            <ui:SettingsCard Header="Acceleration" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
+                <DockPanel>
+                    <TextBox
+                        HorizontalContentAlignment="Center"
+                        IsReadOnly="True"
+                        Text="{Binding Axis2MouseAcceleration, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                        <Slider
-                            Margin="3,0,0,0"
-                            AutoToolTipPrecision="2"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            Maximum="2.00"
-                            Minimum="1.00"
-                            TickFrequency="0.05"
-                            TickPlacement="BottomRight"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            Value="{Binding Axis2MouseAcceleration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DockPanel>
-                </ui:SettingsCard>
+                    <Slider
+                        Margin="3,0,0,0"
+                        AutoToolTipPrecision="2"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        Maximum="2.00"
+                        Minimum="1.00"
+                        TickFrequency="0.05"
+                        TickPlacement="BottomRight"
+                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Value="{Binding Axis2MouseAcceleration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </ui:SettingsCard>
 
-                <!--  Mouse  -->
-                <!--  Deadzone  -->
-                <ui:SettingsCard Header="Deadzone" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
-                    <DockPanel>
-                        <TextBox
-                            HorizontalContentAlignment="Center"
-                            IsReadOnly="True"
-                            Text="{Binding Axis2MouseDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+            <!--  Mouse  -->
+            <!--  Deadzone  -->
+            <ui:SettingsCard Header="Deadzone" Visibility="{Binding ActionTypeIndex, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
+                <DockPanel>
+                    <TextBox
+                        HorizontalContentAlignment="Center"
+                        IsReadOnly="True"
+                        Text="{Binding Axis2MouseDeadzone, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                        <Slider
-                            Margin="3,0,0,0"
-                            IsMoveToPointEnabled="True"
-                            IsSnapToTickEnabled="True"
-                            Maximum="100"
-                            Minimum="0"
-                            TickFrequency="1"
-                            TickPlacement="BottomRight"
-                            ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                            Value="{Binding Axis2MouseDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DockPanel>
-                </ui:SettingsCard>
-            </ui:SettingsExpander.Items>
-        </ui:SettingsExpander>
+                    <Slider
+                        Margin="3,0,0,0"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        Maximum="100"
+                        Minimum="0"
+                        TickFrequency="1"
+                        TickPlacement="BottomRight"
+                        ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Value="{Binding Axis2MouseDeadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </ui:SettingsCard>
+        </ikw:SimpleStackPanel>
     </DataTemplate>
 
     <DataTemplate x:Key="AxisMappingTemplate" DataType="{x:Type viewmodels:AxisMappingViewModel}">

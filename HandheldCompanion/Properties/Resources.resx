@@ -758,13 +758,13 @@
     <value>Enable universal motion controller</value>
   </data>
   <data name="ProfilesPage_UMCMotionOff" xml:space="preserve">
-    <value>Disabled, turn on with button(s)</value>
+    <value>Turn on with button(s)</value>
   </data>
   <data name="ProfilesPage_UMCMotionOn" xml:space="preserve">
-    <value>Enabled, turn off with button(s)</value>
+    <value>Turn off with button(s)</value>
   </data>
   <data name="ProfilesPage_UMCMotionToggle" xml:space="preserve">
-    <value>Toggle between enabled or disabled with button(s)</value>
+    <value>Toggle with button(s)</value>
   </data>
   <data name="ProfilesPage_UMCMotionOnOff" xml:space="preserve">
     <value>Motion activation</value>
@@ -3496,7 +3496,7 @@ Thank you for using HC and helping us make it better.</value>
     <value>Core isolation</value>
   </data>
   <data name="DevicePage_CoreIsolationDesc" xml:space="preserve">
-    <value>Security features available on your device that use virtualization-based security. May prevent TDP manipulations.</value>
+    <value>Security features available on your device that use virtualization-based security. May prevent TDP manipulations when enabled.</value>
   </data>
   <data name="DevicePage_PlatformOptions" xml:space="preserve">
     <value>Platform options</value>
@@ -4187,6 +4187,18 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="DevicePage_GoBackToSleepDesc" xml:space="preserve">
     <value>If the device wakes from Modern Standby for any reason other than the power button, it will be sent back to sleep.</value>
+  </data>
+  <data name="DevicePage_GoBackToSleepOnPowerButtonDesc" xml:space="preserve">
+    <value>Woken by the power button.</value>
+  </data>
+  <data name="DevicePage_GoBackToSleepOnFingerprintReaderDesc" xml:space="preserve">
+    <value>Woken by the fingerprint reader.</value>
+  </data>
+  <data name="DevicePage_GoBackToSleepOnJoystickDesc" xml:space="preserve">
+    <value>Woken by a joystick or controller input.</value>
+  </data>
+  <data name="DevicePage_GoBackToSleepOnChargerConnectedDesc" xml:space="preserve">
+    <value>Woken by a charger being connected.</value>
   </data>
   <data name="ProfilesPage_Whitelist" xml:space="preserve">
     <value>Controller passthrough</value>

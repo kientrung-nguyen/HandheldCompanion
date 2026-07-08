@@ -752,12 +752,6 @@
   <data name="ProfilesPage_UMCEnable" xml:space="preserve">
     <value>Aktivieren der universellen Bewegungssteuerung</value>
   </data>
-  <data name="ProfilesPage_UMCMotionOff" xml:space="preserve">
-    <value>Deaktiviert, einschalten mit Taste(n)</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionOn" xml:space="preserve">
-    <value>Aktiviert, ausschalten mit Taste(n)</value>
-  </data>
   <data name="ProfilesPage_UMCMotionToggle" xml:space="preserve">
     <value>Toggle between enabled or disabled with button(s)</value>
   </data>

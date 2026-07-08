@@ -12,7 +12,7 @@ public class WidgetFactory
         {"BATT", new BatteryWidget()},
         //{"VRAM", new VramWidget()},
         {"CPU", new CpuWidget()},
-        {"RAM", new RamWidget()},
+        //{"RAM", new RamWidget()},
         {"FPS", new FPSWidget()},
         {"GPU", new GpuWidget()}
     };

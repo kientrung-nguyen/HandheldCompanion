@@ -388,6 +388,10 @@ namespace HandheldCompanion.ViewModels
                 case nameof(ActionTypeIndex):
                     OnPropertyChanged(nameof(HasModifier));
                     OnPropertyChanged(nameof(Button2MouseTo));
+                    OnPropertyChanged(nameof(MouseSettingsSectionVisibility));
+                    OnPropertyChanged(nameof(AxisSettingsSectionVisibility));
+                    OnPropertyChanged(nameof(TriggerSettingsSectionVisibility));
+                    OnPropertyChanged(nameof(TimingSettingsSectionVisibility));
                     OnPropertyChanged(nameof(GeneralActionVisibility));
                     OnPropertyChanged(nameof(Button2AxisVisibility));
                     OnPropertyChanged(nameof(AxisInvertVisibility));

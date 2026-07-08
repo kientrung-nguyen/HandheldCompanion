@@ -247,6 +247,17 @@ public static class OSDManager
     {
         //if (value is not null)
         //    entry.elements.Add(new OverlayEntryElement((float)value, unit));
+        if (unit == "MHz" && value > 1000f)
+        { 
+            value /= 1000f;
+            unit = "GHz";
+        }
+
+        if (unit == "MB" && value > 1000f)
+        {
+            value /= 1024f;
+            unit = "GB";
+        }
         entry.elements.Add(new OverlayEntryElement(value, unit));
     }
 

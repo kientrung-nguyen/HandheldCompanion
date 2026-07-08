@@ -1,6 +1,7 @@
 ﻿using iNKORE.UI.WPF.Modern.Controls;
 using iNKORE.UI.WPF.Modern.Controls.Primitives;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -42,6 +43,12 @@ namespace HandheldCompanion.Controls
         private Button m_topNavOverflowButton;
         private bool _isTopNavIconOnly;
         private double _cachedExpandedTopNavWidth;
+        private bool? _lastAppliedIconOnly;
+        private bool _syncPending;
+        private bool _syncPendingWithUpdateLayout;
+        private readonly List<NavigationViewItem> _realizedTopNavItems = [];
+        private readonly Dictionary<NavigationViewItem, NavigationViewItemPresenter> _realizedTopNavPresenters = [];
+        private readonly HashSet<NavigationViewItem> _pendingPresenterItems = [];
 
         public AdaptiveNavigationView()
         {
@@ -52,7 +59,10 @@ namespace HandheldCompanion.Controls
             if (d is AdaptiveNavigationView navigationView)
             {
                 navigationView._cachedExpandedTopNavWidth = 0.0;
+                navigationView._isTopNavIconOnly = false;
+                navigationView._lastAppliedIconOnly = null;
                 navigationView.ApplyTopNavAlignment();
+                navigationView.SyncRealizedTopNavState(true);
                 navigationView.InvalidateMeasure();
             }
         }
@@ -66,7 +76,13 @@ namespace HandheldCompanion.Controls
             _topNavGrid = GetTemplateChild(TopNavGridPartName) as Grid;
             m_topNavRepeater = GetTemplateChild(TopNavMenuItemsHostPartName) as ItemsRepeater;
             m_topNavOverflowButton = GetTemplateChild(TopNavOverflowButtonPartName) as Button;
+            _realizedTopNavItems.Clear();
+            _realizedTopNavPresenters.Clear();
+            _pendingPresenterItems.Clear();
             _cachedExpandedTopNavWidth = 0.0;
+            _lastAppliedIconOnly = null;
+            _syncPending = false;
+            _syncPendingWithUpdateLayout = false;
 
             ApplyTopNavAlignment();
             SyncRealizedTopNavState(true);
@@ -86,34 +102,67 @@ namespace HandheldCompanion.Controls
         private void TopNavRepeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
         {
             if (args.Element is NavigationViewItem navItem)
-                IconPropertyDescriptor.AddValueChanged(navItem, NavItem_IconChanged);
+            {
+                if (!_realizedTopNavItems.Contains(navItem))
+                    _realizedTopNavItems.Add(navItem);
 
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => SyncRealizedTopNavState(true));
+                _realizedTopNavPresenters.Remove(navItem);
+                _pendingPresenterItems.Add(navItem);
+                IconPropertyDescriptor.AddValueChanged(navItem, NavItem_IconChanged);
+            }
+
+            // A new item arrived — invalidate cache (expanded mode only) and re-apply.
+            if (!_isTopNavIconOnly)
+                _cachedExpandedTopNavWidth = 0.0;
+            _lastAppliedIconOnly = null;
+            EnqueueSync(true);
         }
 
         private void TopNavRepeater_ElementClearing(ItemsRepeater sender, ItemsRepeaterElementClearingEventArgs args)
         {
-            if (args.Element is NavigationViewItem navItem)
-                IconPropertyDescriptor.RemoveValueChanged(navItem, NavItem_IconChanged);
+            if (args.Element is not NavigationViewItem navItem)
+                return;
+
+            _realizedTopNavItems.Remove(navItem);
+            _realizedTopNavPresenters.Remove(navItem);
+            _pendingPresenterItems.Remove(navItem);
+            IconPropertyDescriptor.RemoveValueChanged(navItem, NavItem_IconChanged);
+
+            navItem.MouseEnter -= NavItem_ReapplyIconOnlyState;
+            navItem.MouseLeave -= NavItem_ReapplyIconOnlyState;
+            navItem.GotKeyboardFocus -= NavItem_ReapplyIconOnlyState;
+            navItem.LostKeyboardFocus -= NavItem_ReapplyIconOnlyState;
+            navItem.PreviewMouseLeftButtonDown -= NavItem_ReapplyIconOnlyState;
+            navItem.PreviewMouseLeftButtonUp -= NavItem_ReapplyIconOnlyState;
         }
 
         private void NavItem_IconChanged(object? sender, EventArgs e)
         {
-            // Icon binding updated on a realized item — re-apply the correct visual state.
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => SyncRealizedTopNavState(true));
+            // Icon binding updated — invalidate cache (expanded mode only) and re-apply.
+            if (!_isTopNavIconOnly)
+                _cachedExpandedTopNavWidth = 0.0;
+            _lastAppliedIconOnly = null;
+            EnqueueSync(true);
         }
 
         protected override Size MeasureOverride(Size availableSize)
         {
+            bool wasIconOnly = _isTopNavIconOnly;
+
             if (IsTopNavigationEnabled())
-            {
-                ApplyTopNavAlignment();
                 UpdateTopNavigationPresentation(availableSize);
-            }
 
             Size desiredSize = base.MeasureOverride(availableSize);
+            if (desiredSize.Width == availableSize.Width)
+                return desiredSize;
 
-            SyncRealizedTopNavState(false);
+            // If we just switched into icon-only mode, base.MeasureOverride may have called
+            // OnApplyTemplate on presenters for the first time, resetting them to "IconOnLeft"
+            // and measuring them at full text width. Pass updateLayout=true so every presenter
+            // gets InvalidateMeasure and re-measures at icon size on the follow-up pass.
+            // On that second pass wasIconOnly==true so modeJustChanged==false and we stop.
+            bool modeJustChanged = !wasIconOnly && _isTopNavIconOnly;
+            SyncRealizedTopNavState(modeJustChanged);
 
             return desiredSize;
         }
@@ -121,6 +170,8 @@ namespace HandheldCompanion.Controls
         protected override Size ArrangeOverride(Size arrangeBounds)
         {
             Size arrangedSize = base.ArrangeOverride(arrangeBounds);
+            if (arrangeBounds.Width == arrangedSize.Width)
+                return arrangedSize;
 
             SyncRealizedTopNavState(false);
 
@@ -143,30 +194,26 @@ namespace HandheldCompanion.Controls
                 return;
             }
 
+            // Hysteresis exit: if we're already in icon-only mode, just check whether
+            // the window has grown enough to switch back. No measure needed.
             if (_isTopNavIconOnly)
             {
-                ApplyTopNavItemPresentation(true, false);
-
                 if (_cachedExpandedTopNavWidth > 0.0 && availableSize.Width >= _cachedExpandedTopNavWidth + TopNavModeHysteresisWidth)
-                {
                     SetTopNavIconOnly(false);
-                }
 
                 return;
             }
 
-            ApplyTopNavItemPresentation(false, false);
-
-            double expandedWidth = MeasureCurrentTopNavigationWidth();
-            if (expandedWidth > 0.0)
+            // Measure only when the cache is stale (first layout, items changed, icon changed).
+            if (_cachedExpandedTopNavWidth <= 0.0)
             {
-                _cachedExpandedTopNavWidth = expandedWidth;
+                double expandedWidth = MeasureCurrentTopNavigationWidth();
+                if (expandedWidth > 0.0)
+                    _cachedExpandedTopNavWidth = expandedWidth;
             }
 
-            if (expandedWidth > availableSize.Width)
-            {
+            if (_cachedExpandedTopNavWidth > 0.0 && _cachedExpandedTopNavWidth > availableSize.Width)
                 SetTopNavIconOnly(true);
-            }
         }
 
         private double MeasureCurrentTopNavigationWidth()
@@ -174,18 +221,30 @@ namespace HandheldCompanion.Controls
             if (_topNavGrid is null)
                 return 0.0;
 
-            SuppressOverflowButton();
-            _topNavGrid.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            return _topNavGrid.DesiredSize.Width;
+            // Only collapse spacer columns for Left-aligned items (MainWindow case).
+            // For Center/Right aligned items (LibraryPage), use standard measurement.
+            if (TopNavItemsAlignment != HorizontalAlignment.Left)
+            {
+                SuppressOverflowButton();
+                _topNavGrid.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                return _topNavGrid.DesiredSize.Width;
+            }
+            else
+            {
+                _topNavGrid.ColumnDefinitions[4].Width = new GridLength(0, GridUnitType.Pixel);
+                _topNavGrid.ColumnDefinitions[5].Width = new GridLength(0, GridUnitType.Pixel);
+                _topNavGrid.ColumnDefinitions[6].Width = new GridLength(0, GridUnitType.Pixel);
+
+                SuppressOverflowButton();
+                _topNavGrid.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                return _topNavGrid.DesiredSize.Width;
+            }
         }
 
         private void SetTopNavIconOnly(bool isIconOnly)
         {
             if (_isTopNavIconOnly == isIconOnly)
-            {
-                ApplyTopNavItemPresentation(isIconOnly, false);
                 return;
-            }
 
             _isTopNavIconOnly = isIconOnly;
             ApplyTopNavItemPresentation(isIconOnly, true);
@@ -196,9 +255,14 @@ namespace HandheldCompanion.Controls
             if (m_topNavRepeater is null)
                 return;
 
-            foreach (NavigationViewItem item in EnumerateDescendants<NavigationViewItem>(m_topNavRepeater))
+            if (!updateLayout && _lastAppliedIconOnly == isIconOnly)
+                return;
+
+            bool rewireEvents = _lastAppliedIconOnly != isIconOnly;
+
+            foreach (NavigationViewItem item in _realizedTopNavItems)
             {
-                NavigationViewItemPresenter? presenter = FindDescendant<NavigationViewItemPresenter>(item);
+                NavigationViewItemPresenter? presenter = GetItemPresenter(item);
                 if (presenter is null)
                     continue;
 
@@ -209,24 +273,49 @@ namespace HandheldCompanion.Controls
                     stateName = isIconOnly ? "IconOnly" : "IconOnLeft";
 
                 VisualStateManager.GoToState(presenter, stateName, false);
-
-                // Subscribe/unsubscribe the hook that re-applies IconOnly after the presenter's
-                // own hover/focus state update resets it back to IconOnLeft.
-                item.MouseEnter -= NavItem_ReapplyIconOnlyState;
-                item.MouseLeave -= NavItem_ReapplyIconOnlyState;
-                item.GotKeyboardFocus -= NavItem_ReapplyIconOnlyState;
-                item.LostKeyboardFocus -= NavItem_ReapplyIconOnlyState;
-                item.PreviewMouseLeftButtonDown -= NavItem_ReapplyIconOnlyState;
-                item.PreviewMouseLeftButtonUp -= NavItem_ReapplyIconOnlyState;
-
-                if (isIconOnly && item.Icon is not null)
+                if (isIconOnly)
                 {
-                    item.MouseEnter += NavItem_ReapplyIconOnlyState;
-                    item.MouseLeave += NavItem_ReapplyIconOnlyState;
-                    item.GotKeyboardFocus += NavItem_ReapplyIconOnlyState;
-                    item.LostKeyboardFocus += NavItem_ReapplyIconOnlyState;
-                    item.PreviewMouseLeftButtonDown += NavItem_ReapplyIconOnlyState;
-                    item.PreviewMouseLeftButtonUp += NavItem_ReapplyIconOnlyState;
+                    item.Width = 40;
+                    item.Height = 48;
+                    item.MinWidth = 40;
+                    item.MinHeight = 48;
+                    presenter.Width = 40;
+                    presenter.Height = 48;
+                    presenter.MinWidth = 40;
+                    presenter.MinHeight = 48;
+                }
+                else
+                {
+                    item.ClearValue(WidthProperty);
+                    item.ClearValue(HeightProperty);
+                    item.ClearValue(MinWidthProperty);
+                    item.ClearValue(MinHeightProperty);
+                    presenter.ClearValue(WidthProperty);
+                    presenter.ClearValue(HeightProperty);
+                    presenter.ClearValue(MinWidthProperty);
+                    presenter.ClearValue(MinHeightProperty);
+                }
+
+                // Only rewire the hover/focus events when the mode actually changes —
+                // the rewire itself is cheap but the add/remove on every pass adds up.
+                if (rewireEvents)
+                {
+                    item.MouseEnter -= NavItem_ReapplyIconOnlyState;
+                    item.MouseLeave -= NavItem_ReapplyIconOnlyState;
+                    item.GotKeyboardFocus -= NavItem_ReapplyIconOnlyState;
+                    item.LostKeyboardFocus -= NavItem_ReapplyIconOnlyState;
+                    item.PreviewMouseLeftButtonDown -= NavItem_ReapplyIconOnlyState;
+                    item.PreviewMouseLeftButtonUp -= NavItem_ReapplyIconOnlyState;
+
+                    if (isIconOnly && item.Icon is not null)
+                    {
+                        item.MouseEnter += NavItem_ReapplyIconOnlyState;
+                        item.MouseLeave += NavItem_ReapplyIconOnlyState;
+                        item.GotKeyboardFocus += NavItem_ReapplyIconOnlyState;
+                        item.LostKeyboardFocus += NavItem_ReapplyIconOnlyState;
+                        item.PreviewMouseLeftButtonDown += NavItem_ReapplyIconOnlyState;
+                        item.PreviewMouseLeftButtonUp += NavItem_ReapplyIconOnlyState;
+                    }
                 }
 
                 if (updateLayout)
@@ -235,6 +324,8 @@ namespace HandheldCompanion.Controls
                     presenter.InvalidateArrange();
                 }
             }
+
+            _lastAppliedIconOnly = isIconOnly;
         }
 
         private void NavItem_ReapplyIconOnlyState(object sender, RoutedEventArgs e)
@@ -247,7 +338,7 @@ namespace HandheldCompanion.Controls
             // before the render pass, preventing any visible flash.
             Dispatcher.BeginInvoke(DispatcherPriority.Normal, () =>
             {
-                NavigationViewItemPresenter? presenter = FindDescendant<NavigationViewItemPresenter>(item);
+                NavigationViewItemPresenter? presenter = GetItemPresenter(item);
                 if (presenter is not null)
                     VisualStateManager.GoToState(presenter, "IconOnly", false);
             });
@@ -266,10 +357,7 @@ namespace HandheldCompanion.Controls
             if (_topNavGrid.ColumnDefinitions.Count <= 5)
                 return;
 
-            _topNavGrid.ColumnDefinitions[3].Width = TopNavItemsAlignment == HorizontalAlignment.Left
-                ? GridLength.Auto
-                : new GridLength(1, GridUnitType.Star);
-
+            _topNavGrid.ColumnDefinitions[3].Width = new GridLength(1, GridUnitType.Star);
             _topNavGrid.ColumnDefinitions[5].Width = GridLength.Auto;
         }
 
@@ -282,6 +370,39 @@ namespace HandheldCompanion.Controls
             m_topNavOverflowButton.IsEnabled = false;
         }
 
+        private void EnqueueSync(bool updateLayout)
+        {
+            if (updateLayout)
+                _syncPendingWithUpdateLayout = true;
+
+            if (_syncPending)
+                return;
+
+            _syncPending = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            {
+                bool withLayout = _syncPendingWithUpdateLayout;
+                _syncPending = false;
+                _syncPendingWithUpdateLayout = false;
+
+                RefreshTrackedPresenters();
+
+                SyncRealizedTopNavState(withLayout);
+            });
+        }
+
+        private void RefreshTrackedPresenters()
+        {
+            if (_pendingPresenterItems.Count == 0)
+                return;
+
+            List<NavigationViewItem> pendingItems = [.. _pendingPresenterItems];
+            foreach (NavigationViewItem item in pendingItems)
+            {
+                TryTrackPresenter(item);
+            }
+        }
+
         private void SyncRealizedTopNavState(bool updateLayout)
         {
             if (!IsTopNavigationEnabled())
@@ -291,47 +412,47 @@ namespace HandheldCompanion.Controls
             ApplyTopNavItemPresentation(_isTopNavIconOnly, updateLayout);
         }
 
-        private static T? FindDescendant<T>(DependencyObject? root) where T : DependencyObject
+        private NavigationViewItemPresenter? GetItemPresenter(NavigationViewItem item)
         {
-            if (root is null)
-                return null;
+            if (!_realizedTopNavPresenters.TryGetValue(item, out NavigationViewItemPresenter? presenter) && TryTrackPresenter(item))
+                _realizedTopNavPresenters.TryGetValue(item, out presenter);
 
+            return presenter;
+        }
+
+        private bool TryTrackPresenter(NavigationViewItem item)
+        {
+            if (!_realizedTopNavItems.Contains(item))
+            {
+                _pendingPresenterItems.Remove(item);
+                _realizedTopNavPresenters.Remove(item);
+                return false;
+            }
+
+            NavigationViewItemPresenter? presenter = FindTrackedPresenter(item);
+            if (presenter is null)
+                return false;
+
+            _realizedTopNavPresenters[item] = presenter;
+            _pendingPresenterItems.Remove(item);
+            return true;
+        }
+
+        private static NavigationViewItemPresenter? FindTrackedPresenter(DependencyObject root)
+        {
             int childCount = VisualTreeHelper.GetChildrenCount(root);
             for (int i = 0; i < childCount; i++)
             {
                 DependencyObject child = VisualTreeHelper.GetChild(root, i);
-                if (child is T match)
-                {
-                    return match;
-                }
+                if (child is NavigationViewItemPresenter presenter)
+                    return presenter;
 
-                T? nestedMatch = FindDescendant<T>(child);
-                if (nestedMatch is not null)
-                    return nestedMatch;
+                NavigationViewItemPresenter? nestedPresenter = FindTrackedPresenter(child);
+                if (nestedPresenter is not null)
+                    return nestedPresenter;
             }
 
             return null;
-        }
-
-        private static System.Collections.Generic.IEnumerable<T> EnumerateDescendants<T>(DependencyObject? root) where T : DependencyObject
-        {
-            if (root is null)
-                yield break;
-
-            int childCount = VisualTreeHelper.GetChildrenCount(root);
-            for (int i = 0; i < childCount; i++)
-            {
-                DependencyObject child = VisualTreeHelper.GetChild(root, i);
-                if (child is T match)
-                {
-                    yield return match;
-                }
-
-                foreach (T nestedMatch in EnumerateDescendants<T>(child))
-                {
-                    yield return nestedMatch;
-                }
-            }
         }
     }
 }

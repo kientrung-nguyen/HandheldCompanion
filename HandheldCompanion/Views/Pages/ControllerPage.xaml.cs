@@ -32,7 +32,40 @@ public partial class ControllerPage : Page
         SteamDeckPanel.Visibility = IDevice.GetCurrent() is SteamDeck ? Visibility.Visible : Visibility.Collapsed;
 
         // manage events
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
+        }
+    }
+
+    private void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+    private void QuerySettings()
+    {
+        // manage events
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        SettingsManager_SettingValueChanged("HIDcloakonconnect", ManagerFactory.settingsManager.GetString("HIDcloakonconnect"), false);
+        SettingsManager_SettingValueChanged("HIDuncloakonclose", ManagerFactory.settingsManager.GetString("HIDuncloakonclose"), false);
+        SettingsManager_SettingValueChanged("HIDuncloakondisconnect", ManagerFactory.settingsManager.GetString("HIDuncloakondisconnect"), false);
+        SettingsManager_SettingValueChanged("HIDvibrateonconnect", ManagerFactory.settingsManager.GetString("HIDvibrateonconnect"), false);
+        SettingsManager_SettingValueChanged("VibrationStrength", ManagerFactory.settingsManager.GetString("VibrationStrength"), false);
+        SettingsManager_SettingValueChanged("SteamControllerMode", ManagerFactory.settingsManager.GetString("SteamControllerMode"), false);
+        SettingsManager_SettingValueChanged("SteamControllerRumbleInterval", ManagerFactory.settingsManager.GetString("SteamControllerRumbleInterval"), false);
+        SettingsManager_SettingValueChanged("HIDmode", ManagerFactory.settingsManager.GetString("HIDmode"), false);
+        SettingsManager_SettingValueChanged("HIDstatus", ManagerFactory.settingsManager.GetString("HIDstatus"), false);
+        SettingsManager_SettingValueChanged("ControllerPlugBehavior", ManagerFactory.settingsManager.GetString("ControllerPlugBehavior"), false);
+        SettingsManager_SettingValueChanged("MasterInterval", ManagerFactory.settingsManager.GetString("MasterInterval"), false);
     }
 
     public ControllerPage(string Tag) : this()
@@ -101,7 +134,6 @@ public partial class ControllerPage : Page
 
     private void Page_Loaded(object sender, RoutedEventArgs e)
     {
-        SettingsManager_SettingValueChanged("MasterInterval", ManagerFactory.settingsManager.GetInt("MasterInterval"), false);
     }
 
     public void Page_Closed()

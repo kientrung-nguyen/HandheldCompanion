@@ -10,17 +10,14 @@ namespace HandheldCompanion.Devices.OneXPlayer
     {
         public OneXPlayerApex()
         {
-            ProductIllustration = "device_onexplayer_x1";
+            ProductIllustration = "device_onexplayer_apex";
             ProductModel = "ONEXPLAYERAPEX";
             VendorHidInitProfile = OxpHidInitProfile.Apex;
 
-            if (!string.IsNullOrEmpty(Processor) && Processor.Contains("HX 370", StringComparison.OrdinalIgnoreCase))
-            {
-                nTDP = new double[] { 25, 35, 65 };
-                cTDP = new double[] { 25, 65 };
-                GfxClock = new double[] { 100, 2900 };
-                CpuClock = 5100;
-            }
+            nTDP = new double[] { 25, 35, 65 };
+            cTDP = new double[] { 25, 65 };
+            GfxClock = new double[] { 100, 2900 };
+            CpuClock = 5100;
 
             OEMChords.Clear();
 

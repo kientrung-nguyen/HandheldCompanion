@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Notifications;
 using HandheldCompanion.Shared;
-using HandheldCompanion.Views;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -311,7 +310,7 @@ namespace HandheldCompanion.Managers
 
                 UpdateTime();
 
-                if (latestBuild <= MainWindow.CurrentVersion)
+                if (latestBuild <= App.CurrentVersion)
                 {
                     updateStatus = UpdateStatus.Updated;
                     Updated?.Invoke(updateStatus, null, null);

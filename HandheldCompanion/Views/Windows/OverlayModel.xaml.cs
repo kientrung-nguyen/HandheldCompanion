@@ -136,8 +136,8 @@ public partial class OverlayModel : OverlayWindow
                     // UI thread
                     UIHelper.TryInvoke(() =>
                     {
-                        MainWindow.overlayModel.Width = controllerSize;
-                        MainWindow.overlayModel.Height = controllerSize;
+                        App.overlayModel.Width = controllerSize;
+                        App.overlayModel.Height = controllerSize;
                     });
                 }
                 break;

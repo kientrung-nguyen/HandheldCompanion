@@ -2,7 +2,9 @@
     x:Class="HandheldCompanion.Views.Pages.DevicePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behaviors="clr-namespace:HandheldCompanion.Behaviors"
     xmlns:colorpicker="clr-namespace:ColorPicker;assembly=ColorPicker"
+    xmlns:controls="clr-namespace:HandheldCompanion.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:emoji="http://schemas.inkore.net/lib/ui/wpf/emojis"
     xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
@@ -14,6 +16,7 @@
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     Name="Device"
     Title="{l:Static resx:Resources.DevicePage_Device}"
+    Margin="20"
     d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:DevicePageViewModel}"
     d:DesignHeight="3000"
@@ -22,248 +25,316 @@
     Loaded="Page_Loaded"
     mc:Ignorable="d">
 
-    <Grid Name="MainGrid" Margin="20">
-        <ikw:SimpleStackPanel Spacing="8">
+    <StackPanel>
+        <TextBlock
+            Margin="0,0,0,8"
+            behaviors:TextBlockUpperCase.IsUpperCase="True"
+            Style="{StaticResource CapitalAccentTextBlockStyle}"
+            Text="{Binding Name, RelativeSource={RelativeSource AncestorType=Page}}" />
+
+        <ikw:SimpleStackPanel Spacing="28">
             <!--  Power options  -->
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_PowerOptions}" />
-            <ikw:SimpleStackPanel Name="PowerOptionsStack" Spacing="3">
-                <ui:SettingsCard
-                    HorizontalContentAlignment="Stretch"
-                    Description="{l:Static resx:Resources.DevicePage_TDPControlMethodDesc}"
-                    Header="{l:Static resx:Resources.DevicePage_TDPControlMethod}">
-                    <ui:SettingsCard.HeaderIcon>
-                        <ui:FontIcon Glyph="&#xea86;" />
-                    </ui:SettingsCard.HeaderIcon>
-                    <ComboBox SelectedIndex="{Binding ConfigurableTDPMethod, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ComboBoxItem>Default</ComboBoxItem>
-                        <ComboBoxItem IsEnabled="{Binding HasWMIMethod, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">WMI</ComboBoxItem>
-                    </ComboBox>
-                </ui:SettingsCard>
+            <ikw:SimpleStackPanel Name="PowerOptionsStack" Spacing="8">
+                <DockPanel>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BaseTextBlockStyle}"
+                        Text="{l:Static resx:Resources.DevicePage_PowerOptions}" />
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        Text="Configurable TDP, undervolting and CPU clock methods" />
+                </DockPanel>
 
-                <!--  Configurable TDP  -->
-                <ui:SettingsExpander
-                    d:IsExpanded="True"
-                    Description="{l:Static resx:Resources.SettingsPage_AdvancedSettingsDesc}"
-                    Header="{l:Static resx:Resources.SettingsPage_AdvancedSettings}">
-                    <ui:SettingsExpander.HeaderIcon>
-                        <ui:FontIcon Glyph="&#xe785;" />
-                    </ui:SettingsExpander.HeaderIcon>
-                    <ui:ToggleSwitch Name="Toggle_cTDP" IsOn="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
+                <ikw:SimpleStackPanel Spacing="3">
+                    <ui:SettingsCard
+                        HorizontalContentAlignment="Stretch"
+                        Description="{l:Static resx:Resources.DevicePage_TDPControlMethodDesc}"
+                        Header="{l:Static resx:Resources.DevicePage_TDPControlMethod}">
+                        <ui:SettingsCard.HeaderIcon>
+                            <ui:FontIcon Glyph="&#xea86;" />
+                        </ui:SettingsCard.HeaderIcon>
+                        <ComboBox SelectedIndex="{Binding ConfigurableTDPMethod, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                            <ComboBoxItem>Default</ComboBoxItem>
+                            <ComboBoxItem IsEnabled="{Binding HasWMIMethod, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">WMI</ComboBoxItem>
+                        </ComboBox>
+                    </ui:SettingsCard>
 
-                    <ui:SettingsExpander.Items>
-                        <!--  Configurable TDP down  -->
-                        <ui:SettingsCard
-                            Description="{l:Static resx:Resources.SettingsPage_TDPMinDesc}"
-                            Header="{l:Static resx:Resources.SettingsPage_TDPMin}"
-                            IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}">
-                            <ui:NumberBox
-                                Name="NumberBox_TDPMin"
-                                MinWidth="20"
-                                Minimum="3"
-                                SpinButtonPlacementMode="Inline"
-                                ValueChanged="NumberBox_TDPMin_ValueChanged" />
-                        </ui:SettingsCard>
+                    <!--  Configurable TDP  -->
+                    <ui:SettingsExpander
+                        d:IsExpanded="True"
+                        Description="{l:Static resx:Resources.SettingsPage_AdvancedSettingsDesc}"
+                        Header="{l:Static resx:Resources.SettingsPage_AdvancedSettings}">
+                        <ui:SettingsExpander.HeaderIcon>
+                            <ui:FontIcon Glyph="&#xe785;" />
+                        </ui:SettingsExpander.HeaderIcon>
+                        <ui:ToggleSwitch Name="Toggle_cTDP" IsOn="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
 
-                        <!--  Configurable TDP up  -->
-                        <ui:SettingsCard
-                            Description="{l:Static resx:Resources.SettingsPage_TDPMaxDesc}"
-                            Header="{l:Static resx:Resources.SettingsPage_TDPMax}"
-                            IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}">
-                            <ui:NumberBox
-                                Name="NumberBox_TDPMax"
-                                MinWidth="20"
-                                SpinButtonPlacementMode="Inline"
-                                ValueChanged="NumberBox_TDPMax_ValueChanged" />
-                        </ui:SettingsCard>
-
-                        <!--  RyzenAdj (set_coall)  -->
-                        <ui:SettingsCard
-                            Description="{l:Static resx:Resources.SettingsPage_AllCurveOptimiserDesc}"
-                            Header="{l:Static resx:Resources.SettingsPage_AllCurveOptimiser}"
-                            IsEnabled="{Binding HasCoreCurve, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding IsAMD, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <StackPanel Orientation="Horizontal">
+                        <ui:SettingsExpander.Items>
+                            <!--  Configurable TDP down  -->
+                            <ui:SettingsCard
+                                Description="{l:Static resx:Resources.SettingsPage_TDPMinDesc}"
+                                Header="{l:Static resx:Resources.SettingsPage_TDPMin}"
+                                IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}">
                                 <ui:NumberBox
-                                    Name="NumberBox_SetCoAll"
+                                    Name="NumberBox_TDPMin"
                                     MinWidth="20"
-                                    Maximum="12"
-                                    Minimum="-24"
+                                    Minimum="3"
                                     SpinButtonPlacementMode="Inline"
-                                    ValueChanged="NumberBox_SetCoAll_ValueChanged" />
+                                    ValueChanged="NumberBox_TDPMin_ValueChanged" />
+                            </ui:SettingsCard>
 
-                                <Button
-                                    Width="24"
-                                    Height="24"
-                                    Margin="6,0,0,0"
-                                    Padding="0,0,0,0"
-                                    Background="Transparent"
-                                    BorderBrush="Transparent"
-                                    ToolTip="{l:Static resx:Resources.SettingsPage_AllCurveOptimiserTooltip}"
-                                    ToolTipService.InitialShowDelay="200">
-                                    <Grid>
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
-                        </ui:SettingsCard>
-
-                        <!--  RyzenAdj (set_cogfx)  -->
-                        <ui:SettingsCard
-                            Description="{l:Static resx:Resources.SettingsPage_GfxCurveOptimiserDesc}"
-                            Header="{l:Static resx:Resources.SettingsPage_GfxCurveOptimiser}"
-                            IsEnabled="{Binding HasGPUCurve, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding IsAMD, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <StackPanel Orientation="Horizontal">
+                            <!--  Configurable TDP up  -->
+                            <ui:SettingsCard
+                                Description="{l:Static resx:Resources.SettingsPage_TDPMaxDesc}"
+                                Header="{l:Static resx:Resources.SettingsPage_TDPMax}"
+                                IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}">
                                 <ui:NumberBox
-                                    Name="NumberBox_SetCoGfx"
+                                    Name="NumberBox_TDPMax"
                                     MinWidth="20"
-                                    Maximum="12"
-                                    Minimum="-24"
                                     SpinButtonPlacementMode="Inline"
-                                    ValueChanged="NumberBox_SetCoGfx_ValueChanged" />
+                                    ValueChanged="NumberBox_TDPMax_ValueChanged" />
+                            </ui:SettingsCard>
 
-                                <Button
-                                    Width="24"
-                                    Height="24"
-                                    Margin="6,0,0,0"
-                                    Padding="0,0,0,0"
-                                    Background="Transparent"
-                                    BorderBrush="Transparent"
-                                    ToolTip="{l:Static resx:Resources.SettingsPage_GfxCurveOptimiserTooltip}"
-                                    ToolTipService.InitialShowDelay="200">
-                                    <Grid>
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
-                        </ui:SettingsCard>
+                            <!--  RyzenAdj (set_coall)  -->
+                            <ui:SettingsCard
+                                Description="{l:Static resx:Resources.SettingsPage_AllCurveOptimiserDesc}"
+                                Header="{l:Static resx:Resources.SettingsPage_AllCurveOptimiser}"
+                                IsEnabled="{Binding HasCoreCurve, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding IsAMD, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:NumberBox
+                                        Name="NumberBox_SetCoAll"
+                                        MinWidth="20"
+                                        Maximum="12"
+                                        Minimum="-24"
+                                        SpinButtonPlacementMode="Inline"
+                                        ValueChanged="NumberBox_SetCoAll_ValueChanged" />
 
-                        <!--  msr-cmd (core, cache)  -->
-                        <ui:SettingsCard
-                            Description="{l:Static resx:Resources.SettingsPage_MsrCPUUndervoltDesc}"
-                            Header="{l:Static resx:Resources.SettingsPage_MsrCPUUndervolt}"
-                            IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding IsIntel, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:NumberBox
-                                    Name="NumberBox_SetMsrCore"
-                                    MinWidth="20"
-                                    Maximum="50"
-                                    Minimum="-50"
-                                    SpinButtonPlacementMode="Inline"
-                                    ValueChanged="NumberBox_SetMsrCore_ValueChanged" />
+                                    <Button
+                                        Width="24"
+                                        Height="24"
+                                        Margin="6,0,0,0"
+                                        Padding="0,0,0,0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        ToolTip="{l:Static resx:Resources.SettingsPage_AllCurveOptimiserTooltip}"
+                                        ToolTipService.InitialShowDelay="200">
+                                        <Grid>
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </ui:SettingsCard>
 
-                                <Button
-                                    Width="24"
-                                    Height="24"
-                                    Margin="6,0,0,0"
-                                    Padding="0,0,0,0"
-                                    Background="Transparent"
-                                    BorderBrush="Transparent"
-                                    ToolTip="{l:Static resx:Resources.SettingsPage_MsrCPUUndervoltTooltip}"
-                                    ToolTipService.InitialShowDelay="200">
-                                    <Grid>
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
-                        </ui:SettingsCard>
+                            <!--  RyzenAdj (set_cogfx)  -->
+                            <ui:SettingsCard
+                                Description="{l:Static resx:Resources.SettingsPage_GfxCurveOptimiserDesc}"
+                                Header="{l:Static resx:Resources.SettingsPage_GfxCurveOptimiser}"
+                                IsEnabled="{Binding HasGPUCurve, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding IsAMD, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:NumberBox
+                                        Name="NumberBox_SetCoGfx"
+                                        MinWidth="20"
+                                        Maximum="12"
+                                        Minimum="-24"
+                                        SpinButtonPlacementMode="Inline"
+                                        ValueChanged="NumberBox_SetCoGfx_ValueChanged" />
 
-                        <!--  msr-cmd (gpu)  -->
-                        <ui:SettingsCard
-                            Description="{l:Static resx:Resources.SettingsPage_MsrGPUUndervoltDesc}"
-                            Header="{l:Static resx:Resources.SettingsPage_MsrGPUUndervolt}"
-                            IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding IsIntel, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:NumberBox
-                                    Name="NumberBox_SetMsrGpu"
-                                    MinWidth="20"
-                                    Maximum="50"
-                                    Minimum="-50"
-                                    SpinButtonPlacementMode="Inline"
-                                    ValueChanged="NumberBox_SetMsrGpu_ValueChanged" />
+                                    <Button
+                                        Width="24"
+                                        Height="24"
+                                        Margin="6,0,0,0"
+                                        Padding="0,0,0,0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        ToolTip="{l:Static resx:Resources.SettingsPage_GfxCurveOptimiserTooltip}"
+                                        ToolTipService.InitialShowDelay="200">
+                                        <Grid>
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </ui:SettingsCard>
 
-                                <Button
-                                    Width="24"
-                                    Height="24"
-                                    Margin="6,0,0,0"
-                                    Padding="0,0,0,0"
-                                    Background="Transparent"
-                                    BorderBrush="Transparent"
-                                    ToolTip="{l:Static resx:Resources.SettingsPage_MsrGPUUndervoltTooltip}"
-                                    ToolTipService.InitialShowDelay="200">
-                                    <Grid>
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
-                        </ui:SettingsCard>
+                            <!--  msr-cmd (core, cache)  -->
+                            <ui:SettingsCard
+                                Description="{l:Static resx:Resources.SettingsPage_MsrCPUUndervoltDesc}"
+                                Header="{l:Static resx:Resources.SettingsPage_MsrCPUUndervolt}"
+                                IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding IsIntel, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:NumberBox
+                                        Name="NumberBox_SetMsrCore"
+                                        MinWidth="20"
+                                        Maximum="50"
+                                        Minimum="-50"
+                                        SpinButtonPlacementMode="Inline"
+                                        ValueChanged="NumberBox_SetMsrCore_ValueChanged" />
 
-                        <!--  msr-cmd (System agent)  -->
-                        <ui:SettingsCard
-                            Description="{l:Static resx:Resources.SettingsPage_MsrSocUndervoltDesc}"
-                            Header="{l:Static resx:Resources.SettingsPage_MsrSocUndervolt}"
-                            IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding IsIntel, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:NumberBox
-                                    Name="NumberBox_SetMsrSoc"
-                                    MinWidth="20"
-                                    Maximum="50"
-                                    Minimum="-50"
-                                    SpinButtonPlacementMode="Inline"
-                                    ValueChanged="NumberBox_SetMsrSoc_ValueChanged" />
+                                    <Button
+                                        Width="24"
+                                        Height="24"
+                                        Margin="6,0,0,0"
+                                        Padding="0,0,0,0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        ToolTip="{l:Static resx:Resources.SettingsPage_MsrCPUUndervoltTooltip}"
+                                        ToolTipService.InitialShowDelay="200">
+                                        <Grid>
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </ui:SettingsCard>
 
-                                <Button
-                                    Width="24"
-                                    Height="24"
-                                    Margin="6,0,0,0"
-                                    Padding="0,0,0,0"
-                                    Background="Transparent"
-                                    BorderBrush="Transparent"
-                                    ToolTip="{l:Static resx:Resources.SettingsPage_MsrSocUndervoltTooltip}"
-                                    ToolTipService.InitialShowDelay="200">
-                                    <Grid>
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
-                                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
-                        </ui:SettingsCard>
-                    </ui:SettingsExpander.Items>
-                </ui:SettingsExpander>
+                            <!--  msr-cmd (gpu)  -->
+                            <ui:SettingsCard
+                                Description="{l:Static resx:Resources.SettingsPage_MsrGPUUndervoltDesc}"
+                                Header="{l:Static resx:Resources.SettingsPage_MsrGPUUndervolt}"
+                                IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding IsIntel, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:NumberBox
+                                        Name="NumberBox_SetMsrGpu"
+                                        MinWidth="20"
+                                        Maximum="50"
+                                        Minimum="-50"
+                                        SpinButtonPlacementMode="Inline"
+                                        ValueChanged="NumberBox_SetMsrGpu_ValueChanged" />
 
-                <!--  Enhanced Sleep  -->
-                <ui:SettingsCard
-                    x:Name="EnhancedSleepCard"
-                    Description="{l:Static resx:Resources.DevicePage_EnhancedSleepDesc}"
-                    Header="{l:Static resx:Resources.DevicePage_EnhancedSleep}">
-                    <ui:SettingsCard.HeaderIcon>
-                        <ui:FontIcon Glyph="&#xE708;" />
-                    </ui:SettingsCard.HeaderIcon>
-                    <ui:ToggleSwitch x:Name="Toggle_EnhancedSleep" Toggled="Toggle_EnhancedSleep_Toggled" />
-                </ui:SettingsCard>
+                                    <Button
+                                        Width="24"
+                                        Height="24"
+                                        Margin="6,0,0,0"
+                                        Padding="0,0,0,0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        ToolTip="{l:Static resx:Resources.SettingsPage_MsrGPUUndervoltTooltip}"
+                                        ToolTipService.InitialShowDelay="200">
+                                        <Grid>
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </ui:SettingsCard>
 
-                <!--  Go Back To Sleep  -->
-                <ui:SettingsCard
-                    x:Name="GoBackToSleepCard"
-                    Description="{l:Static resx:Resources.DevicePage_GoBackToSleepDesc}"
-                    Header="{l:Static resx:Resources.DevicePage_GoBackToSleep}">
-                    <ui:SettingsCard.HeaderIcon>
-                        <ui:FontIcon Glyph="&#xE72E;" />
-                    </ui:SettingsCard.HeaderIcon>
-                    <ui:ToggleSwitch x:Name="Toggle_GoBackToSleep" Toggled="Toggle_GoBackToSleep_Toggled" />
-                </ui:SettingsCard>
+                            <!--  msr-cmd (System agent)  -->
+                            <ui:SettingsCard
+                                Description="{l:Static resx:Resources.SettingsPage_MsrSocUndervoltDesc}"
+                                Header="{l:Static resx:Resources.SettingsPage_MsrSocUndervolt}"
+                                IsEnabled="{Binding HasAdvancedSettings, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding IsIntel, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:NumberBox
+                                        Name="NumberBox_SetMsrSoc"
+                                        MinWidth="20"
+                                        Maximum="50"
+                                        Minimum="-50"
+                                        SpinButtonPlacementMode="Inline"
+                                        ValueChanged="NumberBox_SetMsrSoc_ValueChanged" />
+
+                                    <Button
+                                        Width="24"
+                                        Height="24"
+                                        Margin="6,0,0,0"
+                                        Padding="0,0,0,0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        ToolTip="{l:Static resx:Resources.SettingsPage_MsrSocUndervoltTooltip}"
+                                        ToolTipService.InitialShowDelay="200">
+                                        <Grid>
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF138;" />
+                                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xF142;" />
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </ui:SettingsCard>
+                        </ui:SettingsExpander.Items>
+                    </ui:SettingsExpander>
+
+                    <!--  Enhanced Sleep  -->
+                    <ui:SettingsCard
+                        x:Name="EnhancedSleepCard"
+                        Description="{l:Static resx:Resources.DevicePage_EnhancedSleepDesc}"
+                        Header="{l:Static resx:Resources.DevicePage_EnhancedSleep}">
+                        <ui:SettingsCard.HeaderIcon>
+                            <ui:FontIcon Glyph="&#xE708;" />
+                        </ui:SettingsCard.HeaderIcon>
+                        <ui:ToggleSwitch x:Name="Toggle_EnhancedSleep" Toggled="Toggle_EnhancedSleep_Toggled" />
+                    </ui:SettingsCard>
+
+                    <!--  Go Back To Sleep  -->
+                    <ui:SettingsExpander
+                        x:Name="GoBackToSleepExpander"
+                        d:IsExpanded="True"
+                        Description="{l:Static resx:Resources.DevicePage_GoBackToSleepDesc}"
+                        Header="{l:Static resx:Resources.DevicePage_GoBackToSleep}">
+                        <ui:SettingsExpander.HeaderIcon>
+                            <ui:FontIcon Glyph="&#xE72E;" />
+                        </ui:SettingsExpander.HeaderIcon>
+                        <ui:ToggleSwitch x:Name="Toggle_GoBackToSleep" Toggled="Toggle_GoBackToSleep_Toggled" />
+
+                        <ui:SettingsExpander.Items>
+                            <!--  Power button  -->
+                            <ui:SettingsCard ContentAlignment="Left" IsEnabled="{Binding GoBackToSleep}">
+                                <CheckBox
+                                    x:Name="CB_GoBackToSleepOnPowerButton"
+                                    Checked="CB_GoBackToSleepOnWakeReason_Changed"
+                                    Content="{l:Static resx:Resources.DevicePage_GoBackToSleepOnPowerButtonDesc}"
+                                    Unchecked="CB_GoBackToSleepOnWakeReason_Changed" />
+                            </ui:SettingsCard>
+
+                            <!--  Fingerprint reader  -->
+                            <ui:SettingsCard ContentAlignment="Left" IsEnabled="{Binding GoBackToSleep}">
+                                <CheckBox
+                                    x:Name="CB_GoBackToSleepOnFingerprintReader"
+                                    Checked="CB_GoBackToSleepOnWakeReason_Changed"
+                                    Content="{l:Static resx:Resources.DevicePage_GoBackToSleepOnFingerprintReaderDesc}"
+                                    Unchecked="CB_GoBackToSleepOnWakeReason_Changed" />
+                            </ui:SettingsCard>
+
+                            <!--  Joystick / controller  -->
+                            <ui:SettingsCard ContentAlignment="Left" IsEnabled="{Binding GoBackToSleep}">
+                                <CheckBox
+                                    x:Name="CB_GoBackToSleepOnJoystick"
+                                    Checked="CB_GoBackToSleepOnWakeReason_Changed"
+                                    Content="{l:Static resx:Resources.DevicePage_GoBackToSleepOnJoystickDesc}"
+                                    Unchecked="CB_GoBackToSleepOnWakeReason_Changed" />
+                            </ui:SettingsCard>
+
+                            <!--  Charger connected  -->
+                            <ui:SettingsCard ContentAlignment="Left" IsEnabled="{Binding GoBackToSleep}">
+                                <CheckBox
+                                    x:Name="CB_GoBackToSleepOnChargerConnected"
+                                    Checked="CB_GoBackToSleepOnWakeReason_Changed"
+                                    Content="{l:Static resx:Resources.DevicePage_GoBackToSleepOnChargerConnectedDesc}"
+                                    Unchecked="CB_GoBackToSleepOnWakeReason_Changed" />
+                            </ui:SettingsCard>
+                        </ui:SettingsExpander.Items>
+                    </ui:SettingsExpander>
+                </ikw:SimpleStackPanel>
             </ikw:SimpleStackPanel>
 
             <!--  Security options  -->
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_SecurityOptions}" />
-            <ikw:SimpleStackPanel Name="SecurityOptionsStack" Spacing="3">
+            <ikw:SimpleStackPanel Name="SecurityOptionsStack" Spacing="8">
+                <DockPanel>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BaseTextBlockStyle}"
+                        Text="{l:Static resx:Resources.DevicePage_SecurityOptions}" />
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        Text="Core isolation and memory integrity" />
+                </DockPanel>
 
                 <!--  Core isolation  -->
                 <ui:SettingsCard Description="{l:Static resx:Resources.DevicePage_CoreIsolationDesc}" Header="{l:Static resx:Resources.DevicePage_CoreIsolation}">
@@ -275,10 +346,20 @@
             </ikw:SimpleStackPanel>
 
             <!--  Platform options  -->
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_PlatformOptions}" />
-            <ikw:SimpleStackPanel Name="PlatformOptionsStack" Spacing="3">
-
+            <ikw:SimpleStackPanel Name="PlatformOptionsStack" Spacing="8">
                 <!--  OEM Frontend  -->
+                <DockPanel>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BaseTextBlockStyle}"
+                        Text="{l:Static resx:Resources.DevicePage_PlatformOptions}" />
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        Text="OEM frontend and manufacturer application" />
+                </DockPanel>
+
                 <ui:SettingsCard
                     Description="{l:Static resx:Resources.DevicePage_ManufacturerApplicationDesc}"
                     Header="{l:Static resx:Resources.DevicePage_ManufacturerApplication}"
@@ -304,10 +385,20 @@
             </ikw:SimpleStackPanel>
 
             <!--  Display options  -->
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_DisplayOptions}" />
-            <ikw:SimpleStackPanel Name="DisplayOptionsStack" Spacing="3">
-
+            <ikw:SimpleStackPanel Name="DisplayOptionsStack" Spacing="8">
                 <!--  Docked display behavior  -->
+                <DockPanel>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BaseTextBlockStyle}"
+                        Text="{l:Static resx:Resources.DevicePage_DisplayOptions}" />
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        Text="Docked display and external monitor behaviour" />
+                </DockPanel>
+
                 <ui:SettingsCard Description="{l:Static resx:Resources.DevicePage_DockedDisplayBehaviorDesc}" Header="{l:Static resx:Resources.DevicePage_DockedDisplayBehavior}">
                     <ui:SettingsCard.HeaderIcon>
                         <ui:FontIcon Glyph="&#xE7F4;" />
@@ -318,18 +409,17 @@
                         <ComboBoxItem Content="{l:Static resx:Resources.DevicePage_DockedDisplayBehavior_SwitchToExternalWhenCharging}" />
                     </ComboBox>
                 </ui:SettingsCard>
-
             </ikw:SimpleStackPanel>
 
             <!--  Battery options  -->
             <ikw:SimpleStackPanel
                 Name="BatteryChargeStack"
                 d:Visibility="Visible"
-                Spacing="3"
+                Spacing="8"
                 Visibility="{Binding BatteryBypassVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
 
-                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_BatteryOptions}" />
                 <!--  Battery Charge  -->
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_BatteryOptions}" />
                 <ui:SettingsExpander
                     Name="BatteryChargeLimitToggle"
                     d:IsExpanded="True"
@@ -343,6 +433,7 @@
                     <ui:ToggleSwitch Name="Toggle_BatteryChargeLimit" Toggled="Toggle_BatteryChargeLimit_Toggled" />
 
                     <ui:SettingsExpander.Items>
+                        <!--  Battery charge limit  -->
                         <ui:SettingsCard
                             Name="BatteryChargeLimitPercent"
                             Description="{l:Static resx:Resources.DevicePage_BatteryChargeLimitPercent_Desc}"
@@ -374,6 +465,7 @@
                             </DockPanel>
                         </ui:SettingsCard>
 
+                        <!--  Battery bypass (ONEXPLAYER X1)  -->
                         <ui:SettingsCard
                             Name="BatteryBypassCharging"
                             d:Visibility="Visible"
@@ -402,9 +494,19 @@
             <ikw:SimpleStackPanel
                 Name="DynamicLightingPanel"
                 d:Visibility="Visible"
-                Spacing="3"
+                Spacing="8"
                 Visibility="Collapsed">
-                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.DevicePage_DynamicLightTitle}" />
+                <DockPanel>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BaseTextBlockStyle}"
+                        Text="{l:Static resx:Resources.DevicePage_DynamicLightTitle}" />
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        Text="RGB effects, brightness and colour selection" />
+                </DockPanel>
 
                 <!--  Use Dynamic lighting  -->
                 <ui:SettingsCard Header="{l:Static resx:Resources.DevicePage_DynamicLightDesc}">
@@ -414,10 +516,11 @@
                     <ui:ToggleSwitch Name="UseDynamicLightingToggle" Toggled="UseDynamicLightingToggle_Toggled" />
                 </ui:SettingsCard>
 
+                <!--  TODO: Remove this stackpanel and move IsEnabled to the SettingsCard/SettingsExpander by storing the Toggle on Viewmodel  -->
                 <ikw:SimpleStackPanel
                     Name="LEDPanel"
                     IsEnabled="{Binding ElementName=UseDynamicLightingToggle, Path=IsOn}"
-                    Spacing="3">
+                    Spacing="8">
                     <!--  Static LED Brightness  -->
                     <ui:SettingsCard
                         Name="LEDBrightness"
@@ -646,9 +749,20 @@
             </ikw:SimpleStackPanel>
 
             <!--  Sensor options  -->
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.SettingsPage_SensorOptions}" />
-            <ikw:SimpleStackPanel Name="SensorOptionsStack" Spacing="3">
+            <ikw:SimpleStackPanel Name="SensorOptionsStack" Spacing="8">
                 <!--  Sensor Selection  -->
+                <DockPanel>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BaseTextBlockStyle}"
+                        Text="{l:Static resx:Resources.SettingsPage_SensorOptions}" />
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        Text="Gyroscope and accelerometer selection, calibration and placement" />
+                </DockPanel>
+
                 <ui:SettingsExpander
                     Name="SensorSelectionExpander"
                     d:IsExpanded="True"
@@ -657,6 +771,7 @@
                     <ui:SettingsExpander.HeaderIcon>
                         <ui:FontIcon Glyph="&#xE950;" />
                     </ui:SettingsExpander.HeaderIcon>
+
                     <ComboBox Name="cB_SensorSelection" SelectionChanged="cB_SensorSelection_SelectionChanged">
                         <ComboBoxItem
                             Name="SensorNone"
@@ -753,20 +868,19 @@
                 </ui:SettingsExpander>
             </ikw:SimpleStackPanel>
 
+            <!--  Device settings  -->
             <ikw:SimpleStackPanel Spacing="8">
-
-                <!--  Device settings  -->
                 <TextBlock
                     d:Text="Device settings (MSI Claw)"
                     Style="{StaticResource BaseTextBlockStyle}"
                     Text="{l:Static resx:Resources.DevicePage_DeviceSettings}"
                     Visibility="{Binding ElementName=MSIClawPanel, Path=Visibility}" />
 
-                <!--  MSI Claw 8  -->
+                <!--  Device settings: MSI Claw 8  -->
                 <ikw:SimpleStackPanel
                     Name="MSIClawPanel"
                     d:Visibility="Visible"
-                    Spacing="3"
+                    Spacing="8"
                     Visibility="Collapsed">
 
                     <ui:SettingsCard Description="Select the desired controller mode" Header="Controller mode">
@@ -793,19 +907,18 @@
                     </ui:SettingsCard>
                 </ikw:SimpleStackPanel>
 
-                <!--  Device settings  -->
-                <TextBlock
-                    d:Text="Device settings (Lenovo Legion Go)"
-                    Style="{StaticResource BaseTextBlockStyle}"
-                    Text="{l:Static resx:Resources.DevicePage_DeviceSettings}"
-                    Visibility="{Binding ElementName=LegionGoPanel, Path=Visibility}" />
-
-                <!--  Lenovo Legion Go  -->
+                <!--  Device settings: Lenovo Legion Go  -->
                 <ikw:SimpleStackPanel
                     Name="LegionGoPanel"
                     d:Visibility="Visible"
-                    Spacing="3"
+                    Spacing="8"
                     Visibility="Collapsed">
+
+                    <TextBlock
+                        d:Text="Device settings (Lenovo Legion Go)"
+                        Style="{StaticResource BaseTextBlockStyle}"
+                        Text="{l:Static resx:Resources.DevicePage_DeviceSettings}"
+                        Visibility="{Binding ElementName=LegionGoPanel, Path=Visibility}" />
 
                     <ui:SettingsCard
                         Name="LegionGoPassthrough"
@@ -1051,19 +1164,17 @@
                     </ui:SettingsExpander>
                 </ikw:SimpleStackPanel>
 
-                <!--  Device settings  -->
-                <TextBlock
-                    d:Text="Device settings (Zotac Gaming Zone)"
-                    Style="{StaticResource BaseTextBlockStyle}"
-                    Text="{l:Static resx:Resources.DevicePage_DeviceSettings}"
-                    Visibility="{Binding ElementName=LegionGoPanel, Path=Visibility}" />
-
-                <!--  Zotac Gaming Zone  -->
+                <!--  Device settings: Zotac Gaming Zone  -->
                 <ikw:SimpleStackPanel
                     Name="ZotacGamingZonePanel"
                     d:Visibility="Visible"
-                    Spacing="3"
+                    Spacing="8"
                     Visibility="Collapsed">
+                    <TextBlock
+                        d:Text="Device settings (Zotac Gaming Zone)"
+                        Style="{StaticResource BaseTextBlockStyle}"
+                        Text="{l:Static resx:Resources.DevicePage_DeviceSettings}"
+                        Visibility="{Binding ElementName=LegionGoPanel, Path=Visibility}" />
 
                     <ui:SettingsCard Description="{l:Static resx:Resources.DevicePage_GamingZone_VRAMDesc}" Header="{l:Static resx:Resources.DevicePage_GamingZone_VRAM}">
                         <ui:SettingsCard.HeaderIcon>
@@ -1079,8 +1190,7 @@
                         </ComboBox>
                     </ui:SettingsCard>
                 </ikw:SimpleStackPanel>
-
             </ikw:SimpleStackPanel>
         </ikw:SimpleStackPanel>
-    </Grid>
+    </StackPanel>
 </Page>

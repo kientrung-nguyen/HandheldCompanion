@@ -29,6 +29,9 @@ namespace HandheldCompanion.ViewModels
             ManagerFactory.notificationManager.Discarded += NotificationManager_Discarded;
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
+            // Initialize MainWindowApplyNoise from settings
+            MainWindowApplyNoise = ManagerFactory.settingsManager.GetBoolean("MainWindowApplyNoise");
+
             DismissInfoBarCommand = new DelegateCommand(async () =>
             {
                 IsInfoBarOpen = false;
@@ -54,6 +57,13 @@ namespace HandheldCompanion.ViewModels
         {
             get => _isNavLibraryVisible;
             set => SetProperty(ref _isNavLibraryVisible, value, null, nameof(IsNavLibraryVisible));
+        }
+
+        private bool _mainWindowApplyNoise;
+        public bool MainWindowApplyNoise
+        {
+            get => _mainWindowApplyNoise;
+            set => SetProperty(ref _mainWindowApplyNoise, value, null, nameof(MainWindowApplyNoise));
         }
 
         public bool IsInfoBarOpen
@@ -173,6 +183,12 @@ namespace HandheldCompanion.ViewModels
                         IsNavLibraryVisible = enabled;
                         if (!enabled && MainWindow.CurrentPageName == "LibraryPage")
                             UIHelper.TryBeginInvoke(() => MainWindow.GetCurrent()?.NavigateToPage("ControllerPage"));
+                    }
+                    break;
+
+                case "MainWindowApplyNoise":
+                    {
+                        MainWindowApplyNoise = Convert.ToBoolean(value);
                     }
                     break;
             }

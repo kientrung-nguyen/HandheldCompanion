@@ -157,7 +157,7 @@ public class DesktopScreen : IDisposable
 
     public override string ToString()
     {
-        return $"{FriendlyName} / {display.ScreenName} / {devMode.dmDeviceName} - {screen?.DeviceName} - {DevicePath}";
+        return $"{FriendlyName} - {screen?.DeviceName}";
     }
 
     public bool HasResolution(ScreenResolution resolution)

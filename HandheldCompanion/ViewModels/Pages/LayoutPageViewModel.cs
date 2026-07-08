@@ -1,11 +1,13 @@
 ﻿using HandheldCompanion.Controllers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Pages;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media.Imaging;
 
 namespace HandheldCompanion.ViewModels
 {
@@ -20,7 +22,7 @@ namespace HandheldCompanion.ViewModels
             BindingOperations.EnableCollectionSynchronization(layoutList, _collectionLock);
 
             // manage events
-            ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+            VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
 
             LayoutCollectionView = new ListCollectionView(layoutList);
             LayoutCollectionView.GroupDescriptions.Add(new PropertyGroupDescription("Header"));
@@ -48,6 +50,17 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            ControllerManager.Initialized += ControllerManager_Initialized;
+
+            if (ControllerManager.IsInitialized)
+                ControllerManager_Initialized();
+        }
+
+        private void ControllerManager_Initialized()
+        {
+            // manage events
+            ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+
             if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController controller)
                 ControllerManager_ControllerSelected(controller);
         }
@@ -60,6 +73,9 @@ namespace HandheldCompanion.ViewModels
         private void QuerySettings()
         {
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+            // raise events
+            SettingsManager_SettingValueChanged("LayoutFilterOnDevice", ManagerFactory.settingsManager.GetString("LayoutFilterOnDevice"), false);
             RefreshLayoutList();
         }
 
@@ -71,6 +87,35 @@ namespace HandheldCompanion.ViewModels
                     RefreshLayoutList();
                     break;
             }
+        }
+
+        public BitmapImage Artwork
+        {
+            get
+            {
+                switch (VirtualManager.HIDmode)
+                {
+                    default:
+                    case HIDmode.DInputController:
+                    case HIDmode.Xbox360Controller:
+                        return LibraryResources.Xbox360Big;
+                    //case HIDmode.SwitchProController:
+                    //    return LibraryResources.SwitchProBig;
+                    //case HIDmode.SteamController:
+                    //    return LibraryResources.SteamControllerBig;
+                    case HIDmode.DualShock4Controller:
+                        return LibraryResources.DualShock4Big;
+                        //case HIDmode.DualSenseController:
+                        //    return LibraryResources.DualSenseBig;
+                        //case HIDmode.SteamDeckController:
+                        //    return LibraryResources.SteamDeckBig;
+                }
+            }
+        }
+
+        private void VirtualManager_ControllerSelected(HIDmode mode)
+        {
+            OnPropertyChanged(nameof(Artwork));
         }
 
         private void ControllerManager_ControllerSelected(IController? controller)
@@ -151,6 +196,7 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
                 ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
                 ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+                VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
             }
 
             base.Dispose(disposing);

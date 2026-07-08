@@ -226,6 +226,7 @@ public class RTSSPlatform : IPlatform
         // set HookedProcessId
         HookedProcessId = appEntry.ProcessId;
 
+        PlatformManager.LibreHardware.Resume();
         // raise event
         Hooked?.Invoke(appEntry);
     }
@@ -241,6 +242,7 @@ public class RTSSPlatform : IPlatform
         // clear HookedProcessId
         HookedProcessId = 0;
 
+        PlatformManager.LibreHardware.Pause();
         // raise event
         Unhooked?.Invoke(processId);
     }
@@ -276,7 +278,7 @@ public class RTSSPlatform : IPlatform
         }
     }
 
-    private void Process_Exited(object? sender, EventArgs e)
+    private new void Process_Exited(object? sender, EventArgs e)
     {
         if (KeepAlive)
             StartProcess();

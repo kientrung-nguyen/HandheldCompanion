@@ -4,7 +4,6 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
-using HandheldCompanion.Shared;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
@@ -18,7 +17,6 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Navigation;
 using System.Windows.Threading;
-using Windows.Devices.Power;
 using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
@@ -177,9 +175,9 @@ public partial class OverlayQuickTools : GamepadWindow
         Top = _targetTop;   // otherwise start at the resting Y
     }
 
-    public static OverlayQuickTools GetCurrent()
+    public static OverlayQuickTools? GetCurrent()
     {
-        return CurrentWindow!;
+        return CurrentWindow;
     }
 
     private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
@@ -259,7 +257,7 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             // Common settings across cases 0 and 1
             MaxWidth = (int)Math.Min(_MaxWidth, targetScreen.WpfBounds.Width);
-            Width = 550; // (int)Math.Max(MinWidth, ManagerFactory.settingsManager.GetDouble("QuickToolsWidth"));
+            Width = 450; // (int)Math.Max(MinWidth, ManagerFactory.settingsManager.GetDouble("QuickToolsWidth"));
             MaxHeight = Math.Min(targetScreen.WpfBounds.Height - (Margin.Top + Margin.Bottom), _MaxHeight);
             Height = MinHeight = MaxHeight;
             WindowStyle = WindowStyle.ToolWindow; // default style
@@ -538,6 +536,7 @@ public partial class OverlayQuickTools : GamepadWindow
             {
                 //NavigateToPage("QuickHomePage");
                 IsHitTestVisible = true;
+                PlatformManager.LibreHardware.Resume();
                 ShowInstant();
 
                 HardwareControl.RefreshBatteryHealth();
@@ -546,6 +545,7 @@ public partial class OverlayQuickTools : GamepadWindow
             else
             {
                 HideInstant();
+                PlatformManager.LibreHardware.Pause();
                 IsHitTestVisible = false;
             }
         }, DispatcherPriority.Normal);
@@ -557,6 +557,7 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             case Visibility.Collapsed:
             case Visibility.Hidden:
+                PlatformManager.LibreHardware.Pause();
                 InvokeLostGamepadWindowFocus();
                 clockUpdateTimer.Stop();
                 break;
@@ -564,6 +565,7 @@ public partial class OverlayQuickTools : GamepadWindow
             case Visibility.Visible:
                 UpdateStyle();
 
+                PlatformManager.LibreHardware.Resume();
                 InvokeGotGamepadWindowFocus();
                 clockUpdateTimer.Start();
                 break;
@@ -574,6 +576,9 @@ public partial class OverlayQuickTools : GamepadWindow
 
     public void UpdateStyle()
     {
+        if (hwndSource is null)
+            return;
+
         WinAPI.SendMessage(hwndSource.Handle, WM_NCACTIVATE, (IntPtr)WM_NCACTIVATE, IntPtr.Zero);
     }
 

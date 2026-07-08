@@ -271,6 +271,8 @@ namespace HandheldCompanion.ViewModels
                 case "SelectedTarget":
                 case "ActionTypeIndex":
                     OnPropertyChanged(nameof(TriggerDeadzoneVisibility));
+                    OnPropertyChanged(nameof(TriggerSettingsSectionVisibility));
+                    OnPropertyChanged(nameof(GeneralActionVisibility));
                     break;
             }
 

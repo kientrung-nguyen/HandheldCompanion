@@ -7,6 +7,7 @@ using LibreHardwareMonitor.Hardware;
 using System;
 using System.Net.NetworkInformation;
 using System.Timers;
+using Monitor = System.Threading.Monitor;
 
 namespace HandheldCompanion.Platforms.Misc
 {
@@ -19,10 +20,15 @@ namespace HandheldCompanion.Platforms.Misc
         private const int MinimumBatteryPollingInterval = 5000;
         private const int MinimumNetworkPollingInterval = 1000;
 
+        private const short INTERVAL_DEFAULT = 3000; // default interval between value scans
+        private const short INTERVAL_DEGRADED = 5000; // degraded interval between value scans
+
         private Computer computer;
-        private NetworkInterface? _networkInterface;
+        private NetworkInterface? networkInterface;
 
         private bool computerOpened;
+
+        private volatile bool halting = false;
 
         private Timer updateTimer;
         private int updateInterval = 1000;
@@ -119,8 +125,10 @@ namespace HandheldCompanion.Platforms.Misc
                     break;
             }
 
-            _networkInterface ??= DeviceUtils.GetPrimaryNetworkInterface();
+            networkInterface ??= DeviceUtils.GetPrimaryNetworkInterface();
+            halting = true;
 
+            HardwareControl.InitCPUAsync();
 
             if (computer is not null)
             {
@@ -169,16 +177,29 @@ namespace HandheldCompanion.Platforms.Misc
             SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", ManagerFactory.settingsManager.GetString("OnScreenDisplayRefreshRate"), false);
         }
 
+        public void Pause()
+        {
+            halting = true;
+            GPUManager.GetCurrent()?.StopTelemetry();
+        }
+
+        public void Resume()
+        {
+            halting = false;
+            GPUManager.GetCurrent()?.StartTelemetry();
+        }
+
         public override bool Stop(bool kill = false)
         {
             ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
             ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
 
+            halting = true;
             updateTimer?.Stop();
 
             HardwareControl.Dispose();
 
-            _networkInterface = null;
+            networkInterface = null;
 
             // wait until all tasks are complete
             lock (updateLock)
@@ -195,20 +216,39 @@ namespace HandheldCompanion.Platforms.Misc
             if (!computerOpened || computer is null)
                 return;
 
-            lock (updateLock)
+            var hasHook = PlatformManager.RTSS?.HasHook() ?? false;
+            if (!hasHook)
             {
-                long now = Environment.TickCount64;
-                bool shouldUpdateCpu = ShouldUpdateHardware(now, ref lastCpuUpdateTick, MinimumCpuPollingInterval);
-                bool shouldUpdateGpu = ShouldUpdateHardware(now, ref lastGpuUpdateTick, MinimumGpuPollingInterval);
-                bool shouldUpdateFan = ShouldUpdateHardware(now, ref lastFanUpdateTick, MinimumFanPollingInterval);
-                bool shouldUpdateMemory = ShouldUpdateHardware(now, ref lastMemoryUpdateTick, MinimumMemoryPollingInterval);
-                bool shouldUpdateBattery = ShouldUpdateHardware(now, ref lastBatteryUpdateTick, MinimumBatteryPollingInterval);
-                bool shouldUpdateNetwork = ShouldUpdateHardware(now, ref lastNetworkUpdateTick, MinimumNetworkPollingInterval);
+                if (halting)
+                    // raise events
+                    SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", INTERVAL_DEGRADED.ToString(), false);
+                else
+                    SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", INTERVAL_DEFAULT.ToString(), false);
+            }
+            else
+            {
+                SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", ManagerFactory.settingsManager.GetString("OnScreenDisplayRefreshRate"), false);
+                halting = false;
+            }
 
-                if (shouldUpdateCpu)
+            if (halting)
+            {
+                HandleCPU_TemperatureValue(HardwareControl.GetCPUTemp());
+                return;
+            }
+
+            if (Monitor.TryEnter(updateLock))
+            {
+                try
                 {
-                    HardwareControl.ReadCPUSensors();
-
+                    long now = Environment.TickCount64;
+                    bool shouldUpdateCpu = ShouldUpdateHardware(now, ref lastCpuUpdateTick, MinimumCpuPollingInterval);
+                    bool shouldUpdateGpu = ShouldUpdateHardware(now, ref lastGpuUpdateTick, MinimumGpuPollingInterval);
+                    bool shouldUpdateFan = ShouldUpdateHardware(now, ref lastFanUpdateTick, MinimumFanPollingInterval);
+                    bool shouldUpdateMemory = ShouldUpdateHardware(now, ref lastMemoryUpdateTick, MinimumMemoryPollingInterval);
+                    bool shouldUpdateBattery = ShouldUpdateHardware(now, ref lastBatteryUpdateTick, MinimumBatteryPollingInterval);
+                    bool shouldUpdateNetwork = ShouldUpdateHardware(now, ref lastNetworkUpdateTick, MinimumNetworkPollingInterval);
+                    
                     if (shouldUpdateFan)
                     {
                         if (HardwareControl.CPUFanRPM is not null)
@@ -222,59 +262,68 @@ namespace HandheldCompanion.Platforms.Misc
                         }
                     }
 
-                    if (HardwareControl.CPUUsage is not null &&
-                        HardwareControl.CPUPower is not null &&
-                        HardwareControl.CPUClock is not null &&
-                        HardwareControl.CPUTemp is not null)
+                    if (shouldUpdateCpu)
                     {
-                        shouldUpdateCpu = false;
-                        HandleCPU_LoadValue(HardwareControl.CPUUsage);
-                        HandleCPU_PowerValue(HardwareControl.CPUPower);
-                        HandleCPU_TemperatureValue(HardwareControl.CPUTemp);
-                        HandleCPU_ClockValue(HardwareControl.CPUClock);
+                        HardwareControl.ReadCPUSensors();
+                        if (HardwareControl.CPUUsage is not null &&
+                            HardwareControl.CPUPower is not null &&
+                            HardwareControl.CPUClock is not null &&
+                            HardwareControl.CPUTemp is not null)
+                        {
+                            shouldUpdateCpu = false;
+                            HandleCPU_LoadValue(HardwareControl.CPUUsage);
+                            HandleCPU_PowerValue(HardwareControl.CPUPower);
+                            HandleCPU_TemperatureValue(HardwareControl.CPUTemp);
+                            HandleCPU_ClockValue(HardwareControl.CPUClock);
+                        }
+                    }
+
+                    if (shouldUpdateBattery)
+                    {
+                        HardwareControl.ReadBatteryState();
+                        if (HardwareControl.BatteryCapacity is not null and not 0 &&
+                            HardwareControl.BatteryRemainingCapacity is not null and not 0)
+                        {
+                            shouldUpdateBattery = false;
+                            HandleBattery_PowerValue(HardwareControl.BatteryChargeRate);
+                            HandleBattery_CapacityValue(HardwareControl.BatteryCapacity);
+                            HandleBattery_TimeValue(HardwareControl.TimeFullInMinutes ?? HardwareControl.TimeLeftInMinutes);
+                        }
+                    }
+
+                    foreach (IHardware? hardware in computer.Hardware)
+                    {
+                        if (!ShouldUpdateHardware(hardware, shouldUpdateCpu, shouldUpdateGpu, shouldUpdateMemory, shouldUpdateBattery, shouldUpdateNetwork))
+                            continue;
+
+                        try { hardware.Update(); } catch { /* keep going */ }
+
+                        switch (hardware.HardwareType)
+                        {
+                            case HardwareType.Cpu:
+                                HandleCPU(hardware);
+                                break;
+                            case HardwareType.GpuNvidia:
+                            case HardwareType.GpuAmd:
+                            case HardwareType.GpuIntel:
+                                HandleGPU(hardware);
+                                break;
+                            case HardwareType.Memory:
+                                HandleMemory(hardware);
+                                break;
+                            case HardwareType.Network when networkInterface != null && hardware.Name.Equals(networkInterface.Name, StringComparison.OrdinalIgnoreCase):
+                                HandleNetwork(hardware);
+                                break;
+                            case HardwareType.Battery:
+                                HandleBattery(hardware);
+                                break;
+                        }
                     }
                 }
-
-                if (shouldUpdateBattery)
+                catch { }
+                finally
                 {
-                    HardwareControl.ReadBatteryState();
-                    if (HardwareControl.BatteryCapacity is not null and not 0 &&
-                        HardwareControl.BatteryRemainingCapacity is not null and not 0)
-                    {
-                        shouldUpdateBattery = false;
-                        HandleBattery_PowerValue(HardwareControl.BatteryChargeRate);
-                        HandleBattery_CapacityValue(HardwareControl.BatteryCapacity);
-                        HandleBattery_TimeValue(HardwareControl.TimeFullInMinutes ?? HardwareControl.TimeLeftInMinutes);
-                    }
-                }
-
-                foreach (IHardware? hardware in computer.Hardware)
-                {
-                    if (!ShouldUpdateHardware(hardware, shouldUpdateCpu, shouldUpdateGpu, shouldUpdateMemory, shouldUpdateBattery, shouldUpdateNetwork))
-                        continue;
-
-                    try { hardware.Update(); } catch { /* keep going */ }
-
-                    switch (hardware.HardwareType)
-                    {
-                        case HardwareType.Cpu:
-                            HandleCPU(hardware);
-                            break;
-                        case HardwareType.GpuNvidia:
-                        case HardwareType.GpuAmd:
-                        case HardwareType.GpuIntel:
-                            HandleGPU(hardware);
-                            break;
-                        case HardwareType.Memory:
-                            HandleMemory(hardware);
-                            break;
-                        case HardwareType.Network when _networkInterface != null && hardware.Name.Equals(_networkInterface.Name, StringComparison.OrdinalIgnoreCase):
-                            HandleNetwork(hardware);
-                            break;
-                        case HardwareType.Battery:
-                            HandleBattery(hardware);
-                            break;
-                    }
+                    Monitor.Exit(updateLock);
                 }
             }
         }

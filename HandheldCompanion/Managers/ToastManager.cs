@@ -90,11 +90,34 @@ namespace HandheldCompanion.Managers
         }
     }
 
+    /// <summary>A single item in a toast selection combobox.</summary>
+    public sealed class ToastComboItem
+    {
+        public string Id { get; set; } = "";
+        public string Label { get; set; } = "";
+
+        public ToastComboItem() { }
+        public ToastComboItem(string id, string label) { Id = id; Label = label; }
+    }
+
+    /// <summary>A selection combobox to embed in a toast notification.</summary>
+    public sealed class ToastComboInput
+    {
+        /// <summary>Unique element id; also the key in the UserInput dictionary on activation.</summary>
+        public string Id { get; set; } = "";
+        /// <summary>Optional label shown above the combobox.</summary>
+        public string Title { get; set; } = "";
+        /// <summary>Id of the pre-selected item.</summary>
+        public string DefaultItemId { get; set; } = "";
+        public List<ToastComboItem> Items { get; set; } = new();
+    }
+
     /// <summary>Typed toast request with optional actions.</summary>
     public sealed class ToastRequest
     {
         public string Title { get; set; } = "";
         public string Content { get; set; } = "";
+        public string Content2 { get; set; } = "";
         public string Img { get; set; } = "icon";
         public bool IsHero { get; set; }
         public List<ToastAction> Actions { get; set; } = new();
@@ -103,6 +126,8 @@ namespace HandheldCompanion.Managers
         /// <summary>Optional custom tag/group if you want multiple toasts; by default we reuse the single-tag replacement behavior.</summary>
         public string? Tag { get; set; }
         public string? Group { get; set; }
+        /// <summary>Optional selection comboboxes shown above the action buttons.</summary>
+        public List<ToastComboInput> SelectionBoxes { get; set; } = new();
     }
 
     public static class ToastManager
@@ -222,7 +247,20 @@ namespace HandheldCompanion.Managers
         {
             // Build image URI if present
             Uri? imageUri = null;
-            string imagePath = $"{AppDomain.CurrentDomain.BaseDirectory}Resources\\{request.Img}.png";
+            string imagePath;
+
+            // Check if the image is a full file path (e.g., from library cache) or a resource name
+            if (Path.IsPathRooted(request.Img) || File.Exists(request.Img))
+            {
+                // It's already a full file path
+                imagePath = request.Img;
+            }
+            else
+            {
+                // It's a resource name, construct the full path
+                imagePath = $"{AppDomain.CurrentDomain.BaseDirectory}Resources\\{request.Img}.png";
+            }
+
             if (File.Exists(imagePath))
                 imageUri = new Uri($"file:///{imagePath}");
 
@@ -232,6 +270,7 @@ namespace HandheldCompanion.Managers
             var builder = new ToastContentBuilder()
                 .AddText(request.Title)
                 .AddText(request.Content)
+                .AddText(request.Content2)
                 .AddAudio(new ToastAudio
                 {
                     Silent = true,
@@ -243,6 +282,19 @@ namespace HandheldCompanion.Managers
             {
                 if (request.IsHero) builder.AddHeroImage(imageUri);
                 else builder.AddAppLogoOverride(imageUri, ToastGenericAppLogoCrop.Default);
+            }
+
+            // Selection comboboxes
+            foreach (var combo in request.SelectionBoxes ?? Enumerable.Empty<ToastComboInput>())
+            {
+                var box = new ToastSelectionBox(combo.Id)
+                {
+                    Title = combo.Title,
+                    DefaultSelectionBoxItemId = combo.DefaultItemId
+                };
+                foreach (var item in combo.Items)
+                    box.Items.Add(new ToastSelectionBoxItem(item.Id, item.Label));
+                builder.AddToastInput(box);
             }
 
             // Buttons
@@ -304,6 +356,16 @@ namespace HandheldCompanion.Managers
                 var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var kv in args)
                     dict[kv.Key] = kv.Value;
+
+                // Merge selection-box values from UserInput (keyed by element id)
+                if (e.UserInput is not null)
+                {
+                    foreach (var kv in e.UserInput)
+                    {
+                        if (kv.Value is string sv)
+                            dict[kv.Key] = sv;
+                    }
+                }
 
                 // Otherwise use durable command route
                 if (dict.TryGetValue("cmd", out var cmd) && !string.IsNullOrWhiteSpace(cmd))

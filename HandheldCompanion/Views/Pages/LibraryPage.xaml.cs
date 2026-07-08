@@ -62,7 +62,9 @@ public partial class LibraryPage : Page
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
         if (ViewModel is { } vm)
+        {
             vm.BackAvailabilityChanged -= LibraryPageViewModel_BackAvailabilityChanged;
+        }
     }
 
     public void Page_Closed()

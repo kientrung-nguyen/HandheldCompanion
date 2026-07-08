@@ -742,15 +742,6 @@
   <data name="ProfilesPage_UMCEnable" xml:space="preserve">
     <value>유니버설 모션 컨트롤러를 활성화합니다.</value>
   </data>
-  <data name="ProfilesPage_UMCMotionOff" xml:space="preserve">
-    <value>비활성화, 버튼으로 활성화합니다.</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionOn" xml:space="preserve">
-    <value>활성화, 버튼으로 비활성화합니다.</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionToggle" xml:space="preserve">
-    <value>버튼으로 활성화와 비활성화를 전환합니다.</value>
-  </data>
   <data name="ProfilesPage_UMCMotionOnOff" xml:space="preserve">
     <value>모션 활성화</value>
   </data>

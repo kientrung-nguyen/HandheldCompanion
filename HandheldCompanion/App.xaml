@@ -88,8 +88,36 @@
             <converters:WidthToColumnsConverter x:Key="WidthToColumnsConverter" />
             <converters:WidthToAspectHeightConverter x:Key="WidthToAspectHeightConverter" />
             <converters:HasArtworkConverter x:Key="HasArtworkConverter" />
+            <converters:MotionOutputToNameConverter x:Key="MotionOutputToNameConverter" />
 
             <math:MathConverter x:Key="Math" />
+
+            <Style
+                x:Key="CapitalAccentTextBlockStyle"
+                BasedOn="{StaticResource BaseTextBlockStyle}"
+                TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorLight2Brush}" />
+            </Style>
+
+            <Style
+                x:Key="TitleBoldTextBlockStyle"
+                BasedOn="{StaticResource BaseTextBlockStyle}"
+                TargetType="TextBlock">
+                <Setter Property="FontSize" Value="48" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            </Style>
+
+            <Style
+                x:Key="SubtitleBoldTextBlockStyle"
+                BasedOn="{StaticResource BaseTextBlockStyle}"
+                TargetType="TextBlock">
+                <Setter Property="FontSize" Value="32" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            </Style>
 
             <Style BasedOn="{StaticResource {x:Static ui:ThemeKeys.ExpanderCardStyleKey}}" TargetType="Expander">
                 <Setter Property="HorizontalAlignment" Value="Stretch" />

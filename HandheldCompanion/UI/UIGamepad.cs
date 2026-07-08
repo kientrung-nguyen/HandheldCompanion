@@ -202,7 +202,7 @@ namespace HandheldCompanion.Managers
                 return;
 
             Control? control = dependencyObject as Control ?? WPFUtils.FindParent<Control>(dependencyObject);
-            if (control is null)
+            if (control is null || !IsValidFocusableContentElement(control))
                 return;
 
             TrackFocusedControl(control);
@@ -532,7 +532,7 @@ namespace HandheldCompanion.Managers
             return WPFUtils.FindVisualChild<Frame>(navigationView);
         }
 
-        private bool IsValidFocusableContentElement(Control? control, DependencyObject? scopeRoot, bool includeNavigationViewItems = false)
+        public bool IsValidFocusableContentElement(Control? control, DependencyObject? scopeRoot = null, bool includeNavigationViewItems = false)
         {
             if (control is null)
                 return false;

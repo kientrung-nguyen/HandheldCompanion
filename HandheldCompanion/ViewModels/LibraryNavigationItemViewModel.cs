@@ -3,6 +3,7 @@ using HandheldCompanion.Platforms;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -77,15 +78,30 @@ namespace HandheldCompanion.ViewModels
             Icon = new FontIcon() { Glyph = "\uF712" };
         }
 
+        // Cached frozen ImageSource per platform type — computed once across all instances.
+        private static readonly System.Collections.Generic.Dictionary<GamePlatform, ImageSource?> _logoCache = new();
+
         /// <summary>
         /// (Re-)loads the platform logo. Safe to call after PlatformManager has started.
         /// </summary>
-        public void RefreshIcon()
+        public async void RefreshIcon()
         {
             if (Kind != LibraryNavigationItemKind.Platform)
                 return;
 
-            ImageSource? source = GetPlatformLogoSource(Platform);
+            // Check cache first on the UI thread to avoid any Task overhead when already resolved.
+            if (_logoCache.TryGetValue(Platform, out ImageSource? cached))
+            {
+                if (cached is not null)
+                    Icon = new System.Windows.Controls.Image { Source = cached, Width = 16, Height = 16, Stretch = Stretch.Uniform };
+                return;
+            }
+
+            // Run all heavy work (GDI draw, pixel-loop crop, PNG encode, BitmapImage decode) off the UI thread.
+            // The default await continuation resumes on the captured UI SynchronizationContext.
+            ImageSource? source = await Task.Run(() => GetPlatformLogoSource(Platform));
+
+            _logoCache[Platform] = source;
             if (source is not null)
                 Icon = new System.Windows.Controls.Image { Source = source, Width = 16, Height = 16, Stretch = Stretch.Uniform };
         }

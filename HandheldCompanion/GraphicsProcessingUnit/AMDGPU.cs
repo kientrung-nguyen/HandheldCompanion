@@ -390,10 +390,57 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             return (float)TelemetryData.gpuTemperatureValue;
         }
 
+        public override bool HasVRAMUsage()
+        {
+            switch (adapterInformation.Details.Description)
+            {
+                case "AMD Custom GPU 0932":
+                case "AMD Custom GPU 0405":
+                    return false;
+                default:
+                    return TelemetryData.gpuVramSupported;
+            }
+        }
+
         public override float GetVRAMUsage()
         {
             return (float)TelemetryData.gpuVramValue;
         }
+		
+        public override bool HasSharedMemory()
+        {
+            switch (adapterInformation.Details.Description)
+            {
+                case "AMD Custom GPU 0932":
+                case "AMD Custom GPU 0405":
+                    return false;
+                default:
+                    return TelemetryData.gpuSharedMemorySupported;
+            }
+        }
+
+        public override float GetSharedMemory()
+        {
+            return (float)TelemetryData.gpuSharedMemoryValue;
+        }
+
+        public override bool HasVRAMClock()
+        {
+            switch (adapterInformation.Details.Description)
+            {
+                case "AMD Custom GPU 0932":
+                case "AMD Custom GPU 0405":
+                    return false;
+                default:
+                    return TelemetryData.gpuVRAMClockSpeedSupported;
+            }
+        }
+
+        public override float GetVRAMClock()
+        {
+            return (float)TelemetryData.gpuVRAMClockSpeedValue;
+        }
+
 
         static AMDGPU()
         {
@@ -473,6 +520,12 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         {
             if (halting)
                 return;
+
+            var hasHook = PlatformManager.RTSS?.HasHook() ?? false;
+            if (!hasHook)
+                TelemetryTimer?.Interval = INTERVAL_DEFAULT;
+            else
+                TelemetryTimer?.Interval = TelemetryInterval;
 
             if (Monitor.TryEnter(telemetryLock))
             {

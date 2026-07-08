@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Shared;
+﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
 using System;
@@ -113,7 +114,8 @@ public static class AudioControl
         {
             if ((flow != DataFlow.Render || role != Role.Multimedia) && (flow != DataFlow.Capture || role != Role.Communications))
                 return;
-
+            var mmDevice = enumerator.GetDevice(defaultDeviceId);
+            ToastManager.SendToast($"Audio device changed", $"Audio changed to {mmDevice?.FriendlyName}");
             SubscribeToEvents(_eventHandler);
         }
 

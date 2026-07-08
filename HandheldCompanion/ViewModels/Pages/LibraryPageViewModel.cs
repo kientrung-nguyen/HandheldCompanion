@@ -103,6 +103,13 @@ namespace HandheldCompanion.ViewModels
                 : SelectedNavigationItem;
             set
             {
+                // Prevent auto-selection of disabled trigger glyphs by the NavigationView
+                if (value?.Kind == LibraryNavigationItemKind.TriggerGlyph)
+                {
+                    OnPropertyChanged(nameof(NavigationViewSelectedItem));
+                    return;
+                }
+
                 // The getter returns the "Collections" parent item when a specific collection is active,
                 // so the navView's TwoWay binding can back-write the parent item when the page re-enters
                 // the frame (e.g. after ContentFrame.GoBack()). Guard against that: if the navView
@@ -593,7 +600,7 @@ namespace HandheldCompanion.ViewModels
 
         private void RefreshPlatformIcons()
         {
-            UIHelper.TryBeginInvoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 foreach (LibraryNavigationItemViewModel item in NavigationItems)
                     item.RefreshIcon();
@@ -638,7 +645,7 @@ namespace HandheldCompanion.ViewModels
 
         private void CollectionManager_CollectionAdded(GameCollection collection)
         {
-            RunOnUiContext(() =>
+            UIHelper.TryInvoke(() =>
             {
                 RebuildNavigationItems();
                 ScheduleRebuildCollectionGroups();
@@ -647,7 +654,7 @@ namespace HandheldCompanion.ViewModels
 
         private void CollectionManager_CollectionRemoved(GameCollection collection)
         {
-            RunOnUiContext(() =>
+            UIHelper.TryInvoke(() =>
             {
                 RebuildNavigationItems();
                 ScheduleRebuildCollectionGroups();
@@ -656,12 +663,12 @@ namespace HandheldCompanion.ViewModels
 
         private void CollectionManager_CollectionUpdated(GameCollection collection)
         {
-            _uiContext.Post(_ =>
+            UIHelper.TryInvoke(() =>
             {
                 CollectionGroupViewModel? group = CollectionGroups.FirstOrDefault(g => g.Collection?.Id == collection.Id);
                 group?.RefreshName();
                 RebuildNavigationItems();
-            }, null);
+            });
         }
 
         private void ControllerManager_ControllerSelected(IController? controller)
@@ -669,7 +676,7 @@ namespace HandheldCompanion.ViewModels
             if (controller is null)
                 return;
 
-            UIHelper.TryBeginInvoke(() =>
+            UIHelper.TryInvoke(() =>
             {
                 _navL2.UpdateTriggerGlyph(controller.GetGlyph(AxisFlags.L2));
                 _navR2.UpdateTriggerGlyph(controller.GetGlyph(AxisFlags.R2));
@@ -678,64 +685,65 @@ namespace HandheldCompanion.ViewModels
 
         private void RebuildNavigationItems()
         {
-            if (Application.Current?.Dispatcher.CheckAccess() == false)
+            UIHelper.TryInvoke(() =>
             {
-                Application.Current.Dispatcher.BeginInvoke(new Action(RebuildNavigationItems));
-                return;
-            }
+                string selectedKey = SelectedNavigationItem?.Key ?? AllGamesNavigationKey;
+                HashSet<GamePlatform> availablePlatforms = AvailablePlatforms.ToHashSet();
 
-            string selectedKey = SelectedNavigationItem?.Key ?? AllGamesNavigationKey;
-            HashSet<GamePlatform> availablePlatforms = AvailablePlatforms.ToHashSet();
-
-            NavigationItems.Clear();
-            collectionNavigationItems.Clear();
-
-            NavigationItems.Add(_navL2);
-
-            NavigationItems.Add(new LibraryNavigationItemViewModel(AllGamesNavigationKey, "All games", LibraryNavigationItemKind.AllGames));
-
-            LibraryNavigationItemViewModel favoritesItem = new(FavoritesNavigationKey, "Favorites", LibraryNavigationItemKind.Collection)
-            {
-                IsVisible = HasLiked
-            };
-            NavigationItems.Add(favoritesItem);
-
-            foreach ((GamePlatform platform, string title) in SupportedPlatforms)
-            {
-                NavigationItems.Add(new LibraryNavigationItemViewModel($"platform:{platform}", title, platform)
+                if (NavigationItems.Count == 0)
                 {
-                    IsVisible = availablePlatforms.Contains(platform)
-                });
-            }
+                    NavigationItems.Add(_navL2);
+                    NavigationItems.Add(new LibraryNavigationItemViewModel(AllGamesNavigationKey, "All games", LibraryNavigationItemKind.AllGames));
+                    NavigationItems.Add(new LibraryNavigationItemViewModel(FavoritesNavigationKey, "Favorites", LibraryNavigationItemKind.Collection));
 
-            LibraryNavigationItemViewModel collectionsItem = new(CollectionsNavigationKey, "Collections", LibraryNavigationItemKind.CollectionsRoot);
-            foreach (GameCollection collection in ManagerFactory.collectionManager
-                         .GetCollections()
-                         .OrderBy(collection => collection.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                LibraryNavigationItemViewModel collectionItem = new($"collection:{collection.Id}", collection.Name, collection.Id)
+                    foreach ((GamePlatform platform, string title) in SupportedPlatforms)
+                        NavigationItems.Add(new LibraryNavigationItemViewModel($"platform:{platform}", title, platform));
+
+                    NavigationItems.Add(new LibraryNavigationItemViewModel(CollectionsNavigationKey, "Collections", LibraryNavigationItemKind.CollectionsRoot));
+                    NavigationItems.Add(_navR2);
+                }
+
+                foreach (var item in NavigationItems)
                 {
-                    IsVisible = HasProfilesForCollection(collection.Id)
-                };
+                    if (item.Key == FavoritesNavigationKey)
+                        item.IsVisible = HasLiked;
+                    else if (item.Kind == LibraryNavigationItemKind.Platform)
+                        item.IsVisible = availablePlatforms.Contains(item.Platform);
+                }
 
-                collectionNavigationItems[collectionItem.Key] = collectionItem;
-            }
+                var activeCollections = ManagerFactory.collectionManager
+                    .GetCollections()
+                    .OrderBy(collection => collection.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
 
-            NavigationItems.Add(collectionsItem);
-            NavigationItems.Add(_navR2);
+                collectionNavigationItems.Clear();
 
-            LibraryNavigationItemViewModel? selectedItem = FindNavigationItemByKey(selectedKey);
+                foreach (GameCollection collection in activeCollections)
+                {
+                    string key = $"collection:{collection.Id}";
+                    bool isVisible = HasProfilesForCollection(collection.Id);
 
-            if (selectedItem is null || !selectedItem.IsVisible)
-                selectedItem = NavigationItems.FirstOrDefault(item => item.IsVisible && item.Kind != LibraryNavigationItemKind.TriggerGlyph)
-                               ?? NavigationItems.FirstOrDefault(item => item.Kind != LibraryNavigationItemKind.TriggerGlyph);
+                    LibraryNavigationItemViewModel collectionItem = new(key, collection.Name, collection.Id)
+                    {
+                        IsVisible = isVisible
+                    };
 
-            if (SelectedNavigationItem is null || !string.Equals(SelectedNavigationItem.Key, selectedItem?.Key, StringComparison.Ordinal))
+                    collectionNavigationItems[key] = collectionItem;
+                }
+
+                LibraryNavigationItemViewModel? selectedItem = FindNavigationItemByKey(selectedKey);
+
+                if (selectedItem is null || !selectedItem.IsVisible)
+                    selectedItem = NavigationItems.FirstOrDefault(item => item.IsVisible && item.Kind != LibraryNavigationItemKind.TriggerGlyph)
+                                   ?? NavigationItems.FirstOrDefault(item => item.Kind != LibraryNavigationItemKind.TriggerGlyph);
+
                 SelectedNavigationItem = selectedItem;
 
-            OnPropertyChanged(nameof(NavigationItems));
-            OnPropertyChanged(nameof(AvailablePlatforms));
-            BackAvailabilityChanged?.Invoke(CanGoBack);
+                OnPropertyChanged(nameof(NavigationItems));
+                OnPropertyChanged(nameof(AvailablePlatforms));
+
+                BackAvailabilityChanged?.Invoke(CanGoBack);
+            });
         }
 
         public LibraryNavigationItemViewModel? FindNavigationItemByKey(string? key)
@@ -770,31 +778,12 @@ namespace HandheldCompanion.ViewModels
             if (_rebuildCollectionGroupsPending)
                 return;
 
-            if (Application.Current?.Dispatcher.CheckAccess() != false)
-            {
-                _rebuildCollectionGroupsPending = true;
-                _rebuildCollectionGroupsPending = false;
-                RebuildCollectionGroups();
-                return;
-            }
-
             _rebuildCollectionGroupsPending = true;
-            _uiContext.Post(_ =>
+            UIHelper.TryInvoke(() =>
             {
                 _rebuildCollectionGroupsPending = false;
                 RebuildCollectionGroups();
-            }, null);
-        }
-
-        private void RunOnUiContext(Action action)
-        {
-            if (Application.Current?.Dispatcher.CheckAccess() != false)
-            {
-                action();
-                return;
-            }
-
-            Application.Current.Dispatcher.BeginInvoke(action);
+            });
         }
 
         private void EnsureCollectionGroupsReady()
@@ -818,7 +807,7 @@ namespace HandheldCompanion.ViewModels
 
         private void RefreshProfilesCardsItemsSource()
         {
-            RunOnUiContext(() =>
+            UIHelper.TryInvoke(() =>
             {
                 ProfilesCardsItemsSource = null;
                 ProfilesCardsItemsSource = ProfilesView;
@@ -1053,18 +1042,15 @@ namespace HandheldCompanion.ViewModels
 
         private void UpdateFiltering()
         {
-            if (Application.Current?.Dispatcher.CheckAccess() == false)
+            UIHelper.TryInvoke(() =>
             {
-                Application.Current.Dispatcher.BeginInvoke(new Action(UpdateFiltering));
-                return;
-            }
+                ProfilesView.Filter = o => o is ProfileViewModel vm && MatchesFilters(vm);
 
-            ProfilesView.Filter = o => o is ProfileViewModel vm && MatchesFilters(vm);
+                // Workaround for iNKORE ItemsRepeater not observing ICollectionView changes
+                RefreshProfilesCardsItemsSource();
 
-            // Workaround for iNKORE ItemsRepeater not observing ICollectionView changes
-            RefreshProfilesCardsItemsSource();
-
-            ScheduleRebuildCollectionGroups();
+                ScheduleRebuildCollectionGroups();
+            });
         }
 
         private bool MatchesFilters(ProfileViewModel profile)

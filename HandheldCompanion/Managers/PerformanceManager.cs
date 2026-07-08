@@ -11,7 +11,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using System.Windows.Forms;
 using static HandheldCompanion.Processors.Intel.KX;
 using static HandheldCompanion.Processors.IntelProcessor;
 using PowerSchemeAPI = PowerManagerAPI.PowerManager;

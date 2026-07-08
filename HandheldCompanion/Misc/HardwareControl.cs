@@ -27,7 +27,7 @@ public static class HardwareControl
     private static float? cpuFanRPM;
 
     private static PerformanceCounter? _cpuTempCounter;
-    private static readonly string[] _tempCounterInstances = [@"\_TZ.TZ01", @"\_TZ.THRM"];
+    private static readonly string[] _tempCounterInstances = [@"\_TZ.TZ01", @"\_TZ.THRM", @"\_TZ.THM0"];
 
     private static PerformanceCounter? _cpuPowerCounter;
     private static readonly string[] _powerCounterInstances = ["Apu Power", "RAPL_Package0_PKG", "CPU Power", "Socket Power", "Current Socket Power"];
@@ -149,13 +149,14 @@ public static class HardwareControl
         try
         {
             var category = new PerformanceCounterCategory("Thermal Zone Information");
-            var instances = category.GetInstanceNames();
-
+            PerformanceCounter? counter = null;
             foreach (var name in _tempCounterInstances)
             {
-                if (instances.Contains(name, StringComparer.OrdinalIgnoreCase))
+                if (category.InstanceExists(name))
                 {
-                    var counter = new PerformanceCounter("Thermal Zone Information", "Temperature", name, true);
+                    counter = category.CounterExists("High Precision Temperature")
+                        ? new PerformanceCounter("Thermal Zone Information", "High Precision Temperature", name, true)
+                        : new PerformanceCounter("Thermal Zone Information", "Temperature", name, true);
                     counter.NextValue();
                     _cpuTempCounter = counter;
                     return;
@@ -377,7 +378,7 @@ public static class HardwareControl
         if (_cpuTempCounterFailed || _cpuTempCounter is null) return null;
         try
         {
-            var newCpu = _cpuTempCounter.NextValue() - 273.15f;
+            var newCpu = (_cpuTempCounter.NextValue() / (_cpuTempCounter.CounterName == "High Precision Temperature" ? 10 : 1)) - 273.15f;
             if (newCpu > 0)
             {
                 _cpuTempNullTicks = 0;

@@ -133,7 +133,7 @@ namespace HandheldCompanion.Controls
 
                 if (itemIndex < 0 || !currentLayout.TryGetItemLayout(itemIndex, out ItemLayout? itemLayout))
                 {
-                    child.Arrange(Rect.Empty);
+                    child.Arrange(new Rect(0.0, 0.0, 0.0, 0.0));
                     continue;
                 }
 
@@ -248,9 +248,6 @@ namespace HandheldCompanion.Controls
         {
             double width = CoerceNonNegativeFinite(bounds.Width);
             double height = CoerceNonNegativeFinite(bounds.Height);
-            if (width <= 0.0 || height <= 0.0)
-                return Rect.Empty;
-
             return new Rect(CoerceFiniteCoordinate(bounds.X), CoerceFiniteCoordinate(bounds.Y), width, height);
         }
 

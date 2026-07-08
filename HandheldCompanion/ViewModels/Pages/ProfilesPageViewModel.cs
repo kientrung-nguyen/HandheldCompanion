@@ -182,7 +182,7 @@ namespace HandheldCompanion.ViewModels
         private bool _HasRSRSupport;
         public bool HasRSRSupport
         {
-            get => _HasRSRSupport;
+            get => _HasRSRSupport && _GPUScalingEnabled;
             set { if (value != _HasRSRSupport) { _HasRSRSupport = value; OnPropertyChanged(nameof(HasRSRSupport)); } }
         }
 
@@ -210,7 +210,7 @@ namespace HandheldCompanion.ViewModels
         private bool _HasIntegerScalingSupport;
         public bool HasIntegerScalingSupport
         {
-            get => _HasIntegerScalingSupport;
+            get => _HasIntegerScalingSupport && _GPUScalingEnabled;
             set { if (value != _HasIntegerScalingSupport) { _HasIntegerScalingSupport = value; OnPropertyChanged(nameof(HasIntegerScalingSupport)); } }
         }
 
@@ -831,6 +831,13 @@ namespace HandheldCompanion.ViewModels
         {
             get => _CurrentProfileName;
             set { if (value != _CurrentProfileName) { _CurrentProfileName = value; OnPropertyChanged(nameof(CurrentProfileName)); } }
+        }
+
+        private string _CurrentProfileDescription = string.Empty;
+        public string CurrentProfileDescription
+        {
+            get => _CurrentProfileDescription;
+            set { if (value != _CurrentProfileDescription) { _CurrentProfileDescription = value; OnPropertyChanged(nameof(CurrentProfileDescription)); } }
         }
 
         private string _ProfileArguments = string.Empty;
@@ -1560,7 +1567,10 @@ namespace HandheldCompanion.ViewModels
                     OnPropertyChanged(nameof(CanResumeProcess));
                     OnPropertyChanged(nameof(CanKillProcess));
                     OnPropertyChanged(nameof(IsProfileProcessRunning));
+                    OnPropertyChanged(nameof(IsProfileProcessSuspended));
                     OnPropertyChanged(nameof(CanToggleProfileProcess));
+                    OnPropertyChanged(nameof(ProfileProcessActionText));
+                    OnPropertyChanged(nameof(ProfileProcessActionGlyph));
 
                     OnPropertyChanged(nameof(KillProcessCommand));
                 }
@@ -1577,20 +1587,55 @@ namespace HandheldCompanion.ViewModels
                     OnPropertyChanged(nameof(CanKillProcess));
                     OnPropertyChanged(nameof(IsProfileProcessRunning));
                     OnPropertyChanged(nameof(CanToggleProfileProcess));
+                    OnPropertyChanged(nameof(ProfileProcessActionText));
+                    OnPropertyChanged(nameof(ProfileProcessActionGlyph));
                     break;
                 case nameof(ProcessExViewModel.IsSuspended):
                     OnPropertyChanged(nameof(CanSuspendProcess));
                     OnPropertyChanged(nameof(CanResumeProcess));
+                    OnPropertyChanged(nameof(IsProfileProcessSuspended));
+                    OnPropertyChanged(nameof(ProfileProcessActionText));
+                    OnPropertyChanged(nameof(ProfileProcessActionGlyph));
                     break;
             }
         }
 
         public bool IsProfileProcessRunning => CurrentProcessViewModel?.IsRunning == true;
+        public bool IsProfileProcessSuspended => CurrentProcessViewModel?.IsSuspended == true;
         public bool CanToggleProfileProcess => CanLaunchProcess || CanKillProcess;
         public bool CanLaunchProcess => SelectedProfile != null && !string.IsNullOrEmpty(SelectedProfile.Path) && CurrentProcessViewModel?.IsRunning != true;
         public bool CanSuspendProcess => CurrentProcessViewModel?.CanSuspend == true;
         public bool CanResumeProcess => CurrentProcessViewModel?.CanResume == true;
         public bool CanKillProcess => CurrentProcessViewModel?.IsRunning == true;
+
+        public string ProfileProcessActionText
+        {
+            get
+            {
+                if (!IsProfileProcessRunning)
+                    return Properties.Resources.ProfilesPage_Play;
+
+                if (IsProfileProcessSuspended)
+                    return Properties.Resources.ProfilesPage_ResumeProcess;
+
+                return Properties.Resources.ProfilesPage_SuspendProcess;
+            }
+        }
+
+        public string ProfileProcessActionGlyph
+        {
+            get
+            {
+                // Glyph codes: Play=F5B0, Pause=E769, Resume=E768
+                if (!IsProfileProcessRunning)
+                    return "\uF5B0";  // Play glyph (launch)
+
+                if (IsProfileProcessSuspended)
+                    return "\uE768";  // Resume glyph (play)
+
+                return "\uE769";      // Pause glyph (suspend)
+            }
+        }
 
         // Delegate process commands to CurrentProcessViewModel, except Launch which uses Profile
         public ICommand? SuspendProcessCommand => CurrentProcessViewModel?.SuspendProcessCommand;
@@ -1617,8 +1662,6 @@ namespace HandheldCompanion.ViewModels
         public ICommand DisplayLibrary { get; private set; } = null!;
         public ICommand DownloadLibrary { get; private set; } = null!;
         public ICommand LaunchExecutable { get; private set; } = null!;
-        public ICommand ToggleProfileProcessCommand { get; private set; } = null!;
-        public ICommand LaunchProfileProcessCommand { get; private set; } = null!;
         public ICommand AddProfileExecutable { get; private set; } = null!;
         public ICommand RemoveProfileExecutable { get; private set; } = null!;
         public ICommand CreateProfileCommand { get; private set; } = null!;
@@ -1638,6 +1681,13 @@ namespace HandheldCompanion.ViewModels
         public ICommand BrowseCoverCommand { get; private set; } = null!;
         public ICommand BrowseArtworkCommand { get; private set; } = null!;
         public ICommand BrowseLogoCommand { get; private set; } = null!;
+
+        // Profile commands
+        public ICommand LaunchProfileProcessCommand { get; private set; } = null!;
+        public ICommand SuspendProfileProcessCommand { get; private set; } = null!;
+        public ICommand ResumeProfileProcessCommand { get; private set; } = null!;
+        public ICommand KillProfileProcessCommand { get; private set; } = null!;
+        public ICommand ToggleProfileProcessCommand { get; private set; } = null!;
 
         private bool isLoadingProfile = false;
         public bool IsLoadingProfile => isLoadingProfile;
@@ -1857,6 +1907,42 @@ namespace HandheldCompanion.ViewModels
                 catch (Exception ex)
                 {
                     LogManager.LogError("Failed to launch profile process: {0}", ex.Message);
+                }
+            });
+
+            SuspendProfileProcessCommand = new DelegateCommand(() =>
+            {
+                try
+                {
+                    CurrentProcessViewModel?.SuspendProcessCommand?.Execute(null);
+                }
+                catch (Exception ex)
+                {
+                    LogManager.LogError("Failed to suspend profile process: {0}", ex.Message);
+                }
+            });
+
+            ResumeProfileProcessCommand = new DelegateCommand(() =>
+            {
+                try
+                {
+                    CurrentProcessViewModel?.ResumeProcessCommand?.Execute(null);
+                }
+                catch (Exception ex)
+                {
+                    LogManager.LogError("Failed to resume profile process: {0}", ex.Message);
+                }
+            });
+
+            KillProfileProcessCommand = new DelegateCommand(() =>
+            {
+                try
+                {
+                    CurrentProcessViewModel?.KillProcessCommand?.Execute(null);
+                }
+                catch (Exception ex)
+                {
+                    LogManager.LogError("Failed to kill profile process: {0}", ex.Message);
                 }
             });
 
@@ -2920,6 +3006,7 @@ namespace HandheldCompanion.ViewModels
 
                 ProfileEnabled = IsQuickTools ? !SelectedProfile.Default : SelectedProfile.Enabled;
                 CurrentProfileName = SelectedProfile.Name;
+                CurrentProfileDescription = SelectedProfile.LibraryEntry?.Description ?? string.Empty;
                 ProfileArguments = SelectedProfile.Arguments;
                 ProfileLaunchString = SelectedProfile.LaunchString;
 

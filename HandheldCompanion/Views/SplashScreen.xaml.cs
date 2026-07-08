@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Threading;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Threading;
 
 namespace HandheldCompanion.Views
@@ -15,6 +15,14 @@ namespace HandheldCompanion.Views
             InitializeComponent();
         }
 
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            // Clear WS_MAXIMIZE so Windows does not show this window maximized when first
+            // displayed. This has no ShowWindow side-effect unlike SetWindowPlacement.
+            WinAPI.ClearMaximizeStyle(new WindowInteropHelper(this).Handle);
+        }
+
         public void SetStatus(string status)
         {
             if (FindName("StatusTextBlock") is System.Windows.Controls.TextBlock statusTextBlock)
@@ -22,101 +30,54 @@ namespace HandheldCompanion.Views
         }
     }
 
+    /// <summary>
+    /// Hosts a <see cref="SplashScreen"/> on the main UI thread.
+    /// <see cref="Show"/> and <see cref="Close"/> must be called from the UI thread.
+    /// <see cref="SetStatus"/> is safe to call from any thread.
+    /// </summary>
     public sealed class SplashScreenHost : IDisposable
     {
-        private readonly object _syncRoot = new();
-        private readonly ManualResetEventSlim _windowReady = new(false);
-
-        private Thread? _thread;
-        private Dispatcher? _dispatcher;
         private SplashScreen? _window;
 
+        /// <summary>Must be called from the UI thread.</summary>
         public void Show()
         {
-            lock (_syncRoot)
-            {
-                if (_dispatcher is not null)
-                    return;
+            if (_window is not null)
+                return;
 
-                _windowReady.Reset();
-
-                _thread = new Thread(ThreadStart)
-                {
-                    IsBackground = true,
-                    Name = nameof(SplashScreen)
-                };
-                _thread.SetApartmentState(ApartmentState.STA);
-                _thread.Start();
-            }
-
-            _windowReady.Wait();
+            _window = new SplashScreen();
+            _window.Show();
         }
 
+        /// <summary>
+        /// Updates the status text. Safe to call from any thread.
+        /// </summary>
         public void SetStatus(string status)
         {
-            Dispatcher? dispatcher;
-            SplashScreen? window;
-
-            lock (_syncRoot)
-            {
-                dispatcher = _dispatcher;
-                window = _window;
-            }
-
-            if (string.IsNullOrWhiteSpace(status) || window is null || dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            if (_window is null || string.IsNullOrWhiteSpace(status))
                 return;
 
-            dispatcher.BeginInvoke(() => window.SetStatus(status), DispatcherPriority.Normal);
+            var dispatcher = _window.Dispatcher;
+            if (dispatcher.CheckAccess())
+            {
+                _window.SetStatus(status);
+            }
+            else
+            {
+                dispatcher.InvokeAsync(() => _window?.SetStatus(status), DispatcherPriority.Normal);
+            }
         }
 
+        /// <summary>Must be called from the UI thread.</summary>
         public void Close()
         {
-            SplashScreen? window;
-            Dispatcher? dispatcher;
-
-            lock (_syncRoot)
-            {
-                window = _window;
-                dispatcher = _dispatcher;
-                _window = null;
-                _dispatcher = null;
-                _thread = null;
-            }
-
-            if (window is null || dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            if (_window is null)
                 return;
 
-            dispatcher.BeginInvoke(new Action(window.Close), DispatcherPriority.Normal);
+            _window.Close();
+            _window = null;
         }
 
-        public void Dispose()
-        {
-            Close();
-            _windowReady.Dispose();
-        }
-
-        private void ThreadStart()
-        {
-            SplashScreen window = new();
-            Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
-
-            window.Closed += Window_Closed;
-
-            lock (_syncRoot)
-            {
-                _window = window;
-                _dispatcher = dispatcher;
-            }
-
-            _windowReady.Set();
-            window.Show();
-
-            Dispatcher.Run();
-        }
-
-        private static void Window_Closed(object? sender, EventArgs e)
-        {
-            Dispatcher.CurrentDispatcher.BeginInvokeShutdown(DispatcherPriority.Background);
-        }
+        public void Dispose() => Close();
     }
 }

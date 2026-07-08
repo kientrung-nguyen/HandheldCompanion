@@ -1,6 +1,5 @@
 using HandheldCompanion.Devices;
 using HandheldCompanion.Processors.AMD;
-using HandheldCompanion.Shared;
 
 namespace HandheldCompanion.Processors;
 
@@ -69,6 +68,7 @@ public class AMDProcessor : Processor
                         break;
                 }
             }
+
             base.SetTDPLimit(type, limit, immediate, result);
         }
     }
@@ -76,21 +76,18 @@ public class AMDProcessor : Processor
     public override uint GetTDPLimit(PowerType type)
     {
         float value = 0.0f;
-        var result = false;
         switch (type)
         {
             case PowerType.Slow:
-                result = ryzenSmuService.TryGetSlowLimit(out value);
+                ryzenSmuService.TryGetSlowLimit(out value);
                 break;
             case PowerType.Stapm:
-                result = ryzenSmuService.TryGetStapmLimit(out value);
+                ryzenSmuService.TryGetStapmLimit(out value);
                 break;
             case PowerType.Fast:
-                result = ryzenSmuService.TryGetFastLimit(out value);
+                ryzenSmuService.TryGetFastLimit(out value);
                 break;
         }
-
-        LogManager.LogInformation("User requested {0} TDP limit: {1}W, error code: {2}", type, value, result);
         return (uint)value;
     }
 

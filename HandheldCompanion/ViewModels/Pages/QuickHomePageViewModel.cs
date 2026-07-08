@@ -40,9 +40,6 @@ namespace HandheldCompanion.ViewModels
             updateTimer.Elapsed += UpdateTimer_Elapsed;
 
             // manage events
-            ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
-            ManagerFactory.hotkeysManager.Deleted += HotkeysManager_Deleted;
-
             if (PerformanceManager.IsInitialized && PerformanceManager.GetProcessor() is Processor processor)
                 PerformanceManager_Initialized(processor.CanChangeTDP, processor.CanChangeGPU);
             else
@@ -192,7 +189,7 @@ namespace HandheldCompanion.ViewModels
                     GPULoad = OverlayEntryElement.FormatValue((float)gpu.GetLoad(), "%");
 
                 if (gpu.HasTemperature())
-                    GPUTemperature = OverlayEntryElement.FormatValue((float)gpu.GetTemperature(), "°C");
+                    GPUTemperature = OverlayEntryElement.FormatValue((float)gpu.GetTemperature(), "°");
             }
         }
 
@@ -808,7 +805,12 @@ namespace HandheldCompanion.ViewModels
 
         private void QueryHotkeys()
         {
-            foreach (Hotkey hotkey in ManagerFactory.hotkeysManager.GetHotkeys())
+            // manage events
+            ManagerFactory.hotkeysManager.Updated += HotkeysManager_Updated;
+            ManagerFactory.hotkeysManager.Deleted += HotkeysManager_Deleted;
+
+            // raise events
+            foreach (Hotkey hotkey in ManagerFactory.hotkeysManager.GetHotkeys().OrderByDescending(hotkey => hotkey.PinIndex != -1).ThenBy(hotkey => hotkey.ButtonFlags))
                 HotkeysManager_Updated(hotkey);
         }
 
@@ -864,7 +866,7 @@ namespace HandheldCompanion.ViewModels
                         int index = hotkey.PinIndex;
                         if (index > HotkeysList.Count || index < 0)
                             index = HotkeysList.Count;
-                        HotkeysList.Insert(index, new HotkeyViewModel(hotkey));
+                        HotkeysList.Insert(index, new HotkeyViewModel(hotkey, true));
                     }
                 }
                 else
@@ -892,12 +894,16 @@ namespace HandheldCompanion.ViewModels
 
         public void OnNavigatedTo()
         {
+            PlatformManager.LibreHardware.Resume();
             updateTimer.Start();
+            LogManager.LogInformation("Quick Home OnNavigatedTo");
         }
 
         public void OnNavigatedFrom()
         {
+            PlatformManager.LibreHardware.Pause();
             updateTimer.Stop();
+            LogManager.LogInformation("Quick Home OnNavigatedFrom");
         }
 
         protected override void Dispose(bool disposing)
@@ -911,6 +917,8 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.platformManager.Initialized -= PlatformManager_Initialized;
                 ManagerFactory.gpuManager.Hooked -= GPUManager_Hooked;
                 ManagerFactory.gpuManager.Initialized -= GpuManager_Initialized;
+				ManagerFactory.hotkeysManager.Updated -= HotkeysManager_Updated;
+            	ManagerFactory.hotkeysManager.Deleted -= HotkeysManager_Deleted;
                 ManagerFactory.hotkeysManager.Initialized -= HotkeysManager_Initialized;
                 ManagerFactory.powerProfileManager.Initialized -= PowerProfileManager_Initialized;
                 ManagerFactory.powerProfileManager.Applied -= PowerProfileManager_Applied;

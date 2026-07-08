@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -103,31 +104,53 @@ namespace HandheldCompanion.ViewModels
 
         public void SetPreviewProfiles(IEnumerable<ProfileViewModel> profiles)
         {
+            // Clear immediately so the UI shows empty/placeholder state without blocking
             PreviewArtworks.Clear();
             PreviewCovers.Clear();
+            NotifyPreviewProperties();
 
-            List<BitmapImage> artworks = profiles
-                .Select(GetPreviewArtwork)
-                .Take(4)
-                .Cast<BitmapImage>()
-                .ToList();
+            // Snapshot the profiles list so the lambda captures a stable collection
+            List<ProfileViewModel> snapshot = profiles.ToList();
 
-            List<BitmapImage> covers = profiles
-                .Select(GetPreviewCover)
-                .Take(4)
-                .Cast<BitmapImage>()
-                .ToList();
+            // Capture the UI scheduler before leaving the UI thread
+            TaskScheduler uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
 
-            foreach (BitmapImage artwork in artworks)
+            // Load bitmaps (file I/O + decode) on a background thread, then update collections on the UI thread
+            Task.Run(() =>
             {
-                PreviewArtworks.Add(artwork);
-            }
+                List<BitmapImage> artworks = snapshot
+                    .Select(GetPreviewArtwork)
+                    .Cast<BitmapImage>()
+                    .ToList();
 
-            foreach (BitmapImage cover in covers)
+                List<BitmapImage> covers = snapshot
+                    .Select(GetPreviewCover)
+                    .Cast<BitmapImage>()
+                    .ToList();
+
+                return (artworks, covers);
+            }).ContinueWith(t =>
             {
-                PreviewCovers.Add(cover);
-            }
+                if (t.IsFaulted || t.IsCanceled)
+                    return;
 
+                (List<BitmapImage> artworks, List<BitmapImage> covers) = t.Result;
+
+                PreviewArtworks.Clear();
+                PreviewCovers.Clear();
+
+                foreach (BitmapImage artwork in artworks)
+                    PreviewArtworks.Add(artwork);
+
+                foreach (BitmapImage cover in covers)
+                    PreviewCovers.Add(cover);
+
+                NotifyPreviewProperties();
+            }, uiScheduler);
+        }
+
+        private void NotifyPreviewProperties()
+        {
             OnPropertyChanged(nameof(HasPreviewArtworks));
             OnPropertyChanged(nameof(HasPreviewCovers));
             OnPropertyChanged(nameof(ProfileCount));

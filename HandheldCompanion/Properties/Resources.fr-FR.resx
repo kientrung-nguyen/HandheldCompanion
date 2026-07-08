@@ -739,15 +739,6 @@
   <data name="ProfilesPage_UMCEnable" xml:space="preserve">
     <value>Activer le contrôle universel de mouvements</value>
   </data>
-  <data name="ProfilesPage_UMCMotionOff" xml:space="preserve">
-    <value>Désactivé, activer avec le(s) bouton(s)</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionOn" xml:space="preserve">
-    <value>Activé, désactiver avec le(s) bouton(s)</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionToggle" xml:space="preserve">
-    <value>Basculer entre activé ou désactivé avec le(s) bouton(s)</value>
-  </data>
   <data name="ProfilesPage_UMCMotionOnOff" xml:space="preserve">
     <value>Activer le contrôle de mouvement UMC</value>
   </data>

@@ -111,14 +111,82 @@ namespace HandheldCompanion.Views.Pages
             this.Tag = Tag;
 
             // manage events
-            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-            MainWindow.uiSettings.ColorValuesChanged += OnColorValuesChanged;
-            ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
             IDevice.GetCurrent().CapabilitiesChanged += OnCapabilitiesChanged;
+
+            switch (ManagerFactory.settingsManager.Status)
+            {
+                default:
+                case ManagerStatus.Initializing:
+                    ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                    break;
+                case ManagerStatus.Initialized:
+                    QuerySettings();
+                    break;
+            }
+
+            ControllerManager.Initialized += ControllerManager_Initialized;
+
+            if (ControllerManager.IsInitialized)
+                ControllerManager_Initialized();
+        }
+
+        private void ControllerManager_Initialized()
+        {
+            // manage events
+            ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
 
             // raise events
             if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController controller)
                 ControllerManager_ControllerSelected(controller);
+        }
+
+        private void SettingsManager_Initialized()
+        {
+            QuerySettings();
+        }
+
+        private void QuerySettings()
+        {
+            // manage events
+            ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+            // raise events
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverride", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverride"), false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideDown"), false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideUp"), false);
+            SettingsManager_SettingValueChanged("LEDSettingsEnabled", ManagerFactory.settingsManager.GetString("LEDSettingsEnabled"), false);
+            SettingsManager_SettingValueChanged("LEDSettingsUseAccentColor", ManagerFactory.settingsManager.GetString("LEDSettingsUseAccentColor"), false);
+            SettingsManager_SettingValueChanged("LEDSettingsLevel", ManagerFactory.settingsManager.GetString("LEDSettingsLevel"), false);
+            SettingsManager_SettingValueChanged("LEDBrightness", ManagerFactory.settingsManager.GetString("LEDBrightness"), false);
+            SettingsManager_SettingValueChanged("LEDSpeed", ManagerFactory.settingsManager.GetString("LEDSpeed"), false);
+            SettingsManager_SettingValueChanged("LEDDirection", ManagerFactory.settingsManager.GetString("LEDDirection"), false);
+            SettingsManager_SettingValueChanged("LEDMainColor", ManagerFactory.settingsManager.GetString("LEDMainColor"), false);
+            SettingsManager_SettingValueChanged("LEDSecondColor", ManagerFactory.settingsManager.GetString("LEDSecondColor"), false);
+            SettingsManager_SettingValueChanged("LEDAmbilightVerticalBlackBarDetection", ManagerFactory.settingsManager.GetString("LEDAmbilightVerticalBlackBarDetection"), false);
+            SettingsManager_SettingValueChanged("LEDUseSecondColor", ManagerFactory.settingsManager.GetString("LEDUseSecondColor"), false);
+            SettingsManager_SettingValueChanged("LEDPresetIndex", ManagerFactory.settingsManager.GetString("LEDPresetIndex"), false);
+            SettingsManager_SettingValueChanged("LegionControllerPassthrough", ManagerFactory.settingsManager.GetString("LegionControllerPassthrough"), false);
+            SettingsManager_SettingValueChanged("LegionControllerSwap", ManagerFactory.settingsManager.GetString("LegionControllerSwap"), false);
+            SettingsManager_SettingValueChanged("LegionControllerGyroIndex", ManagerFactory.settingsManager.GetString("LegionControllerGyroIndex"), false);
+            SettingsManager_SettingValueChanged("ZotacGamingZoneVRAM", ManagerFactory.settingsManager.GetString("ZotacGamingZoneVRAM"), false);
+            SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetString("BatteryChargeLimit"), false);
+            SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetString("BatteryChargeLimitPercent"), false);
+            SettingsManager_SettingValueChanged("BatteryBypassChargingMode", ManagerFactory.settingsManager.GetString("BatteryBypassChargingMode"), false);
+            SettingsManager_SettingValueChanged("SensorSelection", ManagerFactory.settingsManager.GetString("SensorSelection"), false);
+            SettingsManager_SettingValueChanged("SensorPlacement", ManagerFactory.settingsManager.GetString("SensorPlacement"), false);
+            SettingsManager_SettingValueChanged("SensorPlacementUpsideDown", ManagerFactory.settingsManager.GetString("SensorPlacementUpsideDown"), false);
+            SettingsManager_SettingValueChanged("RyzenAdjCoAll", ManagerFactory.settingsManager.GetString("RyzenAdjCoAll"), false);
+            SettingsManager_SettingValueChanged("RyzenAdjCoGfx", ManagerFactory.settingsManager.GetString("RyzenAdjCoGfx"), false);
+            SettingsManager_SettingValueChanged("MsrUndervoltCore", ManagerFactory.settingsManager.GetString("MsrUndervoltCore"), false);
+            SettingsManager_SettingValueChanged("MsrUndervoltGpu", ManagerFactory.settingsManager.GetString("MsrUndervoltGpu"), false);
+            SettingsManager_SettingValueChanged("MsrUndervoltSoc", ManagerFactory.settingsManager.GetString("MsrUndervoltSoc"), false);
+            SettingsManager_SettingValueChanged("EnhancedSleep", ManagerFactory.settingsManager.GetString("EnhancedSleep"), false);
+            SettingsManager_SettingValueChanged("GoBackToSleep", ManagerFactory.settingsManager.GetString("GoBackToSleep"), false);
+            SettingsManager_SettingValueChanged("GoBackToSleepOnPowerButton", ManagerFactory.settingsManager.GetString("GoBackToSleepOnPowerButton"), false);
+            SettingsManager_SettingValueChanged("GoBackToSleepOnFingerprintReader", ManagerFactory.settingsManager.GetString("GoBackToSleepOnFingerprintReader"), false);
+            SettingsManager_SettingValueChanged("GoBackToSleepOnJoystick", ManagerFactory.settingsManager.GetString("GoBackToSleepOnJoystick"), false);
+            SettingsManager_SettingValueChanged("GoBackToSleepOnChargerConnected", ManagerFactory.settingsManager.GetString("GoBackToSleepOnChargerConnected"), false);
+            SettingsManager_SettingValueChanged("DockedDisplayBehavior", ManagerFactory.settingsManager.GetString("DockedDisplayBehavior"), false);
         }
 
         private void OnCapabilitiesChanged(DeviceCapabilities capabilities)
@@ -167,6 +235,9 @@ namespace HandheldCompanion.Views.Pages
 
         public void Page_Closed()
         {
+            ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+            ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+            ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
             IDevice.GetCurrent().CapabilitiesChanged -= OnCapabilitiesChanged;
         }
 
@@ -191,6 +262,11 @@ namespace HandheldCompanion.Views.Pages
                         break;
                     case "LEDSettingsUseAccentColor":
                         MatchAccentColor.IsOn = Convert.ToBoolean(value);
+                        MainColorPicker.IsEnabled = !MatchAccentColor.IsOn;
+                        SecondColorPicker.IsEnabled = !MatchAccentColor.IsOn;
+
+                        if (MatchAccentColor.IsOn)
+                            SetAccentColor();
                         break;
                     case "LEDSettingsLevel":
                         {
@@ -314,6 +390,18 @@ namespace HandheldCompanion.Views.Pages
                     case "GoBackToSleep":
                         Toggle_GoBackToSleep.IsOn = Convert.ToBoolean(value);
                         break;
+                    case "GoBackToSleepOnPowerButton":
+                        CB_GoBackToSleepOnPowerButton.IsChecked = Convert.ToBoolean(value);
+                        break;
+                    case "GoBackToSleepOnFingerprintReader":
+                        CB_GoBackToSleepOnFingerprintReader.IsChecked = Convert.ToBoolean(value);
+                        break;
+                    case "GoBackToSleepOnJoystick":
+                        CB_GoBackToSleepOnJoystick.IsChecked = Convert.ToBoolean(value);
+                        break;
+                    case "GoBackToSleepOnChargerConnected":
+                        CB_GoBackToSleepOnChargerConnected.IsChecked = Convert.ToBoolean(value);
+                        break;
                     case "DockedDisplayBehavior":
                         cB_DockedDisplayBehavior.SelectedIndex = Convert.ToInt32(value);
                         break;
@@ -429,8 +517,8 @@ namespace HandheldCompanion.Views.Pages
 
         private void SetAccentColor()
         {
-            MainColorPicker.SelectedColor = (Color)ColorConverter.ConvertFromString(Convert.ToString(MainWindow.uiSettings.GetColorValue(UIColorType.Accent).ToString()));
-            SecondColorPicker.SelectedColor = (Color)ColorConverter.ConvertFromString(Convert.ToString(MainWindow.uiSettings.GetColorValue(UIColorType.Accent).ToString()));
+            MainColorPicker.SelectedColor = (Color)ColorConverter.ConvertFromString(Convert.ToString(App.uiSettings.GetColorValue(UIColorType.Accent).ToString()));
+            SecondColorPicker.SelectedColor = (Color)ColorConverter.ConvertFromString(Convert.ToString(App.uiSettings.GetColorValue(UIColorType.Accent).ToString()));
 
             ManagerFactory.settingsManager.SetProperty("LEDMainColor", MainColorPicker.SelectedColor);
             ManagerFactory.settingsManager.SetProperty("LEDSecondColor", MainColorPicker.SelectedColor);
@@ -652,6 +740,17 @@ namespace HandheldCompanion.Views.Pages
                 return;
 
             ManagerFactory.settingsManager.SetProperty("GoBackToSleep", Toggle_GoBackToSleep.IsOn);
+        }
+
+        private void CB_GoBackToSleepOnWakeReason_Changed(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded)
+                return;
+
+            ManagerFactory.settingsManager.SetProperty("GoBackToSleepOnPowerButton", CB_GoBackToSleepOnPowerButton.IsChecked == true);
+            ManagerFactory.settingsManager.SetProperty("GoBackToSleepOnFingerprintReader", CB_GoBackToSleepOnFingerprintReader.IsChecked == true);
+            ManagerFactory.settingsManager.SetProperty("GoBackToSleepOnJoystick", CB_GoBackToSleepOnJoystick.IsChecked == true);
+            ManagerFactory.settingsManager.SetProperty("GoBackToSleepOnChargerConnected", CB_GoBackToSleepOnChargerConnected.IsChecked == true);
         }
 
         #region Display

@@ -38,8 +38,6 @@ namespace HandheldCompanion.ViewModels
             {
                 if (value != ActionTypeIndex)
                 {
-                    Action?.actionType = (ActionType)value;
-
                     ActionTypeChanged((ActionType)value);
                     OnPropertyChanged(nameof(ActionTypeIndex));
                 }
@@ -126,6 +124,8 @@ namespace HandheldCompanion.ViewModels
 
         public ObservableCollection<MappingTargetViewModel> Targets { get; set; } = [];
 
+        public bool HasTarget => SelectedTarget is not null;
+
         private MappingTargetViewModel? _selectedTarget;
         public MappingTargetViewModel? SelectedTarget
         {
@@ -138,6 +138,7 @@ namespace HandheldCompanion.ViewModels
                     IsSupported = value?.IsSupported ?? true;
                     TargetTypeChanged();
                     OnPropertyChanged(nameof(SelectedTarget));
+                    OnPropertyChanged(nameof(HasTarget));
                 }
             }
         }
@@ -339,7 +340,7 @@ namespace HandheldCompanion.ViewModels
                 // Show for Button, Keyboard, Mouse, Trigger, Shift
                 if (currentActionType == ActionType.Button || currentActionType == ActionType.Keyboard ||
                     currentActionType == ActionType.Mouse || currentActionType == ActionType.Trigger ||
-                    currentActionType == ActionType.Shift)
+                    currentActionType == ActionType.Shift || currentActionType == ActionType.Joystick)
                     return Visibility.Visible;
 
                 // For Axis mappings converting to Button, also show
@@ -347,6 +348,87 @@ namespace HandheldCompanion.ViewModels
                     return Visibility.Visible;
 
                 return Visibility.Collapsed;
+            }
+        }
+
+        // Container visibility properties - check if section should show based on children visibility
+        // Mouse settings section: only visible if at least one mouse-related setting is visible
+        public virtual Visibility MouseSettingsSectionVisibility
+        {
+            get
+            {
+                ActionType currentActionType = (ActionType)ActionTypeIndex;
+                if (currentActionType != ActionType.Mouse)
+                    return Visibility.Collapsed;
+
+                // Check if any mouse-related child is visible
+                if (Button2MouseTo == Visibility.Visible ||
+                    Axis2MouseTo == Visibility.Visible ||
+                    Axis2MouseVisibility == Visibility.Visible ||
+                    Axis2TouchpadVisibility == Visibility.Visible ||
+                    Axis2MouseFiltering ||
+                    Axis2JoystickVisibility == Visibility.Visible)
+                    return Visibility.Visible;
+
+                return Visibility.Collapsed;
+            }
+        }
+
+        // Axis settings section: only visible if at least one axis-related setting is visible
+        // For Axis->Joystick mappings, show if any axis property is visible
+        public virtual Visibility AxisSettingsSectionVisibility
+        {
+            get
+            {
+                ActionType currentActionType = (ActionType)ActionTypeIndex;
+                if (currentActionType != ActionType.Joystick)
+                    return Visibility.Collapsed;
+
+                // For Button->Joystick, always show the section (it has Output shape which is always visible)
+                if (!IsAxisMapping)
+                    return Visibility.Visible;
+
+                // For Axis->Joystick, check if at least one setting is visible
+                if (AxisVisualizerVisibility == Visibility.Visible ||
+                    AxisInvertVisibility == Visibility.Visible ||
+                    Axis2MouseVisibility == Visibility.Visible)
+                    return Visibility.Visible;
+
+                return Visibility.Collapsed;
+            }
+        }
+
+        // Trigger settings section: only visible if at least one trigger setting is visible
+        public virtual Visibility TriggerSettingsSectionVisibility
+        {
+            get
+            {
+                ActionType currentActionType = (ActionType)ActionTypeIndex;
+                if (currentActionType != ActionType.Trigger)
+                    return Visibility.Collapsed;
+
+                // Check if any trigger-related child is visible
+                if (TriggerOutputVisibility == Visibility.Visible ||
+                    TriggerDeadzoneVisibility == Visibility.Visible)
+                    return Visibility.Visible;
+
+                return Visibility.Collapsed;
+            }
+        }
+
+        // Timing settings section: only visible if at least one timing setting is visible
+        public virtual Visibility TimingSettingsSectionVisibility
+        {
+            get
+            {
+                // Timing settings are only available for actions in GeneralActionVisibility
+                if (GeneralActionVisibility == Visibility.Collapsed)
+                    return Visibility.Collapsed;
+
+                // Check if any timing-related child would be visible
+                // This includes: HasToggle, HasTurbo, HasDuration, and StartDelay properties
+                // All of these require GeneralActionVisibility to be visible
+                return Visibility.Visible;
             }
         }
 

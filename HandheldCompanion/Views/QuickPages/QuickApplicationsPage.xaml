@@ -169,228 +169,214 @@
             </ikw:SimpleStackPanel>
         </ui:ContentDialog>
 
-        <ikw:SimpleStackPanel Spacing="8">
+        <ikw:SimpleStackPanel Spacing="28">
 
             <!--  Quick start  -->
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.QuickApplicationsPage_QuickStart}" />
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <ikw:SimpleStackPanel Spacing="8">
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.QuickApplicationsPage_QuickStart}" />
 
-                <ItemsControl
-                    Grid.Column="0"
-                    HorizontalAlignment="Center"
-                    ItemsSource="{Binding PagedProfiles}"
-                    VirtualizingPanel.IsVirtualizing="True"
-                    VirtualizingPanel.VirtualizationMode="Recycling">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel
-                                ItemHeight="100"
-                                ItemWidth="90"
-                                Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <!--  your existing profile-button template  -->
-                        <DataTemplate>
-                            <Button
-                                Margin="3"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                CacheMode="BitmapCache"
-                                Command="{Binding StartProcessCommand}"
-                                IsEnabled="{Binding IsAvailable, UpdateSourceTrigger=PropertyChanged}">
-                                <ikw:SimpleStackPanel
-                                    Margin="0,6,0,0"
-                                    Orientation="Vertical"
-                                    Spacing="3">
-                                    <Image
-                                        Width="32"
-                                        Height="31"
-                                        Source="{Binding Icon, UpdateSourceTrigger=PropertyChanged}">
-                                        <Image.Style>
-                                            <Style TargetType="Image">
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsEnabled" Value="False">
-                                                        <Setter Property="Opacity" Value="0.20" />
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Image.Style>
-                                    </Image>
-                                    <TextBlock
-                                        Height="40"
-                                        HorizontalAlignment="Center"
-                                        FontSize="12"
-                                        Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                        TextAlignment="Center"
-                                        TextTrimming="CharacterEllipsis"
-                                        TextWrapping="Wrap" />
-                                </ikw:SimpleStackPanel>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <ui:PipsPager
-                    Grid.Column="1"
-                    Margin="12,0,0,0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    NextButtonVisibility="Visible"
-                    NumberOfPages="{Binding TotalPages}"
-                    Orientation="Vertical"
-                    PreviousButtonVisibility="Visible"
-                    SelectedPageIndex="{Binding SelectedPageIndex, Mode=TwoWay}" />
-            </Grid>
+                    <ItemsControl
+                        ItemsSource="{Binding PagedProfiles}"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel
+                                    ItemHeight="100"
+                                    ItemWidth="90"
+                                    Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <!--  your existing profile-button template  -->
+                            <DataTemplate>
+                                <Button
+                                    Height="100"
+                                    Margin="3"
+                                    Padding="0"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    VerticalContentAlignment="Stretch"
+                                    Command="{Binding StartProcessCommand}"
+                                    IsEnabled="{Binding IsAvailable, UpdateSourceTrigger=PropertyChanged}">
+
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="5*" />
+                                            <RowDefinition Height="5*" />
+                                        </Grid.RowDefinitions>
+
+                                        <Image
+                                            Width="32"
+                                            Height="32"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Source="{Binding Icon, UpdateSourceTrigger=PropertyChanged}">
+                                            <Image.Style>
+                                                <Style TargetType="Image">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Opacity" Value="0.20" />
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Image.Style>
+                                        </Image>
+
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                            TextWrapping="Wrap" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ui:PipsPager
+                        Grid.Column="1"
+                        Margin="12,0,0,0"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        NextButtonVisibility="Visible"
+                        NumberOfPages="{Binding TotalPages}"
+                        Orientation="Vertical"
+                        PreviousButtonVisibility="Visible"
+                        SelectedPageIndex="{Binding SelectedPageIndex, Mode=TwoWay}" />
+                </Grid>
+            </ikw:SimpleStackPanel>
 
             <!--  Processes  -->
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.QuickApplicationsPage_Processes}" />
-            <ikw:SimpleStackPanel Spacing="3">
+            <ikw:SimpleStackPanel Spacing="8">
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{l:Static resx:Resources.QuickApplicationsPage_Processes}" />
 
-                <ui:ProgressBar IsIndeterminate="{Binding IsReady, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource InvertBooleanConverter}}" Visibility="{Binding IsReady, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=False}" />
+                <ikw:SimpleStackPanel Spacing="3">
+                    <ui:ProgressBar IsIndeterminate="{Binding IsReady, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource InvertBooleanConverter}}" Visibility="{Binding IsReady, Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=False}" />
 
-                <ItemsControl
-                    IsEnabled="{Binding IsReady, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                    ItemsSource="{Binding Processes}"
-                    VirtualizingPanel.IsVirtualizing="True"
-                    VirtualizingPanel.VirtualizationMode="Recycling">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <ikw:SimpleStackPanel Orientation="Vertical" Spacing="3" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+                    <ItemsControl
+                        IsEnabled="{Binding IsReady, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                        ItemsSource="{Binding Processes}"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <ikw:SimpleStackPanel Orientation="Vertical" Spacing="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
 
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <ui:SettingsExpander ItemsSource="{Binding ProcessWindows}">
-                                <ui:SettingsExpander.HeaderIcon>
-                                    <Image
-                                        Grid.Column="0"
-                                        Width="24"
-                                        Height="24"
-                                        CacheMode="BitmapCache"
-                                        Source="{Binding Icon}" />
-                                </ui:SettingsExpander.HeaderIcon>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ui:SettingsExpander
+                                    Description="{Binding CompanyName}"
+                                    Header="{Binding ProductName}"
+                                    ItemsSource="{Binding ProcessWindows}">
+                                    <ui:SettingsExpander.HeaderIcon>
+                                        <Image
+                                            Grid.Column="0"
+                                            Width="24"
+                                            Height="24"
+                                            Source="{Binding Icon}" />
+                                    </ui:SettingsExpander.HeaderIcon>
 
-                                <ui:SettingsExpander.Header>
-                                    <TextBlock
-                                        Name="ProcessName"
-                                        VerticalAlignment="Center"
-                                        Style="{StaticResource BodyTextBlockStyle}"
-                                        Text="{Binding ProductName}" />
-                                </ui:SettingsExpander.Header>
+                                    <ikw:SimpleStackPanel
+                                        Grid.Column="2"
+                                        Margin="6,0,12,0"
+                                        HorizontalAlignment="Right"
+                                        Orientation="Horizontal"
+                                        Spacing="3">
 
-                                <ui:SettingsExpander.Description>
-                                    <TextBlock
-                                        Name="ProcessPath"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{Binding CompanyName}"
-                                        TextWrapping="NoWrap" />
-                                </ui:SettingsExpander.Description>
+                                        <ToggleButton
+                                            Height="31"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            IsChecked="{Binding IsSuspended, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                            <ToggleButton.Style>
+                                                <Style BasedOn="{StaticResource DefaultToggleButtonStyle}" TargetType="ToggleButton">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSuspended}" Value="True">
+                                                            <Setter Property="ToolTip" Value="{l:Static resx:Resources.QuickApplicationsPage_ResumeApplication}" />
+                                                            <Setter Property="Content" Value="&#xe768;" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsSuspended}" Value="False">
+                                                            <Setter Property="ToolTip" Value="{l:Static resx:Resources.QuickApplicationsPage_SuspendApplication}" />
+                                                            <Setter Property="Content" Value="&#xe769;" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ToggleButton.Style>
+                                        </ToggleButton>
 
-                                <ikw:SimpleStackPanel
-                                    Grid.Column="2"
-                                    Margin="6,0,12,0"
-                                    HorizontalAlignment="Right"
-                                    Orientation="Horizontal"
-                                    Spacing="3">
+                                        <Button
+                                            Height="31"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Command="{Binding KillProcessCommand}"
+                                            Content="&#xe711;"
+                                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                            ToolTip="Terminate application" />
+                                    </ikw:SimpleStackPanel>
 
-                                    <ToggleButton
-                                        Height="31"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Stretch"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        IsChecked="{Binding IsSuspended, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                                        <ToggleButton.Style>
-                                            <Style BasedOn="{StaticResource DefaultToggleButtonStyle}" TargetType="ToggleButton">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSuspended}" Value="True">
-                                                        <Setter Property="ToolTip" Value="{l:Static resx:Resources.QuickApplicationsPage_ResumeApplication}" />
-                                                        <Setter Property="Content" Value="&#xe768;" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsSuspended}" Value="False">
-                                                        <Setter Property="ToolTip" Value="{l:Static resx:Resources.QuickApplicationsPage_SuspendApplication}" />
-                                                        <Setter Property="Content" Value="&#xe769;" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ToggleButton.Style>
-                                    </ToggleButton>
+                                    <ui:SettingsExpander.ItemTemplate>
+                                        <DataTemplate>
+                                            <ui:SettingsCard Description="{Binding Name, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
 
-                                    <Button
-                                        Height="31"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Stretch"
-                                        Command="{Binding KillProcessCommand}"
-                                        Content="&#xe711;"
-                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                        ToolTip="Terminate application" />
-                                </ikw:SimpleStackPanel>
+                                                <ikw:SimpleStackPanel
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Right"
+                                                    Orientation="Horizontal"
+                                                    Spacing="3">
 
-                                <ui:SettingsExpander.ItemTemplate>
-                                    <DataTemplate>
-                                        <ui:SettingsCard>
-                                            <ui:SettingsCard.Description>
-                                                <TextBlock
-                                                    Name="ProcessPath"
-                                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                                    Text="{Binding Name, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                                    TextWrapping="NoWrap" />
-                                            </ui:SettingsCard.Description>
+                                                    <Button
+                                                        Height="31"
+                                                        HorizontalAlignment="Stretch"
+                                                        VerticalAlignment="Stretch"
+                                                        Command="{Binding BringProcessCommand}"
+                                                        Content="&#xe7c4;"
+                                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                                        ToolTip="Snap application window" />
 
-                                            <ikw:SimpleStackPanel
-                                                Grid.Column="1"
-                                                HorizontalAlignment="Right"
-                                                Orientation="Horizontal"
-                                                Spacing="3">
-
-                                                <Button
-                                                    Height="31"
-                                                    HorizontalAlignment="Stretch"
-                                                    VerticalAlignment="Stretch"
-                                                    Command="{Binding BringProcessCommand}"
-                                                    Content="&#xe7c4;"
-                                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                                    ToolTip="Snap application window" />
-
-                                                <Button
-                                                    Height="31"
-                                                    HorizontalAlignment="Stretch"
-                                                    VerticalAlignment="Stretch"
-                                                    Command="{Binding SwapScreenCommand}"
-                                                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                                    IsEnabled="{Binding HasTwoScreen, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                                                    <Button.Style>
-                                                        <Style BasedOn="{StaticResource AccentButtonStyle}" TargetType="Button">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsPrimaryScreen}" Value="True">
-                                                                    <Setter Property="ToolTip" Value="Swap to secondary screen" />
-                                                                    <Setter Property="Content" Value="&#xe8a7;" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsPrimaryScreen}" Value="False">
-                                                                    <Setter Property="ToolTip" Value="Swap to primary screen" />
-                                                                    <Setter Property="Content" Value="&#xe78b;" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Button.Style>
-                                                </Button>
-                                            </ikw:SimpleStackPanel>
-                                        </ui:SettingsCard>
-                                    </DataTemplate>
-                                </ui:SettingsExpander.ItemTemplate>
-                            </ui:SettingsExpander>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                                                    <Button
+                                                        Height="31"
+                                                        HorizontalAlignment="Stretch"
+                                                        VerticalAlignment="Stretch"
+                                                        Command="{Binding SwapScreenCommand}"
+                                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                                        IsEnabled="{Binding HasTwoScreen, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                                                        <Button.Style>
+                                                            <Style BasedOn="{StaticResource AccentButtonStyle}" TargetType="Button">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsPrimaryScreen}" Value="True">
+                                                                        <Setter Property="ToolTip" Value="Swap to secondary screen" />
+                                                                        <Setter Property="Content" Value="&#xe8a7;" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsPrimaryScreen}" Value="False">
+                                                                        <Setter Property="ToolTip" Value="Swap to primary screen" />
+                                                                        <Setter Property="Content" Value="&#xe78b;" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                </ikw:SimpleStackPanel>
+                                            </ui:SettingsCard>
+                                        </DataTemplate>
+                                    </ui:SettingsExpander.ItemTemplate>
+                                </ui:SettingsExpander>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ikw:SimpleStackPanel>
             </ikw:SimpleStackPanel>
         </ikw:SimpleStackPanel>
     </Grid>

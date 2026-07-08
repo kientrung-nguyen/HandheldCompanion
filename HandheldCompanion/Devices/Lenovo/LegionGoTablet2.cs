@@ -29,6 +29,9 @@ namespace HandheldCompanion.Devices.Lenovo
 
         public LegionGoTablet2()
         {
+            // device specific settings
+            ProductIllustration = "device_legion_go2";
+
             // https://www.amd.com/en/products/processors/handhelds/ryzen-z-series/z2-series/z2-extreme.html
             nTDP = new double[] { 15, 15, 20 };
             cTDP = new double[] { 15, 35 };

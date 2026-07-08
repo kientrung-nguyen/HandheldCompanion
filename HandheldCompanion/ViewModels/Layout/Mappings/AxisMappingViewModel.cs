@@ -328,6 +328,11 @@ namespace HandheldCompanion.ViewModels
                     OnPropertyChanged(nameof(Axis2MouseVisibility));
                     OnPropertyChanged(nameof(Axis2ButtonVisibility));
                     OnPropertyChanged(nameof(Axis2MouseTo));
+                    OnPropertyChanged(nameof(Axis2TouchpadVisibility));
+                    OnPropertyChanged(nameof(Axis2JoystickVisibility));
+                    OnPropertyChanged(nameof(MouseSettingsSectionVisibility));
+                    OnPropertyChanged(nameof(AxisSettingsSectionVisibility));
+                    OnPropertyChanged(nameof(TriggerSettingsSectionVisibility));
                     OnPropertyChanged(nameof(AxisDirectionVisibility));
                     OnPropertyChanged(nameof(AxisThresholdVisibility));
                     OnPropertyChanged(nameof(GeneralActionVisibility));

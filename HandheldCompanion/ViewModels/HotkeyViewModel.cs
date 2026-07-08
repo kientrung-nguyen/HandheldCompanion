@@ -152,6 +152,10 @@ namespace HandheldCompanion.ViewModels
         public int FontSize => Hotkey.command.FontSize;
         public bool HasDoubleExecute => Hotkey.command.HasDoubleExecute;
 
+        public ObservableCollection<GlyphIconInfo> TriggerChordParts { get; set; } = [];
+
+        public bool HasTriggerChord => TriggerChordParts.Count > 0;
+
         public string CustomName
         {
             get
@@ -346,7 +350,7 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private string _Chord = "Press to define hotkey input";
+        private string _Chord = string.Empty;
         public string Chord
         {
             get
@@ -638,9 +642,11 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public HotkeyViewModel(Hotkey hotkey)
+        private bool IsQuickTools;
+        public HotkeyViewModel(Hotkey hotkey, bool isQuickTools = false)
         {
             Hotkey = hotkey;
+            IsQuickTools = isQuickTools;
 
             EnsureSharedFunctionData();
             _functionTypes = _sharedFunctionTypes!;
@@ -828,6 +834,159 @@ namespace HandheldCompanion.ViewModels
             }
             KeyboardChord = string.Join(",", Hotkey.inputsChord.KeyState.Where(key => key.IsKeyDown).Select(key => (KeyCode)key.KeyValue));
             InputsChordType = EnumUtils.GetDescriptionFromEnumValue(Hotkey.inputsChord.chordType);
+            var newParts = BuildTriggerChordParts(controller);
+
+            UIHelper.TryBeginInvoke(() =>
+            {
+                TriggerChordParts.Clear();
+                foreach (var part in newParts)
+                    TriggerChordParts.Add(part);
+                OnPropertyChanged(nameof(HasTriggerChord));
+            });
+        }
+
+        private List<GlyphIconInfo> BuildTriggerChordParts(IController controller)
+        {
+            List<GlyphIconInfo> parts = [];
+
+            foreach (var key in Hotkey.inputsChord.KeyState.Where(key => key.IsKeyDown).OrderBy(key => key.Timestamp))
+                parts.Add(KeyboardToken((KeyCode)key.KeyValue));
+
+            foreach (var button in Hotkey.inputsChord.ButtonState.Buttons)
+                parts.Add(GetTriggerButtonToken(controller, button, IsQuickTools));
+
+            return parts;
+        }
+
+        private static GlyphIconInfo GetTriggerButtonToken(IController controller, ButtonFlags button, bool IsQuickTools)
+        {
+            switch (button)
+            {
+                case ButtonFlags.OEM1:
+                case ButtonFlags.OEM2:
+                case ButtonFlags.OEM3:
+                case ButtonFlags.OEM4:
+                case ButtonFlags.OEM5:
+                case ButtonFlags.OEM6:
+                case ButtonFlags.OEM7:
+                case ButtonFlags.OEM8:
+                case ButtonFlags.OEM9:
+                case ButtonFlags.OEM10:
+                    {
+                        return IDevice.GetCurrent().GetGlyphIconInfo(button, IsQuickTools ? 15 : 22);
+                    }
+                default:
+                    {
+                        return controller.GetGlyphIconInfo(button, IsQuickTools ? 15 : 22);
+                    }
+            }
+        }
+
+        private static GlyphIconInfo KeyboardToken(KeyCode key)
+        {
+            return key switch
+            {
+                KeyCode.A => new GlyphIconInfo { Glyph = "A", FontSize = 12 },
+                KeyCode.B => new GlyphIconInfo { Glyph = "B", FontSize = 12 },
+                KeyCode.C => new GlyphIconInfo { Glyph = "C", FontSize = 12 },
+                KeyCode.D => new GlyphIconInfo { Glyph = "D", FontSize = 12 },
+                KeyCode.E => new GlyphIconInfo { Glyph = "E", FontSize = 12 },
+                KeyCode.F => new GlyphIconInfo { Glyph = "F", FontSize = 12 },
+                KeyCode.G => new GlyphIconInfo { Glyph = "G", FontSize = 12 },
+                KeyCode.H => new GlyphIconInfo { Glyph = "H", FontSize = 12 },
+                KeyCode.I => new GlyphIconInfo { Glyph = "I", FontSize = 12 },
+                KeyCode.J => new GlyphIconInfo { Glyph = "J", FontSize = 12 },
+                KeyCode.K => new GlyphIconInfo { Glyph = "K", FontSize = 12 },
+                KeyCode.L => new GlyphIconInfo { Glyph = "L", FontSize = 12 },
+                KeyCode.M => new GlyphIconInfo { Glyph = "M", FontSize = 12 },
+                KeyCode.N => new GlyphIconInfo { Glyph = "N", FontSize = 12 },
+                KeyCode.O => new GlyphIconInfo { Glyph = "O", FontSize = 12 },
+                KeyCode.P => new GlyphIconInfo { Glyph = "P", FontSize = 12 },
+                KeyCode.Q => new GlyphIconInfo { Glyph = "Q", FontSize = 12 },
+                KeyCode.R => new GlyphIconInfo { Glyph = "R", FontSize = 12 },
+                KeyCode.S => new GlyphIconInfo { Glyph = "S", FontSize = 12 },
+                KeyCode.T => new GlyphIconInfo { Glyph = "T", FontSize = 12 },
+                KeyCode.U => new GlyphIconInfo { Glyph = "U", FontSize = 12 },
+                KeyCode.V => new GlyphIconInfo { Glyph = "V", FontSize = 12 },
+                KeyCode.W => new GlyphIconInfo { Glyph = "W", FontSize = 12 },
+                KeyCode.X => new GlyphIconInfo { Glyph = "X", FontSize = 12 },
+                KeyCode.Y => new GlyphIconInfo { Glyph = "Y", FontSize = 12 },
+                KeyCode.Z => new GlyphIconInfo { Glyph = "Z", FontSize = 12 },
+
+                KeyCode.D0 => new GlyphIconInfo { Glyph = "0", FontSize = 12 },
+                KeyCode.D1 => new GlyphIconInfo { Glyph = "1", FontSize = 12 },
+                KeyCode.D2 => new GlyphIconInfo { Glyph = "2", FontSize = 12 },
+                KeyCode.D3 => new GlyphIconInfo { Glyph = "3", FontSize = 12 },
+                KeyCode.D4 => new GlyphIconInfo { Glyph = "4", FontSize = 12 },
+                KeyCode.D5 => new GlyphIconInfo { Glyph = "5", FontSize = 12 },
+                KeyCode.D6 => new GlyphIconInfo { Glyph = "6", FontSize = 12 },
+                KeyCode.D7 => new GlyphIconInfo { Glyph = "7", FontSize = 12 },
+                KeyCode.D8 => new GlyphIconInfo { Glyph = "8", FontSize = 12 },
+                KeyCode.D9 => new GlyphIconInfo { Glyph = "9", FontSize = 12 },
+
+                KeyCode.NumPad0 => new GlyphIconInfo { Glyph = "0", FontSize = 12 },
+                KeyCode.NumPad1 => new GlyphIconInfo { Glyph = "1", FontSize = 12 },
+                KeyCode.NumPad2 => new GlyphIconInfo { Glyph = "2", FontSize = 12 },
+                KeyCode.NumPad3 => new GlyphIconInfo { Glyph = "3", FontSize = 12 },
+                KeyCode.NumPad4 => new GlyphIconInfo { Glyph = "4", FontSize = 12 },
+                KeyCode.NumPad5 => new GlyphIconInfo { Glyph = "5", FontSize = 12 },
+                KeyCode.NumPad6 => new GlyphIconInfo { Glyph = "6", FontSize = 12 },
+                KeyCode.NumPad7 => new GlyphIconInfo { Glyph = "7", FontSize = 12 },
+                KeyCode.NumPad8 => new GlyphIconInfo { Glyph = "8", FontSize = 12 },
+                KeyCode.NumPad9 => new GlyphIconInfo { Glyph = "9", FontSize = 12 },
+
+                KeyCode.Control or KeyCode.LControlKey or KeyCode.RControlKey or KeyCode.LControl or KeyCode.RControl => new GlyphIconInfo { Glyph = "Ctrl", FontSize = 12 },
+                KeyCode.Shift or KeyCode.LShiftKey or KeyCode.RShiftKey or KeyCode.LShift or KeyCode.RShift => new GlyphIconInfo { Glyph = "Shift", FontSize = 12 },
+                KeyCode.Menu or KeyCode.LMenu or KeyCode.RMenu or KeyCode.LAlt or KeyCode.RAlt => new GlyphIconInfo { Glyph = "Alt", FontSize = 12 },
+                KeyCode.LWin or KeyCode.RWin => new GlyphIconInfo { FontFamily = new("PromptFont"), Glyph = "\uE008", FontSize = 12 },
+                KeyCode.Tab => new GlyphIconInfo { Glyph = "Tab", FontSize = 12 },
+                KeyCode.CapsLock => new GlyphIconInfo { Glyph = "Caps", FontSize = 12 },
+                KeyCode.Backspace => new GlyphIconInfo { Glyph = "Back", FontSize = 12 },
+                KeyCode.Return => new GlyphIconInfo { Glyph = "Enter", FontSize = 12 },
+                KeyCode.Escape => new GlyphIconInfo { Glyph = "Esc", FontSize = 12 },
+                KeyCode.PageUp => new GlyphIconInfo { Glyph = "PgUp", FontSize = 12 },
+                KeyCode.PageDown => new GlyphIconInfo { Glyph = "PgDn", FontSize = 12 },
+                KeyCode.Insert => new GlyphIconInfo { Glyph = "Ins", FontSize = 12 },
+                KeyCode.Delete => new GlyphIconInfo { Glyph = "Del", FontSize = 12 },
+                KeyCode.Home => new GlyphIconInfo { Glyph = "Home", FontSize = 12 },
+                KeyCode.End => new GlyphIconInfo { Glyph = "End", FontSize = 12 },
+                KeyCode.Left => new GlyphIconInfo { Glyph = "←", FontSize = 12 },
+                KeyCode.Up => new GlyphIconInfo { Glyph = "↑", FontSize = 12 },
+                KeyCode.Right => new GlyphIconInfo { Glyph = "→", FontSize = 12 },
+                KeyCode.Down => new GlyphIconInfo { Glyph = "↓", FontSize = 12 },
+                KeyCode.PrintScreen => new GlyphIconInfo { Glyph = "PrtSc", FontSize = 12 },
+                KeyCode.Scroll => new GlyphIconInfo { Glyph = "ScrLk", FontSize = 12 },
+                KeyCode.Pause => new GlyphIconInfo { Glyph = "Pause", FontSize = 12 },
+                KeyCode.NumLock => new GlyphIconInfo { Glyph = "Num", FontSize = 12 },
+                KeyCode.Space => new GlyphIconInfo { Glyph = "Space", FontSize = 12 },
+
+                KeyCode.F1 => new GlyphIconInfo { Glyph = "F1", FontSize = 12 },
+                KeyCode.F2 => new GlyphIconInfo { Glyph = "F2", FontSize = 12 },
+                KeyCode.F3 => new GlyphIconInfo { Glyph = "F3", FontSize = 12 },
+                KeyCode.F4 => new GlyphIconInfo { Glyph = "F4", FontSize = 12 },
+                KeyCode.F5 => new GlyphIconInfo { Glyph = "F5", FontSize = 12 },
+                KeyCode.F6 => new GlyphIconInfo { Glyph = "F6", FontSize = 12 },
+                KeyCode.F7 => new GlyphIconInfo { Glyph = "F7", FontSize = 12 },
+                KeyCode.F8 => new GlyphIconInfo { Glyph = "F8", FontSize = 12 },
+                KeyCode.F9 => new GlyphIconInfo { Glyph = "F9", FontSize = 12 },
+                KeyCode.F10 => new GlyphIconInfo { Glyph = "F10", FontSize = 12 },
+                KeyCode.F11 => new GlyphIconInfo { Glyph = "F11", FontSize = 12 },
+                KeyCode.F12 => new GlyphIconInfo { Glyph = "F12", FontSize = 12 },
+
+                KeyCode.Oem1 or KeyCode.OemSemicolon => new GlyphIconInfo { Glyph = ";", FontSize = 12 },
+                KeyCode.Oem2 or KeyCode.OemQuestion => new GlyphIconInfo { Glyph = "/", FontSize = 12 },
+                KeyCode.Oem3 or KeyCode.Oemtilde => new GlyphIconInfo { Glyph = "`", FontSize = 12 },
+                KeyCode.Oem4 or KeyCode.OemOpenBrackets => new GlyphIconInfo { Glyph = "[", FontSize = 12 },
+                KeyCode.Oem5 or KeyCode.OemPipe or KeyCode.OemBackslash => new GlyphIconInfo { Glyph = "\\", FontSize = 12 },
+                KeyCode.Oem6 or KeyCode.OemCloseBrackets => new GlyphIconInfo { Glyph = "]", FontSize = 12 },
+                KeyCode.Oem7 or KeyCode.OemQuotes => new GlyphIconInfo { Glyph = "'", FontSize = 12 },
+                KeyCode.OemMinus => new GlyphIconInfo { Glyph = "-", FontSize = 12 },
+                KeyCode.Oemplus => new GlyphIconInfo { Glyph = "+", FontSize = 12 },
+                KeyCode.Oemcomma => new GlyphIconInfo { Glyph = ",", FontSize = 12 },
+                KeyCode.OemPeriod => new GlyphIconInfo { Glyph = ".", FontSize = 12 },
+
+                _ => new GlyphIconInfo { Glyph = key.ToString(), FontSize = 12 }
+            };
         }
 
         private void DrawNameAndDescription()

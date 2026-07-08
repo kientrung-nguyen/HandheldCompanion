@@ -1,6 +1,5 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
-using HandheldCompanion.Views;
 using System;
 using System.Windows.Media.Imaging;
 
@@ -10,7 +9,7 @@ namespace HandheldCompanion.ViewModels
     {
         public string Manufacturer => IDevice.GetCurrent().ManufacturerName;
         public string ProductName => IDevice.GetCurrent().ProductName;
-        public string Version => MainWindow.CurrentVersion.ToString();
+        public string Version => App.CurrentVersion.ToString();
 
         public string InternalSensor => IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.InternalSensor)
                 ? IDevice.GetCurrent().InternalSensorName

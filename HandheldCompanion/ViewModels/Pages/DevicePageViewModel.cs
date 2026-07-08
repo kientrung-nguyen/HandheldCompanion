@@ -63,6 +63,20 @@ namespace HandheldCompanion.ViewModels
 
         #region Power options
         public bool HasWMIMethod => CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.OEMCPU);
+
+        private bool _GoBackToSleep;
+        public bool GoBackToSleep
+        {
+            get => _GoBackToSleep;
+            set
+            {
+                if (value != _GoBackToSleep)
+                {
+                    _GoBackToSleep = value;
+                    OnPropertyChanged(nameof(GoBackToSleep));
+                }
+            }
+        }
         public int ConfigurableTDPMethod
         {
             get
@@ -160,7 +174,7 @@ namespace HandheldCompanion.ViewModels
             }
             set
             {
-                coreIsolationWatcher.SetSettings(value);
+                coreIsolationWatcher.SetSettings(value, MainWindow.GetCurrent());
             }
         }
         #endregion
@@ -311,6 +325,7 @@ namespace HandheldCompanion.ViewModels
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
             SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimit"), false);
             SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetDouble("BatteryChargeLimitPercent"), false);
+            SettingsManager_SettingValueChanged("GoBackToSleep", ManagerFactory.settingsManager.GetBoolean("GoBackToSleep"), false);
         }
 
         private void CoreIsolationWatcher_StatusChanged(bool enabled)
@@ -388,6 +403,9 @@ namespace HandheldCompanion.ViewModels
                     break;
                 case "BatteryChargeLimitPercent":
                     BatteryChargeLimitPercent = Convert.ToDouble(value);
+                    break;
+                case "GoBackToSleep":
+                    GoBackToSleep = Convert.ToBoolean(value);
                     break;
             }
         }

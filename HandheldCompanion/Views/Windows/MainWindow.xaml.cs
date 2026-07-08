@@ -11,14 +11,12 @@ using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
-using HandheldCompanion.Views.Windows;
 using iNKORE.UI.WPF.Modern;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -33,10 +31,7 @@ using System.Windows.Media;
 using System.Windows.Navigation;
 using System.Windows.Shell;
 using System.Windows.Threading;
-using Windows.UI.ViewManagement;
-using ContextMenu = System.Windows.Controls.ContextMenu;
 using Control = System.Windows.Controls.Control;
-using MessageBox = iNKORE.UI.WPF.Modern.Controls.MessageBox;
 using Page = System.Windows.Controls.Page;
 using RadioButton = System.Windows.Controls.RadioButton;
 
@@ -71,15 +66,7 @@ public partial class MainWindow : GamepadWindow
     public static LayoutItemPage layoutItemPage = null!;
 
     // overlay(s) vars
-    public static OverlayModel overlayModel = new();
-    public static OverlayTrackpad overlayTrackpad = new();
-    public static OverlayQuickTools overlayquickTools = new();
-
-    public static string CurrentExe = Environment.ProcessPath ?? string.Empty;
-    public static string CurrentPath => AppDomain.CurrentDomain.BaseDirectory;
-
     private static MainWindow? CurrentWindow;
-    private static FileVersionInfo? fileVersionInfo;
 
     public static string CurrentPageName = string.Empty;
 
@@ -119,16 +106,11 @@ public partial class MainWindow : GamepadWindow
 
     public static SplashScreenHost SplashScreen = null!;
 
-    public static UISettings uiSettings = null!;
-
     private const int WM_QUERYENDSESSION = 0x0011;
     private const int WM_DISPLAYCHANGE = 0x007e;
     private const int WM_DEVICECHANGE = 0x0219;
     private const int TrayMenuMargin = 8;
     private const int TrayMenuCursorPadding = 20;
-
-    public static Version LastVersion => Version.Parse(ManagerFactory.settingsManager.GetString("LastVersion"));
-    public static Version CurrentVersion => Version.Parse(fileVersionInfo?.FileVersion ?? "0.0.0.0");
 
     private static bool StartMinimized => ManagerFactory.settingsManager.GetBoolean("StartMinimized");
     private static bool StartMaximized => ManagerFactory.settingsManager.GetBoolean("StartMaximized");
@@ -137,20 +119,14 @@ public partial class MainWindow : GamepadWindow
     private void notifyIconWaitTimerTicked(object? sender, EventArgs e)
     {
         notifyIconWaitTimer?.Stop();
-        overlayquickTools.ToggleVisibility();
+        App.overlayquickTools.ToggleVisibility();
     }
 
 
-    public MainWindow(FileVersionInfo _fileVersionInfo, Assembly CurrentAssembly)
+    public MainWindow(SplashScreenHost splashScreen, IDevice? currentDevice = null)
     {
-        // initialize splash screen
-        SplashScreen = new SplashScreenHost();
+        SplashScreen = splashScreen;
         DataContext = new MainWindowViewModel();
-
-#if !DEBUG
-        if (ShowSplashScreen)
-            SplashScreen.Show();
-#endif
 
         UpdateSplashStatus("Loading interface...");
 
@@ -170,18 +146,10 @@ public partial class MainWindow : GamepadWindow
         ContentDialog.Closed += ContentDialog_Closed;
         ContentDialog.Opened += ContentDialog_Opened;
 
-        fileVersionInfo = _fileVersionInfo;
         CurrentWindow = this;
 
-        // get last version
-        bool FirstStart = LastVersion == Version.Parse("0.0.0.0");
-        bool NewUpdate = LastVersion != CurrentVersion;
-
-        // used by system manager, controller manager
-        uiSettings = new UISettings();
-
         // define current directory
-        Directory.SetCurrentDirectory(CurrentPath);
+        Directory.SetCurrentDirectory(App.CurrentPath);
 
         notifyIconWaitTimer = new(
             TimeSpan.FromMilliseconds(200),
@@ -210,8 +178,8 @@ public partial class MainWindow : GamepadWindow
         notifyIcon.DoubleClick += (sender, e) =>
         {
             notifyIconWaitTimer?.Stop();
-            if (overlayquickTools.Visibility == Visibility.Visible)
-                overlayquickTools.ToggleVisibility();
+            if (App.overlayquickTools.Visibility == Visibility.Visible)
+                App.overlayquickTools.ToggleVisibility();
             ToggleState();
         };
         notifyIcon.MouseUp += NotifyIcon_MouseUp;
@@ -220,15 +188,12 @@ public partial class MainWindow : GamepadWindow
         BuildTrayMenu();
 
         // HidHide registration can block up to 3 seconds on driver error - run off the UI thread
-        Task.Run(() => HidHide.RegisterApplication(CurrentExe));
-
-        // collect details from MotherboardInfo (reads JSON cache - fast on subsequent starts)
-        UpdateSplashStatus("Loading device information...");
-        MotherboardInfo.Collect();
+        Task.Run(() => HidHide.RegisterApplication(App.CurrentExe));
 
         // initialize device singleton synchronously: page constructors call IDevice.GetCurrent()
         // and rely on Capabilities/OEMChords that are set in the device's own constructor
-        CurrentDevice = IDevice.GetCurrent();
+        UpdateSplashStatus("Loading device information...");
+        CurrentDevice = currentDevice ?? IDevice.GetCurrent();
 
         // FSE monitor
         fullScreenExperienceMonitor = new FullScreenExperienceMonitor();
@@ -240,22 +205,11 @@ public partial class MainWindow : GamepadWindow
 
         // load all pages BEFORE starting managers (architectural requirement)
         UpdateSplashStatus("Loading pages...");
-        overlayquickTools.loadPages();
+        App.overlayquickTools.loadPages();
         loadPages();
-
-        // start non-threaded managers that don't depend on MVVM pages
-        InputsManager.Start();
-        TimerManager.Start();
-        MotionManager.Start();
-        ManagerFactory.settingsManager.Start();
 
         // Subscribe to setting changes for lazy page creation
         ManagerFactory.settingsManager.SettingValueChanged += MainWindow_SettingValueChanged;
-
-        // Now that ALL pages are loaded, start background managers
-        // PullSensors, device Initialize, and all manager starts move to background;
-        // pages are guaranteed to exist before managers finish starting
-        Task.Run(() => StartNonUIInit(CurrentExe, FirstStart, NewUpdate, UpdateSplashStatus));
 
         // manage events
         SystemManager.SystemStatusChanged += OnSystemStatusChanged;
@@ -273,44 +227,12 @@ public partial class MainWindow : GamepadWindow
         ToastManager.Start();
         ToastManager.SendToast(Title, "is starting");
 
-        // update setting(s)
-        ManagerFactory.settingsManager.SetProperty("LastVersion", fileVersionInfo.FileVersion);
-
         // load gamepad navigation manager
         gamepadFocusManager = new(this, ContentFrame);
     }
 
     public ContentDialog LaunchProfileContentDialog => FindName("LaunchProfileDialog") as ContentDialog
         ?? throw new InvalidOperationException("LaunchProfileDialog was not found.");
-
-    /// <summary>
-    /// Runs on a background thread: sensor pull, device hardware init, and all manager starts.
-    /// The device singleton is already constructed before this is called, so Capabilities and
-    /// OEMChords (set in device constructors) are available to page constructors on the UI thread.
-    /// </summary>
-    private static void StartNonUIInit(string exePath, bool firstStart, bool newUpdate, Action<string>? reportStatus = null)
-    {
-        reportStatus?.Invoke("Initializing hardware...");
-        CurrentDevice.PullSensors();
-        CurrentDevice.Initialize(firstStart, newUpdate);
-
-        // start non-static managers
-        // todo: make them non-static
-        reportStatus?.Invoke("Loading managers...");
-        foreach (IManager manager in ManagerFactory.Managers)
-            Task.Run(() => manager.Start());
-
-        // start static managers
-        Task.Run(() => OSDManager.Start());
-        Task.Run(() => SystemManager.Start());
-        Task.Run(() => DynamicLightingManager.Start());
-        Task.Run(() => VirtualManager.Start());
-        Task.Run(() => SensorsManager.Start());
-        Task.Run(() => ControllerManager.Start());
-        Task.Run(() => TaskManager.Start(exePath));
-        Task.Run(() => PerformanceManager.Start());
-        Task.Run(() => UpdateManager.Start());
-    }
 
     private static void UpdateSplashStatus(string status)
     {
@@ -594,9 +516,9 @@ public partial class MainWindow : GamepadWindow
             RemoveProfileFromTrayMenu(profile);
     }
 
-    public static MainWindow GetCurrent()
+    public static MainWindow? GetCurrent()
     {
-        return CurrentWindow!;
+        return CurrentWindow;
     }
 
     public void UpdateTaskbarState(TaskbarItemProgressState state)
@@ -735,7 +657,7 @@ public partial class MainWindow : GamepadWindow
                     ToggleState();
                     break;
                 case "QuickTools":
-                    overlayquickTools.ToggleVisibility();
+                    App.overlayquickTools.ToggleVisibility();
                     break;
                 case "Exit":
                     RequestClose();
@@ -776,8 +698,8 @@ public partial class MainWindow : GamepadWindow
             if (!trayContextMenu.Items.OfType<ToolStripItem>().Any(item => item.Available))
                 return;
 
-            if (overlayquickTools.Visibility == Visibility.Visible)
-                overlayquickTools.ToggleVisibility();
+            if (App.overlayquickTools.Visibility == Visibility.Visible)
+                App.overlayquickTools.ToggleVisibility();
 
             if (trayContextMenu.Visible)
                 trayContextMenu.Close();
@@ -865,17 +787,6 @@ public partial class MainWindow : GamepadWindow
         ((MainWindowViewModel)DataContext).IsInitializing = false;
 
         startupWindowReady = true;
-
-        string TelemetryApproved = ManagerFactory.settingsManager.GetString("TelemetryApproved");
-        if (string.IsNullOrEmpty(TelemetryApproved))
-        {
-            string Title = Properties.Resources.MainWindow_TelemetryTitle;
-            string Content = Properties.Resources.MainWindow_TelemetryText;
-
-            MessageBoxResult result = MessageBox.Show(Content, Title, MessageBoxButton.YesNo);
-            ManagerFactory.settingsManager.SetProperty("TelemetryApproved", result == MessageBoxResult.Yes ? "True" : "False");
-            ManagerFactory.settingsManager.SetProperty("TelemetryEnabled", result == MessageBoxResult.Yes);
-        }
 
         // hide splashscreen
         SplashScreen?.Close();
@@ -966,9 +877,9 @@ public partial class MainWindow : GamepadWindow
                         pendingTime = DateTime.Now;
 
                         // hide subwindow(s)
-                        overlayModel.SetVisibility(Visibility.Collapsed);
-                        overlayTrackpad.SetVisibility(Visibility.Collapsed);
-                        overlayquickTools.SetVisibility(Visibility.Collapsed);
+                        App.overlayModel.SetVisibility(Visibility.Collapsed);
+                        App.overlayTrackpad.SetVisibility(Visibility.Collapsed);
+                        App.overlayquickTools.SetVisibility(Visibility.Collapsed);
 
                         // suspend manager(s)
                         ManagerFactory.Suspend();
@@ -1141,9 +1052,9 @@ public partial class MainWindow : GamepadWindow
         UIHelper.TryInvoke(() =>
         {
             // stop windows
-            overlayModel.Close(true);
-            overlayTrackpad.Close();
-            overlayquickTools.Close(true);
+            App.overlayModel.Close(true);
+            App.overlayTrackpad.Close();
+            App.overlayquickTools.Close(true);
 
             // stop pages
             controllerPage.Page_Closed();
@@ -1539,7 +1450,7 @@ public partial class MainWindow : GamepadWindow
             return;
 
         Control? control = dependencyObject as Control ?? WPFUtils.FindParent<Control>(dependencyObject);
-        if (control is null)
+        if (control is null || !gamepadFocusManager.IsValidFocusableContentElement(control))
             return;
 
         gamepadFocusManager.TrackFocusedControl(control);

@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Shared;
+﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Shared;
 using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
@@ -38,6 +39,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         protected Timer? UpdateTimer;
 
         protected const int TelemetryInterval = 1000;
+        protected const short INTERVAL_DEFAULT = 3000; // default interval between value scans
         protected Timer? TelemetryTimer;
 
         protected bool prevGPUScalingSupport = false;
@@ -167,6 +169,8 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             // release halting flag
             halting = false;
 
+            StopTelemetry();
+
             if (UpdateTimer != null && !UpdateTimer.Enabled)
                 StartMonitor();
 
@@ -197,6 +201,16 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         public virtual void StopMonitor()
         {
             UpdateTimer?.Stop();
+        }
+
+        public virtual void StartTelemetry()
+        {
+            halting = false;
+        }
+
+        public virtual void StopTelemetry()
+        {
+            halting = true;
         }
 
         /// <summary>
@@ -364,11 +378,38 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             return 0.0f;
         }
 
+        public virtual bool HasVRAMUsage()
+        {
+            return false;
+        }
+
         // todo: replace me with LHM readings
         public virtual float GetVRAMUsage()
         {
             return 0.0f;
         }
+
+        public virtual bool HasSharedMemory()
+        {
+            return false;
+        }
+
+        // todo: replace me with LHM readings
+        public virtual float GetSharedMemory()
+        {
+            return 0.0f;
+        }
+
+        public virtual bool HasVRAMClock()
+        {
+            return false;
+        }
+
+        public virtual float GetVRAMClock()
+        {
+            return 0.0f;
+        }
+
 
         protected virtual void UpdateSettings()
         { }

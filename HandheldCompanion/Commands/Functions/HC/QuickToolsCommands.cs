@@ -18,7 +18,8 @@ namespace HandheldCompanion.Commands.Functions.HC
             base.Glyph = "\uEC7A";
             base.OnKeyUp = true;
 
-            OverlayQuickTools.GetCurrent().IsVisibleChanged += IsVisibleChanged;
+            OverlayQuickTools? overlayQuickTools = OverlayQuickTools.GetCurrent();
+            overlayQuickTools?.IsVisibleChanged += IsVisibleChanged;
         }
 
         private void IsVisibleChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
@@ -78,7 +79,9 @@ namespace HandheldCompanion.Commands.Functions.HC
 
         public override void Dispose()
         {
-            OverlayQuickTools.GetCurrent().IsVisibleChanged -= IsVisibleChanged;
+            OverlayQuickTools? overlayQuickTools = OverlayQuickTools.GetCurrent();
+            overlayQuickTools?.IsVisibleChanged -= IsVisibleChanged;
+
             base.Dispose();
         }
     }

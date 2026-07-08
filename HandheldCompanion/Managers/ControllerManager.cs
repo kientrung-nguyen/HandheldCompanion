@@ -195,7 +195,7 @@ public static class ControllerManager
         UIGamepad.GotFocus += GamepadFocusManager_FocusChanged;
         UIGamepad.LostFocus += GamepadFocusManager_FocusChanged;
         VirtualManager.Vibrated += VirtualManager_Vibrated;
-        MainWindow.uiSettings.ColorValuesChanged += OnColorValuesChanged;
+        App.uiSettings.ColorValuesChanged += OnColorValuesChanged;
         ToastManager.CommandReceived += ToastCommandRouter;
 
         // Trigger slot-fix prompt (Manual) or auto-fix (Automatic) only when controller topology changes.
@@ -339,7 +339,7 @@ public static class ControllerManager
 
         // Update motion consumers (null-safe)
         MotionManager.UpdateReport(controllerState, gamepadMotion, delta);
-        MainWindow.overlayModel?.UpdateReport(controllerState, gamepadMotion, delta);
+        App.overlayModel?.UpdateReport(controllerState, gamepadMotion, delta);
 
         // compute layout (null-safe mapping)
         ControllerState mapped = ManagerFactory.layoutManager?.MapController(controllerState, delta) ?? controllerState;
@@ -400,7 +400,7 @@ public static class ControllerManager
         var physicalControllers = GetPhysicalControllers<IController>();
         bool showActions = physicalControllers.Count() > 1 && PlugBehavior == ControllerPlugBehavior.AlwaysAsk;
 
-        Color winColor = MainWindow.uiSettings.GetColorValue(UIColorType.Foreground);
+        Color winColor = App.uiSettings.GetColorValue(UIColorType.Foreground);
 
         string iconFile = ToastIconHelper.RenderGlyphPng(
             glyph: "\ue7fc",
@@ -1121,7 +1121,7 @@ public static class ControllerManager
         UIGamepad.GotFocus -= GamepadFocusManager_FocusChanged;
         UIGamepad.LostFocus -= GamepadFocusManager_FocusChanged;
         VirtualManager.Vibrated -= VirtualManager_Vibrated;
-        MainWindow.uiSettings.ColorValuesChanged -= OnColorValuesChanged;
+        App.uiSettings.ColorValuesChanged -= OnColorValuesChanged;
         ToastManager.CommandReceived -= ToastCommandRouter;
 
         ControllerPlugged -= ControllerManager_ControllerPlugged;
@@ -1159,7 +1159,7 @@ public static class ControllerManager
 
     private static void OnColorValuesChanged(UISettings sender, object args)
     {
-        Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.AccentDark1);
+        Color _systemAccent = App.uiSettings.GetColorValue(UIColorType.AccentDark1);
         targetController?.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
     }
 
@@ -2231,7 +2231,7 @@ public static class ControllerManager
             targetController = controller;
             targetController.Plug();
 
-            Color _systemAccent = MainWindow.uiSettings.GetColorValue(UIColorType.AccentDark1);
+            Color _systemAccent = App.uiSettings.GetColorValue(UIColorType.AccentDark1);
             targetController.SetLightColor(_systemAccent.R, _systemAccent.G, _systemAccent.B);
 
             // update HIDInstancePath

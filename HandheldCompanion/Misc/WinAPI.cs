@@ -65,6 +65,20 @@ public static class WinAPI
     private const int WS_THICKFRAME = 0x00040000;
     private const int WS_MINIMIZEBOX = 0x00020000;
     private const int WS_MAXIMIZEBOX = 0x00010000;
+    private const int WS_MAXIMIZE = 0x01000000;
+
+    /// <summary>
+    /// Clears the WS_MAXIMIZE style bit from the HWND so that Windows does not show the window
+    /// maximized when it is first displayed. Unlike SetWindowPlacement, this does not call
+    /// ShowWindow and therefore has no side-effects on WPF's own show pipeline.
+    /// Call from OnSourceInitialized, after the HWND exists but before Show().
+    /// </summary>
+    public static void ClearMaximizeStyle(IntPtr hwnd)
+    {
+        int style = GetWindowLong(hwnd, GWL_STYLE);
+        if ((style & WS_MAXIMIZE) != 0)
+            SetWindowLong(hwnd, GWL_STYLE, style & ~WS_MAXIMIZE);
+    }
 
     public const int GWL_EXSTYLE = -20;
     public const int WS_EX_NOACTIVATE = 0x08000000;

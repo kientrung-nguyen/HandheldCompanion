@@ -52,6 +52,7 @@ namespace HandheldCompanion.Managers
         public static ushort VendorId = 0x45E;
         public static ushort ProductId = 0x28E;
 
+
         public static bool IsInitialized;
 
         public static event ControllerSelectedEventHandler? ControllerSelected;
@@ -537,6 +538,10 @@ namespace HandheldCompanion.Managers
 
         public static void UpdateInputs(ControllerState controllerState, GamepadMotion gamepadMotion)
         {
+            // Skip sending inputs to virtual controller when listening for hotkey inputs
+            if (InputsManager.IsListening)
+                return;
+
             vTarget?.UpdateInputs(controllerState, gamepadMotion);
         }
     }

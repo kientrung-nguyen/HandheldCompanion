@@ -109,6 +109,7 @@ public class ProfileManager : IManager
         ManagerFactory.processManager.ProcessStopped += ProcessManager_ProcessStopped;
         ManagerFactory.powerProfileManager.Deleted += PowerProfileManager_Deleted;
         ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
+        ToastManager.CommandReceived += ToastCommandRouter;
 
         // raise events
         switch (ManagerFactory.processManager.Status)
@@ -165,8 +166,28 @@ public class ProfileManager : IManager
         ManagerFactory.processManager.Initialized -= ProcessManager_Initialized;
         ManagerFactory.powerProfileManager.Deleted -= PowerProfileManager_Deleted;
         ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
+        ToastManager.CommandReceived -= ToastCommandRouter;
 
         base.Stop();
+    }
+
+    private void ToastCommandRouter(string command, IReadOnlyDictionary<string, string> args)
+    {
+        try
+        {
+            switch (command)
+            {
+                case "SetLayoutMode":
+                    if (args.TryGetValue("layoutMode", out string? modeStr) &&
+                        int.TryParse(modeStr, out int modeInt) &&
+                        Enum.IsDefined(typeof(LayoutModes), modeInt))
+                    {
+                        ManagerFactory.settingsManager.SetProperty("LayoutMode", modeInt);
+                    }
+                    break;
+            }
+        }
+        catch { /* ignore */ }
     }
 
     public bool Contains(Profile profile)
@@ -339,20 +360,99 @@ public class ProfileManager : IManager
 
         if (announce)
         {
-            if (!profile.IsSubProfile)
+            string mainProfileName = profile.IsSubProfile ? GetParent(profile).Name : profile.Name;
+            string subprofileName = profile.IsSubProfile ? profile.Name : string.Empty;
+
+            LogManager.LogInformation(profile.IsSubProfile ? "Subprofile {0} {1} applied" : "Profile {0} applied", mainProfileName, subprofileName);
+            ToastManager.SendToast(BuildProfileAppliedToast(profile, $"Profile {mainProfileName} applied", subprofileName));
+        }
+    }
+
+    private static ToastRequest BuildProfileAppliedToast(Profile profile, string title, string content)
+    {
+        LayoutModes current = (LayoutModes)ManagerFactory.settingsManager.GetInt("LayoutMode");
+
+        /*
+        List<string> controllerMessages = BuildControllerMessages(profile);
+        string content2 = controllerMessages.Count > 0 ? string.Join(Environment.NewLine, controllerMessages) : string.Empty;
+        */
+
+        // Try to get profile artwork for the toast hero image
+        string imageToUse = "icon";
+        bool useAsHero = false;
+
+        if (profile.LibraryEntry?.Id > 0)
+        {
+            long artworkId = profile.LibraryEntry.GetArtworkId();
+            string extension = profile.LibraryEntry.GetArtworkExtension(thumbnail: false);
+
+            if (artworkId > 0 && !string.IsNullOrEmpty(extension))
             {
-                // Log and toast a regular profile announcement
-                LogManager.LogInformation("Profile {0} applied", profile.Name);
-                ToastManager.SendToast($"Profile {profile.Name} applied");
-            }
-            else
-            {
-                // For subprofiles, get the main profile name first
-                string mainProfileName = GetParent(profile).Name;
-                LogManager.LogInformation("Subprofile {0} {1} applied", mainProfileName, profile.Name);
-                ToastManager.SendToast($"Subprofile {mainProfileName} {profile.Name} applied");
+                string artworkPath = ManagerFactory.libraryManager.GetGameArtPath(
+                    profile.LibraryEntry.Id,
+                    LibraryManager.LibraryType.artwork,
+                    artworkId,
+                    extension);
+
+                if (File.Exists(artworkPath))
+                {
+                    imageToUse = artworkPath;
+                    useAsHero = true;
+                }
             }
         }
+
+        return new ToastRequest
+        {
+            Title = title,
+            Content = content ?? string.Empty,
+            Content2 = string.Empty,
+            Img = imageToUse,
+            IsHero = useAsHero,
+            SelectionBoxes =
+            [
+                new ToastComboInput
+                {
+                    Id = "layoutMode",
+                    Title = "Gamepad mode",
+                    DefaultItemId = ((int)current).ToString(),
+                    Items =
+                    [
+                        new ToastComboItem(((int)LayoutModes.Gamepad).ToString(),  "Gamepad"),
+                        new ToastComboItem(((int)LayoutModes.Desktop).ToString(), "Desktop"),
+                        new ToastComboItem(((int)LayoutModes.Auto).ToString(),    "Auto"),
+                    ]
+                }
+            ],
+            Actions =
+            [
+                new ToastAction
+                {
+                    Label = "Apply",
+                    Command = "SetLayoutMode",
+                }
+            ]
+        };
+    }
+
+    private static List<string> BuildControllerMessages(Profile profile)
+    {
+        List<string> messages = [];
+
+        /*
+        IController? virtualController = ControllerManager.GetVirtualControllers<IController>().FirstOrDefault();
+        if (virtualController is not null)
+            messages.Add("Virtual controller emulated");
+
+        IController? physicalController = ControllerManager.GetPhysicalControllers<IController>().FirstOrDefault();
+        if (physicalController is not null && physicalController.IsHidden())
+            messages.Add("Physical controller hidden");
+        */
+
+        if (ControllerManager.HasVirtualSlot1Issue)
+            messages.Add("Virtual controller is not on Slot 1");
+
+        return messages;
     }
 
     private void PowerProfileManager_Deleted(PowerProfile powerProfile)
@@ -726,10 +826,17 @@ public class ProfileManager : IManager
             return;
         }
 
-        // failed to parse
-        if (!HasValidProfileName(profile) || (!profile.Default && string.IsNullOrWhiteSpace(profile.Path)))
+        // failed to parse, profile has no name
+        if (!HasValidProfileName(profile))
         {
-            LogManager.LogError("Corrupted profile: {0}. Profile has an empty name or an empty path.", fileName);
+            LogManager.LogError("Corrupted profile: {0}. Profile has an empty name.", fileName);
+            return;
+        }
+
+        // failed to parse, profile has no path, no launchstring and non generic platform (can't be matched to any process, can't be a subprofile since it has no parent path, and is not default)
+        if (!profile.Default && string.IsNullOrWhiteSpace(profile.Path) && string.IsNullOrEmpty(profile.LaunchString) && profile.PlatformType == Platforms.GamePlatform.Generic)
+        {
+            LogManager.LogError("Corrupted profile: {0}. Profile has an empty path, launchstring and non generic platform.", fileName);
             return;
         }
 
@@ -872,7 +979,7 @@ public class ProfileManager : IManager
         pendingCreation.TryAdd(profilePath, 0);
 
         // update profile version to current build
-        profile.Version = MainWindow.CurrentVersion;
+        profile.Version = App.CurrentVersion;
 
         string jsonString = JsonConvert.SerializeObject(profile, Formatting.Indented, new JsonSerializerSettings
         {
@@ -1010,7 +1117,7 @@ public class ProfileManager : IManager
                     break;
 
                 default:
-                    ManagerFactory.libraryManager.RefreshProfileArts(profile, source, includeFullResAssets: false);
+                    ManagerFactory.libraryManager.RefreshProfileArts(profile, source, true);
                     break;
             }
 

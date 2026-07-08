@@ -13,8 +13,11 @@
     ui:ThemeManager.IsThemeAware="True"
     ui:WindowHelper.SystemBackdropType="Mica"
     ui:WindowHelper.UseModernWindowStyle="True"
+    ResizeMode="NoResize"
     WindowStartupLocation="CenterScreen"
-    mc:Ignorable="d" ResizeMode="NoResize" WindowStyle="None">
+    WindowState="Normal"
+    WindowStyle="None"
+    mc:Ignorable="d">
 
     <Grid Background="#FF202020">
         <Grid
@@ -46,21 +49,5 @@
                 TextTrimming="CharacterEllipsis"
                 TextWrapping="Wrap" />
         </Grid>
-
-        <ikw:SimpleStackPanel
-            Margin="10"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Bottom">
-            <TextBlock
-                Margin="0,0,0,-14"
-                Foreground="White"
-                Style="{StaticResource BodyTextBlockStyle}"
-                Text="supported by"
-                TextAlignment="Right" />
-            <Image
-                Width="125"
-                Height="50"
-                Source="/HandheldCompanion;component/Resources/droix.png" />
-        </ikw:SimpleStackPanel>
     </Grid>
 </Window>

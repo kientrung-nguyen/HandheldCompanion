@@ -146,8 +146,16 @@ public sealed class WindowsPlatform : IPlatform
 
     private bool ShouldResleepOnWakeReason(ModernStandbyResleepMonitor.WakeReason reason)
     {
-        return reason != ModernStandbyResleepMonitor.WakeReason.PowerButton &&
-               reason != ModernStandbyResleepMonitor.WakeReason.FingerprintReader;
+        string? settingKey = reason switch
+        {
+            ModernStandbyResleepMonitor.WakeReason.PowerButton      => "GoBackToSleepOnPowerButton",
+            ModernStandbyResleepMonitor.WakeReason.FingerprintReader => "GoBackToSleepOnFingerprintReader",
+            ModernStandbyResleepMonitor.WakeReason.Joystick          => "GoBackToSleepOnJoystick",
+            ModernStandbyResleepMonitor.WakeReason.ChargerConnected  => "GoBackToSleepOnChargerConnected",
+            _                                                         => null,
+        };
+
+        return settingKey != null && ManagerFactory.settingsManager.GetBoolean(settingKey);
     }
 
     private sealed class EnhancedSleepPolicy
@@ -314,6 +322,12 @@ public sealed class WindowsPlatform : IPlatform
         [DllImport("user32.dll")]
         private static extern int SendMessage(int hWnd, int Msg, int wParam, int lParam);
 
+        [DllImport("user32.dll")]
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+        private const byte VK_NONAME = 0xFC;
+        private const uint KEYEVENTF_KEYUP = 0x0002;
+
         private const int HWND_BROADCAST = 0xffff;
         private const int WM_SYSCOMMAND = 0x0112;
         private const int SC_SUSPEND = 0xF170;
@@ -383,11 +397,15 @@ public sealed class WindowsPlatform : IPlatform
 
             if (eventId == 507) // wake
             {
-                var reason = ParseWakeReason(e.EventRecord);
+                WakeReason reason = ParseWakeReason(e.EventRecord);
                 LogManager.LogInformation("[GoBackToSleep] Woke from Modern Standby. Reason: {0}", reason);
 
                 if (!_shouldResleep(reason))
+                {
+                    LogManager.LogInformation("[GoBackToSleep] Wake reason is intentional ({0}). Nudging display on...", reason);
+                    WakeDisplay();
                     return;
+                }
 
                 // cooldown: 5 seconds
                 long now = DateTime.UtcNow.Ticks;
@@ -405,6 +423,14 @@ public sealed class WindowsPlatform : IPlatform
         {
             // Same approach as SuspendedNTime (broadcast SC_SUSPEND). :contentReference[oaicite:7]{index=7}
             SendMessage(HWND_BROADCAST, WM_SYSCOMMAND, SC_SUSPEND, 2);
+        }
+
+        private void WakeDisplay()
+        {
+            // Send a no-op key press/release to nudge the display out of blank state
+            // after a fingerprint or power-button initiated Modern Standby wake.
+            keybd_event(VK_NONAME, 0, 0, UIntPtr.Zero);
+            keybd_event(VK_NONAME, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         }
 
         private WakeReason ParseWakeReason(EventRecord evt)
@@ -428,6 +454,7 @@ public sealed class WindowsPlatform : IPlatform
                     4 => WakeReason.FingerprintReader,
                     7 => WakeReason.Joystick,
                     28 => WakeReason.ChargerConnected,
+                    44 => WakeReason.FingerprintReader,
                     0 => WakeReason.Unknown,
                     _ => WakeReason.Other
                 };

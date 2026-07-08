@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using static HandheldCompanion.Managers.LibraryManager;
@@ -478,36 +479,51 @@ namespace HandheldCompanion.ViewModels
 
         public ImageSource? Icon => _Profile.Icon;
 
-        public Image? Platform
+        // Cached frozen BitmapSource per platform type — computed once, never per-card.
+        private static readonly Dictionary<GamePlatform, BitmapSource?> _platformIconCache = new();
+
+        public BitmapSource? Platform
         {
             get
             {
-                switch (PlatformType)
+                if (PlatformType == GamePlatform.Generic)
+                    return null;
+
+                if (_platformIconCache.TryGetValue(PlatformType, out BitmapSource? cached))
+                    return cached;
+
+                Image? img = PlatformType switch
                 {
-                    default:
-                    case GamePlatform.Generic:
-                        return null;
-                    case GamePlatform.Steam:
-                        return PlatformManager.Steam?.GetLogo();
-                    case GamePlatform.Origin:
-                        return PlatformManager.Origin?.GetLogo();
-                    case GamePlatform.EADesktop:
-                        return PlatformManager.EADesktop?.GetLogo();
-                    case GamePlatform.UbisoftConnect:
-                        return PlatformManager.UbisoftConnect?.GetLogo();
-                    case GamePlatform.GOG:
-                        return PlatformManager.GOGGalaxy?.GetLogo();
-                    case GamePlatform.BattleNet:
-                        return PlatformManager.BattleNet?.GetLogo();
-                    case GamePlatform.Epic:
-                        return PlatformManager.Epic?.GetLogo();
-                    case GamePlatform.RiotGames:
-                        return PlatformManager.RiotGames?.GetLogo();
-                    case GamePlatform.Rockstar:
-                        return PlatformManager.Rockstar?.GetLogo();
-                    case GamePlatform.MicrosoftStore:
-                        return PlatformManager.MicrosoftStore?.GetLogo();
+                    GamePlatform.Steam => PlatformManager.Steam?.GetLogo(),
+                    GamePlatform.Origin => PlatformManager.Origin?.GetLogo(),
+                    GamePlatform.EADesktop => PlatformManager.EADesktop?.GetLogo(),
+                    GamePlatform.UbisoftConnect => PlatformManager.UbisoftConnect?.GetLogo(),
+                    GamePlatform.GOG => PlatformManager.GOGGalaxy?.GetLogo(),
+                    GamePlatform.BattleNet => PlatformManager.BattleNet?.GetLogo(),
+                    GamePlatform.Epic => PlatformManager.Epic?.GetLogo(),
+                    GamePlatform.RiotGames => PlatformManager.RiotGames?.GetLogo(),
+                    GamePlatform.Rockstar => PlatformManager.Rockstar?.GetLogo(),
+                    GamePlatform.MicrosoftStore => PlatformManager.MicrosoftStore?.GetLogo(),
+                    _ => null
+                };
+
+                BitmapSource? result = null;
+                if (img is Bitmap bmp)
+                {
+                    IntPtr hBmp = bmp.GetHbitmap();
+                    try
+                    {
+                        result = Imaging.CreateBitmapSourceFromHBitmap(
+                            hBmp, IntPtr.Zero, Int32Rect.Empty,
+                            BitmapSizeOptions.FromWidthAndHeight(48, 48));
+                        result.Freeze();
+                    }
+                    catch { result = null; }
+                    finally { WinAPI.DeleteObject(hBmp); }
                 }
+
+                _platformIconCache[PlatformType] = result;
+                return result;
             }
         }
 

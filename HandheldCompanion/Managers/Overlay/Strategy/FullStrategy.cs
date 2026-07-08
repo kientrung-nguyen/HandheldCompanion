@@ -9,7 +9,7 @@ public class FullStrategy : IOverlayStrategy
     {
         OverlayRow row1 = new(); // GPU
         OverlayRow row2 = new(); // CPU  
-        OverlayRow row3 = new(); // RAM
+        //OverlayRow row3 = new(); // RAM
         //OverlayRow row4 = new(); // VRAM
         OverlayRow row5 = new(); // Battery
         OverlayRow row6 = new(); // FPS
@@ -26,9 +26,9 @@ public class FullStrategy : IOverlayStrategy
         WidgetFactory.CreateWidget("CPU", CPUentry, WidgetLevel.FULL);
         row2.entries.Add(CPUentry);
 
-        OverlayEntry RAMentry = new("RAM", OverlayColors.RAM_COLOR, direction != 0);
-        WidgetFactory.CreateWidget("RAM", RAMentry, WidgetLevel.FULL);
-        row3.entries.Add(RAMentry);
+        //OverlayEntry RAMentry = new("RAM", OverlayColors.RAM_COLOR, direction != 0);
+        //WidgetFactory.CreateWidget("RAM", RAMentry, WidgetLevel.FULL);
+        //row3.entries.Add(RAMentry);
 
         OverlayEntry BATTentry = new("BATT", OverlayColors.BATT_COLOR, direction != 0);
         WidgetFactory.CreateWidget("BATT", BATTentry, WidgetLevel.FULL);
@@ -43,13 +43,13 @@ public class FullStrategy : IOverlayStrategy
                 row6.ToString(),
                 row1.ToString(),
                 row2.ToString(),
-                row3.ToString(),
+                //row3.ToString(),
                 //row4.ToString(),
                 row5.ToString())
             : string.Join("\n",
             row1.ToString(),
             row2.ToString(),
-            row3.ToString(),
+            //row3.ToString(),
             //row4.ToString(),
             row5.ToString(),
             row6.ToString()

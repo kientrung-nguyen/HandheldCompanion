@@ -8,13 +8,15 @@ public partial class LayoutItemPage : Page
 {
     // page vars
     private ActionSettingsPage actionSettingsPage = null!;
-
+    private LayoutItemPageViewModel viewModel = null!;
 
     public MappingViewModel? CurrentMapping { get; private set; }
 
     public LayoutItemPage()
     {
         InitializeComponent();
+        viewModel = new LayoutItemPageViewModel();
+        DataContext = viewModel;
     }
 
     public LayoutItemPage(string Tag, object parent) : this()
@@ -35,45 +37,7 @@ public partial class LayoutItemPage : Page
     public void SetMapping(MappingViewModel mapping)
     {
         CurrentMapping = mapping;
-
-        // Get profile name
-        string profileName = MainWindow.layoutPage.currentTemplate.Product;
-        if (string.IsNullOrEmpty(profileName))
-            profileName = Properties.Resources.LayoutPage_LaytouDesktop;
-
-        // Get input name from parent stack (works for Button, Trigger, and Axis)
-        string inputName = "Unknown Input";
-        if (mapping is ButtonMappingViewModel buttonMapping)
-            inputName = buttonMapping.ParentStack?.Name ?? "Unknown Button";
-        else if (mapping is TriggerMappingViewModel triggerMapping)
-            inputName = triggerMapping.ParentStack?.Name ?? "Unknown Trigger";
-        else if (mapping is AxisMappingViewModel axisMapping)
-            inputName = axisMapping.ParentStack?.Name ?? "Unknown Axis";
-
-        // Update title: "<ProfileName>: <input to be configured>"
-        ActionTitle.Text = $"{profileName}: {inputName}";
-
-        // Update description
-        if (mapping?.Action is not null && mapping.SelectedTarget is not null)
-        {
-            string actionType = mapping.ActionTypeIndex switch
-            {
-                0 => "Disabled",
-                1 => "Button",
-                2 => "Joystick",
-                3 => "Keyboard",
-                4 => "Mouse",
-                5 => "Trigger",
-                6 => "Shift",
-                7 => "Inherit",
-                _ => "Unknown"
-            };
-            ActionDescription.Text = $"{actionType}: {mapping.SelectedTarget.Content}";
-        }
-        else
-        {
-            ActionDescription.Text = "Configure action settings";
-        }
+        viewModel.CurrentMapping = mapping;
 
         // Update the settings page with the mapping
         actionSettingsPage?.SetMapping(mapping);

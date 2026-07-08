@@ -757,15 +757,6 @@
   <data name="ProfilesPage_UMCEnable" xml:space="preserve">
     <value>Ligar o controle de movimento universal</value>
   </data>
-  <data name="ProfilesPage_UMCMotionOff" xml:space="preserve">
-    <value>Desligado, ligar com botão(ões)</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionOn" xml:space="preserve">
-    <value>Ligado, desligar com botão(ões)</value>
-  </data>
-  <data name="ProfilesPage_UMCMotionToggle" xml:space="preserve">
-    <value>Alternar entre habilitado e desabilitado com botão(ões)</value>
-  </data>
   <data name="ProfilesPage_UMCMotionOnOff" xml:space="preserve">
     <value>Ativação de movimento</value>
   </data>

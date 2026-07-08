@@ -2,7 +2,6 @@
 using HandheldCompanion.Misc;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -424,7 +423,7 @@ namespace HandheldCompanion.Managers
             string profilePath = Path.Combine(ManagerPath, profile.GetFileName());
 
             // update profile version to current build
-            profile.Version = MainWindow.CurrentVersion;
+            profile.Version = App.CurrentVersion;
 
             var jsonString = JsonConvert.SerializeObject(profile, Formatting.Indented, new JsonSerializerSettings
             {

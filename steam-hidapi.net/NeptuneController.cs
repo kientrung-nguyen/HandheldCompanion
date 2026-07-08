@@ -86,11 +86,11 @@ namespace steam_hidapi.net
                 if (!_active)
                     break;
 
-                if (!_lizardDirty)
-                    continue;
-
-                SetLizardMode(_lizard);
-                _lizardDirty = false;
+                if (_lizardDirty || !_lizard)
+                {
+                    SetLizardMode(_lizard);
+                    _lizardDirty = false;
+                }
             }
         }
 
