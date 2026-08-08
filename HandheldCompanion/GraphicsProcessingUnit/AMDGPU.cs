@@ -406,7 +406,7 @@ namespace HandheldCompanion.GraphicsProcessingUnit
         {
             return (float)TelemetryData.gpuVramValue;
         }
-		
+
         public override bool HasSharedMemory()
         {
             switch (adapterInformation.Details.Description)
@@ -455,9 +455,16 @@ namespace HandheldCompanion.GraphicsProcessingUnit
             string dispName = string.Empty;
             string friendlyName = ManagerFactory.multimediaManager.GetAdapterFriendlyName(adapterInformation.Details.DeviceName);
 
-            result = GetNumberOfDisplays(ref adapterCount);
-            if (result != ADLX_RESULT.ADLX_OK)
+            try
+            {
+                result = GetNumberOfDisplays(ref adapterCount);
+                if (result != ADLX_RESULT.ADLX_OK)
+                    return;
+            }
+            catch
+            {
                 return;
+            }
 
             if (adapterCount == 0)
                 return;

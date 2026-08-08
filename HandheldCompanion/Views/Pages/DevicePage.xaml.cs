@@ -8,6 +8,7 @@ using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.ViewModels;
+using iNKORE.UI.WPF.Helpers;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
@@ -17,6 +18,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Windows.UI.ViewManagement;
+using static HandheldCompanion.Devices.Lenovo.SapientiaUsb;
 using static HandheldCompanion.Utils.DeviceUtils;
 using Page = System.Windows.Controls.Page;
 
@@ -34,76 +36,6 @@ namespace HandheldCompanion.Views.Pages
         {
             DataContext = new DevicePageViewModel();
             InitializeComponent();
-
-            // call function
-            UpdateDevice();
-
-            // get device
-            IDevice device = IDevice.GetCurrent();
-
-            // Adjust UI element availability based on device capabilities
-            DynamicLightingPanel.Visibility = device.Capabilities.HasFlag(DeviceCapabilities.DynamicLighting) ? Visibility.Visible : Visibility.Collapsed;
-            LEDBrightness.Visibility = device.Capabilities.HasFlag(DeviceCapabilities.DynamicLightingBrightness) ? Visibility.Visible : Visibility.Collapsed;
-            SecondColorToggleCard.Visibility = SecondColorPickerCard.Visibility = device.Capabilities.HasFlag(DeviceCapabilities.DynamicLightingSecondLEDColor) ? Visibility.Visible : Visibility.Collapsed;
-
-            // Move device-specific USB I/O operations to background thread
-            if (device is LegionGoTablet)
-            {
-                Task.Run(() =>
-                {
-                    // Perform USB I/O operations on background thread
-                    int leftJoystickDeadzone = SapientiaUsb.GetStickCustomDeadzone(LegionGoTablet.LeftJoyconIndex);
-                    int leftAutoSleepTime = SapientiaUsb.GetAutoSleepTime(LegionGoTablet.LeftJoyconIndex);
-                    var leftTrigger = SapientiaUsb.GetTriggerDeadzoneAndMargin(LegionGoTablet.LeftJoyconIndex);
-
-                    int rightJoystickDeadzone = SapientiaUsb.GetStickCustomDeadzone(LegionGoTablet.RightJoyconIndex);
-                    int rightAutoSleepTime = SapientiaUsb.GetAutoSleepTime(LegionGoTablet.RightJoyconIndex);
-                    var rightTrigger = SapientiaUsb.GetTriggerDeadzoneAndMargin(LegionGoTablet.RightJoyconIndex);
-
-                    // Update UI on UI thread
-                    UIHelper.TryInvoke(() =>
-                    {
-                        SliderLeftJoystickDeadzone.Value = leftJoystickDeadzone + 1;
-                        SliderLeftAutoSleepTime.Value = leftAutoSleepTime;
-                        SliderLeftTriggerDeadzone.Value = leftTrigger.Deadzone + 1;
-                        SliderLeftTriggerMargin.Value = leftTrigger.Margin + 1;
-
-                        SliderRightJoystickDeadzone.Value = rightJoystickDeadzone + 1;
-                        SliderRightAutoSleepTime.Value = rightAutoSleepTime;
-                        SliderRightTriggerDeadzone.Value = rightTrigger.Deadzone + 1;
-                        SliderRightTriggerMargin.Value = rightTrigger.Margin + 1;
-                    });
-                });
-
-                // Show LegionGoPanel immediately
-                LegionGoPanel.Visibility = Visibility.Visible;
-
-                if (device.GetType() == typeof(LegionGoTablet) ||
-                    device.GetType() == typeof(LegionGoTablet2))
-                {
-                    LegionGoSensorSelection.Visibility = Visibility.Visible;
-                    LegionGoLeftController.Visibility = Visibility.Visible;
-                    LegionGoRightController.Visibility = Visibility.Visible;
-                }
-            }
-            else if (device is ClawA2VM || device is ClawA1M)
-            {
-                // Show MSIClawPanel
-                MSIClawPanel.Visibility = Visibility.Visible;
-            }
-            else if (device is GamingZone)
-            {
-                ZotacGamingZonePanel.Visibility = Visibility.Visible;
-            }
-
-            SetControlEnabledAndVisible(LEDSolidColor, LEDLevel.SolidColor);
-            SetControlEnabledAndVisible(LEDBreathing, LEDLevel.Breathing);
-            SetControlEnabledAndVisible(LEDRainbow, LEDLevel.Rainbow);
-            SetControlEnabledAndVisible(LEDWave, LEDLevel.Wave);
-            SetControlEnabledAndVisible(LEDWheel, LEDLevel.Wheel);
-            SetControlEnabledAndVisible(LEDGradient, LEDLevel.Gradient);
-            SetControlEnabledAndVisible(LEDAmbilight, LEDLevel.Ambilight);
-            SetControlEnabledAndVisible(LEDPreset, LEDLevel.LEDPreset);
         }
 
         public DevicePage(string? Tag) : this()
@@ -112,7 +44,11 @@ namespace HandheldCompanion.Views.Pages
 
             // manage events
             IDevice.GetCurrent().CapabilitiesChanged += OnCapabilitiesChanged;
+            IDevice.GetCurrent().Opened += Device_Opened;
+            IDevice.GetCurrent().Closed += Device_Closed;
+            App.uiSettings.ColorValuesChanged += OnColorValuesChanged;
 
+            // raise events
             switch (ManagerFactory.settingsManager.Status)
             {
                 default:
@@ -124,8 +60,10 @@ namespace HandheldCompanion.Views.Pages
                     break;
             }
 
+            // manage events
             ControllerManager.Initialized += ControllerManager_Initialized;
 
+            // raise events
             if (ControllerManager.IsInitialized)
                 ControllerManager_Initialized();
         }
@@ -151,47 +89,148 @@ namespace HandheldCompanion.Views.Pages
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
             // raise events
-            SettingsManager_SettingValueChanged("ConfigurableTDPOverride", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverride"), false);
-            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideDown"), false);
-            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideUp"), false);
-            SettingsManager_SettingValueChanged("LEDSettingsEnabled", ManagerFactory.settingsManager.GetString("LEDSettingsEnabled"), false);
-            SettingsManager_SettingValueChanged("LEDSettingsUseAccentColor", ManagerFactory.settingsManager.GetString("LEDSettingsUseAccentColor"), false);
-            SettingsManager_SettingValueChanged("LEDSettingsLevel", ManagerFactory.settingsManager.GetString("LEDSettingsLevel"), false);
-            SettingsManager_SettingValueChanged("LEDBrightness", ManagerFactory.settingsManager.GetString("LEDBrightness"), false);
-            SettingsManager_SettingValueChanged("LEDSpeed", ManagerFactory.settingsManager.GetString("LEDSpeed"), false);
-            SettingsManager_SettingValueChanged("LEDDirection", ManagerFactory.settingsManager.GetString("LEDDirection"), false);
-            SettingsManager_SettingValueChanged("LEDMainColor", ManagerFactory.settingsManager.GetString("LEDMainColor"), false);
-            SettingsManager_SettingValueChanged("LEDSecondColor", ManagerFactory.settingsManager.GetString("LEDSecondColor"), false);
-            SettingsManager_SettingValueChanged("LEDAmbilightVerticalBlackBarDetection", ManagerFactory.settingsManager.GetString("LEDAmbilightVerticalBlackBarDetection"), false);
-            SettingsManager_SettingValueChanged("LEDUseSecondColor", ManagerFactory.settingsManager.GetString("LEDUseSecondColor"), false);
-            SettingsManager_SettingValueChanged("LEDPresetIndex", ManagerFactory.settingsManager.GetString("LEDPresetIndex"), false);
-            SettingsManager_SettingValueChanged("LegionControllerPassthrough", ManagerFactory.settingsManager.GetString("LegionControllerPassthrough"), false);
-            SettingsManager_SettingValueChanged("LegionControllerSwap", ManagerFactory.settingsManager.GetString("LegionControllerSwap"), false);
-            SettingsManager_SettingValueChanged("LegionControllerGyroIndex", ManagerFactory.settingsManager.GetString("LegionControllerGyroIndex"), false);
-            SettingsManager_SettingValueChanged("ZotacGamingZoneVRAM", ManagerFactory.settingsManager.GetString("ZotacGamingZoneVRAM"), false);
-            SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetString("BatteryChargeLimit"), false);
-            SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetString("BatteryChargeLimitPercent"), false);
-            SettingsManager_SettingValueChanged("BatteryBypassChargingMode", ManagerFactory.settingsManager.GetString("BatteryBypassChargingMode"), false);
-            SettingsManager_SettingValueChanged("SensorSelection", ManagerFactory.settingsManager.GetString("SensorSelection"), false);
-            SettingsManager_SettingValueChanged("SensorPlacement", ManagerFactory.settingsManager.GetString("SensorPlacement"), false);
-            SettingsManager_SettingValueChanged("SensorPlacementUpsideDown", ManagerFactory.settingsManager.GetString("SensorPlacementUpsideDown"), false);
-            SettingsManager_SettingValueChanged("RyzenAdjCoAll", ManagerFactory.settingsManager.GetString("RyzenAdjCoAll"), false);
-            SettingsManager_SettingValueChanged("RyzenAdjCoGfx", ManagerFactory.settingsManager.GetString("RyzenAdjCoGfx"), false);
-            SettingsManager_SettingValueChanged("MsrUndervoltCore", ManagerFactory.settingsManager.GetString("MsrUndervoltCore"), false);
-            SettingsManager_SettingValueChanged("MsrUndervoltGpu", ManagerFactory.settingsManager.GetString("MsrUndervoltGpu"), false);
-            SettingsManager_SettingValueChanged("MsrUndervoltSoc", ManagerFactory.settingsManager.GetString("MsrUndervoltSoc"), false);
-            SettingsManager_SettingValueChanged("EnhancedSleep", ManagerFactory.settingsManager.GetString("EnhancedSleep"), false);
-            SettingsManager_SettingValueChanged("GoBackToSleep", ManagerFactory.settingsManager.GetString("GoBackToSleep"), false);
-            SettingsManager_SettingValueChanged("GoBackToSleepOnPowerButton", ManagerFactory.settingsManager.GetString("GoBackToSleepOnPowerButton"), false);
-            SettingsManager_SettingValueChanged("GoBackToSleepOnFingerprintReader", ManagerFactory.settingsManager.GetString("GoBackToSleepOnFingerprintReader"), false);
-            SettingsManager_SettingValueChanged("GoBackToSleepOnJoystick", ManagerFactory.settingsManager.GetString("GoBackToSleepOnJoystick"), false);
-            SettingsManager_SettingValueChanged("GoBackToSleepOnChargerConnected", ManagerFactory.settingsManager.GetString("GoBackToSleepOnChargerConnected"), false);
-            SettingsManager_SettingValueChanged("DockedDisplayBehavior", ManagerFactory.settingsManager.GetString("DockedDisplayBehavior"), false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverride", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverride"), false, false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideDown"), false, false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideUp"), false, false);
+            SettingsManager_SettingValueChanged("LEDSettingsEnabled", ManagerFactory.settingsManager.GetString("LEDSettingsEnabled"), false, false);
+            SettingsManager_SettingValueChanged("LEDSettingsUseAccentColor", ManagerFactory.settingsManager.GetString("LEDSettingsUseAccentColor"), false, false);
+            SettingsManager_SettingValueChanged("LEDSettingsLevel", ManagerFactory.settingsManager.GetString("LEDSettingsLevel"), false, false);
+            SettingsManager_SettingValueChanged("LEDBrightness", ManagerFactory.settingsManager.GetString("LEDBrightness"), false, false);
+            SettingsManager_SettingValueChanged("LEDSpeed", ManagerFactory.settingsManager.GetString("LEDSpeed"), false, false);
+            SettingsManager_SettingValueChanged("LEDDirection", ManagerFactory.settingsManager.GetString("LEDDirection"), false, false);
+            SettingsManager_SettingValueChanged("LEDMainColor", ManagerFactory.settingsManager.GetString("LEDMainColor"), false, false);
+            SettingsManager_SettingValueChanged("LEDSecondColor", ManagerFactory.settingsManager.GetString("LEDSecondColor"), false, false);
+            SettingsManager_SettingValueChanged("LEDAmbilightVerticalBlackBarDetection", ManagerFactory.settingsManager.GetString("LEDAmbilightVerticalBlackBarDetection"), false, false);
+            SettingsManager_SettingValueChanged("LEDUseSecondColor", ManagerFactory.settingsManager.GetString("LEDUseSecondColor"), false, false);
+            SettingsManager_SettingValueChanged("LEDPresetIndex", ManagerFactory.settingsManager.GetString("LEDPresetIndex"), false, false);
+            SettingsManager_SettingValueChanged("LegionControllerPassthrough", ManagerFactory.settingsManager.GetString("LegionControllerPassthrough"), false, false);
+            SettingsManager_SettingValueChanged("LegionControllerSwap", ManagerFactory.settingsManager.GetString("LegionControllerSwap"), false, false);
+            SettingsManager_SettingValueChanged("LegionControllerGyroIndex", ManagerFactory.settingsManager.GetString("LegionControllerGyroIndex"), false, false);
+            SettingsManager_SettingValueChanged("ZotacGamingZoneVRAM", ManagerFactory.settingsManager.GetString("ZotacGamingZoneVRAM"), false, false);
+            SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetString("BatteryChargeLimit"), false, false);
+            SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetString("BatteryChargeLimitPercent"), false, false);
+            SettingsManager_SettingValueChanged("BatteryBypassChargingMode", ManagerFactory.settingsManager.GetString("BatteryBypassChargingMode"), false, false);
+            SettingsManager_SettingValueChanged("SensorSelection", ManagerFactory.settingsManager.GetString("SensorSelection"), false, false);
+            SettingsManager_SettingValueChanged("SensorPlacement", ManagerFactory.settingsManager.GetString("SensorPlacement"), false, false);
+            SettingsManager_SettingValueChanged("SensorPlacementUpsideDown", ManagerFactory.settingsManager.GetString("SensorPlacementUpsideDown"), false, false);
+            SettingsManager_SettingValueChanged("RyzenAdjCoAll", ManagerFactory.settingsManager.GetString("RyzenAdjCoAll"), false, false);
+            SettingsManager_SettingValueChanged("RyzenAdjCoGfx", ManagerFactory.settingsManager.GetString("RyzenAdjCoGfx"), false, false);
+            SettingsManager_SettingValueChanged("MsrUndervoltCore", ManagerFactory.settingsManager.GetString("MsrUndervoltCore"), false, false);
+            SettingsManager_SettingValueChanged("MsrUndervoltGpu", ManagerFactory.settingsManager.GetString("MsrUndervoltGpu"), false, false);
+            SettingsManager_SettingValueChanged("MsrUndervoltSoc", ManagerFactory.settingsManager.GetString("MsrUndervoltSoc"), false, false);
+            SettingsManager_SettingValueChanged("EnhancedSleep", ManagerFactory.settingsManager.GetString("EnhancedSleep"), false, false);
+            SettingsManager_SettingValueChanged("GoBackToSleep", ManagerFactory.settingsManager.GetString("GoBackToSleep"), false, false);
+            SettingsManager_SettingValueChanged("GoBackToSleepOnPowerButton", ManagerFactory.settingsManager.GetString("GoBackToSleepOnPowerButton"), false, false);
+            SettingsManager_SettingValueChanged("GoBackToSleepOnFingerprintReader", ManagerFactory.settingsManager.GetString("GoBackToSleepOnFingerprintReader"), false, false);
+            SettingsManager_SettingValueChanged("GoBackToSleepOnJoystick", ManagerFactory.settingsManager.GetString("GoBackToSleepOnJoystick"), false, false);
+            SettingsManager_SettingValueChanged("GoBackToSleepOnChargerConnected", ManagerFactory.settingsManager.GetString("GoBackToSleepOnChargerConnected"), false, false);
+            SettingsManager_SettingValueChanged("DockedDisplayBehavior", ManagerFactory.settingsManager.GetString("DockedDisplayBehavior"), false, false);
         }
 
-        private void OnCapabilitiesChanged(DeviceCapabilities capabilities)
+        private void OnCapabilitiesChanged(IDevice sender, DeviceCapabilities capabilities)
         {
-            UpdateDevice();
+            // UI thread
+            UIHelper.TryInvoke(() =>
+            {
+                SensorInternal.IsEnabled = sender.Capabilities.HasFlag(DeviceCapabilities.InternalSensor);
+                SensorExternal.IsEnabled = sender.Capabilities.HasFlag(DeviceCapabilities.ExternalSensor);
+            });
+        }
+
+        private LegionTriggerDeadzone legionTriggerDeadzoneLeft = new();
+        private LegionTriggerDeadzone legionTriggerDeadzoneRight = new();
+
+        private void Device_Opened(IDevice sender)
+        {
+            // Update UI on UI thread
+            UIHelper.TryInvoke(() =>
+            {
+                // Adjust UI element availability based on device capabilities
+                if (sender.Capabilities.HasFlag(DeviceCapabilities.DynamicLighting))
+                {
+                    DynamicLightingPanel.Visibility = Visibility.Visible;
+
+                    SetControlEnabledAndVisible(sender, LEDSolidColor, LEDLevel.SolidColor);
+                    SetControlEnabledAndVisible(sender, LEDBreathing, LEDLevel.Breathing);
+                    SetControlEnabledAndVisible(sender, LEDRainbow, LEDLevel.Rainbow);
+                    SetControlEnabledAndVisible(sender, LEDWave, LEDLevel.Wave);
+                    SetControlEnabledAndVisible(sender, LEDWheel, LEDLevel.Wheel);
+                    SetControlEnabledAndVisible(sender, LEDGradient, LEDLevel.Gradient);
+                    SetControlEnabledAndVisible(sender, LEDAmbilight, LEDLevel.Ambilight);
+                    SetControlEnabledAndVisible(sender, LEDPreset, LEDLevel.LEDPreset);
+                }
+
+                LEDBrightness.Visibility = sender.Capabilities.HasFlag(DeviceCapabilities.DynamicLightingBrightness) ? Visibility.Visible : Visibility.Collapsed;
+                SecondColorToggleCard.Visibility = SecondColorPickerCard.Visibility = sender.Capabilities.HasFlag(DeviceCapabilities.DynamicLightingSecondLEDColor) ? Visibility.Visible : Visibility.Collapsed;
+            });
+
+            // device-specific logic
+            // we might need the device to be opened
+            if (sender is LegionGoTablet legionGoTablet)
+            {
+                // Perform USB I/O operations (left joystick)
+                int leftJoystickDeadzone = GetStickCustomDeadzone(LegionGoTablet.LeftJoyconIndex);
+                int leftAutoSleepTime = GetAutoSleepTime(LegionGoTablet.LeftJoyconIndex);
+                legionTriggerDeadzoneLeft = GetTriggerDeadzoneAndMargin(LegionGoTablet.LeftJoyconIndex);
+
+                // Perform USB I/O operations (right joystick)
+                int rightJoystickDeadzone = GetStickCustomDeadzone(LegionGoTablet.RightJoyconIndex);
+                int rightAutoSleepTime = GetAutoSleepTime(LegionGoTablet.RightJoyconIndex);
+                legionTriggerDeadzoneRight = GetTriggerDeadzoneAndMargin(LegionGoTablet.RightJoyconIndex);
+
+                // Update UI on UI thread
+                UIHelper.TryInvoke(() =>
+                {
+                    // Show LegionGoPanel immediately
+                    LegionGoPanel.Visibility = Visibility.Visible;
+                    LegionGoSensorSelection.Visibility = Visibility.Visible;
+
+                    // left joystick
+                    SliderLeftJoystickDeadzone.Value = leftJoystickDeadzone;
+                    SliderLeftAutoSleepTime.Value = leftAutoSleepTime;
+                    SliderLeftTriggerDeadzone.Value = legionTriggerDeadzoneLeft.Deadzone;
+                    SliderLeftTriggerMargin.Value = legionTriggerDeadzoneLeft.Margin;
+                    LegionGoLeftController.Visibility = Visibility.Visible;
+
+                    // right joystick
+                    SliderRightJoystickDeadzone.Value = rightJoystickDeadzone;
+                    SliderRightAutoSleepTime.Value = rightAutoSleepTime;
+                    SliderRightTriggerDeadzone.Value = legionTriggerDeadzoneRight.Deadzone;
+                    SliderRightTriggerMargin.Value = legionTriggerDeadzoneRight.Margin;
+                    LegionGoRightController.Visibility = Visibility.Visible;
+                });
+            }
+            else if (sender is ClawA1M)
+            {
+                // Update UI on UI thread
+                UIHelper.TryInvoke(() =>
+                {
+                    // Show MSIClawPanel
+                    MSIClawPanel.Visibility = Visibility.Visible;
+                });
+            }
+            else if (sender is GamingZone)
+            {
+                // Update UI on UI thread
+                UIHelper.TryInvoke(() =>
+                {
+                    ZotacGamingZonePanel.Visibility = Visibility.Visible;
+                });
+            }
+            else if (sender is OneXPlayerX1)
+            {
+                // Update UI on UI thread
+                UIHelper.TryInvoke(() =>
+                {
+                    LedPresetsComboBox.ItemsSource = sender.LEDPresets;
+                    CB_BatteryBypassCharging.ItemsSource = sender.BatteryBypassPresets;
+                });
+            }
+        }
+
+        private void Device_Closed(IDevice sender)
+        {
+            // do something
         }
 
         private void ControllerManager_ControllerSelected(IController Controller)
@@ -205,43 +244,22 @@ namespace HandheldCompanion.Views.Pages
 
         private void Page_Loaded(object? sender, RoutedEventArgs? e)
         {
-            if (LedPresetsComboBox.ItemsSource is null)
-            {
-                // First Time
-                LedPresetsComboBox.ItemsSource = IDevice.GetCurrent().LEDPresets;
-            }
-            else
-            {
-                // Refresh preset ComboBox when localization changed or re-enter page
-                int currentSelected = LedPresetsComboBox.SelectedIndex;
-                LedPresetsComboBox.ItemsSource = null;
-                LedPresetsComboBox.ItemsSource = IDevice.GetCurrent().LEDPresets;
-                LedPresetsComboBox.SelectedIndex = currentSelected;
-            }
-
-            // Battery Charge settings
-            if (CB_BatteryBypassCharging.ItemsSource is null)
-            {
-                CB_BatteryBypassCharging.ItemsSource = IDevice.GetCurrent().BatteryBypassPresets;
-            }
-            else
-            {
-                int currentSelected = CB_BatteryBypassCharging.SelectedIndex;
-                CB_BatteryBypassCharging.ItemsSource = null;
-                CB_BatteryBypassCharging.ItemsSource = IDevice.GetCurrent().BatteryBypassPresets;
-                CB_BatteryBypassCharging.SelectedIndex = currentSelected;
-            }
+            // do something
         }
 
         public void Page_Closed()
         {
+            IDevice.GetCurrent().CapabilitiesChanged -= OnCapabilitiesChanged;
+            IDevice.GetCurrent().Opened -= Device_Opened;
+            IDevice.GetCurrent().Closed -= Device_Closed;
+            App.uiSettings.ColorValuesChanged -= OnColorValuesChanged;
+            ControllerManager.Initialized -= ControllerManager_Initialized;
             ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
             ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
             ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
-            IDevice.GetCurrent().CapabilitiesChanged -= OnCapabilitiesChanged;
         }
 
-        private void SettingsManager_SettingValueChanged(string? name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string? name, object? value, bool temporary, bool initializing)
         {
             // UI thread
             UIHelper.TryInvoke(() =>
@@ -406,16 +424,6 @@ namespace HandheldCompanion.Views.Pages
                         cB_DockedDisplayBehavior.SelectedIndex = Convert.ToInt32(value);
                         break;
                 }
-            });
-        }
-
-        public void UpdateDevice(PnPDevice? device = null)
-        {
-            // UI thread
-            UIHelper.TryInvoke(() =>
-            {
-                SensorInternal.IsEnabled = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.InternalSensor);
-                SensorExternal.IsEnabled = IDevice.GetCurrent().Capabilities.HasFlag(DeviceCapabilities.ExternalSensor);
             });
         }
 
@@ -606,11 +614,6 @@ namespace HandheldCompanion.Views.Pages
             ManagerFactory.settingsManager.SetProperty("LEDUseSecondColor", Toggle_UseSecondColor.IsOn);
         }
 
-        private void Expander_Expanded(object sender, EventArgs e)
-        {
-            ((SettingsExpander)sender).BringIntoView();
-        }
-
         private void SliderLEDSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             var value = SliderLEDSpeed.Value;
@@ -631,11 +634,15 @@ namespace HandheldCompanion.Views.Pages
             ManagerFactory.settingsManager.SetProperty("LEDDirection", LEDDirection.SelectedIndex);
         }
 
-        private void SetControlEnabledAndVisible(UIElement control, LEDLevel level)
+        private void SetControlEnabledAndVisible(IDevice device, UIElement control, LEDLevel level)
         {
-            bool isCapabilitySupported = IDevice.GetCurrent().DynamicLightingCapabilities.HasFlag(level);
-            control.IsEnabled = isCapabilitySupported;
-            control.Visibility = isCapabilitySupported ? Visibility.Visible : Visibility.Collapsed;
+            // Update UI on UI thread
+            UIHelper.TryInvoke(() =>
+            {
+                bool isCapabilitySupported = device.DynamicLightingCapabilities.HasFlag(level);
+                control.IsEnabled = isCapabilitySupported;
+                control.Visibility = isCapabilitySupported ? Visibility.Visible : Visibility.Collapsed;
+            });
         }
 
         private void Toggle_BatteryChargeLimit_Toggled(object sender, RoutedEventArgs e)
@@ -858,110 +865,106 @@ namespace HandheldCompanion.Views.Pages
 
         private void SliderLeftJoystickDeadzone_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            var value = SliderLeftJoystickDeadzone.Value;
+            double value = SliderLeftJoystickDeadzone.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            SapientiaUsb.SetStickCustomDeadzone(LegionGoTablet.LeftJoyconIndex, (int)value - 1);
+            bool success = SetStickCustomDeadzone(LegionGoTablet.LeftJoyconIndex, (int)value);
         }
 
         private void SliderLeftAutoSleepTime_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            var value = SliderLeftAutoSleepTime.Value;
+            double value = SliderLeftAutoSleepTime.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            SapientiaUsb.SetAutoSleepTime(LegionGoTablet.LeftJoyconIndex, (int)value);
+            bool success = SetAutoSleepTime(LegionGoTablet.LeftJoyconIndex, (int)value);
         }
 
         private void SliderLeftTriggerDeadzone_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            var value = SliderLeftTriggerDeadzone.Value;
+            double value = SliderLeftTriggerDeadzone.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            var trigger = SapientiaUsb.GetTriggerDeadzoneAndMargin(LegionGoTablet.LeftJoyconIndex);
-            trigger.Deadzone = (int)value - 1;
+            legionTriggerDeadzoneLeft.Deadzone = (int)value;
 
-            SapientiaUsb.SetTriggerDeadzoneAndMargin(LegionGoTablet.LeftJoyconIndex, trigger);
+            bool success = SetTriggerDeadzoneAndMargin(LegionGoTablet.LeftJoyconIndex, legionTriggerDeadzoneLeft);
         }
 
         private void SliderLeftTriggerMargin_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            var value = SliderLeftTriggerMargin.Value;
+            double value = SliderLeftTriggerMargin.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            var trigger = SapientiaUsb.GetTriggerDeadzoneAndMargin(LegionGoTablet.LeftJoyconIndex);
-            trigger.Margin = (int)value - 1;
+            legionTriggerDeadzoneLeft.Margin = (int)value;
 
-            SapientiaUsb.SetTriggerDeadzoneAndMargin(LegionGoTablet.LeftJoyconIndex, trigger);
+            bool success = SetTriggerDeadzoneAndMargin(LegionGoTablet.LeftJoyconIndex, legionTriggerDeadzoneLeft);
         }
 
         private void SliderRightJoystickDeadzone_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            var value = SliderRightJoystickDeadzone.Value;
+            double value = SliderRightJoystickDeadzone.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            SapientiaUsb.SetStickCustomDeadzone(LegionGoTablet.RightJoyconIndex, (int)value - 1);
+            bool success = SetStickCustomDeadzone(LegionGoTablet.RightJoyconIndex, (int)value);
         }
 
         private void SliderRightAutoSleepTime_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            var value = SliderRightAutoSleepTime.Value;
+            double value = SliderRightAutoSleepTime.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            SapientiaUsb.SetAutoSleepTime(LegionGoTablet.RightJoyconIndex, (int)value);
+            bool success = SetAutoSleepTime(LegionGoTablet.RightJoyconIndex, (int)value);
         }
 
         private void SliderRightTriggerDeadzone_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            var value = SliderRightTriggerDeadzone.Value;
+            double value = SliderRightTriggerDeadzone.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            var trigger = SapientiaUsb.GetTriggerDeadzoneAndMargin(LegionGoTablet.RightJoyconIndex);
-            trigger.Deadzone = (int)value - 1;
+            legionTriggerDeadzoneRight.Deadzone = (int)value;
 
-            SapientiaUsb.SetTriggerDeadzoneAndMargin(LegionGoTablet.RightJoyconIndex, trigger);
+            bool success = SetTriggerDeadzoneAndMargin(LegionGoTablet.RightJoyconIndex, legionTriggerDeadzoneRight);
         }
 
         private void SliderRightTriggerMargin_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            var value = SliderRightTriggerMargin.Value;
+            double value = SliderRightTriggerMargin.Value;
             if (double.IsNaN(value))
                 return;
 
             if (!IsLoaded)
                 return;
 
-            var trigger = SapientiaUsb.GetTriggerDeadzoneAndMargin(LegionGoTablet.RightJoyconIndex);
-            trigger.Margin = (int)value - 1;
+            legionTriggerDeadzoneRight.Margin = (int)value;
 
-            SapientiaUsb.SetTriggerDeadzoneAndMargin(LegionGoTablet.RightJoyconIndex, trigger);
+            bool success = SetTriggerDeadzoneAndMargin(LegionGoTablet.RightJoyconIndex, legionTriggerDeadzoneRight);
         }
         #endregion
 

@@ -56,7 +56,7 @@ public static class HardwareControl
         batteryHealth = null;
 
         var report = Battery.AggregateBattery.GetReport();
-        if (batteryFullCapacity is null or 0 && report.FullChargeCapacityInMilliwattHours > 0)
+        if (report.FullChargeCapacityInMilliwattHours > 0 )
             batteryFullCapacity = (float)Math.Round((float)report.FullChargeCapacityInMilliwattHours / 1000.0f, 1);
 
         if (batteryDesignCapacity != 0 && report.DesignCapacityInMilliwattHours > 0)

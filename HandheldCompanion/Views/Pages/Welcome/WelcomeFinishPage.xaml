@@ -8,38 +8,58 @@
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels.Windows"
     Title="Done"
+    MaxWidth="840"
     Margin="48"
+    VerticalAlignment="Center"
     d:Background="White"
     d:DataContext="{d:DesignInstance Type=viewmodels:WelcomeViewModel}"
     d:DesignHeight="1080"
     d:DesignWidth="1920"
     mc:Ignorable="d">
 
-    <ikw:SimpleStackPanel
-        MaxWidth="840"
-        VerticalAlignment="Center"
-        Spacing="20">
+    <Page.Resources>
+        <Style
+            x:Key="FinishTitleStyle"
+            BasedOn="{StaticResource TitleBoldTextBlockStyle}"
+            TargetType="TextBlock">
+            <Setter Property="Text" Value="You're ready to start." />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RestartRequired}" Value="True">
+                    <Setter Property="Text" Value="You're ready to (re)start." />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style
+            x:Key="FinishMessageStyle"
+            BasedOn="{StaticResource BodyTextBlockStyle}"
+            TargetType="TextBlock">
+            <Setter Property="Text" Value="HC will save these choices and continue startup. You can revisit all options later from the Settings page." />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RestartRequired}" Value="True">
+                    <Setter Property="Text" Value="HC will save these choices and restart your device. You can revisit all options later from the Settings page." />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <ikw:SimpleStackPanel Spacing="28">
         <ui:FontIcon
             HorizontalAlignment="Center"
             FontFamily="{DynamicResource SymbolThemeFontFamily}"
             FontSize="96"
             Foreground="{DynamicResource SystemAccentColorLight2Brush}"
             Glyph="&#xE930;" />
-        <TextBlock
-            HorizontalAlignment="Center"
-            Style="{StaticResource TitleBoldTextBlockStyle}"
-            Text="You're ready to start."
-            TextWrapping="Wrap" />
-        <TextBlock
-            Style="{StaticResource BodyTextBlockStyle}"
-            Text="HC will save these choices and continue startup. You can revisit all options later from Settings."
-            TextAlignment="Center"
-            TextWrapping="Wrap" />
 
-        <ui:SettingsCard Description="Detected device" Header="{Binding DeviceName}">
-            <ui:SettingsCard.HeaderIcon>
-                <ui:FontIcon Icon="{x:Static ui:SegoeFluentIcons.XboxOneConsole}" />
-            </ui:SettingsCard.HeaderIcon>
-        </ui:SettingsCard>
+        <ikw:SimpleStackPanel Spacing="8">
+            <TextBlock
+                HorizontalAlignment="Center"
+                Style="{StaticResource FinishTitleStyle}"
+                TextWrapping="Wrap" />
+            <TextBlock
+                Style="{StaticResource FinishMessageStyle}"
+                TextAlignment="Center"
+                TextWrapping="Wrap" />
+        </ikw:SimpleStackPanel>
     </ikw:SimpleStackPanel>
 </Page>

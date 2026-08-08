@@ -1,4 +1,5 @@
 ﻿using GongSolutions.Wpf.DragDrop;
+using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Managers;
@@ -40,6 +41,10 @@ namespace HandheldCompanion.ViewModels
             updateTimer.Elapsed += UpdateTimer_Elapsed;
 
             // manage events
+            ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+            ControllerManager.ControllerPlugged += ControllerManager_ControllerChanged;
+            ControllerManager.ControllerUnplugged += ControllerManager_ControllerChanged;
+			
             if (PerformanceManager.IsInitialized && PerformanceManager.GetProcessor() is Processor processor)
                 PerformanceManager_Initialized(processor.CanChangeTDP, processor.CanChangeGPU);
             else
@@ -214,6 +219,11 @@ namespace HandheldCompanion.ViewModels
 
             OnPropertyChanged(nameof(IsRunningLHM));
         }
+				
+        private void HotkeysManager_Initialized()
+        {
+            QueryHotkeys();
+        }
 
         private void PlatformManager_Initialized()
         {
@@ -349,6 +359,30 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.powerProfileManager.UpdateOrCreateProfile(SelectedPreset, UpdateSource.QuickProfilesPage);
             });
         }
+		
+        private void ControllerManager_ControllerChanged(IController controller, bool isPowerCycling)
+        {
+            RefreshHotkeyGlyphs();
+        }
+
+        private void ControllerManager_ControllerChanged(IController controller, bool isPowerCycling, bool wasTarget)
+        {
+            RefreshHotkeyGlyphs();
+        }
+
+        private void ControllerManager_ControllerSelected(IController controller)
+        {
+            RefreshHotkeyGlyphs();
+        }
+
+        private void RefreshHotkeyGlyphs()
+        {
+            lock (_collectionLock)
+            {
+                foreach (HotkeyViewModel hotkeyViewModel in HotkeysList)
+                    hotkeyViewModel.DrawChords();
+            }
+        }
 
         private void PerformanceManager_Initialized(bool CanChangeTDP, bool CanChangeGPU)
         {
@@ -372,7 +406,7 @@ namespace HandheldCompanion.ViewModels
         }
 
 
-        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             if (value is null)
                 return;
@@ -798,11 +832,6 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private void HotkeysManager_Initialized()
-        {
-            QueryHotkeys();
-        }
-
         private void QueryHotkeys()
         {
             // manage events
@@ -919,6 +948,9 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.gpuManager.Initialized -= GpuManager_Initialized;
 				ManagerFactory.hotkeysManager.Updated -= HotkeysManager_Updated;
             	ManagerFactory.hotkeysManager.Deleted -= HotkeysManager_Deleted;
+				ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+	            ControllerManager.ControllerPlugged -= ControllerManager_ControllerChanged;
+            	ControllerManager.ControllerUnplugged -= ControllerManager_ControllerChanged;
                 ManagerFactory.hotkeysManager.Initialized -= HotkeysManager_Initialized;
                 ManagerFactory.powerProfileManager.Initialized -= PowerProfileManager_Initialized;
                 ManagerFactory.powerProfileManager.Applied -= PowerProfileManager_Applied;

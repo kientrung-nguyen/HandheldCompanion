@@ -39,7 +39,7 @@ namespace HandheldCompanion.Commands.Functions.HC
                 case HIDmode.DualShock4Controller:
                     LiveGlyph = "\uE000";
                     break;
-                case HIDmode.DInputController:
+                case HIDmode.DualSenseController:
                     LiveGlyph = "\u243C";
                     break;
             }
@@ -58,9 +58,9 @@ namespace HandheldCompanion.Commands.Functions.HC
                         ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.DualShock4Controller);
                         break;
                     case HIDmode.DualShock4Controller:
-                        ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.DInputController);
+                        ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.DualSenseController);
                         break;
-                    case HIDmode.DInputController:
+                    case HIDmode.DualSenseController:
                         ManagerFactory.settingsManager.SetProperty(SettingsName, (int)HIDmode.Xbox360Controller);
                         break;
                     default:

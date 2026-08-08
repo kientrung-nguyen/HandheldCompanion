@@ -592,7 +592,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Virtual controller is managed by profile.
+        ///   Looks up a localized string similar to Virtual controller is overridden.
         /// </summary>
         public static string ControllerPage_HIDManagedByProfileWarning {
             get {
@@ -1184,7 +1184,25 @@ namespace HandheldCompanion.Properties {
                 return ResourceManager.GetString("DevicePage_BatteryOptions", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to Block Win+G hotkey.
+        /// </summary>
+        public static string DevicePage_BlockMsiClawWinGHotkey {
+            get {
+                return ResourceManager.GetString("DevicePage_BlockMsiClawWinGHotkey", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Prevent the MSI quick settings button from opening Windows Game Bar.
+        /// </summary>
+        public static string DevicePage_BlockMsiClawWinGHotkeyDesc {
+            get {
+                return ResourceManager.GetString("DevicePage_BlockMsiClawWinGHotkeyDesc", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Core isolation.
         /// </summary>
@@ -1528,7 +1546,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to If the device wakes from Modern Standby for any reason other than the power button, it will be sent back to sleep..
+        ///   Looks up a localized string similar to Automatically send the device back to sleep if awakened from Modern Standby by selected wake reasons..
         /// </summary>
         public static string DevicePage_GoBackToSleepDesc {
             get {
@@ -1537,7 +1555,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Woken by a charger being connected..
+        ///   Looks up a localized string similar to Go back to sleep if awakened by a charger being connected..
         /// </summary>
         public static string DevicePage_GoBackToSleepOnChargerConnectedDesc {
             get {
@@ -1546,7 +1564,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Woken by the fingerprint reader..
+        ///   Looks up a localized string similar to Go back to sleep if awakened by the fingerprint reader..
         /// </summary>
         public static string DevicePage_GoBackToSleepOnFingerprintReaderDesc {
             get {
@@ -1555,7 +1573,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Woken by a joystick or controller input..
+        ///   Looks up a localized string similar to Go back to sleep if awakened by a joystick or controller input..
         /// </summary>
         public static string DevicePage_GoBackToSleepOnJoystickDesc {
             get {
@@ -1564,7 +1582,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Woken by the power button..
+        ///   Looks up a localized string similar to Go back to sleep if awakened by the power button..
         /// </summary>
         public static string DevicePage_GoBackToSleepOnPowerButtonDesc {
             get {
@@ -2293,6 +2311,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Emulated DualSense controller.
+        /// </summary>
+        public static string Enum_HIDmode_DualSenseController {
+            get {
+                return ResourceManager.GetString("Enum_HIDmode_DualSenseController", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Emulated DualShock 4 controller.
         /// </summary>
         public static string Enum_HIDmode_DualShock4Controller {
@@ -2328,6 +2355,18 @@ namespace HandheldCompanion.Properties {
             }
         }
         
+        /// <summary>
+        ///   Looks up a localized string similar to Emulated Switch Pro controller.
+        /// </summary>
+        public static string Enum_HIDmode_SwitchProController {
+            get {
+                return ResourceManager.GetString("Enum_HIDmode_SwitchProController", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Emulated DInput controller.
+        /// </summary>
         public static string Enum_HIDmode_vJoyController {
             get {
                 return ResourceManager.GetString("Enum_HIDmode_vJoyController", resourceCulture);
@@ -6287,7 +6326,7 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Export layout.
+        ///   Looks up a localized string similar to Export.
         /// </summary>
         public static string LayoutPage_Export {
             get {
@@ -6472,6 +6511,15 @@ namespace HandheldCompanion.Properties {
         public static string LayoutPage_Profile {
             get {
                 return ResourceManager.GetString("LayoutPage_Profile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reset layout.
+        /// </summary>
+        public static string LayoutPage_ResetLayout {
+            get {
+                return ResourceManager.GetString("LayoutPage_ResetLayout", resourceCulture);
             }
         }
         

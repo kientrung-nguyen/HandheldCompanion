@@ -41,6 +41,7 @@ public class SteamDeck : IDevice
         new DeviceVersion() { Firmware = 0x1030, BoardID = 0x5, PDCS = 0 /* 0x2F */, BatteryTempLE = true },
         new DeviceVersion() { Firmware = 0x1050, BoardID = 0x5, PDCS = 0 /* 0x2F */, BatteryTempLE = true, MaxBatteryCharge = true },
         new DeviceVersion() { Firmware = 0x1090, BoardID = 0x5, PDCS = 0 /* 0x2F */, BatteryTempLE = true, MaxBatteryCharge = true },
+        new DeviceVersion() { Firmware = 0x1100, BoardID = 0x5, PDCS = 0 /* 0x2F */, BatteryTempLE = true, MaxBatteryCharge = true },
     };
 
     public static ushort FirmwareVersion { get; private set; }
@@ -85,14 +86,9 @@ public class SteamDeck : IDevice
         GfxClock = new double[] { 200, 2500 };
         CpuClock = 3500;
 
-        OEMChords.Add(new KeyboardChord("...",
-            [], [],
-            false, ButtonFlags.OEM1
-        ));
-
         // prepare hotkeys
         DeviceHotkeys[typeof(MainWindowCommands)].inputsChord.ButtonState[ButtonFlags.Special] = true;
-        DeviceHotkeys[typeof(QuickToolsCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = true;
+        DeviceHotkeys[typeof(QuickToolsCommands)].inputsChord.ButtonState[ButtonFlags.Special2] = true;
     }
 
     public override bool Open()
@@ -122,7 +118,7 @@ public class SteamDeck : IDevice
             else
                 PDCS = 0xFF;
 
-            LogManager.LogInformation("FirmwareVersion: {0}, BoardID: {1}", FirmwareVersion, BoardID);
+            LogManager.LogInformation("FirmwareVersion: 0x{0:X4}, BoardID: 0x{1:X}, IsSupported: {2}", FirmwareVersion, BoardID, IsSupported);
             return true;
         }
         catch (Exception ex)
@@ -136,13 +132,13 @@ public class SteamDeck : IDevice
     protected override void QuerySettings()
     {
         // raise events
-        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimit"), false);
-        SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimitPercent"), false);
+        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimit"), false, initializing: false);
+        SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimitPercent"), false, initializing: false);
 
         base.QuerySettings();
     }
 
-    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -168,7 +164,7 @@ public class SteamDeck : IDevice
                 break;
         }
 
-        base.SettingsManager_SettingValueChanged(name, value, temporary);
+        base.SettingsManager_SettingValueChanged(name, value, temporary, initializing);
     }
 
     public override void Close()

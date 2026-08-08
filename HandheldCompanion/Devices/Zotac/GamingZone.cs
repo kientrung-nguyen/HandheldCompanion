@@ -76,20 +76,26 @@ namespace HandheldCompanion.Devices.Zotac
             this.GfxClock = new double[] { 100, 2700 };
             this.CpuClock = 5100;
 
-            GyrometerAxis = new Vector3(1.0f, 1.0f, -1.0f);
-            GyrometerAxisSwap = new SortedDictionary<char, char>
+            GyroMatrix = new()
             {
-                { 'X', 'X' },
-                { 'Y', 'Z' },
-                { 'Z', 'Y' }
+                Axis = new Vector3(1.0f, 1.0f, -1.0f),
+                AxisSwap = new SortedDictionary<char, char>
+                {
+                    { 'X', 'X' },
+                    { 'Y', 'Z' },
+                    { 'Z', 'Y' }
+                }
             };
 
-            AccelerometerAxis = new Vector3(1.0f, 1.0f, 1.0f);
-            AccelerometerAxisSwap = new SortedDictionary<char, char>
+            AcceleroMatrix = new()
             {
-                { 'X', 'X' },
-                { 'Y', 'Z' },
-                { 'Z', 'Y' }
+                Axis = new Vector3(1.0f, 1.0f, 1.0f),
+                AxisSwap = new SortedDictionary<char, char>
+                {
+                    { 'X', 'X' },
+                    { 'Y', 'Z' },
+                    { 'Z', 'Y' }
+                }
             };
 
             this.OEMChords.Add(new KeyboardChord("ZOTAC key",
@@ -182,17 +188,6 @@ namespace HandheldCompanion.Devices.Zotac
             }
         }
 
-        public override void OpenEvents()
-        {
-            base.OpenEvents();
-
-            // manage events
-            ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
-            ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-
-            Device_Inserted();
-        }
-
         public override void Close()
         {
             // close devices
@@ -203,22 +198,18 @@ namespace HandheldCompanion.Devices.Zotac
                 hidDevices.Clear();
             }
 
-            // manage events
-            ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
-            ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
-
             base.Close();
         }
 
         protected override void QuerySettings()
         {
             // raise events
-            SettingsManager_SettingValueChanged("ZotacGamingZoneVRAM", ManagerFactory.settingsManager.GetInt("ZotacGamingZoneVRAM"), false);
+            SettingsManager_SettingValueChanged("ZotacGamingZoneVRAM", ManagerFactory.settingsManager.GetInt("ZotacGamingZoneVRAM"), false, false);
 
             base.QuerySettings();
         }
 
-        protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             switch (name)
             {
@@ -228,33 +219,18 @@ namespace HandheldCompanion.Devices.Zotac
                     break;
             }
 
-            base.SettingsManager_SettingValueChanged(name, value, temporary);
+            base.SettingsManager_SettingValueChanged(name, value, temporary, initializing);
         }
 
-        private void ControllerManager_ControllerPlugged(Controllers.IController Controller, bool IsPowerCycling)
-        {
-            if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-                Device_Inserted(true);
-        }
-
-        private void ControllerManager_ControllerUnplugged(Controllers.IController Controller, bool WasPowerCycling, bool WasTarget)
-        {
-            // hack, force rescan
-            if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-                Device_Removed();
-        }
-
-        private void Device_Removed()
+        protected override void Device_Removed()
         {
             if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
             {
-                device.MonitorDeviceEvents = false;
-                device.Removed -= Device_Removed;
                 try { device.Dispose(); } catch { }
             }
         }
 
-        private async void Device_Inserted(bool reScan = false)
+        protected override async void Device_Inserted(bool reScan = false)
         {
             // if you still want to automatically re-attach:
             if (reScan)
@@ -262,8 +238,6 @@ namespace HandheldCompanion.Devices.Zotac
 
             if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
             {
-                device.MonitorDeviceEvents = true;
-                device.Removed += Device_Removed;
                 device.OpenDevice();
 
                 // device.Write(RestoreProfileSet());
@@ -556,6 +530,13 @@ namespace HandheldCompanion.Devices.Zotac
 
         public override bool IsReady()
         {
+            // Early return if device is already bound and connected
+            if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? boundDevice))
+            {
+                if (boundDevice.IsConnected /* && boundDevice.IsOpen */)
+                    return true;
+            }
+
             IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
             foreach (HidDevice device in devices)
             {

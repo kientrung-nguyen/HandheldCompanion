@@ -14,10 +14,11 @@ using System.Windows.Media;
 using WindowsInput.Events;
 using static HandheldCompanion.Utils.DeviceUtils;
 using Task = System.Threading.Tasks.Task;
+using AsusDevice = HandheldCompanion.Devices.ASUS.ASUS;
 
 namespace HandheldCompanion.Devices;
 
-public class ROGAlly : IDevice
+public class ROGAlly : AsusDevice
 {
     private readonly Dictionary<byte, ButtonFlags> keyMapping = new()
     {
@@ -36,7 +37,7 @@ public class ROGAlly : IDevice
     static byte[] MESSAGE_APPLY = { AURA_HID_ID, 0xb4 };
     static byte[] MESSAGE_SET = { AURA_HID_ID, 0xb5, 0, 0, 0 };
 
-    public override bool IsOpen => hidDevices.ContainsKey(INPUT_HID_ID) && hidDevices[INPUT_HID_ID].IsOpen && AsusACPI.IsOpen;
+    public override bool IsOpen => hidDevices.ContainsKey(INPUT_HID_ID) && hidDevices[INPUT_HID_ID].IsOpen && base.IsOpen;
 
     private enum AuraMode
     {
@@ -85,20 +86,26 @@ public class ROGAlly : IDevice
         GfxClock = new double[] { 100, 2700 };
         CpuClock = 5100;
 
-        GyrometerAxis = new Vector3(-1.0f, -1.0f, 1.0f);
-        GyrometerAxisSwap = new SortedDictionary<char, char>
+        GyroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' }
+            Axis = new Vector3(-1.0f, -1.0f, 1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' }
+            }
         };
 
-        AccelerometerAxis = new Vector3(-1.0f, -1.0f, 1.0f);
-        AccelerometerAxisSwap = new SortedDictionary<char, char>
+        AcceleroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' }
+            Axis = new Vector3(-1.0f, -1.0f, 1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' }
+            }
         };
 
         // device specific capacities
@@ -180,7 +187,6 @@ public class ROGAlly : IDevice
 
         // prepare hotkeys
         DeviceHotkeys[typeof(MainWindowCommands)].inputsChord.ButtonState[ButtonFlags.OEM2] = true;
-        DeviceHotkeys[typeof(MainWindowCommands)].inputsChord.ButtonState[ButtonFlags.OEM5] = true;
         DeviceHotkeys[typeof(QuickToolsCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = true;
     }
 
@@ -204,25 +210,9 @@ public class ROGAlly : IDevice
     private byte[] commitReset4of4 = new byte[] { 0x5A, 0xD1, 0x05, 0x04, 0x00, 0x64, 0x00, 0x64 };
     #endregion
 
-    public override bool Open()
-    {
-        bool success = base.Open();
-        if (!success)
-            return false;
-
-        // open Asus ACPI
-        return AsusACPI.Open();
-    }
-
     public override void OpenEvents()
     {
         base.OpenEvents();
-
-        // manage events
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-
-        Device_Inserted();
     }
 
     private static byte[] defaultCPUFan = new byte[] { 0x3A, 0x3D, 0x40, 0x44, 0x48, 0x4D, 0x51, 0x62, 0x08, 0x11, 0x16, 0x1A, 0x22, 0x29, 0x30, 0x45 };
@@ -253,7 +243,7 @@ public class ROGAlly : IDevice
         return curve;
     }
 
-    protected override void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+    public override void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
     {
         if (profile.FanProfile.fanMode == FanMode.Software)
         {
@@ -269,27 +259,12 @@ public class ROGAlly : IDevice
         }
     }
 
-    private void ControllerManager_ControllerPlugged(Controllers.IController Controller, bool WasPowerCycling)
-    {
-        if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-            Device_Inserted(true);
-    }
-
-    private void ControllerManager_ControllerUnplugged(Controllers.IController Controller, bool IsPowerCycling, bool WasTarget)
-    {
-        // hack, force rescan
-        if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-            Device_Removed();
-    }
-
     private bool IsReading = false;
 
-    private void Device_Removed()
+    protected override void Device_Removed()
     {
         if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
         {
-            device.MonitorDeviceEvents = false;
-            device.Removed -= Device_Removed;
             try { device.Dispose(); } catch { }
         }
 
@@ -297,7 +272,7 @@ public class ROGAlly : IDevice
         IsReading = false;
     }
 
-    private async void Device_Inserted(bool reScan = false)
+    protected override async void Device_Inserted(bool reScan = false)
     {
         // if you still want to automatically re-attach:
         if (reScan)
@@ -305,8 +280,6 @@ public class ROGAlly : IDevice
 
         if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
         {
-            device.MonitorDeviceEvents = true;
-            device.Removed += Device_Removed;
             device.OpenDevice();
 
             // fire‐and‐forget the read loop
@@ -343,8 +316,8 @@ public class ROGAlly : IDevice
     protected override void QuerySettings()
     {
         // raise events
-        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetString("BatteryChargeLimit"), false);
-        SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetString("BatteryChargeLimitPercent"), false);
+        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetString("BatteryChargeLimit"), false, false);
+        SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetString("BatteryChargeLimitPercent"), false, false);
 
         base.QuerySettings();
     }
@@ -365,15 +338,18 @@ public class ROGAlly : IDevice
             hidDevices.Clear();
         }
 
-        // manage events
-        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
-
         base.Close();
     }
 
     public override bool IsReady()
     {
+        // Early return if device is already bound and connected
+        if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? boundDevice))
+        {
+            if (boundDevice.IsConnected /* && boundDevice.IsOpen */)
+                return true;
+        }
+
         IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 64);
         foreach (HidDevice device in devices)
         {
@@ -598,13 +574,12 @@ public class ROGAlly : IDevice
             case ButtonFlags.OEM1:
                 return "\uE006";
             case ButtonFlags.OEM2:
+            case ButtonFlags.OEM5:
                 return "\uE005";
             case ButtonFlags.OEM3:
                 return "\u2212";
             case ButtonFlags.OEM4:
                 return "\u2213";
-            case ButtonFlags.OEM5:
-                return "\ue8f1";
         }
 
         return base.GetGlyph(button);
@@ -682,7 +657,7 @@ public class ROGAlly : IDevice
         AsusACPI.DeviceSet(AsusACPI.PPT_APUC1, limit);
     }
 
-    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -708,6 +683,6 @@ public class ROGAlly : IDevice
                 break;
         }
 
-        base.SettingsManager_SettingValueChanged(name, value, temporary);
+        base.SettingsManager_SettingValueChanged(name, value, temporary, initializing);
     }
 }

@@ -1,14 +1,9 @@
-using HandheldCompanion.Extensions;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
-using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Windows;
-using iNKORE.UI.WPF.Controls;
 using iNKORE.UI.WPF.Modern.Controls;
-using System;
 using System.Windows;
-using System.Windows.Controls;
 using Page = System.Windows.Controls.Page;
 
 namespace HandheldCompanion.Views.QuickPages;
@@ -20,16 +15,16 @@ public partial class QuickProfilesPage : Page
 {
     private ProfilesPageViewModel viewModel;
 
-    public QuickProfilesPage(string Tag) : this()
-    {
-        this.Tag = Tag;
-    }
-
     public QuickProfilesPage()
     {
         viewModel = new ProfilesPageViewModel(this);
         DataContext = viewModel;
         InitializeComponent();
+    }
+
+    public QuickProfilesPage(string Tag) : this()
+    {
+        this.Tag = Tag;
 
         // Subscribe to ViewModel events for UI operations
         viewModel.RequestOpenProfilePage += (s, e) =>
@@ -80,7 +75,7 @@ public partial class QuickProfilesPage : Page
 
         viewModel.RequestCreatePowerProfile += (s, e) =>
         {
-            new Dialog(OverlayQuickTools.GetCurrent())
+            _ = new Dialog(OverlayQuickTools.GetCurrent())
             {
                 Title = "Power preset",
                 Content = "Power preset was created",
@@ -88,66 +83,43 @@ public partial class QuickProfilesPage : Page
             }.ShowAsync();
         };
 
-        // todo: move me to MVVM!
-        foreach (var mode in Enum.GetValues<MotionOutput>())
+        // Wire up the create profile card to show the dialog
+        if (CreatePowerProfileCard is not null)
         {
-            var comboBoxItem = new ComboBoxItem()
+            CreatePowerProfileCard.Click += async (s, e) =>
             {
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Left,
+                // Initialize the form first
+                viewModel.ShowCreateProfileFlyoutCommand.Execute(null);
+
+                // Show the ContentDialog from resources
+                var dialog = Resources["CreatePowerProfileDialog"] as ContentDialog;
+                if (dialog is not null)
+                {
+                    // Ensure the dialog has the correct data context
+                    dialog.DataContext = viewModel;
+                    dialog.Owner = Window.GetWindow(this);
+                    ContentDialogResult result = ContentDialogResult.None;
+
+                    try { result = await dialog.ShowAsync(); } catch { }
+
+                    if (result == ContentDialogResult.Primary)
+                    {
+                        // Execute the create command
+                        viewModel.CreatePowerProfileCommand.Execute(null);
+                    }
+                }
             };
-
-            var simpleStackPanel = new SimpleStackPanel
-            {
-                Spacing = 6,
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            var icon = new FontIcon() { Glyph = mode.ToGlyph() };
-            if (!string.IsNullOrEmpty(icon.Glyph))
-                simpleStackPanel.Children.Add(icon);
-
-            var description = EnumUtils.GetDescriptionFromEnumValue(mode);
-            var text = new TextBlock { Text = description };
-            simpleStackPanel.Children.Add(text);
-
-            comboBoxItem.Content = simpleStackPanel;
-            MotionOutputComboBox.Items.Add(comboBoxItem);
-        }
-
-        // todo: move me to MVVM!
-        foreach (var mode in (MotionInput[])Enum.GetValues(typeof(MotionInput)))
-        {
-            var comboBoxItem = new ComboBoxItem()
-            {
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Left,
-            };
-
-            var simpleStackPanel = new SimpleStackPanel
-            {
-                Spacing = 6,
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            var icon = new FontIcon() { Glyph = mode.ToGlyph() };
-            if (!string.IsNullOrEmpty(icon.Glyph))
-                simpleStackPanel.Children.Add(icon);
-
-            var description = EnumUtils.GetDescriptionFromEnumValue(mode);
-            var text = new TextBlock { Text = description };
-            simpleStackPanel.Children.Add(text);
-
-            comboBoxItem.Content = simpleStackPanel;
-            MotionInputComboBox.Items.Add(comboBoxItem);
         }
     }
 
-    public void Close()
+    private void Page_Loaded(object s, RoutedEventArgs e)
     {
-        viewModel.Close();
+        // do something
+    }
+
+    private void Page_Unloaded(object s, RoutedEventArgs e)
+    {
+        // do something
     }
 
     public void PowerProfile_Selected(PowerProfile powerProfile, bool AC)
@@ -155,3 +127,4 @@ public partial class QuickProfilesPage : Page
         viewModel.PowerProfile_Selected(powerProfile, AC);
     }
 }
+

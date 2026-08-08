@@ -38,8 +38,8 @@ namespace HandheldCompanion.Devices.Lenovo
             GfxClock = new double[] { 100, 2900 };
             CpuClock = 5000;
 
-            GyrometerAxis = new Vector3(1.0f, 1.0f, -1.0f);
-            AccelerometerAxis = new Vector3(-1.0f, -1.0f, 1.0f);
+            GyroMatrix = new() { Axis = new Vector3(1.0f, 1.0f, -1.0f) };
+            AcceleroMatrix = new() { Axis = new Vector3(-1.0f, -1.0f, 1.0f) };
 
             // Enable direct EC I/O for fan control
             UseOpenLib = true;
@@ -112,7 +112,7 @@ namespace HandheldCompanion.Devices.Lenovo
             return Math.Clamp(percent, 0f, 100f);
         }
 
-        protected override void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+        public override void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
         {
             // Apply OEM power mode via WMI (inherited from LegionGo)
             int currentFanMode = GetSmartFanMode();

@@ -20,6 +20,7 @@ public class CpuWidget : IWidget
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUTemperature(), "°");
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUPower(), "W");
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetMemoryUsage(), "GB");
+                OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetCPUFanRPM(), "rpm");
                 break;
         }
     }

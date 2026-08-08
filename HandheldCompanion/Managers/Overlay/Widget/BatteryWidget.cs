@@ -19,7 +19,6 @@ public class BatteryWidget : IWidget
                 //OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetBatteryPower() ?? BatteryChargeRateInWatts(), "W");
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetBatteryLevel() ?? HardwareControl.BatteryCapacity, "%");
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetBatteryPower() ?? HardwareControl.BatteryChargeRate, "W");
-                OSDManager.AddElementIfNotNull(entry, HardwareControl.CPUFanRPM, "rpm");
                 break;
             case WidgetLevel.MINIMAL:
                 OSDManager.AddElementIfNotNull(entry, PlatformManager.LibreHardware.GetBatteryLevel() ?? HardwareControl.BatteryCapacity, "%");

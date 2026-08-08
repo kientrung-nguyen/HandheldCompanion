@@ -19,8 +19,8 @@ public class OneXPlayerX1Mini : OneXPlayerX1
         GfxClock = new double[] { 100, 2700 };
         CpuClock = 5100;
 
-        GyrometerAxis = new Vector3(1.0f, 1.0f, 1.0f);
-        AccelerometerAxis = new Vector3(1.0f, -1.0f, 1.0f);
+        GyroMatrix = new() { Axis = new Vector3(1.0f, 1.0f, 1.0f) };
+        AcceleroMatrix = new() { Axis = new Vector3(1.0f, -1.0f, 1.0f) };
 
         EnableSerialPort = false;
 
@@ -45,6 +45,10 @@ public class OneXPlayerX1Mini : OneXPlayerX1
 
     public override bool IsReady()
     {
+        // Early return if device is already bound and connected
+        if (hidDevice != null && hidDevice.IsConnected /* && hidDevice.IsOpen */)
+            return true;
+
         // Reuse the same pattern as OneXPlayerOneXFly to grab the LED HID device
         IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
         foreach (HidDevice device in devices)

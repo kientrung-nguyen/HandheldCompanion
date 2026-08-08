@@ -37,7 +37,7 @@ namespace HandheldCompanion.Targets
         public VJoyTarget(uint _deviceId = 1) : base()
         {
             deviceId = _deviceId;
-            HID = HIDmode.DInputController;
+            HID = HIDmode.DualSenseController;
             joystick = new vJoy();
 
             LogManager.LogInformation("{0} initialized (device {1})", ToString(), deviceId);

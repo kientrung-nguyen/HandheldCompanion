@@ -16,48 +16,45 @@ public partial class QuickHomePage : Page
     private readonly CrossThreadLock brightnessLock = new();
     private readonly CrossThreadLock volumeLock = new();
 
+    public QuickHomePage()
+    {
+        DataContext = new QuickHomePageViewModel();
+        InitializeComponent();
+    }
+
     public QuickHomePage(string Tag) : this()
     {
         this.Tag = Tag;
 
+        // raise events
+        switch (ManagerFactory.multimediaManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryMedia();
+                break;
+        }
+
         ManagerFactory.multimediaManager.VolumeNotification += SystemManager_VolumeNotification;
         ManagerFactory.multimediaManager.MicrophoneVolumeNotification += SystemManager_MicrophoneVolumeNotification;
-        ManagerFactory.multimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
+        ManagerFactory.multimediaManager.BrightnessNotification += MultimediaManager_BrightnessNotification;
         ManagerFactory.multimediaManager.NightLightNotification += SystemManager_NightLightNotification;
-        ManagerFactory.multimediaManager.Initialized += SystemManager_Initialized;
+        
     }
 
     public void Close()
     {
         ManagerFactory.multimediaManager.VolumeNotification -= SystemManager_VolumeNotification;
         ManagerFactory.multimediaManager.MicrophoneVolumeNotification -= SystemManager_MicrophoneVolumeNotification;
-        ManagerFactory.multimediaManager.BrightnessNotification -= SystemManager_BrightnessNotification;
+        ManagerFactory.multimediaManager.BrightnessNotification -= MultimediaManager_BrightnessNotification;
         ManagerFactory.multimediaManager.NightLightNotification -= SystemManager_NightLightNotification;
-        ManagerFactory.multimediaManager.Initialized -= SystemManager_Initialized;
     }
 
-    public QuickHomePage()
-    {
-        DataContext = new QuickHomePageViewModel();
-        InitializeComponent();
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
-    }
-
-    private void OnLoaded(object sender, RoutedEventArgs e) =>
-        ((QuickHomePageViewModel)DataContext).OnNavigatedTo();
-
-    private void OnUnloaded(object sender, RoutedEventArgs e) =>
-        ((QuickHomePageViewModel)DataContext).OnNavigatedFrom();
-
-    private void QuickButton_Click(object sender, RoutedEventArgs e)
-    {
-        Button button = (Button)sender;
-        OverlayQuickTools.GetCurrent().NavigateToPage(button.Name);
-    }
-
-    private void SystemManager_Initialized()
-    {
+    private void QueryMedia()
+	{
         if (ManagerFactory.multimediaManager.HasBrightnessSupport())
         {
             UIHelper.TryBeginInvoke(() =>
@@ -150,7 +147,30 @@ public partial class QuickHomePage : Page
         }
     }
 
-    private void SystemManager_BrightnessNotification(int brightness)
+    private void MultimediaManager_Initialized()
+    {
+        QueryMedia();
+    }
+
+    private void Page_Loaded(object s, RoutedEventArgs e)
+    {
+        // do something
+        ((QuickHomePageViewModel)DataContext).OnNavigatedTo();
+    }
+
+    private void Page_Unloaded(object s, RoutedEventArgs e)
+    {
+        // do something
+        ((QuickHomePageViewModel)DataContext).OnNavigatedFrom();
+    }
+
+    private void QuickButton_Click(object sender, RoutedEventArgs e)
+    {
+        Button button = (Button)sender;
+        OverlayQuickTools.GetCurrent().NavigateToPage(button.Name);
+    }
+
+    private void MultimediaManager_BrightnessNotification(int brightness)
     {
         UIHelper.TryBeginInvoke(() =>
         {

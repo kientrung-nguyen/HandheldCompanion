@@ -1,4 +1,5 @@
 using HandheldCompanion.Misc;
+using HandheldCompanion.Platforms;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using System;
@@ -60,7 +61,8 @@ public class ProcessManager : IManager
 
     private static readonly ConcurrentDictionary<int, ProcessEx> Processes = new();
 
-    private static ProcessEx currentProcess = null!;
+    private static ProcessEx? currentProcess;
+    private static ProcessFilter currentForegroundFilter = ProcessFilter.Restricted;
     private IntPtr currenthWnd;
 
     private AutomationEventHandler _windowOpenedHandler = null!;
@@ -218,7 +220,7 @@ public class ProcessManager : IManager
                 if (!processEx.IsSuspended || !profile.SuspendOnSleep)
                     continue;
 
-                ResumeProcess(processEx, false);
+                _ = ResumeProcess(processEx, false);
             }
         }
     }
@@ -236,7 +238,7 @@ public class ProcessManager : IManager
                 if (processEx.IsSuspended || !profile.SuspendOnSleep)
                     continue;
 
-                SuspendProcess(processEx, false);
+                _ = SuspendProcess(processEx, false);
             }
         }
     }
@@ -387,6 +389,13 @@ public class ProcessManager : IManager
         return Processes.Values.Where(a => a.Executable.Equals(executable, StringComparison.InvariantCultureIgnoreCase)).ToList();
     }
 
+    public static void UpdatePlatformForProcess()
+    {
+        foreach (ProcessEx processEx in Processes.Values)
+            if (processEx.Platform == GamePlatform.Generic)
+                processEx.Platform = PlatformManager.GetPlatform(processEx);
+    }
+
     private void ForegroundCallback(bool IsEventProc, IntPtr hWnd)
     {
         if (hWnd == IntPtr.Zero)
@@ -430,11 +439,8 @@ public class ProcessManager : IManager
             if (!Processes.TryGetValue(processId, out process))
                 return;
 
-            // store previous process
-            ProcessEx prevProcess = currentProcess;
-
             // get filter
-            ProcessFilter filter = GetFilter(process.Executable, process.Path, string.Empty, className);
+            ProcessFilter filter = GetFilter(process.Executable, process.Path, process.Process?.ProcessName ?? string.Empty, className);
 
             switch (filter)
             {
@@ -443,8 +449,16 @@ public class ProcessManager : IManager
                     return;
             }
 
+            // skip exact duplicates (same foreground process and same filter)
+            if (currentProcess?.ProcessId == process.ProcessId && currentForegroundFilter == filter)
+                return;
+
+            // store previous process
+            ProcessEx? prevProcess = currentProcess;
+
             // update current process
             currentProcess = process;
+            currentForegroundFilter = filter;
             currentProcess.Refresh(true);
 
             if (currentProcess is not null)
@@ -456,7 +470,7 @@ public class ProcessManager : IManager
             }
 
             // raise event
-            ForegroundChanged?.Invoke(process, prevProcess, filter);
+            ForegroundChanged?.Invoke(currentProcess, prevProcess, filter);
         }
         catch { }
     }
@@ -479,8 +493,12 @@ public class ProcessManager : IManager
             // If the halted process had foreground, log and raise event.
             if (currentProcess == processEx)
             {
-                LogManager.LogDebug("{0} process {1} that had foreground has halted", currentProcess.Platform, currentProcess.Executable);
-                ForegroundChanged?.Invoke(null, currentProcess, ProcessFilter.Allowed);
+                ProcessEx? haltedForegroundProcess = currentProcess;
+                currentProcess = null;
+                currentForegroundFilter = ProcessFilter.Restricted;
+
+                LogManager.LogDebug("{0} process {1} that had foreground has halted", haltedForegroundProcess.Platform, haltedForegroundProcess.Executable);
+                ForegroundChanged?.Invoke(null, haltedForegroundProcess, ProcessFilter.Allowed);
             }
 
             // Remove the process from the dictionary and raise the stopped event.
@@ -583,6 +601,19 @@ public class ProcessManager : IManager
         }
     }
 
+
+    private static readonly HashSet<string> DesktopApps = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "chrome", "msedge", "firefox", "opera", "brave", "vivaldi", "zen", "iexplore", "chromium", "librewolf", "arc", "waterfox", "thorium",
+            "WindowsTerminal", "conhost", "cmd", "powershell", "pwsh", "alacritty", "wezterm-gui", "mintty",
+            "discord", "slack", "Teams", "ms-teams", "Spotify", "WhatsApp", "Signal", "Telegram", "Code", "Notion", "obsidian", "zoom", "Skype", "Element", "Viber", "LINE", "WeChat",
+            "notepad", "notepad++", "sublime_text", "devenv", "rider64", "idea64", "pycharm64", "webstorm64",
+            "steam", "steamwebhelper", "EpicGamesLauncher", "Battle.net", "GalaxyClient", "EADesktop", "UbisoftConnect",
+            "vlc", "mpv", "mpc-hc64", "mpc-be64", "PotPlayerMini64", "wmplayer", "smplayer", "foobar2000", "aimp",
+            "WINWORD", "EXCEL", "POWERPNT", "OUTLOOK", "Acrobat", "AcroRd32", "SumatraPDF", "thunderbird", "Mailspring", "OneNote", "GitHubDesktop", "7zFM", "WinRAR", "SnippingTool",
+            "explorer", "ShellExperienceHost", "SearchHost", "StartMenuExperienceHost", "ApplicationFrameHost", "SystemSettings", "Taskmgr",
+        };
+
     public static ProcessFilter GetFilter(string exec, string path, string MainWindowTitle = "", string WindowClassName = "")
     {
         if (string.IsNullOrEmpty(path))
@@ -658,6 +689,13 @@ public class ProcessManager : IManager
                 }
 
             default:
+                if (MainWindowTitle == string.Empty && WindowClassName == string.Empty)
+                    return ProcessFilter.Allowed;
+
+                if (DesktopApps.Contains(MainWindowTitle, StringComparer.OrdinalIgnoreCase) ||
+                    DesktopApps.Contains(WindowClassName, StringComparer.OrdinalIgnoreCase))
+                    return ProcessFilter.Desktop;
+
                 return ProcessFilter.Allowed;
         }
     }

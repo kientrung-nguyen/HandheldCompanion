@@ -281,6 +281,13 @@ public class LegionGo : IDevice
 
     public override bool IsReady()
     {
+        // Early return if device is already bound and connected
+        if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? boundDevice))
+        {
+            if (boundDevice.IsConnected /* && boundDevice.IsOpen */)
+                return true;
+        }
+
         IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
         foreach (HidDevice device in devices)
         {
@@ -300,23 +307,16 @@ public class LegionGo : IDevice
         return false;
     }
 
-    public override void OpenEvents()
+    public override bool Open()
     {
-        base.OpenEvents();
+        // initialize SapientiaUsb
+        Init();
 
-        // manage events
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-
-        Device_Inserted();
+        return base.Open();
     }
 
     public override void Close()
     {
-        // manage events
-        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
-
         // close devices
         foreach (HidDevice hidDevice in hidDevices.Values)
             hidDevice.Dispose();
@@ -337,13 +337,13 @@ public class LegionGo : IDevice
     protected override void QuerySettings()
     {
         // raise events
-        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimit"), false);
-        SettingsManager_SettingValueChanged("LegionControllerPassthrough", ManagerFactory.settingsManager.GetBoolean("LegionControllerPassthrough"), false);
+        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimit"), false, false);
+        SettingsManager_SettingValueChanged("LegionControllerPassthrough", ManagerFactory.settingsManager.GetBoolean("LegionControllerPassthrough"), false, false);
 
         base.QuerySettings();
     }
 
-    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -355,11 +355,12 @@ public class LegionGo : IDevice
                 break;
         }
 
-        base.SettingsManager_SettingValueChanged(name, value, temporary);
+        base.SettingsManager_SettingValueChanged(name, value, temporary, initializing);
     }
 
     private FanTable defaultFanTable = new([44, 48, 55, 60, 71, 79, 87, 87, 100, 100]);
-    protected override void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+
+    public override void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
     {
         // get current fan mode and set it to the desired one if different
         // this has to happen before we try setting custom fan/TDP ?
@@ -391,30 +392,16 @@ public class LegionGo : IDevice
         }
     }
 
-    private void ControllerManager_ControllerPlugged(IController Controller, bool WasPowerCycling)
-    {
-        if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-            Device_Inserted(true);
-    }
-
-    protected virtual void Device_Inserted(bool reScan = false)
+    protected override async void Device_Inserted(bool reScan = false)
     {
         // initialize SapientiaUsb
         Init();
     }
 
-    private void ControllerManager_ControllerUnplugged(IController Controller, bool IsPowerCycling, bool WasTarget)
-    {
-        if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-            Device_Removed();
-    }
-
-    protected virtual void Device_Removed()
+    protected override void Device_Removed()
     {
         if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
         {
-            device.MonitorDeviceEvents = false;
-            device.Removed -= Device_Removed;
             try { device.Dispose(); } catch { }
         }
 

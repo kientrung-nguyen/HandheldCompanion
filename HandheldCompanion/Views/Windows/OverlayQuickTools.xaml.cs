@@ -4,6 +4,7 @@ using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Shared;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
@@ -50,6 +51,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private bool isClosing;
 
     private readonly DispatcherTimer clockUpdateTimer;
+    private string? _lastTimeString;
 
     public QuickHomePage homePage = null!;
     public QuickDevicePage devicePage = null!;
@@ -64,13 +66,16 @@ public partial class OverlayQuickTools : GamepadWindow
 
     public OverlayQuickTools()
     {
+        CurrentWindow = this;
+
         DataContext = new OverlayQuickToolsViewModel(this);
         InitializeComponent();
 
-        CurrentWindow = this;
-
         // used by gamepad navigation
         Tag = "QuickTools";
+
+        _MaxHeight = MaxHeight;
+        _MaxWidth = MaxWidth;
 
         ContentDialog.Closed += ContentDialog_Closed;
         ContentDialog.Opened += ContentDialog_Opened;
@@ -80,15 +85,9 @@ public partial class OverlayQuickTools : GamepadWindow
 
         clockUpdateTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(1000)
+            Interval = TimeSpan.FromSeconds(1)
         };
         clockUpdateTimer.Tick += UpdateTime;
-
-        // manage events
-        SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
-        ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-        ManagerFactory.processManager.RawForeground += ProcessManager_RawForeground;
 
         // raise events
         switch (ManagerFactory.settingsManager.Status)
@@ -103,8 +102,38 @@ public partial class OverlayQuickTools : GamepadWindow
         }
 
         // raise events
-        if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController controller)
-            ControllerManager_ControllerSelected(controller);
+        switch (ManagerFactory.multimediaManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.multimediaManager.Initialized += MultimediaManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryMultimedia();
+                break;
+        }
+
+        // raise events
+        switch (ManagerFactory.processManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.processManager.Initialized += ProcessManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryForeground();
+                break;
+        }
+
+        // manage events
+        ControllerManager.Initialized += ControllerManager_Initialized;
+        SystemManager.Initialized += SystemManager_Initialized;
+
+        // raise events
+        if (ControllerManager.IsInitialized)
+            ControllerManager_Initialized();
+        if (SystemManager.IsInitialized)
+            SystemManager_Initialized();
 
         // load gamepad navigation manager
         gamepadFocusManager = new(this, ContentFrame);
@@ -120,15 +149,44 @@ public partial class OverlayQuickTools : GamepadWindow
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // raise events
-        SettingsManager_SettingValueChanged("QuickToolsLocation", ManagerFactory.settingsManager.GetString("QuickToolsLocation"), false);
-        SettingsManager_SettingValueChanged("QuickToolsAutoHide", ManagerFactory.settingsManager.GetString("QuickToolsAutoHide"), false);
-        SettingsManager_SettingValueChanged("QuickToolsDevicePath", ManagerFactory.settingsManager.GetString("QuickToolsDevicePath"), false);
-        SettingsManager_SettingValueChanged("QuickToolsSlideAnimation", ManagerFactory.settingsManager.GetString("QuickToolsSlideAnimation"), false);
+        SettingsManager_SettingValueChanged("QuickToolsLocation", ManagerFactory.settingsManager.GetString("QuickToolsLocation"), false, false);
+        SettingsManager_SettingValueChanged("QuickToolsAutoHide", ManagerFactory.settingsManager.GetString("QuickToolsAutoHide"), false, false);
+        SettingsManager_SettingValueChanged("QuickToolsDevicePath", ManagerFactory.settingsManager.GetString("QuickToolsDevicePath"), false, false);
+        SettingsManager_SettingValueChanged("QuickToolsSlideAnimation", ManagerFactory.settingsManager.GetString("QuickToolsSlideAnimation"), false, false);
     }
 
     protected virtual void SettingsManager_Initialized()
     {
         QuerySettings();
+    }
+
+    private void QueryMultimedia()
+    {
+        // manage events
+        ManagerFactory.multimediaManager.DisplaySettingsChanged += MultimediaManager_DisplaySettingsChanged;
+
+        // raise events
+        if (ManagerFactory.multimediaManager.PrimaryDesktop is not null)
+            MultimediaManager_DisplaySettingsChanged(ManagerFactory.multimediaManager.PrimaryDesktop, ManagerFactory.multimediaManager.PrimaryDesktop.GetResolution());
+    }
+
+    private void MultimediaManager_Initialized()
+    {
+        QueryMultimedia();
+    }
+
+    private void ProcessManager_Initialized()
+    {
+        QueryForeground();
+    }
+
+    private void QueryForeground()
+    {
+        // manage events
+        ManagerFactory.processManager.RawForeground += ProcessManager_RawForeground;
+
+        // raise events
+        ProcessManager_RawForeground(GetForegroundWindow());
     }
 
     private void ProcessManager_RawForeground(nint hWnd)
@@ -141,6 +199,25 @@ public partial class OverlayQuickTools : GamepadWindow
                 HideInstant();
             });
         }
+    }
+
+    private void ControllerManager_Initialized()
+    {
+        // manage events
+        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+
+        // raise events
+        if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController controller)
+            ControllerManager_ControllerSelected(controller);
+    }
+
+    private void SystemManager_Initialized()
+    {
+        // manage events
+        SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
+
+        // raise events
+        PowerManager_PowerStatusChanged(SystemInformation.PowerStatus);
     }
 
     public void loadPages()
@@ -175,12 +252,12 @@ public partial class OverlayQuickTools : GamepadWindow
         Top = _targetTop;   // otherwise start at the resting Y
     }
 
-    public static OverlayQuickTools? GetCurrent()
+    public static OverlayQuickTools GetCurrent()
     {
         return CurrentWindow;
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         // UI thread
         UIHelper.TryInvoke(() =>
@@ -218,8 +295,8 @@ public partial class OverlayQuickTools : GamepadWindow
         UpdateLocation();
     }
 
-    private const double _MaxHeight = 960;
-    private const double _MaxWidth = 960;
+    private readonly double _MaxHeight;
+    private readonly double _MaxWidth;
     private double _Top = 0;
     private double _Left = 0;
 
@@ -359,7 +436,7 @@ public partial class OverlayQuickTools : GamepadWindow
             Dialog.Reset(this);
 
             // use your existing safe hide
-            try { Hide(); } catch { }
+            try { Hide(true); } catch { }
             Top = _targetTop;
         }
 
@@ -397,7 +474,7 @@ public partial class OverlayQuickTools : GamepadWindow
             }
         }
 
-        try { Hide(); } catch { }
+        try { Hide(true); } catch { }
         Top = _targetTop;
     }
 
@@ -534,7 +611,6 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             if (!IsVisible || Visibility != Visibility.Visible)
             {
-                //NavigateToPage("QuickHomePage");
                 IsHitTestVisible = true;
                 PlatformManager.LibreHardware.Resume();
                 ShowInstant();
@@ -557,13 +633,21 @@ public partial class OverlayQuickTools : GamepadWindow
         {
             case Visibility.Collapsed:
             case Visibility.Hidden:
+                if (overlayPage != null && overlayPage.DataContext is OverlayPageViewModel overlayViewModel)
+                    overlayViewModel.OnNavigatedFrom();
+
                 PlatformManager.LibreHardware.Pause();
+
                 InvokeLostGamepadWindowFocus();
                 clockUpdateTimer.Stop();
                 break;
 
             case Visibility.Visible:
+                if (overlayPage != null && overlayPage.DataContext is OverlayPageViewModel visibleOverlayViewModel)
+                    visibleOverlayViewModel.OnNavigatedTo();
+
                 UpdateStyle();
+                UpdateTime(null, EventArgs.Empty);
 
                 PlatformManager.LibreHardware.Resume();
                 InvokeGotGamepadWindowFocus();
@@ -593,8 +677,7 @@ public partial class OverlayQuickTools : GamepadWindow
             ToggleVisibility();
         else
         {
-            // close pages
-            devicePage.Close();
+            // Cleanup handled by page Unloaded events now
         }
     }
 
@@ -603,9 +686,7 @@ public partial class OverlayQuickTools : GamepadWindow
         isClosing = v;
         Close();
 
-        homePage.Close();
-        devicePage.Close();
-        profilesPage.Close();
+        // Page cleanup is now handled by Unloaded events
         applicationsPage.Close();
     }
 

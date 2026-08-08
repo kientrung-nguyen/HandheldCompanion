@@ -18,6 +18,8 @@ namespace HandheldCompanion.ViewModels
         public bool IsRunningRTSS => ManagerFactory.platformManager.IsReady && PlatformManager.RTSS.IsInstalled;
         public bool IsRunningLHM => ManagerFactory.platformManager.IsReady && PlatformManager.LibreHardware.IsInstalled;
 
+        private volatile bool _isActive = true;
+
         private int _onScreenDisplayLevel;
         public int OnScreenDisplayLevel
         {
@@ -35,20 +37,18 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        private int _onScreenDisplayDirection;
-        public int OnScreenDisplayDirection
+        public void OnNavigatedTo()
         {
-            get => _onScreenDisplayDirection;
-            set
-            {
-                if (value != _onScreenDisplayDirection)
-                {
-                    _onScreenDisplayDirection = value;
-                    OnPropertyChanged(nameof(OnScreenDisplayDirection));
+            _isActive = true;
+            updateTimer.Start();
+            framerateTimer.Start();
+        }
 
-                    ManagerFactory.settingsManager.SetProperty(Settings.OnScreenDisplayDirection, value);
-                }
-            }
+        public void OnNavigatedFrom()
+        {
+            _isActive = false;
+            updateTimer.Stop();
+            framerateTimer.Stop();
         }
 
         private double _OverlayRenderInterval;
@@ -516,17 +516,16 @@ namespace HandheldCompanion.ViewModels
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
             // raise events
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayRefreshRate, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayRefreshRate), false);
-            SettingsManager_SettingValueChanged("OverlayRenderInterval", ManagerFactory.settingsManager.GetDouble("OverlayRenderInterval"), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayLevel), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayDirection, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayDirection), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayTimeLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayTimeLevel), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayFPSLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayFPSLevel), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayCPULevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayCPULevel), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayGPULevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayGPULevel), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayRAMLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayRAMLevel), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayVRAMLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayVRAMLevel), false);
-            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayBATTLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayBATTLevel), false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayRefreshRate, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayRefreshRate), false, false);
+            SettingsManager_SettingValueChanged("OverlayRenderInterval", ManagerFactory.settingsManager.GetDouble("OverlayRenderInterval"), false, false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayLevel), false, false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayTimeLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayTimeLevel), false, false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayFPSLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayFPSLevel), false, false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayCPULevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayCPULevel), false, false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayGPULevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayGPULevel), false, false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayRAMLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayRAMLevel), false, false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayVRAMLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayVRAMLevel), false, false);
+            SettingsManager_SettingValueChanged(Settings.OnScreenDisplayBATTLevel, ManagerFactory.settingsManager.GetInt(Settings.OnScreenDisplayBATTLevel), false, false);
         }
 
         private void QueryGPU()
@@ -589,6 +588,9 @@ namespace HandheldCompanion.ViewModels
 
         private void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
         {
+            if (!_isActive)
+                return;
+
             GPU? gpu = GPUManager.GetCurrent();
             if (gpu is not null)
             {
@@ -605,6 +607,9 @@ namespace HandheldCompanion.ViewModels
 
         private void FramerateTimer_Elapsed(object? sender, ElapsedEventArgs e)
         {
+            if (!_isActive)
+                return;
+
             if (!ManagerFactory.platformManager.IsReady)
                 return;
 
@@ -658,6 +663,9 @@ namespace HandheldCompanion.ViewModels
 
         private void LibreHardwareMonitor_CPULoadChanged(float? value)
         {
+            if (!_isActive)
+                return;
+
             if (value is null)
                 return;
 
@@ -666,6 +674,9 @@ namespace HandheldCompanion.ViewModels
 
         private void LibreHardwareMonitor_CPUTemperatureChanged(float? value)
         {
+            if (!_isActive)
+                return;
+
             if (value is null)
                 return;
 
@@ -674,6 +685,9 @@ namespace HandheldCompanion.ViewModels
 
         private void LibreHardwareMonitor_CPUPowerChanged(float? value)
         {
+            if (!_isActive)
+                return;
+
             if (value is null)
                 return;
 
@@ -682,6 +696,9 @@ namespace HandheldCompanion.ViewModels
 
         private void LibreHardwareMonitor_GPULoadChanged(float? value)
         {
+            if (!_isActive)
+                return;
+
             if (value is null)
                 return;
 
@@ -694,6 +711,9 @@ namespace HandheldCompanion.ViewModels
 
         private void LibreHardwareMonitor_GPUTemperatureChanged(float? value)
         {
+            if (!_isActive)
+                return;
+
             if (value is null)
                 return;
 
@@ -706,6 +726,9 @@ namespace HandheldCompanion.ViewModels
 
         private void LibreHardwareMonitor_GPUPowerChanged(float? value)
         {
+            if (!_isActive)
+                return;
+
             if (value is null)
                 return;
 
@@ -714,18 +737,6 @@ namespace HandheldCompanion.ViewModels
                 HasGPUPower = value != 0.0f;
 
             GPUPower = (float)Math.Round((float)value);
-        }
-
-        public void OnNavigatedTo()
-        {
-            updateTimer.Start();
-            framerateTimer.Start();
-        }
-
-        public void OnNavigatedFrom()
-        {
-            updateTimer.Stop();
-            framerateTimer.Stop();
         }
 
         public override void Dispose()
@@ -753,7 +764,7 @@ namespace HandheldCompanion.ViewModels
             base.Dispose(disposing);
         }
 
-        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             if (name == Settings.OnScreenDisplayRefreshRate)
             {
@@ -763,8 +774,6 @@ namespace HandheldCompanion.ViewModels
                 framerateInterval = Convert.ToInt32(value);
                 framerateTimer.Interval = framerateInterval;
             }
-            else if (name == Settings.OnScreenDisplayDirection)
-                _onScreenDisplayDirection = Convert.ToInt32(value);
             else if (name == "OverlayRenderInterval")
                 _OverlayRenderInterval = Convert.ToDouble(value);
             else if (name == Settings.OnScreenDisplayLevel)
@@ -792,6 +801,9 @@ namespace HandheldCompanion.ViewModels
 
         private void RTSS_Updated(PlatformStatus status)
         {
+            if (!_isActive)
+                return;
+
             if (status == PlatformStatus.Stalled)
                 OnScreenDisplayLevel = 0;
 

@@ -1,7 +1,6 @@
 ﻿using HandheldCompanion.Controllers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Shared;
-using HandheldCompanion.Targets;
 using HandheldCompanion.Utils;
 using System;
 using System.Collections.ObjectModel;
@@ -102,8 +101,16 @@ namespace HandheldCompanion.ViewModels
                     default:
                     case HIDmode.Xbox360Controller:
                         return LibraryResources.Xbox360Big;
+                    case HIDmode.SwitchProController:
+                        return LibraryResources.SwitchProBig;
+                    case HIDmode.SteamController:
+                        return LibraryResources.SteamControllerBig;
                     case HIDmode.DualShock4Controller:
                         return LibraryResources.DualShock4Big;
+                    case HIDmode.DualSenseController:
+                        return LibraryResources.DualSenseBig;
+                    case HIDmode.SteamDeckController:
+                        return LibraryResources.SteamDeckBig;
                 }
             }
         }
@@ -280,6 +287,20 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        private Visibility _HIDManagedBySteamHybridVisibility = Visibility.Collapsed;
+        public Visibility HIDManagedBySteamHybridVisibility
+        {
+            get => _HIDManagedBySteamHybridVisibility;
+            set
+            {
+                if (value != _HIDManagedBySteamHybridVisibility)
+                {
+                    _HIDManagedBySteamHybridVisibility = value;
+                    OnPropertyChanged(nameof(HIDManagedBySteamHybridVisibility));
+                }
+            }
+        }
+
         private bool _HidModeEnabled = true;
         public bool HidModeEnabled
         {
@@ -328,15 +349,6 @@ namespace HandheldCompanion.ViewModels
             BindingOperations.EnableCollectionSynchronization(PhysicalControllers, _collectionLock);
             BindingOperations.EnableCollectionSynchronization(VirtualControllers, _collectionLock2);
 
-            // manage events
-            VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
-            VirtualManager.MasterIntervalOverrideChanged += VirtualManager_MasterIntervalOverrideChanged;
-            VirtualManager.StatusChanged += VirtualManager_StatusChanged;
-
-            // initialize slot issue state
-            _hasSlotIssue = ControllerManager.HasSlotIssue;
-            _virtualNotInSlot1 = ControllerManager.HasVirtualSlot1Issue;
-
             // raise events
             switch (ManagerFactory.settingsManager.Status)
             {
@@ -373,10 +385,15 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            // manage events
             ControllerManager.Initialized += ControllerManager_Initialized;
+            VirtualManager.Initialized += VirtualManager_Initialized;
 
+            // raise events
             if (ControllerManager.IsInitialized)
                 ControllerManager_Initialized();
+            if (VirtualManager.IsInitialized)
+                VirtualManager_Initialized();
 
             ScanHardwareCommand = new DelegateCommand(async () =>
             {
@@ -420,12 +437,24 @@ namespace HandheldCompanion.ViewModels
             });
         }
 
+        private void VirtualManager_Initialized()
+        {
+            // manage events
+            VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+            VirtualManager.MasterIntervalOverrideChanged += VirtualManager_MasterIntervalOverrideChanged;
+            VirtualManager.StatusChanged += VirtualManager_StatusChanged;
+
+            // raise events
+            VirtualManager_ControllerSelected(VirtualManager.HIDmode);
+        }
+
         private void ControllerManager_Initialized()
         {
             // manage events
             ControllerManager.ControllerPlugged += ControllerPlugged;
             ControllerManager.ControllerUnplugged += ControllerUnplugged;
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+            ControllerManager.SteamHybridModeOverride += ControllerManager_SteamHybridModeOverride;
             ControllerManager.StatusChanged += ControllerManager_StatusChanged;
             ControllerManager.SlotIssueChanged += ControllerManager_SlotIssueChanged;
 
@@ -433,11 +462,12 @@ namespace HandheldCompanion.ViewModels
             _hasSlotIssue = ControllerManager.HasSlotIssue;
             _virtualNotInSlot1 = ControllerManager.HasVirtualSlot1Issue;
 
-            // send events
-            if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController controller)
-                ControllerManager_ControllerSelected(controller);
-            else
-                Refresh();
+            // raise events
+            foreach(IController controller in ControllerManager.GetControllers<IController>())
+                ControllerPlugged(controller, false);
+            
+            if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController tController)
+                ControllerManager_ControllerSelected(tController);
         }
 
         private void VirtualManager_ControllerSelected(HIDmode mode)
@@ -473,7 +503,10 @@ namespace HandheldCompanion.ViewModels
 
         private void QueryProfile()
         {
+            // manage events
             ManagerFactory.profileManager.Applied += ProfileManager_Applied;
+
+            // raise events
             ProfileManager_Applied(ManagerFactory.profileManager.GetCurrent(), UpdateSource.Background);
         }
 
@@ -488,9 +521,9 @@ namespace HandheldCompanion.ViewModels
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
             // raise events
-            SettingsManager_SettingValueChanged("HIDstatus", ManagerFactory.settingsManager.GetString("HIDstatus"), false);
-            SettingsManager_SettingValueChanged("SteamControllerMode", ManagerFactory.settingsManager.GetString("SteamControllerMode"), false);
-            SettingsManager_SettingValueChanged("ControllerSlotManagementMode", ManagerFactory.settingsManager.GetString("ControllerSlotManagementMode"), false);
+            SettingsManager_SettingValueChanged("HIDstatus", ManagerFactory.settingsManager.GetString("HIDstatus"), false, false);
+            SettingsManager_SettingValueChanged("SteamControllerMode", ManagerFactory.settingsManager.GetString("SteamControllerMode"), false, false);
+            SettingsManager_SettingValueChanged("ControllerSlotManagementMode", ManagerFactory.settingsManager.GetString("ControllerSlotManagementMode"), false, false);
             UpdateMasterIntervalOverrideInfo();
         }
 
@@ -506,9 +539,21 @@ namespace HandheldCompanion.ViewModels
 
         private void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
-            bool managedByProfile = !profile.Default && profile.HID != HIDmode.NotSelected;
+            bool managedByProfile = profile.HID != HIDmode.NotSelected;
             HIDManagedByProfileVisibility = managedByProfile ? Visibility.Visible : Visibility.Collapsed;
-            HidModeEnabled = !managedByProfile;
+
+            // Disable combobox if profile manages HIDmode OR if Steam hybrid override is active
+            HidModeEnabled = !managedByProfile && HIDManagedBySteamHybridVisibility == Visibility.Collapsed;
+        }
+
+        private void ControllerManager_SteamHybridModeOverride(bool isOverridden)
+        {
+            HIDManagedBySteamHybridVisibility = isOverridden ? Visibility.Visible : Visibility.Collapsed;
+
+            // Disable combobox if profile manages HIDmode OR if Steam hybrid override is active
+            bool managedByProfile = !ManagerFactory.profileManager.GetCurrent().Default && 
+                                   ManagerFactory.profileManager.GetCurrent().HID != HIDmode.NotSelected;
+            HidModeEnabled = !managedByProfile && !isOverridden;
         }
 
         private void ControllerPlugged(IController Controller, bool WasPowerCycling)
@@ -601,7 +646,7 @@ namespace HandheldCompanion.ViewModels
             HintsNotMutedVisibility = hasDualInput ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             switch (name)
             {
@@ -679,10 +724,12 @@ namespace HandheldCompanion.ViewModels
                 ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
                 ControllerManager.StatusChanged -= ControllerManager_StatusChanged;
                 ControllerManager.SlotIssueChanged -= ControllerManager_SlotIssueChanged;
+                ControllerManager.SteamHybridModeOverride -= ControllerManager_SteamHybridModeOverride;
                 ControllerManager.Initialized -= ControllerManager_Initialized;
                 ManagerFactory.layoutManager.Initialized -= LayoutManager_Initialized;
                 ManagerFactory.profileManager.Initialized -= ProfileManager_Initialized;
                 ManagerFactory.profileManager.Applied -= ProfileManager_Applied;
+                VirtualManager.Initialized -= VirtualManager_Initialized;
                 VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
                 VirtualManager.MasterIntervalOverrideChanged -= VirtualManager_MasterIntervalOverrideChanged;
                 VirtualManager.StatusChanged -= VirtualManager_StatusChanged;

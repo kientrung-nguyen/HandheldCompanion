@@ -122,8 +122,8 @@ namespace HandheldCompanion.Managers
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
             // raise events
-            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideDown"), false);
-            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideUp"), false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideDown", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideDown"), false, false);
+            SettingsManager_SettingValueChanged("ConfigurableTDPOverrideUp", ManagerFactory.settingsManager.GetString("ConfigurableTDPOverrideUp"), false, false);
         }
 
         public override void Stop()
@@ -144,7 +144,7 @@ namespace HandheldCompanion.Managers
             base.Stop();
         }
 
-        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             // Only process relevant setting names.
             if (name != "ConfigurableTDPOverrideDown" && name != "ConfigurableTDPOverrideUp")
@@ -211,7 +211,7 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        private void SystemManager_PowerLineStatusChanged(PowerLineStatus powerLineStatus)
+        private void SystemManager_PowerLineStatusChanged(PowerLineStatus prevPowerLineStatus, PowerLineStatus powerLineStatus)
         {
             // Get current profile
             Profile profile = ManagerFactory.profileManager.GetCurrent();
@@ -235,7 +235,7 @@ namespace HandheldCompanion.Managers
                 currentProfile = powerProfile;
 
                 // apply device-specific power profile behavior before other subscribers
-                IDevice.GetCurrent().ApplyPowerProfile(powerProfile, source);
+                IDevice.GetCurrent().PowerProfileManager_Applied(powerProfile, source);
 
                 Applied?.Invoke(powerProfile, source);
 
@@ -333,7 +333,7 @@ namespace HandheldCompanion.Managers
                 if (isCurrent)
                 {
                     // apply device-specific power profile behavior before other subscribers
-                    IDevice.GetCurrent().ApplyPowerProfile(profile, source);
+                    IDevice.GetCurrent().PowerProfileManager_Applied(profile, source);
 
                     Applied?.Invoke(profile, source);
                 }
@@ -476,23 +476,31 @@ namespace HandheldCompanion.Managers
                 ToastManager.SendToast($"Power Profile {profile.FileName} deleted");
 
                 LogManager.LogInformation("Deleted power profile {0}", profilePath);
-            }
 
-            FileUtils.FileDelete(profilePath);
+                // actually delete the file
+                FileUtils.FileDelete(profilePath);
+            }
+        }
+
+        public PowerProfile CloneProfile(PowerProfile source)
+        {
+            // Deep clone the profile by serializing and deserializing
+            string json = JsonConvert.SerializeObject(source);
+            return JsonConvert.DeserializeObject<PowerProfile>(json) ?? new PowerProfile();
         }
 
         #region events
         public event DeletedEventHandler? Deleted;
         public delegate void DeletedEventHandler(PowerProfile profile);
 
-        public event UpdatedEventHandler? Updated;
-        public delegate void UpdatedEventHandler(PowerProfile profile, UpdateSource source);
+            public event UpdatedEventHandler? Updated;
+            public delegate void UpdatedEventHandler(PowerProfile profile, UpdateSource source);
 
-        public event AppliedEventHandler? Applied;
-        public delegate void AppliedEventHandler(PowerProfile profile, UpdateSource source);
+            public event AppliedEventHandler? Applied;
+            public delegate void AppliedEventHandler(PowerProfile profile, UpdateSource source);
 
-        public event DiscardedEventHandler? Discarded;
-        public delegate void DiscardedEventHandler(PowerProfile profile, bool swapped);
-        #endregion
+            public event DiscardedEventHandler? Discarded;
+            public delegate void DiscardedEventHandler(PowerProfile profile, bool swapped);
+            #endregion
     }
 }

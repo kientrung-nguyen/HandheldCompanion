@@ -79,7 +79,9 @@ public class NeptuneController : SteamController
         // try known buffer lengths to support different firmware versions (65 current, 64 legacy)
         foreach (ushort bufLen in (ushort[])[65, 64])
         {
-            Controller = new(details.VendorID, details.ProductID, bufLen, details.GetMI());
+            // Pass the device path to ensure we open the correct physical device,
+            // not a virtual one with the same VID/PID/index
+            Controller = new(details.VendorID, details.ProductID, bufLen, details.GetMI(), details.devicePath);
             Open();
             if (IsConnected()) break;
         }
@@ -317,7 +319,7 @@ public class NeptuneController : SteamController
     public override void Unhide(bool powerCycle = true)
     {
         // you shouldn't unhide the controller if steam mode is set to: exclusive
-        bool IsExclusiveMode = ManagerFactory.settingsManager.GetBoolean("SteamControllerMode");
+        bool IsExclusiveMode = ManagerFactory.settingsManager.GetInt("SteamControllerMode") == 1;
         if (IsExclusiveMode)
             return;
 
@@ -382,10 +384,10 @@ public class NeptuneController : SteamController
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // raise events
-        SettingsManager_SettingValueChanged("SteamControllerRumbleInterval", ManagerFactory.settingsManager.GetInt("SteamControllerRumbleInterval"), false);
+        SettingsManager_SettingValueChanged("SteamControllerRumbleInterval", ManagerFactory.settingsManager.GetInt("SteamControllerRumbleInterval"), false, false);
     }
 
-    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {

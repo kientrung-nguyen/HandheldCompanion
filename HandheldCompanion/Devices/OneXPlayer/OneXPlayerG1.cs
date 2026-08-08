@@ -32,6 +32,10 @@ namespace HandheldCompanion.Devices
 
         public override bool IsReady()
         {
+            // Early return if device is already bound and connected
+            if (hidDevice != null && hidDevice.IsConnected /* && hidDevice.IsOpen */)
+                return true;
+
             // Bind the LED HID device (same pattern as OneXPlayerOneXFly)
             IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
             foreach (HidDevice device in devices)
@@ -102,8 +106,8 @@ namespace HandheldCompanion.Devices
             }
 
             // Same IMU orientation pattern as other modern ONEX devices
-            GyrometerAxis = new Vector3(1.0f, 1.0f, 1.0f);
-            AccelerometerAxis = new Vector3(1.0f, -1.0f, 1.0f);
+            GyroMatrix = new() { Axis = new Vector3(1.0f, 1.0f, 1.0f) };
+            AcceleroMatrix = new() { Axis = new Vector3(1.0f, -1.0f, 1.0f) };
         }
     }
 
@@ -120,8 +124,8 @@ namespace HandheldCompanion.Devices
             GfxClock = new double[] { 100, 2250 };
             CpuClock = 5100;
 
-            GyrometerAxis = new Vector3(1.0f, 1.0f, 1.0f);
-            AccelerometerAxis = new Vector3(1.0f, -1.0f, 1.0f);
+            GyroMatrix = new() { Axis = new Vector3(1.0f, 1.0f, 1.0f) };
+            AcceleroMatrix = new() { Axis = new Vector3(1.0f, -1.0f, 1.0f) };
         }
     }
 }

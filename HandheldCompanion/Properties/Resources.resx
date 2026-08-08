@@ -2515,7 +2515,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>The virtual controller type is being managed by the currently applied game profile.</value>
   </data>
   <data name="ControllerPage_HIDManagedByProfileWarning" xml:space="preserve">
-    <value>Virtual controller is managed by profile</value>
+    <value>Virtual controller is overridden</value>
   </data>
   <data name="Hint_CoreIsolationCheck" xml:space="preserve">
     <value>Core isolation features are turned on</value>
@@ -2914,7 +2914,10 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
     <value>Calibrate</value>
   </data>
   <data name="LayoutPage_Export" xml:space="preserve">
-    <value>Export layout</value>
+    <value>Export</value>
+  </data>
+  <data name="LayoutPage_ResetLayout" xml:space="preserve">
+    <value>Reset layout</value>
   </data>
   <data name="PerformancePage_CPUBoost_Aggressive" xml:space="preserve">
     <value>Aggressive</value>
@@ -4186,19 +4189,19 @@ Thank you for using HC and helping us make it better.</value>
     <value>Go back to sleep</value>
   </data>
   <data name="DevicePage_GoBackToSleepDesc" xml:space="preserve">
-    <value>If the device wakes from Modern Standby for any reason other than the power button, it will be sent back to sleep.</value>
+    <value>Automatically send the device back to sleep if awakened from Modern Standby by selected wake reasons.</value>
   </data>
   <data name="DevicePage_GoBackToSleepOnPowerButtonDesc" xml:space="preserve">
-    <value>Woken by the power button.</value>
+    <value>Go back to sleep if awakened by the power button.</value>
   </data>
   <data name="DevicePage_GoBackToSleepOnFingerprintReaderDesc" xml:space="preserve">
-    <value>Woken by the fingerprint reader.</value>
+    <value>Go back to sleep if awakened by the fingerprint reader.</value>
   </data>
   <data name="DevicePage_GoBackToSleepOnJoystickDesc" xml:space="preserve">
-    <value>Woken by a joystick or controller input.</value>
+    <value>Go back to sleep if awakened by a joystick or controller input.</value>
   </data>
   <data name="DevicePage_GoBackToSleepOnChargerConnectedDesc" xml:space="preserve">
-    <value>Woken by a charger being connected.</value>
+    <value>Go back to sleep if awakened by a charger being connected.</value>
   </data>
   <data name="ProfilesPage_Whitelist" xml:space="preserve">
     <value>Controller passthrough</value>
@@ -4277,5 +4280,11 @@ Thank you for using HC and helping us make it better.</value>
   </data>
   <data name="Enum_NeptuneController_ButtonFlags_Special2" xml:space="preserve">
     <value>Options</value>
+  </data>
+  <data name="DevicePage_BlockMsiClawWinGHotkey" xml:space="preserve">
+    <value>Block Win+G hotkey</value>
+  </data>
+  <data name="DevicePage_BlockMsiClawWinGHotkeyDesc" xml:space="preserve">
+    <value>Prevent the MSI quick settings button from opening Windows Game Bar</value>
   </data>
 </root>

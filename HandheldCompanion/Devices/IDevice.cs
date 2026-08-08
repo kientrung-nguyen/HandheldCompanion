@@ -1,7 +1,10 @@
 using HandheldCompanion.Commands.Functions.HC;
 using HandheldCompanion.Commands.Functions.Windows;
+using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices.AYANEO;
+using HandheldCompanion.Devices.ASUS;
 using HandheldCompanion.Devices.Lenovo;
+using HandheldCompanion.Devices.MSI;
 using HandheldCompanion.Devices.OneXPlayer;
 using HandheldCompanion.Devices.Zotac;
 using HandheldCompanion.Helpers;
@@ -15,6 +18,7 @@ using HandheldCompanion.Utils;
 using HidLibrary;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using Sentry;
+using SharpDX.XInput;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +28,9 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using Windows.Devices.Sensors;
 using WindowsInput.Events;
+using static HandheldCompanion.Devices.IDevice;
 using static HandheldCompanion.Utils.DeviceUtils;
+using AsusDevice = HandheldCompanion.Devices.ASUS.ASUS;
 
 namespace HandheldCompanion.Devices;
 
@@ -44,6 +50,7 @@ public enum DeviceCapabilities : ushort
     FanOverride = 512,
     OEMCPU = 1024,
     OEMGPU = 2048,
+    XGMobile = 4096,
 }
 
 public enum TDPMethod
@@ -76,14 +83,62 @@ public struct HidFilter
     }
 }
 
+public struct IMUMatrix
+{
+    public Vector3 Axis;
+    public SortedDictionary<char, char> AxisSwap;
+
+    // Pre-computed indices for fast axis remapping: AxisRemapIndices[input] = output_axis_index
+    // where 0=X, 1=Y, 2=Z. Eliminates dictionary lookups in hot sensor paths.
+    private int[]? _axisRemapIndices;
+    public int[] AxisRemapIndices
+    {
+        get
+        {
+            if (_axisRemapIndices == null)
+                ComputeRemapIndices();
+            return _axisRemapIndices!;
+        }
+    }
+
+    public IMUMatrix()
+    {
+        Axis = new Vector3(1.0f, 1.0f, 1.0f);
+        AxisSwap = new()
+        {
+            { 'X', 'X' },
+            { 'Y', 'Y' },
+            { 'Z', 'Z' }
+        };
+        _axisRemapIndices = new[] { 0, 1, 2 }; // X?0, Y?1, Z?2 (identity mapping)
+    }
+
+    /// <summary>
+    /// Computes the AxisRemapIndices from the AxisSwap dictionary.
+    /// Maps each input axis position (X=0, Y=1, Z=2) to its remapped output axis.
+    /// </summary>
+    private void ComputeRemapIndices()
+    {
+        _axisRemapIndices = new int[3];
+        // Map input positions: 0=X, 1=Y, 2=Z
+        _axisRemapIndices[0] = AxisSwap['X'] switch { 'Y' => 1, 'Z' => 2, _ => 0 }; // X input ? output axis
+        _axisRemapIndices[1] = AxisSwap['Y'] switch { 'X' => 0, 'Z' => 2, _ => 1 }; // Y input ? output axis
+        _axisRemapIndices[2] = AxisSwap['Z'] switch { 'X' => 0, 'Y' => 1, _ => 2 }; // Z input ? output axis
+    }
+}
+
 public abstract class IDevice
 {
-    public delegate void KeyPressedEventHandler(ButtonFlags button);
+    public delegate void KeyPressedEventHandler(IDevice sender, ButtonFlags button);
     public event KeyPressedEventHandler? KeyPressed;
-    public delegate void KeyReleasedEventHandler(ButtonFlags button);
+    public delegate void KeyReleasedEventHandler(IDevice sender, ButtonFlags button);
     public event KeyReleasedEventHandler? KeyReleased;
+    public delegate void OpenedEventHandler(IDevice sender);
+    public event OpenedEventHandler? Opened;
+    public delegate void ClosedEventHandler(IDevice sender);
+    public event ClosedEventHandler? Closed;
 
-    public delegate void CapabilitiesChangedEventHandler(DeviceCapabilities capabilities);
+    public delegate void CapabilitiesChangedEventHandler(IDevice sender, DeviceCapabilities capabilities);
     public event CapabilitiesChangedEventHandler? CapabilitiesChanged;
 
     public static readonly Guid BetterBatteryGuid = new Guid("961cc777-2547-4f9d-8174-7d86181b8a7a");
@@ -100,21 +155,8 @@ public abstract class IDevice
     protected Dictionary<int, HidDevice> hidDevices = [];
     protected Dictionary<int, HidFilter> hidFilters = [];
 
-    public Vector3 AccelerometerAxis = new(1.0f, 1.0f, 1.0f);
-    public SortedDictionary<char, char> AccelerometerAxisSwap = new()
-    {
-        { 'X', 'X' },
-        { 'Y', 'Y' },
-        { 'Z', 'Z' }
-    };
-
-    public Vector3 GyrometerAxis = new(1.0f, 1.0f, 1.0f);
-    public SortedDictionary<char, char> GyrometerAxisSwap = new()
-    {
-        { 'X', 'X' },
-        { 'Y', 'Y' },
-        { 'Z', 'Z' }
-    };
+    public IMUMatrix AcceleroMatrix;
+    public IMUMatrix GyroMatrix;
 
     public GamepadMotion GamepadMotion;
 
@@ -197,6 +239,10 @@ public abstract class IDevice
     {
         GamepadMotion = new(ProductIllustration, CalibrationMode.Manual  /*| CalibrationMode.SensorFusion */);
 
+        // initialize IMU matrices with default values
+        AcceleroMatrix = new();
+        GyroMatrix = new();
+
         // add default power profile
         DevicePowerProfiles.Add(new(Properties.Resources.PowerProfileDefaultName, Properties.Resources.PowerProfileDefaultDescription)
         {
@@ -211,6 +257,10 @@ public abstract class IDevice
         DeviceHotkeys[typeof(QuickToolsCommands)] = new Hotkey() { command = new QuickToolsCommands(), IsPinned = true, ButtonFlags = ButtonFlags.HOTKEY_RESERVED1 };
         DeviceHotkeys[typeof(MainWindowCommands)] = new Hotkey() { command = new MainWindowCommands(), IsPinned = true, ButtonFlags = ButtonFlags.HOTKEY_RESERVED2 };
         DeviceHotkeys[typeof(OnScreenKeyboardCommands)] = new Hotkey() { command = new OnScreenKeyboardCommands(), IsPinned = true, ButtonFlags = ButtonFlags.HOTKEY_RESERVED3 };
+
+        // prepare hotkeys
+        DeviceHotkeys[typeof(DesktopLayoutCommands)].inputsChord.ButtonState[ButtonFlags.LeftStickClick] = true;
+        DeviceHotkeys[typeof(DesktopLayoutCommands)].inputsChord.ButtonState[ButtonFlags.RightStickClick] = true;
     }
 
     public virtual bool Open()
@@ -255,6 +305,9 @@ public abstract class IDevice
 
     public virtual void OpenEvents()
     {
+        // raise opened event
+        Opened?.Invoke(this);
+
         // raise events
         switch (ManagerFactory.settingsManager.Status)
         {
@@ -288,15 +341,6 @@ public abstract class IDevice
                 QueryPowerProfile();
                 break;
         }
-
-        // manage events
-        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
-
-        // raise events
-        if (VirtualManager.IsInitialized)
-        {
-            VirtualManager_ControllerSelected(VirtualManager.HIDmode);
-        }
     }
 
     private void QueryDevices()
@@ -304,9 +348,33 @@ public abstract class IDevice
         // manage events
         ManagerFactory.deviceManager.UsbDeviceArrived += GenericDeviceUpdated;
         ManagerFactory.deviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
+        ManagerFactory.deviceManager.HidDeviceArrived += DeviceManager_HidDeviceArrived;
+        ManagerFactory.deviceManager.HidDeviceRemoved += DeviceManager_HidDeviceRemoved;
+
+        // raise events
+        foreach (PnPDetails pnPDetails in ManagerFactory.deviceManager.PnPDevices.Values)
+            DeviceManager_HidDeviceArrived(pnPDetails, Guid.Empty);
 
         // raise events
         GenericDeviceUpdated(null, Guid.Empty);
+    }
+
+    private void DeviceManager_HidDeviceRemoved(PnPDetails device, Guid InterfaceGuid)
+    {
+        lock (updateLock)
+        {
+            if (device.VendorID == vendorId && productIds.Contains(device.ProductID))
+                Device_Removed();
+        }
+    }
+
+    private void DeviceManager_HidDeviceArrived(PnPDetails device, Guid InterfaceGuid)
+    {
+        lock (updateLock)
+        {
+            if (device.VendorID == vendorId && productIds.Contains(device.ProductID))
+                Device_Inserted(true);
+        }
     }
 
     private void DeviceManager_Initialized()
@@ -320,7 +388,7 @@ public abstract class IDevice
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
-    protected virtual void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    protected virtual void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     { }
 
     protected virtual void SettingsManager_Initialized()
@@ -330,6 +398,10 @@ public abstract class IDevice
 
     protected virtual void QueryPowerProfile()
     {
+        // manage events
+        // handled by PowerProfileManager, because of complex power profile order logic
+        // ManagerFactory.powerProfileManager.Applied += PowerProfileManager_Applied;
+
         // apply current profile once the device is open and ready
         PowerProfileManager_Applied(ManagerFactory.powerProfileManager.GetCurrent(), UpdateSource.Background);
     }
@@ -339,7 +411,7 @@ public abstract class IDevice
         QueryPowerProfile();
     }
 
-    protected virtual void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+    public virtual void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
     {
         // apply profile Fan mode
         switch (profile.FanProfile.fanMode)
@@ -354,14 +426,6 @@ public abstract class IDevice
         }
     }
 
-    public virtual void ApplyPowerProfile(PowerProfile profile, UpdateSource source)
-    {
-        if (profile is null || !IsOpen)
-            return;
-
-        PowerProfileManager_Applied(profile, source);
-    }
-
     public virtual void Close()
     {
         // disable fan control
@@ -374,21 +438,30 @@ public abstract class IDevice
         // set flag
         DeviceOpen = false;
 
-        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
         ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+
         ManagerFactory.powerProfileManager.Initialized -= PowerProfileManager_Initialized;
-        VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
+        // handled by PowerProfileManager, because of complex power profile order logic
+        // ManagerFactory.powerProfileManager.Applied -= PowerProfileManager_Applied;
+
+        ManagerFactory.deviceManager.Initialized -= DeviceManager_Initialized;
         ManagerFactory.deviceManager.UsbDeviceArrived -= GenericDeviceUpdated;
         ManagerFactory.deviceManager.UsbDeviceRemoved -= GenericDeviceUpdated;
+        ManagerFactory.deviceManager.HidDeviceArrived -= DeviceManager_HidDeviceArrived;
+        ManagerFactory.deviceManager.HidDeviceRemoved -= DeviceManager_HidDeviceRemoved;
+
+        Closed?.Invoke(this);
     }
 
     public virtual void Initialize(bool FirstStart, bool NewUpdate)
     { }
 
-    private void VirtualManager_ControllerSelected(HIDmode mode)
-    {
-        SetKeyPressDelay(mode);
-    }
+    protected virtual async void Device_Inserted(bool reScan = false)
+    { }
+
+    protected virtual void Device_Removed()
+    { }
 
     private void GenericDeviceUpdated(PnPDevice? device, Guid IntefaceGuid)
     {
@@ -765,6 +838,9 @@ public abstract class IDevice
                         case "RC73XA":
                             device = new XboxROGAllyX();
                             break;
+                        default:
+                            device = new AsusDevice();
+                            break;
                     }
                 }
                 break;
@@ -817,6 +893,9 @@ public abstract class IDevice
                             break;
                         case "MS-1T8K": // Claw A8
                             device = new ClawBZ2EM();
+                            break;
+                        case "MS-1T91": // Claw 8 EX AI+ CG3EM
+                            device = new ClawCG3EM();
                             break;
                     }
                 }
@@ -881,21 +960,6 @@ public abstract class IDevice
             await Task.Delay(250).ConfigureAwait(false);
     }
 
-    public virtual void SetKeyPressDelay(HIDmode controllerMode)
-    {
-        /*
-        switch (controllerMode)
-        {
-            case HIDmode.DualShock4Controller:
-                KeyPressDelay = (short)(TimerManager.GetPeriod() * 18);
-                break;
-            default:
-                KeyPressDelay = (short)(TimerManager.GetPeriod() * 2);
-                break;
-        }
-        */
-    }
-
     public void PullSensors()
     {
         Gyrometer gyrometer = Gyrometer.GetDefault();
@@ -930,7 +994,7 @@ public abstract class IDevice
             Capabilities &= ~DeviceCapabilities.ExternalSensor;
         }
 
-        CapabilitiesChanged?.Invoke(Capabilities);
+        CapabilitiesChanged?.Invoke(this, Capabilities);
     }
 
     public virtual void SetFanDuty(double percent)
@@ -1155,12 +1219,12 @@ public abstract class IDevice
 
     protected void KeyPress(ButtonFlags button)
     {
-        KeyPressed?.Invoke(button);
+        KeyPressed?.Invoke(this, button);
     }
 
     protected void KeyRelease(ButtonFlags button)
     {
-        KeyReleased?.Invoke(button);
+        KeyReleased?.Invoke(this, button);
     }
 
     protected void KeyPressAndRelease(ButtonFlags button, short delay)

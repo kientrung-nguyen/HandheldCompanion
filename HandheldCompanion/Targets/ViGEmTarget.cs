@@ -29,7 +29,7 @@ namespace HandheldCompanion.Targets
         public event VibratedEventHandler? Vibrated;
         public delegate void VibratedEventHandler(byte LargeMotor, byte SmallMotor);
 
-        public event ConnectStatusChangedEventHandler? ConnectStatusChanged;
+        public event ConnectStatusChangedEventHandler? StatusChanged;
         public delegate void ConnectStatusChangedEventHandler(ViGEmTarget target, VirtualManagerStatus status, int attempt, int maxAttempts);
 
         protected void RaiseConnected() => Connected?.Invoke(this);
@@ -70,7 +70,7 @@ namespace HandheldCompanion.Targets
 
                     IsConnected = true;
                     Connected?.Invoke(this);
-                    ConnectStatusChanged?.Invoke(this, VirtualManagerStatus.Connected, attempt, ConnectMaxAttempts);
+                    StatusChanged?.Invoke(this, VirtualManagerStatus.Connected, attempt, ConnectMaxAttempts);
                     LogManager.LogInformation("{0} connected", ToString());
                     return true;
                 }
@@ -78,7 +78,7 @@ namespace HandheldCompanion.Targets
                 {
                     // Driver stack not ready yet (common on system resume) — retry after a delay
                     LogManager.LogWarning("{0} connect attempt {1}/{2} failed: device not ready, retrying in {3}s…", ToString(), attempt, ConnectMaxAttempts, ConnectRetryDelay.TotalSeconds);
-                    ConnectStatusChanged?.Invoke(this, VirtualManagerStatus.Retrying, attempt, ConnectMaxAttempts);
+                    StatusChanged?.Invoke(this, VirtualManagerStatus.Retrying, attempt, ConnectMaxAttempts);
                     Thread.Sleep(ConnectRetryDelay);
                 }
                 catch (VigemDeviceNotReadyException ex)
@@ -92,7 +92,7 @@ namespace HandheldCompanion.Targets
                     // Target is already on the bus — treat as success
                     IsConnected = true;
                     Connected?.Invoke(this);
-                    ConnectStatusChanged?.Invoke(this, VirtualManagerStatus.Connected, attempt, ConnectMaxAttempts);
+                    StatusChanged?.Invoke(this, VirtualManagerStatus.Connected, attempt, ConnectMaxAttempts);
                     LogManager.LogInformation("{0} already connected, treating as success", ToString());
                     return true;
                 }
@@ -101,7 +101,7 @@ namespace HandheldCompanion.Targets
                     // Notification callback already registered — treat as success
                     IsConnected = true;
                     Connected?.Invoke(this);
-                    ConnectStatusChanged?.Invoke(this, VirtualManagerStatus.Connected, attempt, ConnectMaxAttempts);
+                    StatusChanged?.Invoke(this, VirtualManagerStatus.Connected, attempt, ConnectMaxAttempts);
                     LogManager.LogInformation("{0} callback already registered, treating as success", ToString());
                     return true;
                 }
@@ -138,7 +138,7 @@ namespace HandheldCompanion.Targets
             }
 
             LogManager.LogWarning("Failed to connect {0}: {1}", ToString(), failureReason);
-            ConnectStatusChanged?.Invoke(this, VirtualManagerStatus.Failed, ConnectMaxAttempts, ConnectMaxAttempts);
+            StatusChanged?.Invoke(this, VirtualManagerStatus.Failed, ConnectMaxAttempts, ConnectMaxAttempts);
             ManagerFactory.settingsManager.SetProperty("HIDstatus", 0);
             return false;
         }
@@ -215,7 +215,7 @@ namespace HandheldCompanion.Targets
                 Connected = null;
                 Disconnected = null;
                 Vibrated = null;
-                ConnectStatusChanged = null;
+                StatusChanged = null;
             }
 
             _disposed = true;

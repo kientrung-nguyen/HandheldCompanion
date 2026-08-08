@@ -143,7 +143,7 @@ public static class DynamicLightingManager
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // raise events
-        SettingsManager_SettingValueChanged("LEDAmbilightVerticalBlackBarDetection", ManagerFactory.settingsManager.GetString("LEDAmbilightVerticalBlackBarDetection"), false);
+        SettingsManager_SettingValueChanged("LEDAmbilightVerticalBlackBarDetection", ManagerFactory.settingsManager.GetString("LEDAmbilightVerticalBlackBarDetection"), false, false);
         RequestUpdate();
     }
 
@@ -270,7 +270,7 @@ public static class DynamicLightingManager
         }
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {

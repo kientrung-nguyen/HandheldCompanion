@@ -128,10 +128,10 @@ namespace HandheldCompanion.Managers
             // manage events
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
-            SettingsManager_SettingValueChanged("UpdateUrl", ManagerFactory.settingsManager.GetString("UpdateUrl"), false);
+            SettingsManager_SettingValueChanged("UpdateUrl", ManagerFactory.settingsManager.GetString("UpdateUrl"), false, false);
         }
 
-        private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             switch (name)
             {
@@ -241,11 +241,8 @@ namespace HandheldCompanion.Managers
 
         public static async Task StartProcess(bool background)
         {
-            if (!background)
-            {
-                updateStatus = UpdateStatus.Checking;
-                Updated?.Invoke(updateStatus, null, null);
-            }
+            updateStatus = UpdateStatus.Checking;
+            Updated?.Invoke(updateStatus, null, background);
 
             await Task.WhenAll(
                 CheckGameControllerDb(background),

@@ -100,7 +100,7 @@ namespace HandheldCompanion.Platforms.Misc
             };
         }
 
-        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             switch (name)
             {
@@ -174,7 +174,7 @@ namespace HandheldCompanion.Platforms.Misc
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
             // raise events
-            SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", ManagerFactory.settingsManager.GetString("OnScreenDisplayRefreshRate"), false);
+            SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", ManagerFactory.settingsManager.GetString("OnScreenDisplayRefreshRate"), false, false);
         }
 
         public void Pause()
@@ -201,11 +201,27 @@ namespace HandheldCompanion.Platforms.Misc
 
             networkInterface = null;
 
-            // wait until all tasks are complete
-            lock (updateLock)
+            // Wait for any ongoing update to complete, with timeout to prevent deadlock
+            // if UpdateTimer_Elapsed is blocked inside hardware.Update()
+            const int LockTimeoutMs = 3000;
+            if (Monitor.TryEnter(updateLock, LockTimeoutMs))
             {
+                try
+                {
+                    computerOpened = false;
+                    try { computer.Close(); } catch { }
+                }
+                finally
+                {
+                    Monitor.Exit(updateLock);
+                }
+            }
+            else
+            {
+                // Could not acquire lock within timeout; log and continue
+                // The update thread may be blocked in hardware.Update()
+                LogManager.LogWarning("LibreHardwarePlatform.Stop() could not acquire updateLock within {0}ms; proceeding without cleanup", LockTimeoutMs);
                 computerOpened = false;
-                try { computer.Close(); } catch { }
             }
 
             return base.Stop(kill);
@@ -221,13 +237,13 @@ namespace HandheldCompanion.Platforms.Misc
             {
                 if (halting)
                     // raise events
-                    SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", INTERVAL_DEGRADED.ToString(), false);
+                    SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", INTERVAL_DEGRADED.ToString(), false, false);
                 else
-                    SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", INTERVAL_DEFAULT.ToString(), false);
+                    SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", INTERVAL_DEFAULT.ToString(), false, false);
             }
             else
             {
-                SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", ManagerFactory.settingsManager.GetString("OnScreenDisplayRefreshRate"), false);
+                SettingsManager_SettingValueChanged("OnScreenDisplayRefreshRate", ManagerFactory.settingsManager.GetString("OnScreenDisplayRefreshRate"), false, false);
                 halting = false;
             }
 
@@ -556,6 +572,7 @@ namespace HandheldCompanion.Platforms.Misc
         public float? GetCPUClockMax() => computer?.IsCpuEnabled ?? false ? CPUClockMax : null;
         public float? GetCPUPower() => computer?.IsCpuEnabled ?? false ? CPUPower : null;
         public float? GetCPUTemperature() => computer?.IsCpuEnabled ?? false ? CPUTemperature : null;
+        public float? GetCPUFanRPM() => CPUFanRPM;
 
         private void HandleCPU(IHardware cpu)
         {

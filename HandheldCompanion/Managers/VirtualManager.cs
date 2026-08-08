@@ -1,5 +1,6 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Helpers;
+using HandheldCompanion.Inputs;
 using HandheldCompanion.Shared;
 using HandheldCompanion.Targets;
 using HandheldCompanion.Utils;
@@ -47,11 +48,19 @@ namespace HandheldCompanion.Managers
         public static HIDstatus HIDstatus = HIDstatus.Disconnected;
 
         private static readonly SemaphoreSlim controllerLock = new SemaphoreSlim(1, 1);
-        private static List<IXbox360Controller> temporaryControllers = new();
+        private static List<IVirtualGamepad> temporaryControllers = new();
 
         public static ushort VendorId = 0x45E;
         public static ushort ProductId = 0x28E;
 
+        private static readonly object temporaryControllerLock = new();
+
+        // Sleep state tracking: when the system is in sleep mode, only report meaningful input changes
+        // to prevent the virtual controller from waking the device with constant gyro reports.
+        private static bool isSystemSleeping = false;
+
+        // Xbox stick noise filter threshold: ignore axis value changes smaller than this
+        private const short AxisNoiseThreshold = 150;
 
         public static bool IsInitialized;
 
@@ -88,7 +97,7 @@ namespace HandheldCompanion.Managers
             // prepare vJoy SDL mapping
             VJoyTarget.WriteSDLGameControllerMapping();
         }
-		
+
         public static int? GetMasterIntervalOverrideHz()
         {
             return vTarget?.MasterIntervalOverrideHz;
@@ -163,11 +172,12 @@ namespace HandheldCompanion.Managers
             // load a few variables
             HIDstatus = (HIDstatus)ManagerFactory.settingsManager.GetInt("HIDstatus");
 
-            // apply settings
-            SettingsManager_SettingValueChanged("HIDmode", selectedHIDMode, false);
-            SettingsManager_SettingValueChanged("HIDstatus", HIDstatus, false);
-            SettingsManager_SettingValueChanged("DSUport", ManagerFactory.settingsManager.GetInt("DSUport"), false);
-            SettingsManager_SettingValueChanged("DSUEnabled", ManagerFactory.settingsManager.GetString("DSUEnabled"), false);
+            SettingsManager_SettingValueChanged("DSUport", ManagerFactory.settingsManager.GetInt("DSUport"), false, true);
+            SettingsManager_SettingValueChanged("DSUEnabled", ManagerFactory.settingsManager.GetString("DSUEnabled"), false, true);
+            SettingsManager_SettingValueChanged("HIDmode", selectedHIDMode, false, true);
+            SettingsManager_SettingValueChanged("HIDstatus", HIDstatus, false, true);
+
+            SetControllerModeCore(defaultHIDmode);
         }
 
         public static void Stop()
@@ -255,7 +265,7 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             switch (name)
             {
@@ -296,9 +306,12 @@ namespace HandheldCompanion.Managers
 
             switch (profile.HID)
             {
+                case HIDmode.NoController:
                 case HIDmode.Xbox360Controller:
                 case HIDmode.DualShock4Controller:
-                case HIDmode.DInputController:
+                case HIDmode.DualSenseController:
+                case HIDmode.SteamDeckController:
+                case HIDmode.SwitchProController:
                     SetControllerMode(profile.HID);
                     break;
 
@@ -322,12 +335,12 @@ namespace HandheldCompanion.Managers
                 SetControllerMode(defaultHIDmode);
         }
 
-        private static readonly object tempControllersLock = new();
         public static int CreateTemporaryControllers(int maxCount = int.MaxValue)
         {
             if (vClient is null)
                 return 0;
 
+            DisposeTemporaryControllers();
             // count available XInput slots
             int availableSlots = 0;
             for (int i = 0; i < XInputController.MaxControllers; i++)
@@ -344,21 +357,23 @@ namespace HandheldCompanion.Managers
             {
                 try
                 {
-                    IXbox360Controller controller = vClient.CreateXbox360Controller(VendorId, ProductId);
-                    controller.Connect();
+                    CreateTemporaryControllerTarget();
+                    created++;
+                    //var controller = vClient.CreateXbox360Controller(VendorId, ProductId);
+                    //controller.Connect();
 
-                    lock (tempControllersLock)
-                    {
-                        temporaryControllers.Add(controller);
-                        created++;
-                    }
+                    //lock (temporaryControllerLock)
+                    //{
+                    //    temporaryControllers.Add(controller);
+                    //    created++;
+                    //}
 
                     Thread.Sleep(500);
                 }
                 catch { /* swallow */ }
             }
 
-            lock (tempControllersLock) { return temporaryControllers.Count; }
+            lock (temporaryControllerLock) { return temporaryControllers.Count; }
         }
 
         public static void DisposeTemporaryControllers()
@@ -366,18 +381,18 @@ namespace HandheldCompanion.Managers
             if (vClient is null)
                 return;
 
-            IXbox360Controller[] snapshot;
+            IVirtualGamepad[] snapshot;
 
-            lock (tempControllersLock)
+            lock (temporaryControllerLock)
             {
                 if (temporaryControllers.Count == 0)
                     return;
 
-                snapshot = temporaryControllers.ToArray();
+                snapshot = [.. temporaryControllers];
                 temporaryControllers.Clear();
             }
 
-            foreach (IXbox360Controller controller in snapshot)
+            foreach (var controller in snapshot)
             {
                 try
                 {
@@ -388,12 +403,55 @@ namespace HandheldCompanion.Managers
             }
         }
 
+        private static IXbox360Controller CreateTemporaryControllerTarget()
+        {
+            var controller = vClient.CreateXbox360Controller(VendorId, ProductId);
+            controller.Connect();
+
+            lock (temporaryControllerLock)
+                temporaryControllers.Add(controller);
+            return controller;
+        }
+
         private static void SetDSUStatus(bool started)
         {
             if (started)
                 DSUServer.Start();
             else
                 DSUServer.Stop();
+        }
+
+
+        private static bool IsViiperBackedMode(HIDmode mode)
+        {
+            return mode == HIDmode.Xbox360Controller
+                || mode == HIDmode.DualShock4Controller
+                || mode == HIDmode.DualSenseController
+                || mode == HIDmode.SteamDeckController
+                || mode == HIDmode.SteamController
+                || mode == HIDmode.SwitchProController
+                || mode == HIDmode.Free;
+        }
+
+        private static bool CanUseControllerMode(HIDmode mode)
+        {
+            if (!IsViiperBackedMode(mode))
+                return true;
+
+            if (!ManagerFactory.settingsManager.GetBoolean("VIIPEREnabled"))
+            {
+                LogManager.LogInformation("Skipping {0}: VIIPER server is disabled", mode);
+                return false;
+            }
+
+            //if (!ViiperServerManager.IsRunning)
+            //{
+            //    StatusChanged?.Invoke(VirtualManagerStatus.Failed, 1, 1);
+            //    LogManager.LogWarning("Skipping {0}: VIIPER server is not running", mode);
+            //    return false;
+            //}
+
+            return true;
         }
 
         public static void SetControllerMode(HIDmode mode)
@@ -403,74 +461,7 @@ namespace HandheldCompanion.Managers
 
             try
             {
-                // If the requested mode is already active, do nothing
-                if (HIDmode == mode)
-                {
-                    if (HIDstatus == HIDstatus.Connected && (vTarget is not null && vTarget.IsConnected))
-                        return;
-                    else if (HIDstatus == HIDstatus.Disconnected && (vTarget is null || !vTarget.IsConnected))
-                        return;
-                }
-
-                // Disconnect and dispose the current virtual controller if it exists
-                if (vTarget is not null)
-                {
-                    vTarget.Connected -= OnTargetConnected;
-                    vTarget.Disconnected -= OnTargetDisconnected;
-                    vTarget.Vibrated -= OnTargetVibrated;
-                    vTarget.ConnectStatusChanged -= OnTargetConnectStatusChanged;
-                    vTarget.Disconnect();
-                    vTarget.Dispose();
-                    vTarget = null;
-                	NotifyMasterIntervalOverrideChanged();
-                }
-
-                // Sanity-check: if the ViGEm client isn't available, abort
-                if (vClient is null)
-                    return;
-
-                // Create a new target based on the requested mode
-                switch (mode)
-                {
-                    case HIDmode.NoController:
-                        // Nothing to initialize
-                        break;
-
-                    case HIDmode.DualShock4Controller:
-                        vTarget = new DualShock4Target();
-                        break;
-
-                    case HIDmode.Xbox360Controller:
-                        vTarget = new Xbox360Target(VendorId, ProductId);
-                        break;
-
-                    case HIDmode.DInputController:
-                        uint deviceId = VJoyTarget.FindAvailableDeviceId();
-                        vTarget = new VJoyTarget(deviceId);
-                        break;
-                }
-
-                // If target creation failed, log an error (unless it's the NoController case)
-                if (vTarget is null)
-                {
-                    if (mode != HIDmode.NoController)
-                        LogManager.LogError("Failed to initialise virtual controller with HIDmode: {0}", mode);
-                	NotifyMasterIntervalOverrideChanged();
-                    return;
-                }
-
-                // Subscribe to target events
-                vTarget.Connected += OnTargetConnected;
-                vTarget.Disconnected += OnTargetDisconnected;
-                vTarget.Vibrated += OnTargetVibrated;
-                vTarget.ConnectStatusChanged += OnTargetConnectStatusChanged;
-
-                // Update the current mode
-                HIDmode = mode;
-
-                // Notify subscribers about the controller change
-                ControllerSelected?.Invoke(mode);
-            	NotifyMasterIntervalOverrideChanged();
+                SetControllerModeCore(mode);
             }
             catch { }
             finally
@@ -482,6 +473,7 @@ namespace HandheldCompanion.Managers
             SetControllerStatus(HIDstatus);
         }
 
+
         public static void SetControllerStatus(HIDstatus status)
         {
             if (!controllerLock.Wait(3000))
@@ -489,25 +481,7 @@ namespace HandheldCompanion.Managers
 
             try
             {
-                if (vTarget is null)
-                    return;
-
-                bool success = false;
-                switch (status)
-                {
-                    case HIDstatus.Connected:
-                        if (!vTarget.IsConnected)
-                            success = vTarget.Connect();
-                        break;
-                    case HIDstatus.Disconnected:
-                        if (vTarget.IsConnected)
-                            success = vTarget.Disconnect();
-                        break;
-                }
-
-                // Only update the internal status if the operation was successful
-                if (success)
-                    HIDstatus = status;
+                SetControllerStatusCore(status);
             }
             catch { }
             finally
@@ -515,6 +489,113 @@ namespace HandheldCompanion.Managers
                 controllerLock.Release();
             }
         }
+
+        private static void SetControllerModeCore(HIDmode mode)
+        {
+            // If the requested mode is already active, do nothing
+            if (HIDmode == mode)
+            {
+                if (HIDstatus == HIDstatus.Connected && (vTarget is not null && vTarget.IsConnected))
+                    return;
+                else if (HIDstatus == HIDstatus.Disconnected && (vTarget is null || !vTarget.IsConnected))
+                    return;
+            }
+
+            // Disconnect and dispose the current virtual controller if it exists
+            if (vTarget is not null)
+            {
+                vTarget.Connected -= OnTargetConnected;
+                vTarget.Disconnected -= OnTargetDisconnected;
+                vTarget.Vibrated -= OnTargetVibrated;
+                vTarget.StatusChanged -= OnTargetConnectStatusChanged;
+                vTarget.Disconnect();
+                vTarget.Dispose();
+                vTarget = null;
+                NotifyMasterIntervalOverrideChanged();
+            }
+
+            // Sanity-check: if the ViGEm client isn't available, abort
+            if (vClient is null)
+                return;
+
+            // Create a new target based on the requested mode
+            switch (mode)
+            {
+                case HIDmode.NoController:
+                    {
+                        HIDmode = mode;
+                        ControllerSelected?.Invoke(mode);
+                        NotifyMasterIntervalOverrideChanged();
+                        SetControllerStatusCore(HIDstatus);
+                    }
+                    return;
+                case HIDmode.DualShock4Controller:
+                    vTarget = new DualShock4Target();
+                    break;
+
+                case HIDmode.Xbox360Controller:
+                    vTarget = new Xbox360Target(VendorId, ProductId);
+                    break;
+
+                case HIDmode.DualSenseController:
+                    uint deviceId = VJoyTarget.FindAvailableDeviceId();
+                    vTarget = new VJoyTarget(deviceId);
+                    break;
+            }
+
+            // If target creation failed, log an error (unless it's the NoController case)
+            if (vTarget is null)
+            {
+                if (mode != HIDmode.NoController)
+                    LogManager.LogError("Failed to initialise virtual controller with HIDmode: {0}", mode);
+                NotifyMasterIntervalOverrideChanged();
+                return;
+            }
+
+            // Subscribe to target events
+            vTarget.Connected += OnTargetConnected;
+            vTarget.Disconnected += OnTargetDisconnected;
+            vTarget.Vibrated += OnTargetVibrated;
+            vTarget.StatusChanged += OnTargetConnectStatusChanged;
+
+            // Update the current mode
+            HIDmode = mode;
+
+            // Notify subscribers about the controller change
+            ControllerSelected?.Invoke(mode);
+            NotifyMasterIntervalOverrideChanged();
+
+            SetControllerStatusCore(HIDstatus);
+        }
+
+        private static void SetControllerStatusCore(HIDstatus status)
+        {
+            if (vTarget is null)
+            {
+                if (status == HIDstatus.Disconnected)
+                    HIDstatus = status;
+
+                return;
+            }
+
+            bool success = false;
+            switch (status)
+            {
+                case HIDstatus.Connected:
+                    if (!vTarget.IsConnected)
+                        success = vTarget.Connect();
+                    break;
+                case HIDstatus.Disconnected:
+                    if (vTarget.IsConnected)
+                        success = vTarget.Disconnect();
+                    break;
+            }
+
+            // Only update the internal status if the operation was successful
+            if (success)
+                HIDstatus = status;
+        }
+
 
         private static void OnTargetConnectStatusChanged(ViGEmTarget target, VirtualManagerStatus status, int attempt, int maxAttempts)
         {
@@ -536,10 +617,43 @@ namespace HandheldCompanion.Managers
             Vibrated?.Invoke(LargeMotor, SmallMotor);
         }
 
+        /// <summary>
+        /// Sets the system sleep state. When sleeping, UpdateInputs will only update the virtual
+        /// controller if button state has changed, preventing gyro from waking the device.
+        /// </summary>
+        public static void SetSystemSleepState(bool sleeping)
+        {
+            isSystemSleeping = sleeping;
+        }
+
+        /// <summary>
+        /// Compares two axis states with a noise filter threshold for Xbox mode.
+        /// Returns true if axis values differ by more than the noise threshold.
+        /// </summary>
+        private static bool AxisStateHasSignificantChange(AxisState? previous, AxisState current)
+        {
+            if (previous is null)
+                return !current.IsEmpty();
+
+            foreach (AxisFlags axis in AxisState.TrueAxis)
+            {
+                short prevValue = previous[axis];
+                short currValue = current[axis];
+
+                if (Math.Abs(currValue - prevValue) > AxisNoiseThreshold)
+                    return true;
+            }
+
+            return false;
+        }
+
         public static void UpdateInputs(ControllerState controllerState, GamepadMotion gamepadMotion)
         {
             // Skip sending inputs to virtual controller when listening for hotkey inputs
             if (InputsManager.IsListening)
+                return;
+
+            if (isSystemSleeping)
                 return;
 
             vTarget?.UpdateInputs(controllerState, gamepadMotion);

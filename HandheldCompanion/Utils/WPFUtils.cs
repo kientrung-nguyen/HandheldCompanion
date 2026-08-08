@@ -1,4 +1,6 @@
 ﻿using iNKORE.UI.WPF.Modern.Controls;
+using iNKORE.UI.WPF.Modern.Controls.Primitives;
+using System.Collections;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,11 +12,44 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using static HandheldCompanion.WinAPI;
 using Control = System.Windows.Controls.Control;
+using ProgressBar = iNKORE.UI.WPF.Modern.Controls.ProgressBar;
 
 namespace HandheldCompanion.Utils;
 
 public static class WPFUtils
 {
+    public static bool CanTarget(FrameworkElement? control, Window? targetWindow = null, bool includeContentRules = false, bool includeNavigationViewItems = true)
+    {
+        return control is not null
+            && control is not Window
+            && control.IsLoaded
+            && control.IsVisible
+            && control.IsEnabled
+            && control.Focusable
+            && control.Opacity > 0
+            && control.ActualWidth > 0
+            && control.ActualHeight > 0
+            && control is not ProgressBar
+            && control is not ProgressRing
+            && (control is not TextBox textBox || !textBox.IsReadOnly)
+            && (control is not SettingsCard settingsCard || settingsCard.IsClickEnabled)
+            && (!includeContentRules || !IsTransientContainerControl(control))
+            && (!includeContentRules || includeNavigationViewItems || control is not NavigationViewItem)
+            && (!includeContentRules || control is not ItemsControl || control is Selector)
+            && (targetWindow is null || Window.GetWindow(control) == targetWindow);
+    }
+
+    private static bool IsTransientContainerControl(FrameworkElement control)
+    {
+        return control is iNKORE.UI.WPF.Modern.Controls.MessageBox
+            || control is iNKORE.UI.WPF.Modern.Controls.ContentDialog
+            || control is iNKORE.UI.WPF.Modern.Controls.SplitView
+            || control is System.Windows.Controls.ScrollViewer
+            || control.GetType().Name is "TouchScrollViewer"
+            || control is iNKORE.UI.WPF.Modern.Controls.Frame
+            || control is iNKORE.UI.WPF.Modern.Controls.Page;
+    }
+
     public static HwndSource? GetControlHandle(Control control)
     {
         return PresentationSource.FromVisual(control) as HwndSource;
@@ -58,7 +93,7 @@ public static class WPFUtils
     // A function that takes a list of controls and returns the top-left control
     public static Control? GetTopLeftControl<T>(List<Control> controls, List<Type>? typesToIgnore = null) where T : Control
     {
-        controls = controls.Where(c => c is T && c.IsEnabled).ToList();
+        controls = controls.Where(c => c is T && CanTarget(c)).ToList();
 
         if (typesToIgnore is not null)
             controls = controls.Where(c => !typesToIgnore.Contains(c.GetType())).ToList();
@@ -123,22 +158,55 @@ public static class WPFUtils
 
     private static double PrimaryAxisGap(Control source, Control target, Direction direction)
     {
-        var p = target.TranslatePoint(new Point(0, 0), source);
-        double x = Math.Round(p.X);
-        double y = Math.Round(p.Y);
-
-        switch (direction)
+        try
         {
-            case Direction.Left:
-                return Math.Max(0, -(x + target.ActualWidth));
-            case Direction.Right:
-                return Math.Max(0, x - source.ActualWidth);
-            case Direction.Up:
-                return Math.Max(0, -(y + target.ActualHeight));
-            case Direction.Down:
-                return Math.Max(0, y - source.ActualHeight);
-            default:
+            var p = target.TranslatePoint(new Point(0, 0), source);
+            double x = Math.Round(p.X);
+            double y = Math.Round(p.Y);
+
+            switch (direction)
+            {
+                case Direction.Left:
+                    return Math.Max(0, -(x + target.ActualWidth));
+                case Direction.Right:
+                    return Math.Max(0, x - source.ActualWidth);
+                case Direction.Up:
+                    return Math.Max(0, -(y + target.ActualHeight));
+                case Direction.Down:
+                    return Math.Max(0, y - source.ActualHeight);
+                default:
+                    return double.MaxValue;
+            }
+        }
+        catch
+        {
+            // Fallback: use screen coordinates for controls without shared ancestor (e.g., flyouts)
+            try
+            {
+                Point sourceScreenPos = source.PointToScreen(new Point(source.ActualWidth / 2, source.ActualHeight / 2));
+                Point targetScreenPos = target.PointToScreen(new Point(target.ActualWidth / 2, target.ActualHeight / 2));
+
+                double dx = targetScreenPos.X - sourceScreenPos.X;
+                double dy = targetScreenPos.Y - sourceScreenPos.Y;
+
+                switch (direction)
+                {
+                    case Direction.Left:
+                        return Math.Max(0, -dx - target.ActualWidth / 2);
+                    case Direction.Right:
+                        return Math.Max(0, dx - source.ActualWidth / 2);
+                    case Direction.Up:
+                        return Math.Max(0, -dy - target.ActualHeight / 2);
+                    case Direction.Down:
+                        return Math.Max(0, dy - source.ActualHeight / 2);
+                    default:
+                        return double.MaxValue;
+                }
+            }
+            catch
+            {
                 return double.MaxValue;
+            }
         }
     }
 
@@ -154,18 +222,41 @@ public static class WPFUtils
 
     private static double SecondaryAxisCenterOffset(Control source, Control target, Direction direction)
     {
-        var p = target.TranslatePoint(new Point(0, 0), source);
-        double targetCenterX = Math.Round(p.X + (target.ActualWidth / 2));
-        double targetCenterY = Math.Round(p.Y + (target.ActualHeight / 2));
-        double sourceCenterX = Math.Round(source.ActualWidth / 2);
-        double sourceCenterY = Math.Round(source.ActualHeight / 2);
-
-        return direction switch
+        try
         {
-            Direction.Left or Direction.Right => Math.Abs(targetCenterY - sourceCenterY),
-            Direction.Up or Direction.Down => Math.Abs(targetCenterX - sourceCenterX),
-            _ => 0
-        };
+            var p = target.TranslatePoint(new Point(0, 0), source);
+            double targetCenterX = Math.Round(p.X + (target.ActualWidth / 2));
+            double targetCenterY = Math.Round(p.Y + (target.ActualHeight / 2));
+            double sourceCenterX = Math.Round(source.ActualWidth / 2);
+            double sourceCenterY = Math.Round(source.ActualHeight / 2);
+
+            return direction switch
+            {
+                Direction.Left or Direction.Right => Math.Abs(targetCenterY - sourceCenterY),
+                Direction.Up or Direction.Down => Math.Abs(targetCenterX - sourceCenterX),
+                _ => 0
+            };
+        }
+        catch
+        {
+            // Fallback: use screen coordinates for controls without shared ancestor (e.g., flyouts)
+            try
+            {
+                Point sourceScreenCenter = source.PointToScreen(new Point(source.ActualWidth / 2, source.ActualHeight / 2));
+                Point targetScreenCenter = target.PointToScreen(new Point(target.ActualWidth / 2, target.ActualHeight / 2));
+
+                return direction switch
+                {
+                    Direction.Left or Direction.Right => Math.Abs(targetScreenCenter.Y - sourceScreenCenter.Y),
+                    Direction.Up or Direction.Down => Math.Abs(targetScreenCenter.X - sourceScreenCenter.X),
+                    _ => 0
+                };
+            }
+            catch
+            {
+                return double.MaxValue;
+            }
+        }
     }
 
     private static bool IsWithinSecondaryAxisCenterOffsetThreshold(Control source, Control target, Direction direction)
@@ -205,22 +296,53 @@ public static class WPFUtils
     // Returns 0 when the boxes touch or overlap.
     private static double SecondaryAxisGap(Control source, Control target, Direction direction)
     {
-        var p = target.TranslatePoint(new Point(0, 0), source);
-        double x = Math.Round(p.X);
-        double y = Math.Round(p.Y);
-
-        switch (direction)
+        try
         {
-            case Direction.Left:
-            case Direction.Right:
-                // Vertical gap between [0, source.H] and [y, y + target.H]
-                return Math.Max(0, Math.Max(y - source.ActualHeight, -(y + target.ActualHeight)));
-            case Direction.Up:
-            case Direction.Down:
-                // Horizontal gap between [0, source.W] and [x, x + target.W]
-                return Math.Max(0, Math.Max(x - source.ActualWidth, -(x + target.ActualWidth)));
-            default:
+            var p = target.TranslatePoint(new Point(0, 0), source);
+            double x = Math.Round(p.X);
+            double y = Math.Round(p.Y);
+
+            switch (direction)
+            {
+                case Direction.Left:
+                case Direction.Right:
+                    // Vertical gap between [0, source.H] and [y, y + target.H]
+                    return Math.Max(0, Math.Max(y - source.ActualHeight, -(y + target.ActualHeight)));
+                case Direction.Up:
+                case Direction.Down:
+                    // Horizontal gap between [0, source.W] and [x, x + target.W]
+                    return Math.Max(0, Math.Max(x - source.ActualWidth, -(x + target.ActualWidth)));
+                default:
+                    return double.MaxValue;
+            }
+        }
+        catch
+        {
+            // Fallback: use screen coordinates for controls without shared ancestor (e.g., flyouts)
+            try
+            {
+                Point sourceScreenPos = source.PointToScreen(new Point(0, 0));
+                Point targetScreenPos = target.PointToScreen(new Point(0, 0));
+
+                double dy = targetScreenPos.Y - sourceScreenPos.Y;
+                double dx = targetScreenPos.X - sourceScreenPos.X;
+
+                switch (direction)
+                {
+                    case Direction.Left:
+                    case Direction.Right:
+                        return Math.Max(0, Math.Max(dy - source.ActualHeight, -(dy + target.ActualHeight)));
+                    case Direction.Up:
+                    case Direction.Down:
+                        return Math.Max(0, Math.Max(dx - source.ActualWidth, -(dx + target.ActualWidth)));
+                    default:
+                        return double.MaxValue;
+                }
+            }
+            catch
+            {
                 return double.MaxValue;
+            }
         }
     }
 
@@ -240,7 +362,7 @@ public static class WPFUtils
     private static List<Control> GetControlInDirection<T>(Control source, List<Control> controls, Direction direction, List<Type>? typesToIgnore = null, bool strictAxis = false) where T : Control
     {
         // Filter list based on requested type
-        controls = controls.Where(c => c is T && c.IsEnabled && c.Opacity != 0).ToList();
+        controls = controls.Where(c => c is T && CanTarget(c)).ToList();
 
         // Filter based on exclusion type list
         if (typesToIgnore is not null)
@@ -267,7 +389,7 @@ public static class WPFUtils
 
         foreach (Control control in controls)
         {
-            if (control == source || control is not T || !control.IsEnabled || control.Opacity == 0)
+            if (control == source || control is not T || !CanTarget(control))
                 continue;
 
             if (typesToIgnore is not null && typesToIgnore.Contains(control.GetType()))
@@ -397,9 +519,33 @@ public static class WPFUtils
 
     private static Rect GetBoundsRelativeTo(FrameworkElement ctrl, Visual relativeTo)
     {
-        return ctrl
-            .TransformToVisual(relativeTo)
-            .TransformBounds(new Rect(ctrl.RenderSize));
+        try
+        {
+            if (relativeTo is FrameworkElement relativeToElement)
+            {
+                // Get screen position of the control
+                Point ctrlScreenPos = ctrl.PointToScreen(new Point(0, 0));
+
+                // Get screen position of the reference element
+                Point refScreenPos = relativeToElement.PointToScreen(new Point(0, 0));
+
+                // Calculate offset in screen coordinates
+                double offsetX = ctrlScreenPos.X - refScreenPos.X;
+                double offsetY = ctrlScreenPos.Y - refScreenPos.Y;
+
+                // Create a rect in the reference element's coordinate space
+                return new Rect(offsetX, offsetY, ctrl.ActualWidth, ctrl.ActualHeight);
+            }
+        }
+        catch
+        {
+            try
+            {
+                return ctrl.TransformToVisual(relativeTo).TransformBounds(new Rect(ctrl.RenderSize));
+            }
+            catch { }
+        }
+        return Rect.Empty;
     }
 
     // core point-to-point measurer
@@ -481,89 +627,87 @@ public static class WPFUtils
 
     public static List<FrameworkElement> FindChildren(DependencyObject startNode)
     {
-        int count = VisualTreeHelper.GetChildrenCount(startNode);
         List<FrameworkElement> childs = [];
+        Stack<DependencyObject> nodes = new();
+        nodes.Push(startNode);
 
-        for (int i = 0; i < count; i++)
+        while (nodes.Count > 0)
         {
-            DependencyObject current = VisualTreeHelper.GetChild(startNode, i);
+            DependencyObject current = nodes.Pop();
+            int count = VisualTreeHelper.GetChildrenCount(current);
 
-            string currentType = current.GetType().Name;
-            switch (currentType)
+            for (int i = count - 1; i >= 0; i--)
             {
-                case "TextBox":
-                    {
-                        TextBox textBox = (TextBox)current;
+                DependencyObject child = VisualTreeHelper.GetChild(current, i);
+                nodes.Push(child);
 
-                        // skip if read only
-                        if (textBox.IsReadOnly)
-                            break;
+                if (child is TextBox textBox)
+                {
+                    // skip if read only
+                    if (textBox.IsReadOnly)
+                        continue;
 
-                        goto case "Slider";
-                    }
+                    if (CanTarget(textBox))
+                        childs.Add(textBox);
 
-                case "RepeatButton":
-                    {
-                        RepeatButton repeatButton = (RepeatButton)current;
+                    continue;
+                }
 
-                        // skip if repeat button is part of scrollbar
-                        if (repeatButton.Name.StartsWith("PART_"))
-                            break;
+                if (child is RepeatButton repeatButton)
+                {
+                    // skip if repeat button is part of scrollbar
+                    if (repeatButton.Name.StartsWith("PART_"))
+                        continue;
 
-                        goto case "Slider";
-                    }
+                    if (CanTarget(repeatButton))
+                        childs.Add(repeatButton);
 
-                case "Button":
-                    {
-                        Button button = (Button)current;
-                        if (button.Name.Equals("NavigationViewBackButton"))
-                            break;
-                        else if (button.Name.Equals("TogglePaneButton"))
-                            break;
-                        else
-                            goto case "Slider";
-                    }
+                    continue;
+                }
 
-                case "SettingsCard":
-                    {
-                        SettingsCard settingsCard = (SettingsCard)current;
+                if (child is Button button)
+                {
+                    if (button.Name.Equals("NavigationViewBackButton"))
+                        continue;
+                    else if (button.Name.Equals("TogglePaneButton"))
+                        continue;
+                    else if (CanTarget(button))
+                        childs.Add(button);
 
-                        // skip if not clickable
-                        if (!settingsCard.IsClickEnabled)
-                            break;
+                    continue;
+                }
 
-                        goto case "Slider";
-                    }
+                if (child is SettingsCard settingsCard)
+                {
+                    // skip if not clickable
+                    if (!settingsCard.IsClickEnabled)
+                        continue;
 
-                case "DropDownButton":
-                    goto case "Slider";
+                    if (CanTarget(settingsCard))
+                        childs.Add(settingsCard);
 
-                case "MenuItem":
-                    goto case "Slider";
+                    continue;
+                }
 
-                case "Slider":
-                case "ToggleSwitch":
-                case "NavigationViewItem":
-                case "ComboBox":
-                case "ComboBoxItem":
-                case "ListView":
-                case "ListViewItem":
-                case "AppBarButton":
-                case "ToggleButton":
-                case "CheckBox":
-                case "RadioButton":
-                case "HyperlinkButton":
-                    {
-                        FrameworkElement asType = (FrameworkElement)current;
-                        if (asType.IsEnabled && asType.Focusable && asType.IsVisible)
-                            childs.Add(asType);
-                    }
-                    break;
-            }
-
-            foreach (var item in FindChildren(current))
-            {
-                childs.Add(item);
+                if (child is Slider
+                    or ToggleSwitch
+                    or NavigationViewItem
+                    or ComboBox
+                    or ComboBoxItem
+                    or System.Windows.Controls.ListView
+                    or System.Windows.Controls.ListViewItem
+                    or AppBarButton
+                    or ToggleButton
+                    or CheckBox
+                    or RadioButton
+                    or ContentDialog
+                    or HyperlinkButton
+                    or DropDownButton
+                    or MenuItem)
+                {
+                    if (child is FrameworkElement asType && CanTarget(asType))
+                        childs.Add(asType);
+                }
             }
         }
 
@@ -726,7 +870,27 @@ public static class WPFUtils
     // Visual (not logical) traversal is required because MenuFlyout items live
     // inside a MenuPopup in the visual tree whose logical chain does not include Popup.
     public static List<T> GetElementsFromPopup<T>(List<FrameworkElement> elements) where T : FrameworkElement
-        => GetElementsByAncestor<T>(elements, p => p is Popup or ContentDialog);
+        => GetElementsByAncestor<T>(elements, p => p is Popup or ContentDialog or Flyout);
+
+    // Returns elements that are children of a Flyout's content.
+    // Used when currentFlyout is set to get only the controls inside the flyout.
+    public static List<T> GetElementsFromFlyout<T>(FlyoutBase? flyout) where T : FrameworkElement
+    {
+        List<T> result = [];
+
+        if (flyout is Flyout standardFlyout && standardFlyout.Content is DependencyObject contentRoot)
+        {
+            // Get all descendants of the flyout's content
+            List<FrameworkElement> contentChildren = FindChildren(contentRoot);
+            foreach (FrameworkElement child in contentChildren)
+            {
+                if (child is T typed)
+                    result.Add(typed);
+            }
+        }
+
+        return result;
+    }
 
     // Returns elements whose visual parent chain reaches an AdornerLayer before a
     // Window.  ContentDialog (iNKORE) is hosted in the window's adorner overlay: its

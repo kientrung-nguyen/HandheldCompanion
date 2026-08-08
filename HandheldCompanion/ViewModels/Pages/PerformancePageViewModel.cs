@@ -132,8 +132,8 @@ namespace HandheldCompanion.ViewModels
         }
 
         public bool SupportsTDP => PerformanceManager.GetProcessor()?.CanChangeTDP ?? false;
-
         public bool SupportsGPUFreq => PerformanceManager.GetProcessor()?.CanChangeGPU ?? false;
+
         public bool SupportsFramerateLimiter => IsRunningRTSS;
 
         public bool PerformanceManagerEnabled => ManagerFactory.settingsManager.GetBoolean("PerformanceManagerEnabled");
@@ -394,6 +394,8 @@ namespace HandheldCompanion.ViewModels
                 return desktopScreen.GetCurrentFrequency();
             }
         }
+
+        public int FrameLimitMinimum => 10;
 
         private bool _isCustomFrameLimitSelected;
         public bool IsCustomFrameLimitSelected
@@ -777,11 +779,40 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        private string _createProfileName = string.Empty;
+        public string CreateProfileName
+        {
+            get => _createProfileName;
+            set
+            {
+                if (value != _createProfileName)
+                {
+                    _createProfileName = value;
+                    OnPropertyChanged(nameof(CreateProfileName));
+                }
+            }
+        }
+
+        private bool _copyDefaultProfileSettings = false;
+        public bool CopyDefaultProfileSettings
+        {
+            get => _copyDefaultProfileSettings;
+            set
+            {
+                if (value != _copyDefaultProfileSettings)
+                {
+                    _copyDefaultProfileSettings = value;
+                    OnPropertyChanged(nameof(CopyDefaultProfileSettings));
+                }
+            }
+        }
+
         private ObservableCollection<ProfilesPickerViewModel> _profilePickerItems = [];
         public ObservableCollection<ProfilesPickerViewModel> ProfilePickerItems => _profilePickerItems;
         public ICommand OpenModifyDialogCommand { get; private set; } = new DelegateCommand(() => { });
         public ICommand ConfirmModifyCommand { get; private set; } = new DelegateCommand(() => { });
         public ICommand CreatePresetCommand { get; private set; } = new DelegateCommand(() => { });
+        public ICommand ConfirmCreateProfileCommand { get; private set; } = new DelegateCommand(() => { });
         public ICommand FanPresetSilentCommand { get; private set; } = new DelegateCommand(() => { });
         public ICommand FanPresetPerformanceCommand { get; private set; } = new DelegateCommand(() => { });
         public ICommand FanPresetTurboCommand { get; private set; } = new DelegateCommand(() => { });
@@ -807,26 +838,66 @@ namespace HandheldCompanion.ViewModels
         /// </summary>
         public void SetUpdatingFanCurveUI(bool value) => _updatingFanCurveUI = value;
 
-        private static HashSet<string> _skipPropertyChangedUpdate =
+        /// <summary>
+        /// Properties that should trigger FanCurveUpdateRequested event on MainPage.
+        /// These affect the fan curve chart visualization (axis labels, point selection, mode).
+        /// </summary>
+        private static HashSet<string> _fanCurveUIProperties =
         [
-            nameof(CpuTempC),
+            nameof(FanMode),
             nameof(CpuTempX),
+            nameof(CpuTempC),
             nameof(XPointer),
             nameof(YPointer),
+        ];
+
+        /// <summary>
+        /// Properties that should NOT trigger SubmitSelectedPreset() (preset persistence).
+        /// Includes: form fields, device capabilities, UI state, and fan curve UI properties.
+        /// </summary>
+        private static HashSet<string> _skipPropertyChangedUpdate =
+        [
+            // Form fields specific to create/modify dialogs
+            nameof(ModifyPresetName),
+            nameof(ModifyPresetDescription),
+            nameof(CopyDefaultProfileSettings),
+
+            // TDP configuration
+            nameof(AutoTDPMaximum),
+            nameof(ConfigurableTDPOverrideDown),
+            nameof(ConfigurableTDPOverrideUp),
+            nameof(SupportsTDP),
+
+            // UI state (display-only or indirect updates)
             nameof(SelectedPresetPicker),
             nameof(ProfilePickerItems),
+            nameof(HasWarning),
+
+            // Device capabilities (read-only)
             nameof(SupportsGPUFreq),
             nameof(SupportsIntelEnduranceGaming),
             nameof(SupportsAutoTDP),
             nameof(SupportsFramerateLimiter),
             nameof(IsRunningRTSS),
+            nameof(PerformanceManagerEnabled),
+
+            // Framerate limiter UI state
             nameof(FramerateLimits),
             nameof(SelectedFrameLimit),
             nameof(IsCustomFrameLimitSelected),
             nameof(CustomFrameLimitValue),
             nameof(FrameLimitMaximum),
-            nameof(HasWarning),
-            nameof(PerformanceManagerEnabled),
+
+            // Fan curve UI properties (handled separately for event notification)
+            nameof(FanMode),
+            nameof(CpuTempX),
+            nameof(CpuTempC),
+            nameof(XPointer),
+            nameof(YPointer),
+
+            "CreateProfileName",
+
+            // Bulk refresh trigger
             string.Empty,
         ];
 
@@ -847,14 +918,6 @@ namespace HandheldCompanion.ViewModels
 
             #region General Setup
 
-            // manage events
-            //PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
-
-            if (PerformanceManager.IsInitialized && PerformanceManager.GetProcessor() is Processor processor)
-                PerformanceManager_Initialized(processor.CanChangeTDP, processor.CanChangeGPU);
-            else
-                PerformanceManager.Initialized += PerformanceManager_Initialized;
-
             // raise events
             switch (ManagerFactory.powerProfileManager.Status)
             {
@@ -867,6 +930,7 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            // raise events
             switch (ManagerFactory.settingsManager.Status)
             {
                 default:
@@ -878,6 +942,7 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            // raise events
             switch (ManagerFactory.multimediaManager.Status)
             {
                 default:
@@ -889,6 +954,7 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            // raise events
             switch (ManagerFactory.gpuManager.Status)
             {
                 default:
@@ -900,6 +966,7 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            // raise events
             switch (ManagerFactory.platformManager.Status)
             {
                 default:
@@ -911,53 +978,39 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            // manage events
+            PerformanceManager.Initialized += PerformanceManager_Initialized;
+
+            // raise events
+            if (PerformanceManager.IsInitialized && PerformanceManager.GetProcessor() is Processor processor)
+                PerformanceManager_Initialized(processor.CanChangeTDP, processor.CanChangeGPU);
+
             PropertyChanged += (sender, e) =>
             {
                 if (SelectedPreset is null || SelectedPreset.Name is null)
                     return;
 
-                // skip PropertyChanged updates for specific properties
-                switch (e.PropertyName)
+                // Handle fan curve UI updates on MainPage for relevant property changes
+                if (IsMainPage && e.PropertyName is not null && _fanCurveUIProperties.Contains(e.PropertyName))
                 {
-                    case "ModifyPresetName":
-                    case "ModifyPresetDescription":
-                    case "AutoTDPMaximum":
-                    case "ConfigurableTDPOverride":
-                    case "ConfigurableTDPOverrideDown":
-                    case "ConfigurableTDPOverrideUp":
-                    case "SupportsTDP":
-                        return;
+                    FanCurveUpdateRequested?.Invoke(SelectedPreset.FanProfile.fanSpeeds);
+                    return;
                 }
 
-                if (IsMainPage)
-                {
-                    switch (e.PropertyName)
-                    {
-                        case "":
-                            FanCurveUpdateRequested?.Invoke(SelectedPreset.FanProfile.fanSpeeds);
-                            break;
-                    }
-                }
-
-                // No need to update 
+                // Skip properties that don't need preset persistence
                 if (e.PropertyName is not null && _skipPropertyChangedUpdate.Contains(e.PropertyName))
                     return;
 
-                // trigger power profile update but don't freeze UI
+                // Trigger power profile update but don't freeze UI
                 // todo: implement proper debounce
                 SubmitSelectedPreset();
             };
 
             CreatePresetCommand = new DelegateCommand(() =>
             {
-                string profileName = ManagerFactory.powerProfileManager.GetProfileName(Resources.PowerProfileManualName);
-
-                PowerProfile powerProfile = new(profileName, Resources.PowerProfileManualDescription)
-                {
-                    TDPOverrideValues = IDevice.GetCurrent().nTDP
-                };
-
-                ManagerFactory.powerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
+                // Reset form state with generated profile name
+                CreateProfileName = ManagerFactory.powerProfileManager.GetProfileName(Resources.PowerProfileManualName);
+                CopyDefaultProfileSettings = false;
             });
 
             DeletePresetCommand = new DelegateCommand(async () =>
@@ -980,6 +1033,48 @@ namespace HandheldCompanion.ViewModels
                         ManagerFactory.powerProfileManager.DeleteProfile(SelectedPreset);
                         break;
                 }
+            });
+
+            ConfirmCreateProfileCommand = new DelegateCommand(() =>
+            {
+                if (string.IsNullOrWhiteSpace(CreateProfileName))
+                {
+                    // Generate default name if not provided
+                    CreateProfileName = ManagerFactory.powerProfileManager.GetProfileName(Resources.PowerProfileManualName);
+                }
+
+                PowerProfile powerProfile;
+
+                if (CopyDefaultProfileSettings)
+                {
+                    // Clone the default profile
+                    PowerProfile defaultProfile = ManagerFactory.powerProfileManager.GetDefault();
+                    powerProfile = ManagerFactory.powerProfileManager.CloneProfile(defaultProfile);
+                    powerProfile.Name = CreateProfileName;
+                    powerProfile.Description = Resources.PowerProfileManualDescription;
+                    // Generate new GUID for the cloned profile
+                    powerProfile.Guid = Guid.NewGuid();
+                    powerProfile.Default = false;
+                }
+                else
+                {
+                    // Create a new profile with default values
+                    powerProfile = new(CreateProfileName, Resources.PowerProfileManualDescription)
+                    {
+                        TDPOverrideValues = new[]
+                        {
+                            IDevice.GetCurrent().nTDP[0],
+                            IDevice.GetCurrent().nTDP[1],
+                            IDevice.GetCurrent().nTDP[2]
+                        }
+                    };
+                }
+
+                ManagerFactory.powerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
+
+                // Reset form state
+                CreateProfileName = string.Empty;
+                CopyDefaultProfileSettings = false;
             });
 
             #endregion
@@ -1256,7 +1351,7 @@ namespace HandheldCompanion.ViewModels
 
         #region Events
 
-        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             if (value is null)
                 return;
@@ -1302,6 +1397,9 @@ namespace HandheldCompanion.ViewModels
 
         private void PerformanceManager_Initialized(bool CanChangeTDP, bool CanChangeGPU)
         {
+            // manage events
+            //PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
+
             OnPropertyChanged(nameof(SupportsTDP));
             OnPropertyChanged(nameof(SupportsGPUFreq));
         }

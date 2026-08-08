@@ -139,7 +139,7 @@ public class MultimediaManager : IManager
         MicrophoneVolumeNotification?.Invoke(data.MasterVolume * 100f, data.Muted);
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         // do something
     }
@@ -200,6 +200,7 @@ public class MultimediaManager : IManager
     public static void SetDisplayTopology(bool externalOnly)
     {
         string argument = externalOnly ? "/external" : "/internal";
+        LogManager.LogInformation("Switching display topology: DisplaySwitch.exe {0}", argument);
         try
         {
             Process.Start(new ProcessStartInfo("DisplaySwitch.exe", argument)
@@ -391,8 +392,6 @@ public class MultimediaManager : IManager
                 if (string.IsNullOrEmpty(screen.DeviceName))
                     continue;
 
-                LogManager.LogInformation($"Screen {screen}");
-
                 var display = Display
                     .GetDisplays()
                     .FirstOrDefault(d => screen.DeviceName.Equals(d.ScreenName, StringComparison.OrdinalIgnoreCase));
@@ -414,13 +413,16 @@ public class MultimediaManager : IManager
                         resolution = new ScreenResolution(mode.dmPelsWidth, mode.dmPelsHeight, mode.dmBitsPerPel);
                         desktopScreen.screenResolutions.Add(resolution);
                     }
-                    else if (mode.dmBitsPerPel > resolution.BitsPerPel)
+                    else
                     {
-                        resolution.BitsPerPel = mode.dmBitsPerPel;
+                        if (mode.dmBitsPerPel > resolution.BitsPerPel)
+                        {
+                            resolution.BitsPerPel = mode.dmBitsPerPel;
+                        }
                     }
 
-                    if (mode.dmDisplayFrequency > 1 && !resolution.Frequencies.ContainsKey(mode.dmDisplayFrequency))
-                        resolution.Frequencies.Add(mode.dmDisplayFrequency, mode.dmDisplayFrequency);
+                    if (mode.dmDisplayFrequency > 1)
+                        resolution.Frequencies.TryAdd(mode.dmDisplayFrequency, mode.dmDisplayFrequency);
                 }
 
                 // Get current resolution info
@@ -625,9 +627,36 @@ public class MultimediaManager : IManager
         if (Status != ManagerStatus.Initialized)
             return false;
 
+        // Get the primary screen's device name
+        string? deviceName = PrimaryDesktop?.screen?.DeviceName;
+        if (string.IsNullOrEmpty(deviceName))
+            return false;
+
+        // Validate that the frequency is actually available for this resolution
+        ScreenResolution? targetResolution = PrimaryDesktop?.screenResolutions
+            .FirstOrDefault(r => r.Width == width && r.Height == height);
+
+        if (targetResolution != null && !targetResolution.Frequencies.ContainsKey(displayFrequency))
+        {
+            // Frequency not in enumerated list - try the closest available frequency
+            if (targetResolution.Frequencies.Any())
+            {
+                displayFrequency = targetResolution.Frequencies.Keys
+                    .OrderBy(f => Math.Abs(f - displayFrequency))
+                    .ThenByDescending(f => f) // Prefer higher if equal distance
+                    .First();
+            }
+            else
+            {
+                // No frequencies available for this resolution
+                return false;
+            }
+        }
+
         DisplayDevice dm = new DisplayDevice
         {
             dmSize = (short)Marshal.SizeOf(typeof(DisplayDevice)),
+            dmDeviceName = deviceName,
             dmPelsWidth = width,
             dmPelsHeight = height,
             dmDisplayFrequency = displayFrequency,

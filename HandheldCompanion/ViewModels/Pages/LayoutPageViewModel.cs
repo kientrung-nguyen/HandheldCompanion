@@ -21,9 +21,6 @@ namespace HandheldCompanion.ViewModels
             // Enable thread-safe access to the collection
             BindingOperations.EnableCollectionSynchronization(layoutList, _collectionLock);
 
-            // manage events
-            VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
-
             LayoutCollectionView = new ListCollectionView(layoutList);
             LayoutCollectionView.GroupDescriptions.Add(new PropertyGroupDescription("Header"));
 
@@ -39,6 +36,7 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            // raise events
             switch (ManagerFactory.settingsManager.Status)
             {
                 default:
@@ -50,10 +48,24 @@ namespace HandheldCompanion.ViewModels
                     break;
             }
 
+            // manage events
             ControllerManager.Initialized += ControllerManager_Initialized;
+            VirtualManager.Initialized += VirtualManager_Initialized;
 
+            // raise events
             if (ControllerManager.IsInitialized)
                 ControllerManager_Initialized();
+            if (VirtualManager.IsInitialized)
+                VirtualManager_Initialized();
+        }
+
+        private void VirtualManager_Initialized()
+        {
+            // manage events
+            VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+
+            // raise events
+            VirtualManager_ControllerSelected(VirtualManager.HIDmode);
         }
 
         private void ControllerManager_Initialized()
@@ -61,6 +73,7 @@ namespace HandheldCompanion.ViewModels
             // manage events
             ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
 
+            // raise events
             if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController controller)
                 ControllerManager_ControllerSelected(controller);
         }
@@ -75,11 +88,11 @@ namespace HandheldCompanion.ViewModels
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
             // raise events
-            SettingsManager_SettingValueChanged("LayoutFilterOnDevice", ManagerFactory.settingsManager.GetString("LayoutFilterOnDevice"), false);
+            SettingsManager_SettingValueChanged("LayoutFilterOnDevice", ManagerFactory.settingsManager.GetString("LayoutFilterOnDevice"), false, false);
             RefreshLayoutList();
         }
 
-        private void SettingsManager_SettingValueChanged(string? name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string? name, object? value, bool temporary, bool initializing)
         {
             switch (name)
             {
@@ -96,21 +109,81 @@ namespace HandheldCompanion.ViewModels
                 switch (VirtualManager.HIDmode)
                 {
                     default:
-                    case HIDmode.DInputController:
                     case HIDmode.Xbox360Controller:
                         return LibraryResources.Xbox360Big;
-                    //case HIDmode.SwitchProController:
-                    //    return LibraryResources.SwitchProBig;
-                    //case HIDmode.SteamController:
-                    //    return LibraryResources.SteamControllerBig;
+                    case HIDmode.SwitchProController:
+                        return LibraryResources.SwitchProBig;
+                    case HIDmode.SteamController:
+                        return LibraryResources.SteamControllerBig;
                     case HIDmode.DualShock4Controller:
                         return LibraryResources.DualShock4Big;
-                        //case HIDmode.DualSenseController:
-                        //    return LibraryResources.DualSenseBig;
-                        //case HIDmode.SteamDeckController:
-                        //    return LibraryResources.SteamDeckBig;
+                    case HIDmode.DualSenseController:
+                        return LibraryResources.DualSenseBig;
+                    case HIDmode.SteamDeckController:
+                        return LibraryResources.SteamDeckBig;
                 }
             }
+        }
+
+        private string _layoutName = string.Empty;
+        public string LayoutName
+        {
+            get => _layoutName;
+            set
+            {
+                if (_layoutName != value)
+                {
+                    _layoutName = value;
+                    OnPropertyChanged(nameof(LayoutName));
+                }
+            }
+        }
+
+        private string _layoutDescription = string.Empty;
+        public string LayoutDescription
+        {
+            get => _layoutDescription;
+            set
+            {
+                if (_layoutDescription != value)
+                {
+                    _layoutDescription = value;
+                    OnPropertyChanged(nameof(LayoutDescription));
+                }
+            }
+        }
+
+        private string _layoutAuthor = string.Empty;
+        public string LayoutAuthor
+        {
+            get => _layoutAuthor;
+            set
+            {
+                if (_layoutAuthor != value)
+                {
+                    _layoutAuthor = value;
+                    OnPropertyChanged(nameof(LayoutAuthor));
+                }
+            }
+        }
+
+        // Export-specific properties map to the layout properties
+        public string ExportTitle
+        {
+            get => LayoutName;
+            set => LayoutName = value;
+        }
+
+        public string ExportDescription
+        {
+            get => LayoutDescription;
+            set => LayoutDescription = value;
+        }
+
+        public string ExportAuthor
+        {
+            get => LayoutAuthor;
+            set => LayoutAuthor = value;
         }
 
         private void VirtualManager_ControllerSelected(HIDmode mode)
@@ -167,9 +240,9 @@ namespace HandheldCompanion.ViewModels
             {
                 foreach (LayoutTemplateViewModel layoutTemplate in layoutList)
                 {
-                    if (layoutTemplate.ControllerType is not null && FilterOnDevice)
+                    if (layoutTemplate.DeviceName is not null && FilterOnDevice)
                     {
-                        if (layoutTemplate.ControllerType != controller?.GetType())
+                        if (layoutTemplate.DeviceName != controller?.GetType().Name)
                         {
                             layoutTemplate.Visibility = Visibility.Collapsed;
                             continue;
@@ -195,7 +268,9 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.layoutManager.Initialized -= LayoutManager_Initialized;
                 ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
                 ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+                ControllerManager.Initialized -= ControllerManager_Initialized;
                 ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
+                VirtualManager.Initialized -= VirtualManager_Initialized;
                 VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
             }
 

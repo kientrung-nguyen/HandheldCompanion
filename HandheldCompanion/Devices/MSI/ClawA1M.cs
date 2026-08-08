@@ -148,18 +148,21 @@ public class ClawA1M : IDevice
 
     private static readonly DeviceVersion[] deviceVersions =
     {
-        // Claw 1
-        new DeviceVersion() { Firmware = 0x163, RGB = [0x01, 0xFA], M1 = [0x00, 0x7A], M2 = [0x01, 0x1F] },
-        new DeviceVersion() { Firmware = 0x166, RGB = [0x02, 0x4A], M1 = [0x00, 0xBA], M2 = [0x01, 0x63] },
-        new DeviceVersion() { Firmware = 0x167, RGB = [0x02, 0x4A], M1 = [0x00, 0xBA], M2 = [0x01, 0x63] },
+        // MS-1T41
+        new DeviceVersion() { Firmware = 0x163, RGB = [0x01, 0xFA], M1DInput = [0x00, 0x7A], M2DInput = [0x01, 0x1F], M1XInput = [0x00, 0x7B], M2XInput = [0x01, 0x20] },
+        new DeviceVersion() { Firmware = 0x166, RGB = [0x02, 0x4A], M1DInput = [0x00, 0xBA], M2DInput = [0x01, 0x63], M1XInput = [0x00, 0xBB], M2XInput = [0x01, 0x64] },
+        new DeviceVersion() { Firmware = 0x167, RGB = [0x02, 0x4A], M1DInput = [0x00, 0xBA], M2DInput = [0x01, 0x63], M1XInput = [0x00, 0xBB], M2XInput = [0x01, 0x64] },
 
-        // Claw 8
-        new DeviceVersion() { Firmware = 0x211, RGB = [0x01, 0xFA], M1 = [0x00, 0x7A], M2 = [0x01, 0x1F] },
-        new DeviceVersion() { Firmware = 0x217, RGB = [0x02, 0x4A], M1 = [0x00, 0xBA], M2 = [0x01, 0x63] },
-        new DeviceVersion() { Firmware = 0x219, RGB = [0x02, 0x4A], M1 = [0x00, 0xBA], M2 = [0x01, 0x63] },
+        // MS-1T42, MS-1T52
+        new DeviceVersion() { Firmware = 0x211, RGB = [0x01, 0xFA], M1DInput = [0x00, 0x7A], M2DInput = [0x01, 0x1F], M1XInput = [0x00, 0x7B], M2XInput = [0x01, 0x20] },
+        new DeviceVersion() { Firmware = 0x217, RGB = [0x02, 0x4A], M1DInput = [0x00, 0xBA], M2DInput = [0x01, 0x63], M1XInput = [0x00, 0xBB], M2XInput = [0x01, 0x64] },
+        new DeviceVersion() { Firmware = 0x219, RGB = [0x02, 0x4A], M1DInput = [0x00, 0xBA], M2DInput = [0x01, 0x63], M1XInput = [0x00, 0xBB], M2XInput = [0x01, 0x64] },
 
-        // Claw A8
-        new DeviceVersion() { Firmware = 0x308, RGB = [0x02, 0x4A], M1 = [0x00, 0xBA], M2 = [0x01, 0x63] },
+        // MS-1T8K
+        new DeviceVersion() { Firmware = 0x308, RGB = [0x02, 0x4A], M1DInput = [0x00, 0xBA], M2DInput = [0x01, 0x63], M1XInput = [0x00, 0xBB], M2XInput = [0x01, 0x64] },
+        
+        // MS-1T91
+        new DeviceVersion() { Firmware = 0x411, RGB = [0x02, 0x4A], M1DInput = [0x00, 0xBA], M2DInput = [0x01, 0x63], M1XInput = [0x00, 0xBB], M2XInput = [0x01, 0x64] },
     };
 
     protected int Firmware;
@@ -186,26 +189,32 @@ public class ClawA1M : IDevice
         GfxClock = new double[] { 100, 2250 };
         CpuClock = 4800;
 
-        GyrometerAxis = new Vector3(1.0f, 1.0f, -1.0f);
-        GyrometerAxisSwap = new SortedDictionary<char, char>
+        GyroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' }
+            Axis = new Vector3(1.0f, 1.0f, -1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' }
+            }
         };
 
-        AccelerometerAxis = new Vector3(-1.0f, -1.0f, 1.0f);
-        AccelerometerAxisSwap = new SortedDictionary<char, char>
+        AcceleroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' }
+            Axis = new Vector3(-1.0f, -1.0f, 1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' }
+            }
         };
 
         // device specific capacities
         Capabilities |= DeviceCapabilities.FanControl;
         Capabilities |= DeviceCapabilities.DynamicLighting;
-        Capabilities |= DeviceCapabilities.DynamicLightingBrightness;
+
         Capabilities |= DeviceCapabilities.FanOverride;
         Capabilities |= DeviceCapabilities.OEMCPU;
         Capabilities |= DeviceCapabilities.BatteryChargeLimit;
@@ -257,8 +266,6 @@ public class ClawA1M : IDevice
             IntelEnduranceGamingPreset = (int)ctl_3d_endurance_gaming_mode_t.PERFORMANCE // GPU Auto TDP is Off, FPS depends on the game, and it can be up to 120
         });
 
-        KeyPressDelay = 500;
-
         OEMChords.Add(new KeyboardChord(name: "CLAW", button: ButtonFlags.OEM1));
         OEMChords.Add(new KeyboardChord(name: "QS", button: ButtonFlags.OEM2));
         OEMChords.Add(new KeyboardChord(name: "M1", button: ButtonFlags.OEM3));
@@ -285,7 +292,13 @@ public class ClawA1M : IDevice
         if (!success)
             return false;
 
-        LogManager.LogInformation("Device Firmware: {0:X4}, {1}", Firmware, IsSupported ? "Supported" : "Unsupported");
+        if (hidDevices.TryGetValue(INPUT_HID_ID, out var xinputDevice))
+        {
+            // update firmware
+            Firmware = xinputDevice.Attributes.Version;
+
+            LogManager.LogInformation("Device Firmware: {0:X4}, {1}", Firmware, IsSupported ? "Supported" : "Unsupported");
+        }
 
         SetShiftMode(ShiftModeCalcType.Deactive);
 
@@ -319,9 +332,9 @@ public class ClawA1M : IDevice
         if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
         {
             Thread.Sleep(300);
-            device.Write(GetM12(true), 0, 64);
+            device.Write(GetM12(true, gamepadMode == GamepadMode.XInput), 0, 64);
             Thread.Sleep(500);
-            device.Write(GetM12(false), 0, 64);
+            device.Write(GetM12(false, gamepadMode == GamepadMode.XInput), 0, 64);
             Thread.Sleep(500);
             SyncToROM();
             Thread.Sleep(500);
@@ -345,18 +358,7 @@ public class ClawA1M : IDevice
         return true;
     }
 
-    public override void OpenEvents()
-    {
-        base.OpenEvents();
-
-        // manage events
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-
-        Device_Inserted();
-    }
-
-    protected override void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+    public override void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
     {
         byte[] fanTable = new byte[8];
         if (profile.FanProfile.fanMode == FanMode.Software)
@@ -403,18 +405,6 @@ public class ClawA1M : IDevice
         }
     }
 
-    private void ControllerManager_ControllerPlugged(Controllers.IController Controller, bool WasPowerCycling)
-    {
-        if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-            Device_Inserted(true);
-    }
-
-    private void ControllerManager_ControllerUnplugged(Controllers.IController Controller, bool IsPowerCycling, bool WasTarget)
-    {
-        if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-            Device_Removed();
-    }
-
     private int LEDBrightness = 100;
     private Color LEDMainColor = Colors.Black;
     private Color LEDSecondColor = Colors.Black;
@@ -422,14 +412,14 @@ public class ClawA1M : IDevice
     protected override void QuerySettings()
     {
         // raise events
-        SettingsManager_SettingValueChanged("MSIClawControllerIndex", ManagerFactory.settingsManager.GetInt("MSIClawControllerIndex"), false);
-        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetInt("BatteryChargeLimit"), false);
-        SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetInt("BatteryChargeLimitPercent"), false);
+        SettingsManager_SettingValueChanged("MSIClawControllerIndex", ManagerFactory.settingsManager.GetInt("MSIClawControllerIndex"), false, false);
+        SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetInt("BatteryChargeLimit"), false, false);
+        SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetInt("BatteryChargeLimitPercent"), false, false);
 
         base.QuerySettings();
     }
 
-    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -444,12 +434,13 @@ public class ClawA1M : IDevice
             case "MSIClawControllerIndex":
                 {
                     gamepadMode = (GamepadMode)Convert.ToInt32(value);
+                    ApplyM12Configuration();
                     SwitchMode(gamepadMode);
                 }
                 break;
         }
 
-        base.SettingsManager_SettingValueChanged(name, value, temporary);
+        base.SettingsManager_SettingValueChanged(name, value, temporary, initializing);
     }
 
     public override void Close()
@@ -470,11 +461,21 @@ public class ClawA1M : IDevice
         // set flag
         ClawOpen = false;
 
-        // manage events
-        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
-
         base.Close();
+    }
+
+    private void ApplyM12Configuration()
+    {
+        if (!hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
+            return;
+
+        Thread.Sleep(300);
+        device.Write(GetM12(true, gamepadMode == GamepadMode.XInput), 0, 64);
+        Thread.Sleep(500);
+        device.Write(GetM12(false, gamepadMode == GamepadMode.XInput), 0, 64);
+        Thread.Sleep(500);
+        SyncToROM();
+        Thread.Sleep(500);
     }
 
     protected byte[] GetMsiDCVarData(ref int uefiVariableEx)
@@ -644,7 +645,15 @@ public class ClawA1M : IDevice
 
     public override bool IsReady()
     {
-        IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
+        // Early return if device is already bound and connected
+        if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? boundDevice))
+        {
+            if (boundDevice.IsConnected /* && boundDevice.IsOpen */)
+                return true;
+        }
+
+        // Search for supported HidDevice
+        IEnumerable <HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
         foreach (HidDevice device in devices)
         {
             if (!device.IsConnected)
@@ -656,10 +665,8 @@ public class ClawA1M : IDevice
             if (device.Capabilities.UsagePage != hidFilter.UsagePage || device.Capabilities.Usage != hidFilter.Usage)
                 continue;
 
+            // update device
             hidDevices[INPUT_HID_ID] = device;
-
-            // update firmware
-            Firmware = device.Attributes.Version;
 
             return true;
         }
@@ -856,43 +863,57 @@ public class ClawA1M : IDevice
 
     private byte[] GetM12(bool useM1)
     {
+        return GetM12(useM1, false);
+    }
+
+    private byte[] GetM12(bool useM1, bool xinput)
+    {
         // grab the right array (or null if no device)
-        byte[]? data = useM1
-            ? FirmwareDevice?.M1
-            : FirmwareDevice?.M2;
+        byte[]? data = xinput
+            ? (useM1 ? FirmwareDevice?.M1XInput : FirmwareDevice?.M2XInput)
+            : (useM1 ? FirmwareDevice?.M1DInput : FirmwareDevice?.M2DInput);
 
         // choose your two fallback bytes
         byte defaultAdd1 = useM1 ? (byte)0x00 : (byte)0x01;
         byte defaultAdd2 = useM1 ? (byte)0x7A : (byte)0x1F;
 
+        if (xinput)
+            defaultAdd2++;
+
         // pick actual values
         byte add1 = data != null ? data[0] : defaultAdd1;
         byte add2 = data != null ? data[1] : defaultAdd2;
 
-        return new byte[]
-        {
-        0x0F, 0x00, 0x00, 0x3C,
-        0x21, 0x01,
-        add1, add2,
-        0x05, 0x01,
-        0x00, 0x00,
-        0x11, 0x00
-        };
+        return xinput
+            ?
+            [
+                0x0F, 0x00, 0x00, 0x3C,
+                0x21, 0x01,
+                add1, add2,
+                0x07,
+                0x04, 0x00,
+                useM1 ? (byte)0x7A : (byte)0x7D,
+                0xFF, 0xFF, 0xFF, 0xFF
+            ]
+            :
+            [
+                0x0F, 0x00, 0x00, 0x3C,
+                0x21, 0x01,
+                add1, add2,
+                0x02, 0x01, 0x00
+            ];
     }
 
-    private void Device_Removed()
+    protected override void Device_Removed()
     {
         // close device
         if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
         {
-            device.MonitorDeviceEvents = false;
-            device.Removed -= Device_Removed;
-
             try { device.Dispose(); } catch { }
         }
     }
 
-    private async void Device_Inserted(bool reScan = false)
+    protected override async void Device_Inserted(bool reScan = false)
     {
         // if you still want to automatically re-attach:
         if (reScan)
@@ -901,10 +922,9 @@ public class ClawA1M : IDevice
         // listen for events
         if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
         {
-            device.MonitorDeviceEvents = true;
-            device.Removed += Device_Removed;
             device.OpenDevice();
 
+            ApplyM12Configuration();
             SwitchMode(gamepadMode);
         }
     }
@@ -1156,6 +1176,19 @@ public class ClawA1M : IDevice
         return (currentValue & 128) != 0;
     }
 
+    protected virtual int GetShiftModeValue(ShiftType shiftType)
+    {
+        return shiftType switch
+        {
+            ShiftType.SportMode => 4,
+            ShiftType.ComfortMode => 0,
+            ShiftType.GreenMode => 1,
+            ShiftType.ECO => 2,
+            ShiftType.User => 3,
+            _ => 0,
+        };
+    }
+
     public void SetShiftMode(ShiftModeCalcType calcType, ShiftType shiftType = ShiftType.None)
     {
         if (!IsShiftSupported())
@@ -1177,23 +1210,7 @@ public class ClawA1M : IDevice
             case ShiftModeCalcType.ChangeToCurrentShiftType:
                 ShiftModeValueInEC |= 192;
                 ShiftModeValueInEC &= 252;
-                switch (shiftType)
-                {
-                    case ShiftType.SportMode:
-                        ShiftModeValueInEC += 4;
-                        break;
-                    case ShiftType.ComfortMode:
-                        break;
-                    case ShiftType.GreenMode:
-                        ++ShiftModeValueInEC;
-                        break;
-                    case ShiftType.ECO:
-                        ShiftModeValueInEC += 2;
-                        break;
-                    case ShiftType.User:
-                        ShiftModeValueInEC += 3;
-                        break;
-                }
+                ShiftModeValueInEC += GetShiftModeValue(shiftType);
                 break;
         }
 

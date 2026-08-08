@@ -1,7 +1,8 @@
-﻿using HandheldCompanion.Commands.Functions.HC;
+﻿using System.Collections.Generic;
+using System.Numerics;
+using HandheldCompanion.Commands.Functions.HC;
 using HandheldCompanion.Commands.Functions.Windows;
 using HandheldCompanion.Inputs;
-using System;
 using WindowsInput.Events;
 
 namespace HandheldCompanion.Devices.OneXPlayer
@@ -13,6 +14,28 @@ namespace HandheldCompanion.Devices.OneXPlayer
             ProductIllustration = "device_onexplayer_apex";
             ProductModel = "ONEXPLAYERAPEX";
             VendorHidInitProfile = OxpHidInitProfile.Apex;
+
+            GyroMatrix = new()
+            {
+                Axis = new Vector3(1.0f, -1.0f, 1.0f),
+                AxisSwap = new SortedDictionary<char, char>
+                {
+                    { 'X', 'Y' },
+                    { 'Y', 'X' },
+                    { 'Z', 'Z' },
+                }
+            };
+
+            AcceleroMatrix = new()
+            {
+                Axis = new Vector3(-1.0f, 1.0f, -1.0f),
+                AxisSwap = new SortedDictionary<char, char>
+                {
+                    { 'X', 'Y' },
+                    { 'Y', 'X' },
+                    { 'Z', 'Z' },
+                }
+            };
 
             nTDP = new double[] { 25, 35, 65 };
             cTDP = new double[] { 25, 65 };
@@ -57,7 +80,6 @@ namespace HandheldCompanion.Devices.OneXPlayer
                 false, ButtonFlags.OEM6
                 ));
 
-            DeviceHotkeys[typeof(MainWindowCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = false;
             DeviceHotkeys[typeof(MainWindowCommands)].inputsChord.ButtonState[ButtonFlags.OEM3] = true;
             DeviceHotkeys[typeof(MainWindowCommands)].InputsChordType = InputsChordType.Click;
             DeviceHotkeys[typeof(QuickToolsCommands)].inputsChord.ButtonState[ButtonFlags.OEM1] = true;

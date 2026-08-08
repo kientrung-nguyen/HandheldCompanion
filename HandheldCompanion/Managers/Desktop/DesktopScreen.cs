@@ -125,10 +125,16 @@ public class DesktopScreen : IDisposable
         {
             try
             {
-                return PathInfo.GetActivePaths()
+                var target = PathInfo.GetActivePaths()
                     .SelectMany(p => p.TargetsInfo)
-                    .FirstOrDefault(t => string.Equals(t.DisplayTarget.DevicePath, DevicePath, StringComparison.OrdinalIgnoreCase))
-                    ?.OutputTechnology != DisplayConfigVideoOutputTechnology.Internal;
+                    .FirstOrDefault(t => string.Equals(t.DisplayTarget.DevicePath, DevicePath, StringComparison.OrdinalIgnoreCase));
+
+                // If the screen is not found in the active paths it is inactive/disconnected;
+                // treat it as non-external so callers don't mistake it for an external display.
+                if (target == null)
+                    return false;
+
+                return target.OutputTechnology != DisplayConfigVideoOutputTechnology.Internal;
             }
             catch
             {

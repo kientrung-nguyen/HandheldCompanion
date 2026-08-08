@@ -3,6 +3,7 @@ using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
+using HandheldCompanion.Shared;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using HandheldCompanion.Watchers;
@@ -56,6 +57,22 @@ namespace HandheldCompanion.ViewModels
                 {
                     _BatteryChargeLimitPercent = value;
                     OnPropertyChanged(nameof(BatteryChargeLimitPercent));
+                }
+            }
+        }
+
+        public bool BlockMsiClawWinGHotkey
+        {
+            get
+            {
+                return ManagerFactory.settingsManager.GetBoolean("BlockMsiClawWinGHotkey");
+            }
+            set
+            {
+                if (value != BlockMsiClawWinGHotkey)
+                {
+                    ManagerFactory.settingsManager.SetProperty("BlockMsiClawWinGHotkey", value);
+                    OnPropertyChanged(nameof(BlockMsiClawWinGHotkey));
                 }
             }
         }
@@ -130,40 +147,6 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
-        public double leftTriggerDeadzoneValue = 100;
-        public double LeftTriggerDeadzoneValue
-        {
-            get
-            {
-                return leftTriggerDeadzoneValue;
-            }
-            set
-            {
-                if (value != leftTriggerDeadzoneValue)
-                {
-                    leftTriggerDeadzoneValue = value;
-                    OnPropertyChanged(nameof(LeftTriggerDeadzoneValue));
-                }
-            }
-        }
-
-        public double rightTriggerDeadzoneValue = 100;
-        public double RightTriggerDeadzoneValue
-        {
-            get
-            {
-                return rightTriggerDeadzoneValue;
-            }
-            set
-            {
-                if (value != rightTriggerDeadzoneValue)
-                {
-                    rightTriggerDeadzoneValue = value;
-                    OnPropertyChanged(nameof(RightTriggerDeadzoneValue));
-                }
-            }
-        }
-
         #region MemoryIntegrity
         private CoreIsolationWatcher coreIsolationWatcher = new CoreIsolationWatcher();
         public bool MemoryIntegrity
@@ -203,9 +186,7 @@ namespace HandheldCompanion.ViewModels
         {
             get
             {
-                return (manufacturerWatcher?.HasProcesses() ?? false) ||
-                       (manufacturerWatcher?.HasEnabledTasks() ?? false) ||
-                       (manufacturerWatcher?.HasRunningServices() ?? false);
+                return manufacturerWatcher?.IsRunning ?? false;
             }
             set
             {
@@ -268,11 +249,6 @@ namespace HandheldCompanion.ViewModels
 
         public DevicePageViewModel()
         {
-            // raise events
-            PerformanceManager.Initialized += PerformanceManager_Initialized;
-            if (PerformanceManager.GetProcessor() is not null)
-                QueryProcessor();
-
             // manufacturer watcher
             manufacturerWatcher = ISpaceWatcher.CreateCurrent();
 
@@ -294,6 +270,13 @@ namespace HandheldCompanion.ViewModels
                     QuerySettings();
                     break;
             }
+
+            // raise events
+            PerformanceManager.Initialized += PerformanceManager_Initialized;
+
+            // raise events
+            if (PerformanceManager.IsInitialized && PerformanceManager.GetProcessor() is Processor processor)
+                PerformanceManager_Initialized(processor.CanChangeTDP, processor.CanChangeGPU);
         }
 
         private void PerformanceManager_Initialized(bool canChangeTDP, bool canChangeGPU)
@@ -322,10 +305,14 @@ namespace HandheldCompanion.ViewModels
 
         private void QuerySettings()
         {
+            // manage events
             ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-            SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimit"), false);
-            SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetDouble("BatteryChargeLimitPercent"), false);
-            SettingsManager_SettingValueChanged("GoBackToSleep", ManagerFactory.settingsManager.GetBoolean("GoBackToSleep"), false);
+
+            // raise events
+            SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetBoolean("BatteryChargeLimit"), false, false);
+            SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetDouble("BatteryChargeLimitPercent"), false, false);
+            SettingsManager_SettingValueChanged("GoBackToSleep", ManagerFactory.settingsManager.GetBoolean("GoBackToSleep"), false, false);
+            SettingsManager_SettingValueChanged("BlockMsiClawWinGHotkey", ManagerFactory.settingsManager.GetBoolean("BlockMsiClawWinGHotkey"), false, true);
         }
 
         private void CoreIsolationWatcher_StatusChanged(bool enabled)
@@ -394,7 +381,7 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(ManufacturerAppStatus));
         }
 
-        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             switch (name)
             {
@@ -406,6 +393,9 @@ namespace HandheldCompanion.ViewModels
                     break;
                 case "GoBackToSleep":
                     GoBackToSleep = Convert.ToBoolean(value);
+                    break;
+                case "BlockMsiClawWinGHotkey":
+                    BlockMsiClawWinGHotkey = Convert.ToBoolean(value);
                     break;
             }
         }

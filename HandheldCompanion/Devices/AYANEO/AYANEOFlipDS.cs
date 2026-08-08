@@ -63,13 +63,14 @@ public class AYANEOFlipDS : AYANEOFlipKB
     private ButtonState prevState = new();
     private void ControllerManager_InputsUpdated(ControllerState Inputs, bool IsMapped)
     {
-        if (prevState.Equals(Inputs.ButtonState))
-            return;
-        ButtonState.Overwrite(Inputs.ButtonState, prevState);
-
         // skip if inputs were remapped
         if (IsMapped)
             return;
+
+        if (prevState.Equals(Inputs.ButtonState))
+            return;
+
+        ButtonState.Overwrite(Inputs.ButtonState, prevState);
 
         // if screen button is pressed, turn on bottom screen
         if (Inputs.ButtonState[ButtonFlags.OEM5])
@@ -82,13 +83,13 @@ public class AYANEOFlipDS : AYANEOFlipKB
     protected override void QuerySettings()
     {
         // raise events
-        SettingsManager_SettingValueChanged("AYANEOFlipScreenEnabled", ManagerFactory.settingsManager.GetString("AYANEOFlipScreenEnabled"), false);
-        SettingsManager_SettingValueChanged("AYANEOFlipScreenBrightness", ManagerFactory.settingsManager.GetString("AYANEOFlipScreenBrightness"), false);
+        SettingsManager_SettingValueChanged("AYANEOFlipScreenEnabled", ManagerFactory.settingsManager.GetString("AYANEOFlipScreenEnabled"), false, false);
+        SettingsManager_SettingValueChanged("AYANEOFlipScreenBrightness", ManagerFactory.settingsManager.GetString("AYANEOFlipScreenBrightness"), false, false);
 
         base.QuerySettings();
     }
 
-    protected override void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
+    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -122,7 +123,7 @@ public class AYANEOFlipDS : AYANEOFlipKB
                 break;
         }
 
-        base.SettingsManager_SettingValueChanged(name, value, temporary);
+        base.SettingsManager_SettingValueChanged(name, value, temporary, initializing);
     }
 
     public override string GetGlyph(ButtonFlags button)

@@ -87,9 +87,9 @@ public static class ControllerManager
 
     public enum ControllerPlugBehavior
     {
-        AutoConnect = 0,
+        DoNothing = 0,
         AlwaysAsk = 1,
-        DoNothing = 2
+        AutoConnect = 2,
     }
 
     private static ControllerSlotManagementMode slotManagementMode = ControllerSlotManagementMode.Manual;
@@ -115,8 +115,14 @@ public static class ControllerManager
     private static int consecutiveWatchdogFailures = 0;
     private const int MaxConsecutiveWatchdogFailures = 3;
 
+    // Steam hybrid mode: temporarily overridden HIDmode when Steam process has foreground
+    private static HIDmode previousHIDmode = HIDmode.NotSelected;
+
     private static readonly DummyXbox360Controller dummyXbox360 = new();
     private static readonly DummyDualShock4Controller dummyDualShock4 = new();
+    private static readonly DummyDualSenseController dummyDualSense = new();
+    private static readonly DummySteamDeckController dummySteamDeck = new();
+    private static readonly DummySwitchProController dummySwitchPro = new();
     public static bool HasTargetController => GetTarget() != null;
 
     private static IController? targetController;
@@ -360,9 +366,11 @@ public static class ControllerManager
             mapped = mutedState;
         }
 
-        // Auto-raise pad touch flags when pad axes are non-zero, so downstream consumers don't require an explicit touch button mapping from the user.
-        mapped.ButtonState[ButtonFlags.LeftPadTouch] |= mapped.AxisState[AxisFlags.LeftPadX] != 0 || mapped.AxisState[AxisFlags.LeftPadY] != 0;
-        mapped.ButtonState[ButtonFlags.RightPadTouch] |= mapped.AxisState[AxisFlags.RightPadX] != 0 || mapped.AxisState[AxisFlags.RightPadY] != 0;
+        // Auto-raise pad touch flags when pad axes exceed deadzone, so downstream consumers don't require an explicit touch button mapping from the user.
+        // Use deadzone to prevent noise/drift from triggering unwanted input (e.g., phantom scrolling on DualShock4)
+        const short PAD_TOUCH_DEADZONE = 500;
+        mapped.ButtonState[ButtonFlags.LeftPadTouch] |= Math.Abs((int)mapped.AxisState[AxisFlags.LeftPadX]) > PAD_TOUCH_DEADZONE || Math.Abs((int)mapped.AxisState[AxisFlags.LeftPadY]) > PAD_TOUCH_DEADZONE;
+        mapped.ButtonState[ButtonFlags.RightPadTouch] |= Math.Abs((int)mapped.AxisState[AxisFlags.RightPadX]) > PAD_TOUCH_DEADZONE || Math.Abs((int)mapped.AxisState[AxisFlags.RightPadY]) > PAD_TOUCH_DEADZONE;
 
         DS4Touch.UpdateInputs(mapped);
         VirtualManager.UpdateInputs(mapped, gamepadMotion);
@@ -521,8 +529,9 @@ public static class ControllerManager
 
                                 case SDL.GamepadType.Xbox360:
                                 case SDL.GamepadType.XboxOne:
-                                    // controller = new Xbox360Controller(gamepad, deviceIndex, details);
-                                    break;
+                                    // XInput controllers are handled exclusively by the XInput pipeline (XUsbDeviceArrived).
+                                    // SDL detection is expected; skip silently and let XInput manage it.
+                                    return;
 
                                 case SDL.GamepadType.PS3:
                                 case SDL.GamepadType.PS4:
@@ -549,6 +558,7 @@ public static class ControllerManager
                         // controller is gone ?
                         if (!controller.IsConnected() && !controller.IsVirtual())
                         {
+                            LogManager.LogWarning("SDL controller: VID:{0} and PID:{1} is gone while being added", details.GetVendorID(), details.GetProductID());
                             controller.Gone();
                             return;
                         }
@@ -606,7 +616,7 @@ public static class ControllerManager
                         PowerCyclers.TryGetValue(path, out bool IsPowerCycling);
                         bool WasTarget = IsTargetController(controller.GetInstanceId());
 
-                        LogManager.LogInformation("XInput controller {0} unplugged, cycling {1}", controller.ToString(), IsPowerCycling);
+                        LogManager.LogInformation("SDL controller {0} unplugged, cycling {1}", controller.ToString(), IsPowerCycling);
                         ControllerUnplugged?.Invoke(controller, IsPowerCycling, WasTarget);
 
                         if (!IsPowerCycling)
@@ -747,6 +757,7 @@ public static class ControllerManager
                     // controller is gone ?
                     if (!controller.IsConnected() && !controller.IsVirtual())
                     {
+                        LogManager.LogWarning("Generic controller: VID:{0} and PID:{1} is gone while being added", details.GetVendorID(), details.GetProductID());
                         controller.Gone();
                         return;
                     }
@@ -973,6 +984,7 @@ public static class ControllerManager
                     // controller is gone ?
                     if (!controller.IsConnected() && !controller.IsVirtual())
                     {
+                        LogManager.LogWarning("XInput controller: VID:{0} and PID:{1} is gone while being added", details.GetVendorID(), details.GetProductID());
                         controller.Gone();
                         return;
                     }
@@ -1186,13 +1198,13 @@ public static class ControllerManager
         CheckControllerScenario();
     }
 
-    private static void CurrentDevice_KeyReleased(ButtonFlags button)
+    private static void CurrentDevice_KeyReleased(IDevice sender, ButtonFlags button)
     {
         // calls current controller (if connected)
         targetController?.InjectButton(button, false, true);
     }
 
-    private static void CurrentDevice_KeyPressed(ButtonFlags button)
+    private static void CurrentDevice_KeyPressed(IDevice sender, ButtonFlags button)
     {
         // calls current controller (if connected)
         targetController?.InjectButton(button, true, false);
@@ -1200,13 +1212,13 @@ public static class ControllerManager
 
     private static void ScenarioTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
-        // set flag
+        // reset flag
         ControllerMuted = false;
 
         // Steam Deck specific scenario
         if (IDevice.GetCurrent() is SteamDeck steamDeck)
         {
-            bool IsExclusiveMode = ManagerFactory.settingsManager.GetBoolean("SteamControllerMode");
+            bool IsExclusiveMode = ManagerFactory.settingsManager.GetInt("SteamControllerMode") == 1;
 
             // Making sure current controller is embedded
             if (targetController is NeptuneController neptuneController)
@@ -1217,30 +1229,38 @@ public static class ControllerManager
 
                 if (IsExclusiveMode)
                 {
-                    // mode: exclusive
-                    // hide embedded controller
-                    if (!neptuneController.IsHidden())
-                        neptuneController.Hide();
+                    // do nothing
                 }
                 else
                 {
                     // mode: hybrid
+                    // Temporarily override HIDmode to SteamDeckController when Steam has foreground
                     if (foregroundProcess?.Platform == GamePlatform.Steam)
                     {
                         // application is either steam or a steam game
-                        // restore embedded controller and mute virtual controller
-                        if (neptuneController.IsHidden())
-                            neptuneController.Unhide();
+                        // save current HIDmode before override (if not already saved)
+                        if (previousHIDmode == HIDmode.NotSelected)
+                            previousHIDmode = (HIDmode)ManagerFactory.settingsManager.GetInt("HIDmode", true);
 
-                        // set flag
-                        ControllerMuted = true;
+                        // set to SteamDeck only if not already set
+                        HIDmode currentHIDmode = (HIDmode)ManagerFactory.settingsManager.GetInt("HIDmode", true);
+                        if (currentHIDmode != HIDmode.SteamDeckController)
+                            ManagerFactory.settingsManager.SetProperty("HIDmode", (int)HIDmode.SteamDeckController);
+                        
+                        // notify UI if we've activated Steam hybrid override
+                        SteamHybridModeOverride?.Invoke(true);
                     }
                     else
                     {
                         // application is not steam related
-                        // hide embbeded controller
-                        if (!neptuneController.IsHidden())
-                            neptuneController.Hide();
+                        // restore previous HIDmode if we had overridden it
+                        if (previousHIDmode != HIDmode.NotSelected)
+                        {
+                            ManagerFactory.settingsManager.SetProperty("HIDmode", (int)previousHIDmode);
+
+                            // notify UI that Steam hybrid override is no longer active
+                            SteamHybridModeOverride?.Invoke(false);
+                        }
                     }
                 }
 
@@ -1261,7 +1281,7 @@ public static class ControllerManager
         scenarioTimer.Start();
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    private static void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -1305,10 +1325,10 @@ public static class ControllerManager
         ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // raise events
-        SettingsManager_SettingValueChanged("VibrationStrength", ManagerFactory.settingsManager.GetString("VibrationStrength"), false);
-        SettingsManager_SettingValueChanged("ControllerSlotManagementMode", ManagerFactory.settingsManager.GetString("ControllerSlotManagementMode"), false);
-        SettingsManager_SettingValueChanged("SensorSelection", ManagerFactory.settingsManager.GetString("SensorSelection"), false);
-        SettingsManager_SettingValueChanged("SteamControllerMode", ManagerFactory.settingsManager.GetString("SteamControllerMode"), false);
+        SettingsManager_SettingValueChanged("VibrationStrength", ManagerFactory.settingsManager.GetString("VibrationStrength"), false, false);
+        SettingsManager_SettingValueChanged("ControllerSlotManagementMode", ManagerFactory.settingsManager.GetString("ControllerSlotManagementMode"), false, false);
+        SettingsManager_SettingValueChanged("SensorSelection", ManagerFactory.settingsManager.GetString("SensorSelection"), false, false);
+        SettingsManager_SettingValueChanged("SteamControllerMode", ManagerFactory.settingsManager.GetString("SteamControllerMode"), false, false);
     }
 
     private static void DeviceManager_Initialized()
@@ -1324,17 +1344,46 @@ public static class ControllerManager
         ManagerFactory.deviceManager.HidDeviceArrived += HidDeviceArrived;
         ManagerFactory.deviceManager.HidDeviceRemoved += HidDeviceRemoved;
 
-        HydrateKnownDevices();
+        // Fire and forget the hydration; exceptions are handled within HydrateKnownDevices
+        _ = HydrateKnownDevices();
     }
 
-    private static void HydrateKnownDevices()
+    private static async Task HydrateKnownDevices()
     {
+        var tasksToWait = new List<Task>();
+
         foreach (PnPDetails details in ManagerFactory.deviceManager.PnPDevices.Values.Where(details => details.isGaming))
         {
+            var key = details.baseContainerDeviceInstanceId;
+
             if (details.isXInput)
+            {
                 XUsbDeviceArrived(details, details.InterfaceGuid);
+                // Collect the task that was just created and added to xusbArrivalInProgress
+                if (xusbArrivalInProgress.TryGetValue(key, out var task))
+                    tasksToWait.Add(task);
+            }
             else
+            {
                 HidDeviceArrived(details, details.InterfaceGuid);
+                // Collect the task that was just created and added to hidArrivalInProgress
+                if (hidArrivalInProgress.TryGetValue(key, out var task))
+                    tasksToWait.Add(task);
+            }
+        }
+
+        // Wait for all hydration tasks to complete before proceeding
+        if (tasksToWait.Count > 0)
+        {
+            try
+            {
+                await Task.WhenAll(tasksToWait).ConfigureAwait(false);
+            }
+            catch
+            {
+                // If any task fails, we still want to continue - the logging/error handling
+                // is already done in the individual arrival handlers
+            }
         }
 
         ReopenSDLGamepads();
@@ -1384,6 +1433,16 @@ public static class ControllerManager
 
     public static void Suspend(bool OS)
     {
+        // Clear input state from all controllers before hibernation to prevent stuck state
+        foreach (var controller in Controllers.Values)
+        {
+            try
+            {
+                controller.ClearInputState();
+            }
+            catch { }
+        }
+
         // Stop any in-flight slot fix to avoid manipulating devices during suspend/shutdown.
         StopWatchdog();
 
@@ -1906,6 +1965,7 @@ public static class ControllerManager
             // No physical XInput controller — just cycle the virtual controller
             if (HasVirtualController<XInputController>() && GetControllerFromSlot<XInputController>(UserIndex.One, false) is null)
             {
+                // Disconnect and reconnect the virtual controller so it re-enumerates from scratch and hopefully claims slot 1.
                 VirtualManager.Suspend(false);
                 Thread.Sleep(1000);
                 VirtualManager.Resume(false);
@@ -2267,23 +2327,13 @@ public static class ControllerManager
             // check if controller is about to power cycle
             PowerCyclers.TryGetValue(baseContainerDeviceInstanceId, out IsPowerCycling);
 
-            string ManufacturerName = MotherboardInfo.Manufacturer.ToUpper();
-            switch (ManufacturerName)
+            // vibrate on connect, except when controller is power cycling
+            if (ManagerFactory.settingsManager.GetBoolean("HIDvibrateonconnect"))
             {
-                case "AOKZOE":
-                case "ONE-NETBOOK TECHNOLOGY CO., LTD.":
-                case "ONE-NETBOOK":
+                if (!IsPowerCycling)
                     targetController.Rumble();
-                    break;
-                default:
-                    if (ManagerFactory.settingsManager.GetBoolean("HIDvibrateonconnect"))
-                    {
-                        if (!IsPowerCycling)
-                            targetController.Rumble();
-                        else
-                            targetController.StopRumble();
-                    }
-                    break;
+                else
+                    targetController.StopRumble();
             }
 
             // Never invoke external code while holding targetLock.
@@ -2614,7 +2664,7 @@ public static class ControllerManager
 
     public static IEnumerable<T> GetControllers<T>() where T : IController
     {
-        return Controllers.Values.Where(controller => typeof(T).IsAssignableFrom(controller.GetType())).Cast<T>();
+        return Controllers.Values.Where(controller => typeof(T).IsAssignableFrom(controller.GetType()) && !controller.IsDummy()).Cast<T>();
     }
 
     private static ControllerState mutedState = new ControllerState();
@@ -2639,11 +2689,22 @@ public static class ControllerManager
             default:
             case HIDmode.NoController:
             case HIDmode.Xbox360Controller:
-            case HIDmode.DInputController:
                 return dummyXbox360;
 
             case HIDmode.DualShock4Controller:
                 return dummyDualShock4;
+
+            case HIDmode.DualSenseController:
+                return dummyDualSense;
+
+            case HIDmode.SteamDeckController:
+                return dummySteamDeck;
+
+            case HIDmode.SteamController:
+                return dummySteamDeck;
+
+            case HIDmode.SwitchProController:
+                return dummySwitchPro;
         }
     }
 
@@ -2680,6 +2741,13 @@ public static class ControllerManager
 
     public static event SlotIssueChangedEventHandler? SlotIssueChanged;
     public delegate void SlotIssueChangedEventHandler(bool hasIssue, string reason);
+
+    /// <summary>
+    /// Raised when Steam hybrid mode temporarily overrides HIDmode.
+    /// Allows UI to disable controller selection during Steam foreground.
+    /// </summary>
+    public static event SteamHybridModeOverrideEventHandler? SteamHybridModeOverride;
+    public delegate void SteamHybridModeOverrideEventHandler(bool isOverridden);
 
     public static event InitializedEventHandler? Initialized;
     public delegate void InitializedEventHandler();

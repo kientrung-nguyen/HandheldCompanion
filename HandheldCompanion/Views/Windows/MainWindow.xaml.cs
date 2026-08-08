@@ -31,7 +31,9 @@ using System.Windows.Media;
 using System.Windows.Navigation;
 using System.Windows.Shell;
 using System.Windows.Threading;
+using static HandheldCompanion.Managers.SystemManager;
 using Control = System.Windows.Controls.Control;
+using MessageBox = iNKORE.UI.WPF.Modern.Controls.MessageBox;
 using Page = System.Windows.Controls.Page;
 using RadioButton = System.Windows.Controls.RadioButton;
 
@@ -66,7 +68,7 @@ public partial class MainWindow : GamepadWindow
     public static LayoutItemPage layoutItemPage = null!;
 
     // overlay(s) vars
-    private static MainWindow? CurrentWindow;
+    private static MainWindow CurrentWindow;
 
     public static string CurrentPageName = string.Empty;
 
@@ -125,6 +127,8 @@ public partial class MainWindow : GamepadWindow
 
     public MainWindow(SplashScreenHost splashScreen, IDevice? currentDevice = null)
     {
+        CurrentWindow = this;
+
         SplashScreen = splashScreen;
         DataContext = new MainWindowViewModel();
 
@@ -145,8 +149,6 @@ public partial class MainWindow : GamepadWindow
 
         ContentDialog.Closed += ContentDialog_Closed;
         ContentDialog.Opened += ContentDialog_Opened;
-
-        CurrentWindow = this;
 
         // define current directory
         Directory.SetCurrentDirectory(App.CurrentPath);
@@ -208,20 +210,51 @@ public partial class MainWindow : GamepadWindow
         App.overlayquickTools.loadPages();
         loadPages();
 
-        // Subscribe to setting changes for lazy page creation
-        ManagerFactory.settingsManager.SettingValueChanged += MainWindow_SettingValueChanged;
+        // raise events
+        switch (ManagerFactory.settingsManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.settingsManager.Initialized += SettingsManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QuerySettings();
+                break;
+        }
+
+        // raise events
+        switch (ManagerFactory.profileManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.profileManager.Initialized += ProfileManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryProfile();
+                break;
+        }
+
+        // raise events
+        switch (ManagerFactory.notificationManager.Status)
+        {
+            default:
+            case ManagerStatus.Initializing:
+                ManagerFactory.notificationManager.Initialized += NotificationManager_Initialized;
+                break;
+            case ManagerStatus.Initialized:
+                QueryNotification();
+                break;
+        }
 
         // manage events
-        SystemManager.SystemStatusChanged += OnSystemStatusChanged;
-        SystemManager.SessionLockChanged += OnSessionLockChanged;
-        ManagerFactory.notificationManager.Added += NotificationManagerUpdated;
-        ManagerFactory.notificationManager.Discarded += NotificationManagerUpdated;
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+        SystemManager.Initialized += SystemManager_Initialized;
+        ControllerManager.Initialized += ControllerManager_Initialized;
 
-        // Subscribe to profile manager events to update tray menu
-        ManagerFactory.profileManager.Initialized += ProfileManager_Initialized;
-        ManagerFactory.profileManager.Updated += OnProfileUpdated;
-        ManagerFactory.profileManager.Deleted += RemoveProfileFromTrayMenu;
+        // raise events
+        if (SystemManager.IsInitialized)
+            SystemManager_Initialized();
+        if (ControllerManager.IsInitialized)
+            ControllerManager_Initialized();
 
         // prepare toast manager
         ToastManager.Start();
@@ -231,8 +264,74 @@ public partial class MainWindow : GamepadWindow
         gamepadFocusManager = new(this, ContentFrame);
     }
 
+    private void ControllerManager_Initialized()
+    {
+        // manage events
+        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+
+        // raise events
+        if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController controller)
+            ControllerManager_ControllerSelected(controller);
+    }
+
+    private void SystemManager_Initialized()
+    {
+        // manage events
+        SystemManager.SystemStatusChanged += SystemManager_SystemStatusChanged;
+        SystemManager.SessionLockChanged += SystemManager_SessionLockChanged;
+
+        SystemManager_SystemStatusChanged(SystemManager.currentSystemStatus, SystemStatus.SystemBooting);
+    }
+
+    private void QueryNotification()
+    {
+        // manage events
+        ManagerFactory.notificationManager.Added += NotificationManagerUpdated;
+        ManagerFactory.notificationManager.Discarded += NotificationManagerUpdated;
+
+        // raise events
+        foreach(var notification in ManagerFactory.notificationManager.Notifications)
+            NotificationManagerUpdated(notification);
+    }
+
+    private void NotificationManager_Initialized()
+    {
+        QueryNotification();
+    }
+
     public ContentDialog LaunchProfileContentDialog => FindName("LaunchProfileDialog") as ContentDialog
         ?? throw new InvalidOperationException("LaunchProfileDialog was not found.");
+
+    private void SettingsManager_Initialized()
+    {
+        QuerySettings();
+    }
+
+    private void QuerySettings()
+    {
+        // manage events
+        ManagerFactory.settingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        // raise events
+        SettingsManager_SettingValueChanged("LibraryPageEnabled", ManagerFactory.settingsManager.GetString("LibraryPageEnabled"), false, false);
+        SettingsManager_SettingValueChanged("PerformanceManagerEnabled", ManagerFactory.settingsManager.GetString("PerformanceManagerEnabled"), false, false);
+    }
+
+    private void QueryProfile()
+    {
+        // manage events
+        ManagerFactory.profileManager.Updated += OnProfileUpdated;
+        ManagerFactory.profileManager.Deleted += RemoveProfileFromTrayMenu;
+
+        // raise events
+        List<Profile> likedProfiles = ManagerFactory.profileManager?.GetProfiles(true)
+            .Where(p => p.IsLiked && !p.Default)
+            .OrderBy(p => p.Name)
+            .ToList() ?? new List<Profile>();
+
+        foreach (Profile profile in likedProfiles)
+            AddProfileToTrayMenu(profile);
+    }
 
     private static void UpdateSplashStatus(string status)
     {
@@ -241,13 +340,7 @@ public partial class MainWindow : GamepadWindow
 
     private void ProfileManager_Initialized()
     {
-        List<Profile> likedProfiles = ManagerFactory.profileManager?.GetProfiles(true)
-            .Where(p => p.IsLiked && !p.Default)
-            .OrderBy(p => p.Name)
-            .ToList() ?? new List<Profile>();
-
-        foreach (Profile profile in likedProfiles)
-            AddProfileToTrayMenu(profile);
+        QueryProfile();
     }
 
     protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -516,7 +609,7 @@ public partial class MainWindow : GamepadWindow
             RemoveProfileFromTrayMenu(profile);
     }
 
-    public static MainWindow? GetCurrent()
+    public static MainWindow GetCurrent()
     {
         return CurrentWindow;
     }
@@ -588,7 +681,7 @@ public partial class MainWindow : GamepadWindow
     {
     }
 
-    private void MainWindow_SettingValueChanged(string name, object? value, bool temporary)
+    private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -814,7 +907,7 @@ public partial class MainWindow : GamepadWindow
     private DateTime pendingTime = DateTime.Now;
     private DateTime resumeTime = DateTime.Now;
 
-    private async void OnSystemStatusChanged(SystemManager.SystemStatus status, SystemManager.SystemStatus prevStatus)
+    private async void SystemManager_SystemStatusChanged(SystemManager.SystemStatus status, SystemManager.SystemStatus prevStatus)
     {
         if (status == prevStatus)
             return;
@@ -905,7 +998,7 @@ public partial class MainWindow : GamepadWindow
         }
     }
 
-    private void OnSessionLockChanged(bool isLocked)
+    private void SystemManager_SessionLockChanged(bool isLocked)
     {
         if (isLocked)
             InputsManager.Stop(false);
@@ -925,7 +1018,7 @@ public partial class MainWindow : GamepadWindow
             notifyIcon.Visible = true;
             ShowInTaskbar = false;
 
-            try { Hide(); } catch { }
+            try { Hide(true); } catch { }
 
             return;
         }
@@ -1005,8 +1098,8 @@ public partial class MainWindow : GamepadWindow
 
     public static void NavView_Navigate(Page _page)
     {
-        CurrentWindow?.ContentFrame.Navigate(_page);
-        CurrentWindow?.scrollViewer.ScrollToTop();
+        CurrentWindow.ContentFrame.Navigate(_page);
+        CurrentWindow.scrollViewer.ScrollToTop();
     }
 
     private void navView_BackRequested(NavigationView sender, NavigationViewBackRequestedEventArgs args)
@@ -1041,12 +1134,19 @@ public partial class MainWindow : GamepadWindow
         });
 
         // manage events
-        SystemManager.SystemStatusChanged -= OnSystemStatusChanged;
-        SystemManager.SessionLockChanged -= OnSessionLockChanged;
+        SystemManager.Initialized -= SystemManager_Initialized;
+        SystemManager.SystemStatusChanged -= SystemManager_SystemStatusChanged;
+        SystemManager.SessionLockChanged -= SystemManager_SessionLockChanged;
+
+        ManagerFactory.notificationManager.Initialized -= NotificationManager_Initialized;
         ManagerFactory.notificationManager.Added -= NotificationManagerUpdated;
         ManagerFactory.notificationManager.Discarded -= NotificationManagerUpdated;
+
+        ControllerManager.Initialized -= ControllerManager_Initialized;
         ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
-        ManagerFactory.settingsManager.SettingValueChanged -= MainWindow_SettingValueChanged;
+
+        ManagerFactory.settingsManager.Initialized -= SettingsManager_Initialized;
+        ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
 
         // UI thread
         UIHelper.TryInvoke(() =>
@@ -1247,7 +1347,7 @@ public partial class MainWindow : GamepadWindow
                 switch (windowState)
                 {
                     case WindowState.Minimized:
-                        Hide();
+                        Hide(true);
                         break;
                 }
 
@@ -1276,7 +1376,7 @@ public partial class MainWindow : GamepadWindow
                 switch (windowState)
                 {
                     case WindowState.Minimized:
-                        Hide();
+                        Hide(true);
                         break;
                 }
             }
@@ -1307,7 +1407,7 @@ public partial class MainWindow : GamepadWindow
     {
         Dialog.Reset(this);
 
-        try { Hide(); } catch { }
+        try { Hide(true); } catch { }
 
         notifyIcon.Visible = true;
         ShowInTaskbar = false;
@@ -1450,7 +1550,7 @@ public partial class MainWindow : GamepadWindow
             return;
 
         Control? control = dependencyObject as Control ?? WPFUtils.FindParent<Control>(dependencyObject);
-        if (control is null || !gamepadFocusManager.IsValidFocusableContentElement(control))
+        if (control is null || !WPFUtils.CanTarget(control, this, includeContentRules: true))
             return;
 
         gamepadFocusManager.TrackFocusedControl(control);

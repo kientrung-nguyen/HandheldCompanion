@@ -19,6 +19,8 @@
     d:DesignHeight="1200"
     d:DesignWidth="640"
     KeepAlive="True"
+    Loaded="Page_Loaded"
+    Unloaded="Page_Unloaded"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -190,9 +192,6 @@
             </ikw:SimpleStackPanel>
         </ikw:SimpleStackPanel>
 
-        <ui:NavigationViewItemSeparator Margin="-15,0,-6,0" />
-
-
         <ikw:SimpleStackPanel
             Grid.Row="1"
             VerticalAlignment="Bottom"
@@ -203,7 +202,7 @@
                 Background="{DynamicResource ExpanderHeaderBackground}"
                 CornerRadius="{DynamicResource ControlCornerRadius}">
                 <StackPanel IsEnabled="{Binding SupportsTDP, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                    <DockPanel>
+                    <DockPanel Margin="0,0,0,12">
                         <ui:FontIcon
                             Width="40"
                             HorizontalAlignment="Center"
@@ -242,7 +241,6 @@
                                     Minimum="{Binding ConfigurableTDPOverrideDown, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                                     SmallChange="1"
                                     TickFrequency="1"
-                                    TickPlacement="BottomRight"
                                     ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                     Value="{Binding PL1OverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </DockPanel>
@@ -271,7 +269,6 @@
                                     Minimum="{Binding ConfigurableTDPOverrideDown, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                                     SmallChange="1"
                                     TickFrequency="1"
-                                    TickPlacement="BottomRight"
                                     ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
                                     Value="{Binding PL2OverrideValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </DockPanel>
@@ -290,8 +287,9 @@
                 <ikw:SimpleStackPanel
                     Grid.Column="0"
                     Margin="0,0,3,0"
+                    Background="{DynamicResource ExpanderHeaderBackground}"
                     Spacing="3">
-                    <DockPanel>
+                    <DockPanel Margin="6,6,6,0">
                         <TextBlock Style="{StaticResource BaseTextBlockStyle}" Margin="0,0,4,0" VerticalAlignment="Center" FontSize="12" Text="CPU" />
                         <TextBlock
                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -303,7 +301,6 @@
                     <Border
                         Height="70"
                         Padding="6"
-                        Background="{DynamicResource ExpanderHeaderBackground}"
                         CornerRadius="{DynamicResource ControlCornerRadius}">
 
                         <ikw:SimpleStackPanel
@@ -390,8 +387,9 @@
                 <ikw:SimpleStackPanel
                     Grid.Column="1"
                     Margin="3,0,0,0"
+                    Background="{DynamicResource ExpanderHeaderBackground}"
                     Spacing="3">
-                    <DockPanel>
+                    <DockPanel Margin="6,6,6,0">
                         <TextBlock Style="{StaticResource BaseTextBlockStyle}" FontSize="12" Margin="0,0,4,0" Text="GPU" />
                         <TextBlock
                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -403,7 +401,6 @@
                     <Border
                         Height="70"
                         Padding="6"
-                        Background="{DynamicResource ExpanderHeaderBackground}"
                         CornerRadius="{DynamicResource ControlCornerRadius}">
 
                         <ikw:SimpleStackPanel

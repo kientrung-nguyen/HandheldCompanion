@@ -8,11 +8,12 @@ public class FullStrategy : IOverlayStrategy
     public string? GetConfig(int direction = 0)
     {
         OverlayRow row1 = new(); // GPU
-        OverlayRow row2 = new(); // CPU  
+        OverlayRow row2 = new(); // CPU
         //OverlayRow row3 = new(); // RAM
         //OverlayRow row4 = new(); // VRAM
         OverlayRow row5 = new(); // Battery
         OverlayRow row6 = new(); // FPS
+        OverlayRow row7 = new(); // Time
 
         OverlayEntry GPUentry = new("GPU", OverlayColors.GPU_COLOR, direction != 0);
         WidgetFactory.CreateWidget("GPU", GPUentry, WidgetLevel.FULL);
@@ -30,6 +31,10 @@ public class FullStrategy : IOverlayStrategy
         //WidgetFactory.CreateWidget("RAM", RAMentry, WidgetLevel.FULL);
         //row3.entries.Add(RAMentry);
 
+        OverlayEntry TimeEntry = new("", OverlayColors.DEFAULT_COLOR, direction != 0);
+        WidgetFactory.CreateWidget("TIME", TimeEntry, WidgetLevel.MINIMAL);
+        row7 .entries.Add(TimeEntry);
+
         OverlayEntry BATTentry = new("BATT", OverlayColors.BATT_COLOR, direction != 0);
         WidgetFactory.CreateWidget("BATT", BATTentry, WidgetLevel.FULL);
         row5.entries.Add(BATTentry);
@@ -45,14 +50,17 @@ public class FullStrategy : IOverlayStrategy
                 row2.ToString(),
                 //row3.ToString(),
                 //row4.ToString(),
-                row5.ToString())
+                row5.ToString(),
+                row7.ToString()
+                )
             : string.Join("\n",
             row1.ToString(),
             row2.ToString(),
             //row3.ToString(),
             //row4.ToString(),
             row5.ToString(),
-            row6.ToString()
+            row6.ToString(),
+            row7.ToString()
         );
     }
 }

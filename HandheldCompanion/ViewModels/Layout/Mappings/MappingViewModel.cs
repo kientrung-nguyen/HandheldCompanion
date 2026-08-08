@@ -292,6 +292,7 @@ namespace HandheldCompanion.ViewModels
         public virtual int Axis2AxisAntiDeadzone { get => 0; set { } }
         public virtual int Button2AxisX { get => 0; set { } }
         public virtual int Button2AxisY { get => 0; set { } }
+        public virtual Visibility AxisResponseCurveVisibility => Visibility.Collapsed;
 
         // Visibility for Axis invert properties - only Axis mappings
         public virtual Visibility AxisInvertVisibility => Visibility.Collapsed;
@@ -345,6 +346,9 @@ namespace HandheldCompanion.ViewModels
 
                 // For Axis mappings converting to Button, also show
                 if (IsAxisMapping && Axis2ButtonVisibility == Visibility.Visible)
+                    return Visibility.Visible;
+
+                if (IsAxisMapping && AxisResponseCurveVisibility == Visibility.Visible)
                     return Visibility.Visible;
 
                 return Visibility.Collapsed;
@@ -666,10 +670,6 @@ namespace HandheldCompanion.ViewModels
             // Enable thread-safe access to the collection
             BindingOperations.EnableCollectionSynchronization(Targets, _collectionLock);
 
-            // manage events
-            MainWindow.layoutPage.LayoutUpdated += UpdateMapping;
-            VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
-
             // Lazy initialize to avoid re-creating target for Keyboard targets
             if (_keyboardKeysTargets.Count == 0)
             {
@@ -683,6 +683,14 @@ namespace HandheldCompanion.ViewModels
                 }
             }
 
+            // manage events
+            MainWindow.layoutPage.LayoutUpdated += UpdateMapping;
+            VirtualManager.Initialized += VirtualManager_Initialized;
+
+            // raise events
+            if (VirtualManager.IsInitialized)
+                VirtualManager_Initialized();
+
             // Send update event to Model
             PropertyChanged +=
                 (s, e) =>
@@ -690,6 +698,16 @@ namespace HandheldCompanion.ViewModels
                     if (_updateToModel && e.PropertyName is not null && !ExcludedUpdateProperties.Contains(e.PropertyName))
                         Update();
                 };
+        }
+
+        private void VirtualManager_Initialized()
+        {
+            // manage events
+            // which virtual output format to map it to
+            VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+
+            // raise events
+            VirtualManager_ControllerSelected(VirtualManager.HIDmode);
         }
 
         public override void Dispose()
@@ -702,6 +720,7 @@ namespace HandheldCompanion.ViewModels
             if (disposing)
             {
                 MainWindow.layoutPage.LayoutUpdated -= UpdateMapping;
+                VirtualManager.Initialized -= VirtualManager_Initialized;
                 VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
             }
 

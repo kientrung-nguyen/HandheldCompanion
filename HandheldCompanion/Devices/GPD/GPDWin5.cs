@@ -71,20 +71,26 @@ public class GPDWin5 : IDevice
             FanValueMax = 244
         };
 
-        GyrometerAxis = new Vector3(1.0f, -1.0f, -1.0f);
-        GyrometerAxisSwap = new SortedDictionary<char, char>
+        GyroMatrix = new()
         {
-            { 'X', 'Y' },
-            { 'Y', 'Z' },
-            { 'Z', 'X' }
+            Axis = new Vector3(1.0f, -1.0f, -1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'Y' },
+                { 'Y', 'Z' },
+                { 'Z', 'X' }
+            }
         };
 
-        AccelerometerAxis = new Vector3(-1.0f, -1.0f, 1.0f);
-        AccelerometerAxisSwap = new SortedDictionary<char, char>
+        AcceleroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' }
+            Axis = new Vector3(-1.0f, -1.0f, 1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' }
+            }
         };
 
         // GPD Win 5 specific chords
@@ -109,6 +115,13 @@ public class GPDWin5 : IDevice
 
     public override bool IsReady()
     {
+        // Early return if device is already bound and connected
+        if (hidDevices.TryGetValue(BackButtonsHidId, out HidDevice? boundDevice))
+        {
+            if (boundDevice.IsConnected /* && boundDevice.IsOpen */)
+                return true;
+        }
+
         IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
         foreach (HidDevice device in devices)
         {
@@ -156,16 +169,6 @@ public class GPDWin5 : IDevice
         return true;
     }
 
-    public override void OpenEvents()
-    {
-        base.OpenEvents();
-
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-
-        Device_Inserted();
-    }
-
     public override void Close()
     {
         // Release all back buttons so none remain logically pressed after disconnect.
@@ -175,9 +178,6 @@ public class GPDWin5 : IDevice
             KeyRelease(ButtonFlags.OEM3); // L4
             KeyRelease(ButtonFlags.OEM4); // Switch
         }
-
-        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
 
         lock (updateLock)
         {
@@ -237,41 +237,6 @@ public class GPDWin5 : IDevice
         return val == 0x02 || val == 0x10; // Device is running on Type-C only
     }
 
-    private void ControllerManager_ControllerPlugged(Controllers.IController Controller, bool WasPowerCycling)
-    {
-        if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-            Device_Inserted(true);
-    }
-
-    private void ControllerManager_ControllerUnplugged(Controllers.IController Controller, bool IsPowerCycling, bool WasTarget)
-    {
-        if (Controller.GetVendorID() == vendorId && productIds.Contains(Controller.GetProductID()))
-            Device_Removed();
-    }
-
-    private void Device_Removed()
-    {
-        isReading = false;
-
-        // Release all back buttons so none remain logically pressed after disconnect.
-        lock (updateLock)
-        {
-            KeyRelease(ButtonFlags.OEM2); // R4
-            KeyRelease(ButtonFlags.OEM3); // L4
-            KeyRelease(ButtonFlags.OEM4); // Switch
-        }
-
-        if (hidDevices.TryGetValue(BackButtonsHidId, out HidDevice? device))
-        {
-            device.MonitorDeviceEvents = false;
-            device.Removed -= Device_Removed;
-
-            try { device.Dispose(); } catch { }
-
-            hidDevices.Remove(BackButtonsHidId);
-        }
-    }
-
     private (int major, int minor)? ReadControllerFirmwareVersion(HidDevice device)
     {
         try
@@ -310,15 +275,31 @@ public class GPDWin5 : IDevice
         }
     }
 
-    private async void Device_Inserted(bool reScan = false)
+    protected override void Device_Removed()
+    {
+        isReading = false;
+
+        // Release all back buttons so none remain logically pressed after disconnect.
+        lock (updateLock)
+        {
+            KeyRelease(ButtonFlags.OEM2); // R4
+            KeyRelease(ButtonFlags.OEM3); // L4
+            KeyRelease(ButtonFlags.OEM4); // Switch
+        }
+
+        if (hidDevices.TryGetValue(BackButtonsHidId, out HidDevice? device))
+        {
+            try { device.Dispose(); } catch { }
+        }
+    }
+
+    protected override async void Device_Inserted(bool reScan = false)
     {
         if (reScan)
             await WaitUntilReady();
 
         if (hidDevices.TryGetValue(BackButtonsHidId, out HidDevice? device))
         {
-            device.MonitorDeviceEvents = true;
-            device.Removed += Device_Removed;
             device.OpenDevice();
 
             // Silence L4/R4/Gamepad chords only for firmware >= 1.11.

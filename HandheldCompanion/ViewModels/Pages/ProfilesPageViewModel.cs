@@ -68,6 +68,10 @@ namespace HandheldCompanion.ViewModels
         // ComboBox collections
         public ObservableCollection<ScreenDividerViewModel> IntegerScalingDividers { get; } = [];
 
+        // Motion output and input modes for ComboBox data binding
+        public ObservableCollection<MotionOutputViewModel> MotionOutputModes { get; } = [];
+        public ObservableCollection<MotionInputViewModel> MotionInputModes { get; } = [];
+
         public bool HasAnyWindows => AllWindows.Any();
 
         // True if library search results are available in LibraryPickers (for enabling ComboBox and showing preview)
@@ -880,6 +884,34 @@ namespace HandheldCompanion.ViewModels
             }
         }
 
+        private string _createProfileName = string.Empty;
+        public string CreateProfileName
+        {
+            get => _createProfileName;
+            set
+            {
+                if (value != _createProfileName)
+                {
+                    _createProfileName = value;
+                    OnPropertyChanged(nameof(CreateProfileName));
+                }
+            }
+        }
+
+        private bool _copyDefaultProfileSettings = false;
+        public bool CopyDefaultProfileSettings
+        {
+            get => _copyDefaultProfileSettings;
+            set
+            {
+                if (value != _copyDefaultProfileSettings)
+                {
+                    _copyDefaultProfileSettings = value;
+                    OnPropertyChanged(nameof(CopyDefaultProfileSettings));
+                }
+            }
+        }
+
         public int SteeringAxisIndex
         {
             get => SelectedProfile != null ? (int)SelectedProfile.SteeringAxis : 0;
@@ -905,7 +937,11 @@ namespace HandheldCompanion.ViewModels
                 {
                     HIDmode.Xbox360Controller => 1,
                     HIDmode.DualShock4Controller => 2,
-                    HIDmode.DInputController => 3,
+                    HIDmode.DualSenseController => 3,
+                    HIDmode.SteamDeckController => 4,
+                    HIDmode.SwitchProController => 5,
+                    HIDmode.SteamController => 6,
+                    HIDmode.NoController => 7,
                     _ => 0 // NotSelected
                 };
             }
@@ -915,7 +951,11 @@ namespace HandheldCompanion.ViewModels
                 {
                     1 => HIDmode.Xbox360Controller,
                     2 => HIDmode.DualShock4Controller,
-                    3 => HIDmode.DInputController,
+                    3 => HIDmode.DualSenseController,
+                    4 => HIDmode.SteamDeckController,
+                    5 => HIDmode.SwitchProController,
+                    6 => HIDmode.SteamController,
+                    7 => HIDmode.NoController,
                     _ => HIDmode.NotSelected
                 };
                 if (SelectedProfile != null && SelectedProfile.HID != mode)
@@ -927,6 +967,11 @@ namespace HandheldCompanion.ViewModels
                         UpdateProfile();
                 }
             }
+        }
+
+        public bool CanEditHIDMode
+        {
+            get => SelectedProfile != null && !SelectedProfile.Default;
         }
 
         public int XInputPlusIndex
@@ -1675,8 +1720,9 @@ namespace HandheldCompanion.ViewModels
         public ICommand OpenPowerProfileOnBatteryCommand { get; private set; } = null!;
         public ICommand OpenPowerProfilePluggedCommand { get; private set; } = null!;
         public ICommand OpenProfilePageCommand { get; private set; } = null!;
-        public ICommand OpenProfileLayoutCommand { get; private set; } = null!;
+         public ICommand OpenProfileLayoutCommand { get; private set; } = null!;
         public ICommand CreatePowerProfileCommand { get; private set; } = null!;
+        public ICommand ShowCreateProfileFlyoutCommand { get; private set; } = null!;
         public ICommand OpenAdditionalSettingsCommand { get; private set; } = null!;
         public ICommand BrowseCoverCommand { get; private set; } = null!;
         public ICommand BrowseArtworkCommand { get; private set; } = null!;
@@ -1727,6 +1773,7 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(IsProfileEnabledToggleEnabled));
             OnPropertyChanged(nameof(IsControllerPassthroughEnabled));
             OnPropertyChanged(nameof(SelectedSubProfileViewModel));
+            OnPropertyChanged(nameof(CanEditHIDMode));
 
             if (updateProfileContext)
                 OnProfileChanged();
@@ -1815,6 +1862,18 @@ namespace HandheldCompanion.ViewModels
             SubProfilesView = new ListCollectionView(SubProfiles);
             SubProfilesView.SortDescriptions.Add(new SortDescription(nameof(ProfileViewModel.SortOrder), ListSortDirection.Ascending));
             SubProfilesView.SortDescriptions.Add(new SortDescription(nameof(ProfileViewModel.Name), ListSortDirection.Ascending));
+
+            // Initialize MotionOutput modes
+            foreach (var mode in Enum.GetValues<MotionOutput>())
+            {
+                MotionOutputModes.Add(new MotionOutputViewModel(mode));
+            }
+
+            // Initialize MotionInput modes
+            foreach (var mode in (MotionInput[])Enum.GetValues(typeof(MotionInput)))
+            {
+                MotionInputModes.Add(new MotionInputViewModel(mode));
+            }
 
             ProfileExecutables.CollectionChanged += (_, __) =>
             {
@@ -2156,15 +2215,52 @@ namespace HandheldCompanion.ViewModels
 
             CreatePowerProfileCommand = new DelegateCommand(() =>
             {
-                int idx = ManagerFactory.powerProfileManager.profiles.Values.Where(p => !p.IsDefault()).Count() + 1;
-                string Name = string.Format(Properties.Resources.PowerProfileManualName, idx);
-                PowerProfile powerProfile = new PowerProfile(Name, Properties.Resources.PowerProfileManualDescription)
+                // Generate default name if not provided
+                if (string.IsNullOrWhiteSpace(CreateProfileName))
                 {
-                    TDPOverrideValues = IDevice.GetCurrent().nTDP
-                };
+                    CreateProfileName = ManagerFactory.powerProfileManager.GetProfileName(Properties.Resources.PowerProfileManualName);
+                }
+
+                PowerProfile powerProfile;
+
+                if (CopyDefaultProfileSettings)
+                {
+                    // Clone the default profile
+                    PowerProfile defaultProfile = ManagerFactory.powerProfileManager.GetDefault();
+                    powerProfile = ManagerFactory.powerProfileManager.CloneProfile(defaultProfile);
+                    powerProfile.Name = CreateProfileName;
+                    powerProfile.Description = Properties.Resources.PowerProfileManualDescription;
+                    // Generate new GUID for the cloned profile
+                    powerProfile.Guid = Guid.NewGuid();
+                    powerProfile.Default = false;
+                }
+                else
+                {
+                    // Create a new profile with default values
+                    powerProfile = new PowerProfile(CreateProfileName, Properties.Resources.PowerProfileManualDescription)
+                    {
+                        TDPOverrideValues = new[]
+                        {
+                            IDevice.GetCurrent().nTDP[0],
+                            IDevice.GetCurrent().nTDP[1],
+                            IDevice.GetCurrent().nTDP[2]
+                        }
+                    };
+                }
 
                 ManagerFactory.powerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
                 RequestCreatePowerProfile?.Invoke(this, EventArgs.Empty);
+
+                // Reset form state
+                CreateProfileName = string.Empty;
+                CopyDefaultProfileSettings = false;
+            });
+
+            ShowCreateProfileFlyoutCommand = new DelegateCommand(() =>
+            {
+                // Initialize the form with a generated name
+                CreateProfileName = ManagerFactory.powerProfileManager.GetProfileName(Properties.Resources.PowerProfileManualName);
+                CopyDefaultProfileSettings = false;
             });
 
             OpenAdditionalSettingsCommand = new DelegateCommand(() =>
@@ -2319,7 +2415,7 @@ namespace HandheldCompanion.ViewModels
             OnPropertyChanged(nameof(PerformanceManagerEnabled));
         }
 
-        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+        private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             if (name == "GPUManagementEnabled")
                 OnPropertyChanged(nameof(GPUManagementEnabled));
@@ -2588,6 +2684,9 @@ namespace HandheldCompanion.ViewModels
         /// </summary>
         private void ProcessManager_ProcessStarted(ProcessEx processEx, bool OnStartup)
         {
+            if (OnStartup)
+                return;
+
             UpdateCurrentProcessViewModel();
         }
 

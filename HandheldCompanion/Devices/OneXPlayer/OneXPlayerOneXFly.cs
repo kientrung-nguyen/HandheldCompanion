@@ -29,20 +29,26 @@ public class OneXPlayerOneXFly : OneXAOKZOE
         GfxClock = new double[] { 100, 2700 };
         CpuClock = 5100;
 
-        GyrometerAxis = new Vector3(1.0f, -1.0f, 1.0f);
-        GyrometerAxisSwap = new SortedDictionary<char, char>
+        GyroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' }
+            Axis = new Vector3(1.0f, -1.0f, 1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' }
+            }
         };
 
-        AccelerometerAxis = new Vector3(-1.0f, -1.0f, 1.0f);
-        AccelerometerAxisSwap = new SortedDictionary<char, char>
+        AcceleroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' }
+            Axis = new Vector3(-1.0f, -1.0f, 1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' }
+            }
         };
 
         // device specific capacities
@@ -158,6 +164,10 @@ public class OneXPlayerOneXFly : OneXAOKZOE
 
     public override bool IsReady()
     {
+        // Early return if device is already bound and connected
+        if (hidDevice != null && hidDevice.IsConnected /* && hidDevice.IsOpen */)
+            return true;
+
         IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
         foreach (HidDevice device in devices)
         {

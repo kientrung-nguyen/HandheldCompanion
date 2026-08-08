@@ -32,8 +32,8 @@ namespace HandheldCompanion.Devices.Lenovo
                 { 0xE311, new HidFilter(unchecked((short)0xFFA0), unchecked(0x0001)) }, // dinput
             };
 
-            GyrometerAxis = new Vector3(-1.0f, 1.0f, 1.0f);
-            AccelerometerAxis = new Vector3(-1.0f, 1.0f, 1.0f);
+            GyroMatrix = new() { Axis = new Vector3(-1.0f, 1.0f, 1.0f) };
+            AcceleroMatrix = new() { Axis = new Vector3(-1.0f, 1.0f, 1.0f) };
 
             nTDP = new double[] { 15, 15, 20 };
             cTDP = new double[] { 5, 30 };
@@ -46,6 +46,13 @@ namespace HandheldCompanion.Devices.Lenovo
 
         public override bool IsReady()
         {
+            // Early return if device is already bound and connected
+            if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? boundDevice))
+            {
+                if (boundDevice.IsConnected /* && boundDevice.IsOpen*/)
+                    return true;
+            }
+
             IEnumerable<HidDevice> devices = GetHidDevices(vendorId, productIds, 0);
             foreach (HidDevice device in devices)
             {
@@ -72,8 +79,6 @@ namespace HandheldCompanion.Devices.Lenovo
 
             if (hidDevices.TryGetValue(INPUT_HID_ID, out HidDevice? device))
             {
-                device.MonitorDeviceEvents = true;
-                device.Removed += Device_Removed;
                 device.OpenDevice();
 
                 // Send controller init packet sequence

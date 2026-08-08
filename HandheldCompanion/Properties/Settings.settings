@@ -119,8 +119,8 @@
     <Setting Name="OverlayControllerMotion" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="SteamControllerMode" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
+    <Setting Name="SteamControllerMode" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
     </Setting>
     <Setting Name="HIDcloakonconnect" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
@@ -305,6 +305,12 @@
     <Setting Name="MSIClawControllerIndex" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
     </Setting>
+    <Setting Name="DisableMsiClawPS2Service" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="BlockMsiClawWinGHotkey" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
     <Setting Name="ConfigurableTDPMethod" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
@@ -369,16 +375,16 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="GoBackToSleepOnPowerButton" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
-    </Setting>
-    <Setting Name="GoBackToSleepOnFingerprintReader" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
-    </Setting>
-    <Setting Name="GoBackToSleepOnJoystick" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="GoBackToSleepOnChargerConnected" Type="System.Boolean" Scope="User">
+    <Setting Name="GoBackToSleepOnFingerprintReader" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="GoBackToSleepOnJoystick" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="GoBackToSleepOnChargerConnected" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="MasterInterval" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>

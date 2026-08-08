@@ -184,11 +184,17 @@ public class RTSSPlatform : IPlatform
         if (processEx is null || processEx.ProcessId == 0)
             return;
 
+        LogManager.LogInformation($"{processEx.Executable} {filter} {processEx.Process?.ProcessName}");
+
         switch (filter)
         {
             case ProcessFilter.Allowed:
                 break;
             default:
+                if (HookedProcessId != 0)
+                    // unhook previous process
+                    UnhookProcess(HookedProcessId);
+
                 return;
         }
 
@@ -212,6 +218,8 @@ public class RTSSPlatform : IPlatform
             try
             {
                 appEntry = OSD.GetAppEntries(AppFlags.MASK).FirstOrDefault(x => x.ProcessId == processId);
+                if (appEntry is not null)
+                    break; // Found entry, exit immediately
             }
             catch (FileNotFoundException) { return; }
             catch { }

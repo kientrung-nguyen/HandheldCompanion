@@ -110,7 +110,7 @@ public partial class OverlayModel : OverlayWindow
         _modelTransformGroup.Children.Add(_importViewportCorrectionTransform);
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    private void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -317,13 +317,24 @@ public partial class OverlayModel : OverlayWindow
         }
     }
 
-    public void SetVisibility(Visibility visibility)
+    public new void SetVisibility(Visibility visibility)
     {
         // UI thread
         UIHelper.TryInvoke(() =>
         {
+            // Control animation frame rate based on visibility
+            if (visibility != Visibility.Visible)
+            {
+                _isVisible = false;
+                UpdateTimer.Stop();
+            }
+            else
+            {
+                _isVisible = true;
+                UpdateTimer.Start();
+            }
+
             this.Visibility = visibility;
-            _isVisible = visibility == Visibility.Visible;
         });
     }
 
@@ -332,23 +343,19 @@ public partial class OverlayModel : OverlayWindow
         // UI thread
         UIHelper.TryInvoke(() =>
         {
-            switch (Visibility)
+            Visibility newVisibility = Visibility switch
             {
-                case Visibility.Visible:
-                    _isVisible = false;
-                    UpdateTimer.Stop();
-                    Hide();
-                    break;
-                case Visibility.Collapsed:
-                case Visibility.Hidden:
-                    if (CurrentModel is null)
-                        UpdateModel();
-                    _isVisible = true;
-                    UpdateTimer.Start();
-                    try { Show(); } catch { /* ItemsRepeater might have a NaN DesiredSize */ }
-                    break;
-            }
-        }, DispatcherPriority.Normal);
+                Visibility.Visible => Visibility.Collapsed,
+                Visibility.Collapsed or Visibility.Hidden => Visibility.Visible,
+                _ => Visibility.Visible
+            };
+
+            // Update model before showing if needed
+            if (newVisibility == Visibility.Visible && CurrentModel is null)
+                UpdateModel();
+
+            SetVisibility(newVisibility);
+        });
     }
 
     #region ModelVisual3D

@@ -56,20 +56,26 @@ public class OneXPlayerX1 : OneXAOKZOE
         ProductIllustration = "device_onexplayer_x1";
         ProductModel = "ONEXPLAYERX1";
 
-        GyrometerAxis = new Vector3(1.0f, -1.0f, 1.0f);
-        GyrometerAxisSwap = new SortedDictionary<char, char>
+        GyroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' },
+            Axis = new Vector3(1.0f, -1.0f, 1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' },
+            }
         };
 
-        AccelerometerAxis = new Vector3(1.0f, -1.0f, -1.0f);
-        AccelerometerAxisSwap = new SortedDictionary<char, char>
+        AcceleroMatrix = new()
         {
-            { 'X', 'X' },
-            { 'Y', 'Z' },
-            { 'Z', 'Y' },
+            Axis = new Vector3(1.0f, -1.0f, -1.0f),
+            AxisSwap = new SortedDictionary<char, char>
+            {
+                { 'X', 'X' },
+                { 'Y', 'Z' },
+                { 'Z', 'Y' },
+            }
         };
 
         // device specific capacities
@@ -201,30 +207,20 @@ public class OneXPlayerX1 : OneXAOKZOE
         return success;
     }
 
-    public override void OpenEvents()
-    {
-        base.OpenEvents();
-
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-
-        Device_Inserted();
-    }
-
     protected override void QuerySettings()
     {
         // raise events
         if (CheckIsBatteryProtectionSupported())
         {
-            SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetString("BatteryChargeLimitPercent"), false);
-            SettingsManager_SettingValueChanged("BatteryBypassChargingMode", ManagerFactory.settingsManager.GetString("BatteryBypassChargingMode"), false);
+            SettingsManager_SettingValueChanged("BatteryChargeLimitPercent", ManagerFactory.settingsManager.GetString("BatteryChargeLimitPercent"), false, false);
+            SettingsManager_SettingValueChanged("BatteryBypassChargingMode", ManagerFactory.settingsManager.GetString("BatteryBypassChargingMode"), false, false);
 
-            SettingsManager_SettingValueChanged("LEDSettingsEnabled", ManagerFactory.settingsManager.GetString("LEDSettingsEnabled"), false);
-            SettingsManager_SettingValueChanged("LEDBrightness", ManagerFactory.settingsManager.GetString("LEDBrightness"), false);
-            SettingsManager_SettingValueChanged("LEDSettingsLevel", ManagerFactory.settingsManager.GetString("LEDSettingsLevel"), false);
-            SettingsManager_SettingValueChanged("LEDMainColor", ManagerFactory.settingsManager.GetString("LEDMainColor"), false);
-            SettingsManager_SettingValueChanged("LEDSecondColor", ManagerFactory.settingsManager.GetString("LEDSecondColor"), false);
-            SettingsManager_SettingValueChanged("LEDPresetIndex", ManagerFactory.settingsManager.GetString("LEDPresetIndex"), false);
+            SettingsManager_SettingValueChanged("LEDSettingsEnabled", ManagerFactory.settingsManager.GetString("LEDSettingsEnabled"), false, false);
+            SettingsManager_SettingValueChanged("LEDBrightness", ManagerFactory.settingsManager.GetString("LEDBrightness"), false, false);
+            SettingsManager_SettingValueChanged("LEDSettingsLevel", ManagerFactory.settingsManager.GetString("LEDSettingsLevel"), false, false);
+            SettingsManager_SettingValueChanged("LEDMainColor", ManagerFactory.settingsManager.GetString("LEDMainColor"), false, false);
+            SettingsManager_SettingValueChanged("LEDSecondColor", ManagerFactory.settingsManager.GetString("LEDSecondColor"), false, false);
+            SettingsManager_SettingValueChanged("LEDPresetIndex", ManagerFactory.settingsManager.GetString("LEDPresetIndex"), false, false);
         }
 
         base.QuerySettings();
@@ -232,9 +228,6 @@ public class OneXPlayerX1 : OneXAOKZOE
 
     public override void Close()
     {
-        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
-
         StopVendorHidListener();
 
         if (_serialPort is not null)
@@ -258,7 +251,7 @@ public class OneXPlayerX1 : OneXAOKZOE
         base.Close();
     }
 
-    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary)
+    protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
     {
         switch (name)
         {
@@ -293,7 +286,7 @@ public class OneXPlayerX1 : OneXAOKZOE
                 break;
         }
 
-        base.SettingsManager_SettingValueChanged(name, value, temporary);
+        base.SettingsManager_SettingValueChanged(name, value, temporary, initializing);
     }
 
     public override bool SetLedStatus(bool enable)
@@ -464,24 +457,12 @@ public class OneXPlayerX1 : OneXAOKZOE
         }
     }
 
-    private void ControllerManager_ControllerPlugged(Controllers.IController controller, bool isPowerCycling)
-    {
-        if (controller.GetVendorID() == vendorId && productIds.Contains(controller.GetProductID()))
-            Device_Inserted(true);
-    }
-
-    private void ControllerManager_ControllerUnplugged(Controllers.IController controller, bool wasPowerCycling, bool wasTarget)
-    {
-        if (controller.GetVendorID() == vendorId && productIds.Contains(controller.GetProductID()))
-            Device_Removed();
-    }
-
-    private void Device_Removed()
+    protected override void Device_Removed()
     {
         StopVendorHidListener();
     }
 
-    private async void Device_Inserted(bool reScan = false)
+    protected override async void Device_Inserted(bool reScan = false)
     {
         if (reScan)
             await WaitUntilReady();

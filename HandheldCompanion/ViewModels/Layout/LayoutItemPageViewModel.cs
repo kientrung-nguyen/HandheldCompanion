@@ -1,7 +1,3 @@
-using HandheldCompanion.Actions;
-using HandheldCompanion.Views;
-using System;
-
 namespace HandheldCompanion.ViewModels
 {
     public class LayoutItemPageViewModel : BaseViewModel
@@ -19,18 +15,12 @@ namespace HandheldCompanion.ViewModels
                 if (value != _currentMapping)
                 {
                     // Unsubscribe from old mapping
-                    if (_currentMapping is not null)
-                    {
-                        _currentMapping.PropertyChanged -= CurrentMapping_PropertyChanged;
-                    }
+                    _currentMapping?.PropertyChanged -= CurrentMapping_PropertyChanged;
 
                     _currentMapping = value;
 
                     // Subscribe to new mapping
-                    if (_currentMapping is not null)
-                    {
-                        _currentMapping.PropertyChanged += CurrentMapping_PropertyChanged;
-                    }
+                    _currentMapping?.PropertyChanged += CurrentMapping_PropertyChanged;
 
                     // Update the display strings
                     UpdateDisplay();
@@ -119,7 +109,7 @@ namespace HandheldCompanion.ViewModels
             ActionType = inputType;
 
             // Update description based on action and target
-            if (_currentMapping.Action is not null && _currentMapping.SelectedTarget is not null)
+            if (_currentMapping.Action is not null)
             {
                 string actionType = _currentMapping.ActionTypeIndex switch
                 {
@@ -133,7 +123,10 @@ namespace HandheldCompanion.ViewModels
                     7 => "Inherit",
                     _ => "Unknown"
                 };
-                ActionDescription = $"{actionType}: {_currentMapping.SelectedTarget.Content}";
+
+                ActionDescription = $"{actionType}";
+                if (_currentMapping.SelectedTarget is not null)
+                    ActionDescription = $"{actionType}: {_currentMapping.SelectedTarget.Content}";
             }
             else
             {
@@ -146,10 +139,7 @@ namespace HandheldCompanion.ViewModels
             if (disposing)
             {
                 // Unsubscribe from current mapping
-                if (_currentMapping is not null)
-                {
-                    _currentMapping.PropertyChanged -= CurrentMapping_PropertyChanged;
-                }
+                _currentMapping?.PropertyChanged -= CurrentMapping_PropertyChanged;
             }
 
             base.Dispose(disposing);

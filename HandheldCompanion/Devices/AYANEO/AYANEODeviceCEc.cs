@@ -48,20 +48,26 @@ namespace HandheldCompanion.Devices.AYANEO
                 FanValueMax = 100
             };
 
-            this.GyrometerAxis = new Vector3(1.0f, -1.0f, 1.0f);
-            this.GyrometerAxisSwap = new SortedDictionary<char, char>
+            this.GyroMatrix = new()
             {
-                { 'X', 'X' },
-                { 'Y', 'Z' },
-                { 'Z', 'Y' }
+                Axis = new Vector3(1.0f, -1.0f, 1.0f),
+                AxisSwap = new SortedDictionary<char, char>
+                {
+                    { 'X', 'X' },
+                    { 'Y', 'Z' },
+                    { 'Z', 'Y' }
+                }
             };
 
-            this.AccelerometerAxis = new Vector3(-1.0f, -1.0f, 1.0f);
-            this.AccelerometerAxisSwap = new SortedDictionary<char, char>
+            this.AcceleroMatrix = new()
             {
-                { 'X', 'X' },
-                { 'Y', 'Z' },
-                { 'Z', 'Y' }
+                Axis = new Vector3(-1.0f, -1.0f, 1.0f),
+                AxisSwap = new SortedDictionary<char, char>
+                {
+                    { 'X', 'X' },
+                    { 'Y', 'Z' },
+                    { 'Z', 'Y' }
+                }
             };
 
             this.OEMChords.Add(new KeyboardChord("Custom Key Big",
@@ -115,7 +121,7 @@ namespace HandheldCompanion.Devices.AYANEO
         protected override void QuerySettings()
         {
             // raise events
-            SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetString("BatteryChargeLimit"), false);
+            SettingsManager_SettingValueChanged("BatteryChargeLimit", ManagerFactory.settingsManager.GetString("BatteryChargeLimit"), false, false);
 
             base.QuerySettings();
         }
@@ -133,7 +139,7 @@ namespace HandheldCompanion.Devices.AYANEO
             base.Close();
         }
 
-        protected override void SettingsManager_SettingValueChanged(string name, object value, bool temporary)
+        protected override void SettingsManager_SettingValueChanged(string name, object? value, bool temporary, bool initializing)
         {
             switch (name)
             {
@@ -153,7 +159,7 @@ namespace HandheldCompanion.Devices.AYANEO
                     break;
             }
 
-            base.SettingsManager_SettingValueChanged(name, value, temporary);
+            base.SettingsManager_SettingValueChanged(name, value, temporary, initializing);
         }
 
         private void PowerManager_RemainingChargePercentChanged(object? sender, object e)
@@ -183,8 +189,10 @@ namespace HandheldCompanion.Devices.AYANEO
         {
             lock (this.updateLock)
             {
-                if (this.ledStatus == status) return true;
-                this.ledStatus = status;
+                base.SetLedStatus(status);
+
+                if (this.ledStatus != status)
+                    this.ledStatus = status;
 
                 if ((bool)this.ledStatus)
                 {
@@ -205,8 +213,10 @@ namespace HandheldCompanion.Devices.AYANEO
         {
             lock (this.updateLock)
             {
-                if (this.ledBrightness == brightness) return true;
-                this.ledBrightness = brightness;
+                base.SetLedBrightness(brightness);
+
+                if (this.ledBrightness != brightness)
+                    this.ledBrightness = brightness;
 
                 if (this.ledColorSticksLeft == null || this.ledColorStickRight == null) return true;
 
@@ -222,14 +232,14 @@ namespace HandheldCompanion.Devices.AYANEO
         {
             lock (this.updateLock)
             {
+                base.SetLedColor(colorSticksLeft, colorStickRight, level, speed);
+
                 bool hasChangedSticksLeft = this.ledColorSticksLeft != colorSticksLeft;
                 bool hasChangedSticksRight = this.ledColorStickRight != colorStickRight;
                 this.ledLevel = level;
 
                 if (this.ledBrightness == null)
-                {
                     return true;
-                }
 
                 switch ((LEDLevel)this.ledLevel)
                 {

@@ -119,6 +119,17 @@ namespace HandheldCompanion.ViewModels
 
         #endregion
 
+        #region VIIPER status
+
+        private string _viiperStatusText = "Stopped";
+        public string VIIPERStatusText
+        {
+            get => _viiperStatusText;
+            private set { if (_viiperStatusText != value) { _viiperStatusText = value; OnPropertyChanged(nameof(VIIPERStatusText)); } }
+        }
+
+        #endregion
+
         #region Constructor
 
         public SettingsPageViewModel()
@@ -141,6 +152,7 @@ namespace HandheldCompanion.ViewModels
             // replay current DSU state
             if (DSUServer.IsInitialized)
                 DSUServer_Started();
+
         }
 
         #endregion
@@ -176,6 +188,9 @@ namespace HandheldCompanion.ViewModels
 
                 case UpdateStatus.Checking:
                     lock (_collectionLock) { UpdateFiles.Clear(); }
+                    if (value is bool background && background)
+                        break;
+
                     UpdateStatusText = Properties.Resources.SettingsPage_UpdateCheck;
                     ChangelogVisibility = Visibility.Collapsed;
                     ChangelogText = string.Empty;
