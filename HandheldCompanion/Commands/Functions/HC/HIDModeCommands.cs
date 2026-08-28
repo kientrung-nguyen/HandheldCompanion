@@ -37,9 +37,12 @@ namespace HandheldCompanion.Commands.Functions.HC
                     LiveGlyph = "\uE001";
                     break;
                 case HIDmode.DualShock4Controller:
+                case HIDmode.DualSenseController:
                     LiveGlyph = "\uE000";
                     break;
-                case HIDmode.DualSenseController:
+                case HIDmode.SteamDeckController:
+                case HIDmode.SteamController:
+                case HIDmode.SwitchProController:
                     LiveGlyph = "\u243C";
                     break;
             }

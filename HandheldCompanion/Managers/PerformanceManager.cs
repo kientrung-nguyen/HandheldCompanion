@@ -1186,9 +1186,12 @@ public static class PerformanceManager
             curShort.AC == shortAC && curShort.DC == shortDC)
             return;
 
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.HETEROPOLICY, policyAC, policyDC);
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SCHEDPOLICY, threadAC, threadDC);
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.SHORTSCHEDPOLICY, shortAC, shortDC);
+        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP,
+        [
+            (Setting.HETEROPOLICY, policyAC, policyDC),
+            (Setting.SCHEDPOLICY, threadAC, threadDC),
+            (Setting.SHORTSCHEDPOLICY, shortAC, shortDC)
+        ]);
 
         LogManager.LogDebug("User requested Core Parking Mode: {0}", coreParkingMode);
     }
@@ -1214,8 +1217,11 @@ public static class PerformanceManager
         // Set profile EPP
         //PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFEPP, requestedEPP[0], requestedEPP[1]);
         //PowerScheme.WritePowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFEPP1, requestedEPP[0], requestedEPP[1]);
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP, requestedEPP[0], requestedEPP[1]);
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFEPP1, requestedEPP[0], requestedEPP[1]);
+        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP,
+        [
+            (Setting.PERFEPP, requestedEPP[0], requestedEPP[1]),
+            (Setting.PERFEPP1, requestedEPP[0], requestedEPP[1])
+        ]);
 
         // Has the EPP value been applied?
         //EPP = PowerScheme.ReadPowerCfg(PowerSubGroup.SUB_PROCESSOR, PowerSetting.PERFEPP);
@@ -1243,10 +1249,13 @@ public static class PerformanceManager
             return;
 
         // Set profile CPMINCORES and CPMAXCORES
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES, currentCoreCountPercent, currentCoreCountPercent);
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMINCORES1, currentCoreCountPercent, currentCoreCountPercent);
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES, currentCoreCountPercent, currentCoreCountPercent);
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.CPMAXCORES1, currentCoreCountPercent, currentCoreCountPercent);
+        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP,
+        [
+            (Setting.CPMINCORES, currentCoreCountPercent, currentCoreCountPercent),
+            (Setting.CPMINCORES1, currentCoreCountPercent, currentCoreCountPercent),
+            (Setting.CPMAXCORES, currentCoreCountPercent, currentCoreCountPercent),
+            (Setting.CPMAXCORES1, currentCoreCountPercent, currentCoreCountPercent)
+        ]);
 
         LogManager.LogDebug("User requested CoreCount: {0} ({1}%)", CoreCount, currentCoreCountPercent);
 
@@ -1272,7 +1281,7 @@ public static class PerformanceManager
             return;
 
         // Set profile PerfBoostMode
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PERFBOOSTMODE, value, value);
+        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, [(Setting.PERFBOOSTMODE, value, value)]);
 
         LogManager.LogDebug("User requested perfboostmode: {0}", value);
 
@@ -1293,9 +1302,12 @@ public static class PerformanceManager
             return;
 
         // Set profile max processor frequency
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX, cpuClock, cpuClock);
-        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP, Setting.PROCFREQMAX1, cpuClock, cpuClock);
-
+        PowerSchemeAPI.SetPlanSetting(activePowerPlan, SettingSubgroup.PROCESSOR_SUBGROUP,
+        [
+            (Setting.PROCFREQMAX, cpuClock, cpuClock),
+            (Setting.PROCFREQMAX1, cpuClock, cpuClock)
+        ]);
+        
         double maxClock = MotherboardInfo.ProcessorMaxTurboSpeed;
         double cpuPercentage = cpuClock / maxClock * 100.0d;
         LogManager.LogDebug("User requested PROCFREQMAX: {0} ({1}%)", cpuClock, cpuPercentage);

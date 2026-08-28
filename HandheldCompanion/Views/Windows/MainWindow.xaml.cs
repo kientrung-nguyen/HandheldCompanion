@@ -790,7 +790,6 @@ public partial class MainWindow : GamepadWindow
         {
             if (!trayContextMenu.Items.OfType<ToolStripItem>().Any(item => item.Available))
                 return;
-
             if (App.overlayquickTools.Visibility == Visibility.Visible)
                 App.overlayquickTools.ToggleVisibility();
 
@@ -927,7 +926,7 @@ public partial class MainWindow : GamepadWindow
                             await Task.Delay(3000); // Captures synchronization context
 
                         // resume manager(s)
-                        InputsManager.Start();
+                        //InputsManager.Start();
                         TimerManager.Start();
                         PerformanceManager.Resume(true);
 
@@ -936,7 +935,8 @@ public partial class MainWindow : GamepadWindow
                         // resume platform(s)
                         PlatformManager.LibreHardware.Start();
 
-                        VirtualManager.Resume(true);
+                        //VirtualManager.Resume(true);
+						VirtualManager.SetSystemSleepState(true);
                         ControllerManager.Resume(true);
                         SensorsManager.Resume(true);
                     }
@@ -977,11 +977,12 @@ public partial class MainWindow : GamepadWindow
                         // suspend manager(s)
                         ManagerFactory.Suspend();
 
-                        VirtualManager.Suspend(true);
+                        //VirtualManager.Suspend(true);
+						VirtualManager.SetSystemSleepState(true);
                         ControllerManager.Suspend(true);
                         TimerManager.Stop();
                         SensorsManager.Suspend(true);
-                        InputsManager.Stop(false);
+                        //InputsManager.Stop(false);
 
                         // suspend platform(s)
                         PlatformManager.LibreHardware.Stop();

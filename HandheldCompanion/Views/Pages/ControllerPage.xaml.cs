@@ -1,5 +1,7 @@
-﻿using HandheldCompanion.Devices;
+﻿using HandheldCompanion.Controllers;
+using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
+using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Targets;
@@ -27,9 +29,9 @@ public partial class ControllerPage : Page
         DataContext = ViewModel;
         InitializeComponent();
 
-        cB_HidModeDInputItem.Visibility = VJoyTarget.IsInstalled() ? Visibility.Visible : Visibility.Collapsed;
-
-        SteamDeckPanel.Visibility = IDevice.GetCurrent() is SteamDeck ? Visibility.Visible : Visibility.Collapsed;
+        cB_HidModeDInputItem.Visibility = VJoyTarget.IsInstalled() ? Visibility.Visible : Visibility.Collapsed;	
+        UpdateTrackpadSettingsVisibility();
+        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
 
         // manage events
         switch (ManagerFactory.settingsManager.Status)
@@ -139,7 +141,19 @@ public partial class ControllerPage : Page
     public void Page_Closed()
     {
         ManagerFactory.settingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
         ViewModel.Dispose();
+    }
+
+    private void ControllerManager_ControllerSelected(HandheldCompanion.Controllers.IController controller)
+    {
+        UIHelper.TryInvoke(UpdateTrackpadSettingsVisibility);
+    }
+
+    private void UpdateTrackpadSettingsVisibility()
+    {
+        bool isSteamDeck = IDevice.GetCurrent() is SteamDeck;
+        SteamDeckPanel.Visibility = isSteamDeck ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private string GetResourceString(string baseKey, int attempts)

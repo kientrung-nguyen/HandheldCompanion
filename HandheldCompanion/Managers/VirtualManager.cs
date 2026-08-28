@@ -273,11 +273,22 @@ namespace HandheldCompanion.Managers
                     {
                         // update variable
                         defaultHIDmode = (HIDmode)Convert.ToInt32(value);
+
+                        if (initializing)
+                            return;
                         SetControllerMode(defaultHIDmode);
                     }
                     break;
                 case "HIDstatus":
                     {
+						HIDstatus selectedHIDstatus = (HIDstatus)Convert.ToInt32(value);
+
+                        if (initializing)
+                        {
+                            HIDstatus = selectedHIDstatus;
+                            return;
+                        }
+
                         // skip on cold boot, retrieved by Start() function and called by SetControllerMode()
                         if (ManagerFactory.settingsManager.IsReady)
                             SetControllerStatus((HIDstatus)Convert.ToInt32(value));

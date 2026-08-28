@@ -43,6 +43,7 @@ public static class OSDManager
     public static short OverlayGPULevel;
     public static short OverlayVRAMLevel;
     public static short OverlayBATTLevel;
+    public static short OverlayAutoTDPLevel;
 
     private static readonly Timer RefreshTimer;
     private static int RefreshInterval = 100;
@@ -134,6 +135,7 @@ public static class OSDManager
         SettingsManager_SettingValueChanged("OnScreenDisplayGPULevel", ManagerFactory.settingsManager.GetString("OnScreenDisplayGPULevel"), false, false);
         SettingsManager_SettingValueChanged("OnScreenDisplayVRAMLevel", ManagerFactory.settingsManager.GetString("OnScreenDisplayVRAMLevel"), false, false);
         SettingsManager_SettingValueChanged("OnScreenDisplayBATTLevel", ManagerFactory.settingsManager.GetString("OnScreenDisplayBATTLevel"), false, false);
+        SettingsManager_SettingValueChanged("OnScreenDisplayAutoTDPLevel", ManagerFactory.settingsManager.GetString("OnScreenDisplayAutoTDPLevel"), false, false);
     }
 
     public static void Stop()

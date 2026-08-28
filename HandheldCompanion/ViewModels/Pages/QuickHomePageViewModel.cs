@@ -41,9 +41,11 @@ namespace HandheldCompanion.ViewModels
             updateTimer.Elapsed += UpdateTimer_Elapsed;
 
             // manage events
-            ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-            ControllerManager.ControllerPlugged += ControllerManager_ControllerChanged;
-            ControllerManager.ControllerUnplugged += ControllerManager_ControllerChanged;
+            ControllerManager.Initialized += ControllerManager_Initialized;
+
+            // raise events
+            if (ControllerManager.IsInitialized)
+                ControllerManager_Initialized();
 			
             if (PerformanceManager.IsInitialized && PerformanceManager.GetProcessor() is Processor processor)
                 PerformanceManager_Initialized(processor.CanChangeTDP, processor.CanChangeGPU);
@@ -219,7 +221,19 @@ namespace HandheldCompanion.ViewModels
 
             OnPropertyChanged(nameof(IsRunningLHM));
         }
-				
+
+        private void ControllerManager_Initialized()
+        {
+            // manage events
+            ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+            ControllerManager.ControllerPlugged += ControllerManager_ControllerChanged;
+            ControllerManager.ControllerUnplugged += ControllerManager_ControllerChanged;
+
+            // raise events
+            if (ControllerManager.HasTargetController && ControllerManager.GetTarget() is IController controller)
+                ControllerManager_ControllerSelected(controller);
+        }
+
         private void HotkeysManager_Initialized()
         {
             QueryHotkeys();
@@ -948,6 +962,7 @@ namespace HandheldCompanion.ViewModels
                 ManagerFactory.gpuManager.Initialized -= GpuManager_Initialized;
 				ManagerFactory.hotkeysManager.Updated -= HotkeysManager_Updated;
             	ManagerFactory.hotkeysManager.Deleted -= HotkeysManager_Deleted;
+            	ControllerManager.Initialized -= ControllerManager_Initialized;
 				ControllerManager.ControllerSelected -= ControllerManager_ControllerSelected;
 	            ControllerManager.ControllerPlugged -= ControllerManager_ControllerChanged;
             	ControllerManager.ControllerUnplugged -= ControllerManager_ControllerChanged;
